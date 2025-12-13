@@ -1,0 +1,302 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Variables CSS personalizadas - Tema Blackboard */
+/* Variables CSS personalizadas - Tema Blackboard & Light Mode */
+:root {
+  --faculty-primary: #0066FF;
+  --faculty-secondary: #E6F0FF;
+  --faculty-dark: #0052CC;
+  --faculty-light: #F0F7FF;
+
+  /* --- MODO GLASS (DEFAULT) --- */
+  /* Fondo oscuro con transparencias */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #0f0f0f;
+  --bg-card: rgba(36, 36, 36, 0.7);
+  /* Transparente para Glass */
+  --bg-sidebar: rgba(45, 45, 45, 0.5);
+
+  --text-primary: #e0e0e0;
+  --text-secondary: #9e9e9e;
+
+  --border-color: rgba(64, 64, 64, 0.5);
+  --border-hover: rgba(80, 80, 80, 0.8);
+
+  /* Glass Effects Specifics */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-blur: 12px;
+
+  /* Legacy/Mappings */
+  --bb-dark: var(--bg-primary);
+  --bb-darker: var(--bg-secondary);
+  --bb-card: var(--bg-card);
+  --bb-sidebar: var(--bg-sidebar);
+  --bb-text: var(--text-primary);
+  --bb-text-secondary: var(--text-secondary);
+  --bb-border: var(--border-color);
+  --bb-hover: rgba(58, 58, 58, 0.5);
+}
+
+/* --- MODO LIGHT (SÓLIDO) --- */
+[data-theme="light"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-sidebar: #ffffff;
+
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+
+  --border-color: #e2e8f0;
+  --border-hover: #cbd5e1;
+
+  /* Light mode styles - No Glass */
+  --glass-bg: #ffffff;
+  --glass-border: #e2e8f0;
+  --glass-blur: 0px;
+
+  --bb-hover: #f1f5f9;
+}
+
+/* --- MODO DARK (SÓLIDO) --- */
+[data-theme="dark"] {
+  --bg-primary: #0f0f0f;
+  --bg-secondary: #000000;
+  --bg-card: #1a1a1a;
+  /* Sólido, sin transparencia */
+  --bg-sidebar: #121212;
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+
+  --border-color: #333333;
+  --border-hover: #454545;
+
+  /* Dark mode styles - No Glass */
+  --glass-bg: #1a1a1a;
+  --glass-border: #333333;
+  --glass-blur: 0px;
+
+  --bb-hover: #2a2a2a;
+}
+
+/* Map legacy BB vars to dynamic vars to support existing Tailwind config if updated */
+:root {
+  --bb-dark: var(--bg-primary);
+  --bb-darker: var(--bg-secondary);
+  --bb-sidebar: var(--bg-sidebar);
+  --bb-card: var(--bg-card);
+  --bb-border: var(--border-color);
+  --bb-hover: var(--bg-hover);
+  --bb-text: var(--text-primary);
+  --bb-text-secondary: var(--text-secondary);
+}
+
+/* Reset base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bb-dark);
+  color: var(--bb-text);
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth transitions */
+a {
+  transition: all 0.3s ease;
+}
+
+/* Remove default button styles */
+button {
+  outline: none;
+}
+
+/* Scrollbar styling - Tema oscuro */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bb-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bb-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bb-hover);
+}
+
+/* Componentes reutilizables */
+@layer components {
+
+  /* Botones */
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+    background-color: var(--faculty-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+
+  .btn-primary:active {
+    transform: scale(0.95);
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+    background-color: var(--bb-card);
+    color: var(--bb-text);
+    border: 1px solid var(--bb-border);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--bb-hover);
+  }
+
+  /* Cards */
+  .card {
+    @apply rounded-lg p-6 transition-all duration-200;
+    background-color: var(--bb-card);
+    border: 1px solid var(--bb-border);
+  }
+
+  .card:hover {
+    border-color: var(--faculty-primary);
+    box-shadow: 0 0 20px rgba(var(--faculty-primary), 0.2);
+  }
+
+  /* Inputs */
+  .input {
+    @apply rounded-lg px-3 py-2 transition-all duration-200;
+    background-color: var(--bb-darker);
+    border: 1px solid var(--bb-border);
+    color: var(--bb-text);
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: var(--faculty-primary);
+    box-shadow: 0 0 0 3px rgba(var(--faculty-primary), 0.1);
+  }
+
+  .input::placeholder {
+    color: var(--bb-text-secondary);
+  }
+
+  /* Badges */
+  .badge-faculty {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+    background-color: var(--faculty-light);
+    color: var(--faculty-primary);
+    border: 1px solid var(--faculty-primary);
+    opacity: 0.8;
+  }
+
+  /* Badges secundarios */
+  .badge-secondary {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+    background-color: var(--bb-hover);
+    color: var(--bb-text);
+    border: 1px solid var(--bb-border);
+  }
+
+  /* Dividers */
+  .divider {
+    background-color: var(--border-color);
+  }
+
+  /* Glassmorphism Card Utility */
+  .glass-card {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    transition: all 0.3s ease;
+  }
+
+  .glass-card:hover {
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.2);
+    border-color: var(--faculty-primary);
+  }
+}
+
+/* Smooth mobile transitions */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  div[class*="translate-x"] {
+    will-change: transform;
+  }
+
+  /* Asegurar que el sidebar mobile funcione bien */
+  div[class*="fixed"] {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Placeholder personalizado */
+::placeholder {
+  color: var(--bb-text-secondary);
+  opacity: 1;
+}
+
+/* Links con tema oscuro */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Animations */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
