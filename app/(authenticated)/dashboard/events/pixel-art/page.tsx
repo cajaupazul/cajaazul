@@ -28,7 +28,9 @@ export default function EventosPixelArtPage() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
 
-  const handleCanvasMouseDown = (e) => {
+  const handleCanvasMouseDown = (
+    e: React.MouseEvent<HTMLCanvasElement>
+  ) => {
     setIsDrawing(true);
     handleCanvasClick(e);
   };
@@ -105,7 +107,7 @@ export default function EventosPixelArtPage() {
     });
 
     const text = `¡Mira mi arte de píxeles! Creado en CampusLink Pixel Art por ${profile?.nombre || 'un usuario'}`;
-    
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -137,7 +139,7 @@ export default function EventosPixelArtPage() {
           <div className="lg:col-span-3">
             <div className="bg-bb-card rounded-xl p-6 border border-gray-700">
               <h2 className="text-xl font-bold text-white mb-4">Lienzo</h2>
-              
+
               <div className="flex justify-center mb-6 bg-bb-dark rounded-lg p-4 overflow-auto max-h-96">
                 <canvas
                   ref={canvasRef}
@@ -184,17 +186,16 @@ export default function EventosPixelArtPage() {
                 <Palette className="w-5 h-5" />
                 Colores
               </h3>
-              
+
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {COLORS.map((color) => (
                   <button
                     key={color}
                     onClick={() => setSelectedColor(color)}
-                    className={`w-full h-10 rounded-lg border-2 transition-all ${
-                      selectedColor === color
+                    className={`w-full h-10 rounded-lg border-2 transition-all ${selectedColor === color
                         ? 'border-white scale-110'
                         : 'border-gray-600 hover:border-gray-400'
-                    }`}
+                      }`}
                     style={{ backgroundColor: color }}
                     title={color}
                   />
@@ -216,7 +217,7 @@ export default function EventosPixelArtPage() {
             {/* Actions */}
             <div className="bg-bb-card rounded-xl p-6 border border-gray-700">
               <h3 className="text-lg font-bold text-white mb-4">Acciones</h3>
-              
+
               <div className="space-y-3">
                 <button
                   onClick={downloadImage}
@@ -225,7 +226,7 @@ export default function EventosPixelArtPage() {
                   <Download className="w-4 h-4" />
                   Descargar
                 </button>
-                
+
                 <button
                   onClick={shareImage}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-semibold transition-all"
@@ -233,7 +234,7 @@ export default function EventosPixelArtPage() {
                   <Share2 className="w-4 h-4" />
                   Compartir
                 </button>
-                
+
                 <button
                   onClick={resetCanvas}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold transition-all"
@@ -247,7 +248,7 @@ export default function EventosPixelArtPage() {
             {/* Stats */}
             <div className="bg-bb-card rounded-xl p-6 border border-gray-700 mt-6">
               <h3 className="text-lg font-bold text-white mb-4">Estadísticas</h3>
-              
+
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Dimensiones:</span>
