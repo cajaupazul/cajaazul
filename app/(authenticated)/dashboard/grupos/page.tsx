@@ -20,6 +20,11 @@ import confetti from 'canvas-confetti';
 
 export default function GruposPage() {
   const { profile, loading: profileLoading } = useProfile();
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+  const addLog = (msg: string) => {
+    setDebugLog(prev => [msg, ...prev].slice(0, 5));
+    console.log(`[GRUPOS_DEBUG] ${msg}`);
+  };
   const { colors } = useTheme();
   const [grupos, setGrupos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +50,7 @@ export default function GruposPage() {
   // Memoized fetch function
   const fetchGrupos = useCallback(async () => {
     try {
+      addLog('Iniciando fetchGrupos...');
       // Only show local loading if we don't have data yet
       // We check the current state implicitly without making it a dependency of the callback
       setLoading(prevLoading => {
@@ -62,8 +68,12 @@ export default function GruposPage() {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        addLog(`Error: ${error.message}`);
+        throw error;
+      }
 
+      addLog(`Éxito: ${data?.length || 0} grupos.`);
       setGrupos(data || []);
 
       const counts: Record<string, number> = {};
@@ -304,6 +314,16 @@ export default function GruposPage() {
     <div className="min-h-screen bg-bb-dark p-8 relative overflow-hidden">
 
       <div className="max-w-7xl mx-auto relative z-10">
+        {/* Panel de Diagnóstico */}
+        <div className="fixed bottom-4 right-4 p-4 bg-black/80 border border-emerald-500 rounded-lg text-[10px] text-emerald-300 z-[100] w-64 shadow-2xl backdrop-blur-md">
+          <p className="font-bold border-b border-emerald-500/30 mb-2 pb-1 text-emerald-400">GRUPOS DEBUG PANEL</p>
+          <p>Auth: {profileLoading ? 'Loading...' : (profile ? `Ok (${profile.id.slice(0, 5)})` : 'No Profile')}</p>
+          <p>Grupos State: {grupos.length}</p>
+          <div className="mt-2 text-gray-400">
+            {debugLog.map((log, i) => <div key={i} className="truncate">• {log}</div>)}
+          </div>
+          <button onClick={() => fetchGrupos()} className="mt-2 h-6 text-[10px] w-full bg-emerald-900/50 hover:bg-emerald-800 rounded">Forzar Recarga</button>
+        </div>
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4">
           <motion.div

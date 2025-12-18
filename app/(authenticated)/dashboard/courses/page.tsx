@@ -56,6 +56,12 @@ export default function CoursesPage() {
   });
 
   const { profile, loading: profileLoading } = useProfile();
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+
+  const addLog = (msg: string) => {
+    setDebugLog(prev => [msg, ...prev].slice(0, 5));
+    console.log(`[DEBUG] ${msg}`);
+  };
 
   useEffect(() => {
     // 1. Initial Fetch on Mount (Optimistic)
@@ -77,19 +83,23 @@ export default function CoursesPage() {
       if (courses.length === 0) {
         setLoading(true);
       }
+      addLog('Iniciando fetchCourses...');
       const { data, error } = await supabase
         .from('courses')
         .select('*')
         .order('nombre', { ascending: true });
 
       if (error) {
+        addLog(`Error Supabase: ${error.message}`);
         console.error('Error fetching courses:', error);
         setCourses([]);
       } else {
+        addLog(`Éxito: ${data?.length || 0} cursos.`);
         console.log('Courses fetched:', data);
         setCourses(data || []);
       }
     } catch (err) {
+      addLog(`Catch Error: ${err instanceof Error ? err.message : '?'}`);
       console.error('Catch error:', err);
       setCourses([]);
     } finally {
@@ -236,6 +246,17 @@ export default function CoursesPage() {
               Agregar Curso
             </Button>
           </DialogTrigger>
+
+          {/* Panel de Diagnóstico Temporal */}
+          <div className="fixed bottom-4 right-4 p-4 bg-black/80 border border-blue-500 rounded-lg text-[10px] text-blue-300 z-[100] w-64 shadow-2xl backdrop-blur-md">
+            <p className="font-bold border-b border-blue-500/30 mb-2 pb-1 text-blue-400">DEBUG PANEL</p>
+            <p>Auth: {profileLoading ? 'Loading...' : (profile ? `Ok (${profile.id.slice(0, 5)})` : 'No Profile')}</p>
+            <p>Courses State: {courses.length}</p>
+            <div className="mt-2 text-gray-400">
+              {debugLog.map((log, i) => <div key={i} className="truncate">• {log}</div>)}
+            </div>
+            <Button size="sm" onClick={() => fetchCourses()} className="mt-2 h-6 text-[10px] w-full bg-blue-900/50 hover:bg-blue-800">Forzar Recarga</Button>
+          </div>
 
           <DialogContent className="bg-bb-card border-bb-border text-bb-text max-w-md max-h-screen overflow-y-auto">
             <DialogHeader>

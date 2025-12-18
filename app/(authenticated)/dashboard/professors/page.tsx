@@ -42,6 +42,11 @@ export default function ProfessorsPage() {
   const router = useRouter();
   const { colors } = useTheme();
   const { profile, loading: profileLoading } = useProfile();
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+  const addLog = (msg: string) => {
+    setDebugLog(prev => [msg, ...prev].slice(0, 5));
+    console.log(`[PROF_DEBUG] ${msg}`);
+  };
   const [professors, setProfessors] = useState<ProfessorWithRating[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -81,6 +86,7 @@ export default function ProfessorsPage() {
 
   const fetchProfessors = async () => {
     try {
+      addLog('Iniciando fetchProfessors...');
       if (professors.length === 0) {
         setLoading(true);
       }
@@ -93,9 +99,13 @@ export default function ProfessorsPage() {
         `)
         .order('nombre', { ascending: true });
 
-      if (professorsError) throw professorsError;
+      if (professorsError) {
+        addLog(`Error: ${professorsError.message}`);
+        throw professorsError;
+      }
 
       if (professorsData) {
+        addLog(`Éxito: ${professorsData.length} profs.`);
         const professorsWithRatings = professorsData.map((prof: any) => {
           const ratings = prof.professor_ratings || [];
           const averageRating = ratings.length > 0
@@ -208,6 +218,16 @@ export default function ProfessorsPage() {
         variants={containerVariants}
         className="max-w-7xl mx-auto relative z-10"
       >
+        {/* Panel de Diagnóstico */}
+        <div className="fixed bottom-4 right-4 p-4 bg-black/80 border border-indigo-500 rounded-lg text-[10px] text-indigo-300 z-[100] w-64 shadow-2xl backdrop-blur-md">
+          <p className="font-bold border-b border-indigo-500/30 mb-2 pb-1 text-indigo-400">PROF DEBUG PANEL</p>
+          <p>Auth: {profileLoading ? 'Loading...' : (profile ? `Ok (${profile.id.slice(0, 5)})` : 'No Profile')}</p>
+          <p>Professors State: {professors.length}</p>
+          <div className="mt-2 text-gray-400">
+            {debugLog.map((log, i) => <div key={i} className="truncate">• {log}</div>)}
+          </div>
+          <Button size="sm" onClick={() => fetchProfessors()} className="mt-2 h-6 text-[10px] w-full bg-indigo-900/50 hover:bg-indigo-800">Forzar Recarga</Button>
+        </div>
         {/* Header */}
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <motion.div variants={itemVariants}>
