@@ -41,10 +41,8 @@ export default function CoursesPage() {
   const [selectedCareer, setSelectedCareer] = useState('todos');
   const [loading, setLoading] = useState(true);
   const [savedCourses, setSavedCourses] = useState<string[]>([]);
-  const [itemsPerPage] = useState(25);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [creatingCourse, setCreatingCourse] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const isFetching = useRef(false); // Prevenir peticiones duplicadas
+  const hasLoadedOnce = useRef(false); // Mantener datos visibles
   const router = useRouter();
   const [formData, setFormData] = useState({
     nombre: '',
@@ -64,45 +62,49 @@ export default function CoursesPage() {
   };
 
   useEffect(() => {
-    // 1. Initial Fetch on Mount (Optimistic)
-    fetchCourses();
+    // Solo cargamos si no se está cargando ya
+    if (!hasLoadedOnce.current) {
+      fetchCourses();
+    }
 
-    // 2. Auth Check / Protection
     if (!profileLoading && !profile) {
       router.push('/auth/login');
     }
 
-    // 3. Safety Timeout
-    const timer = setTimeout(() => setLoading(false), 3000);
+    // El timeout de seguridad ahora es más corto ya que fetchCourses es la fuente de verdad
+    const timer = setTimeout(() => {
+      if (!hasLoadedOnce.current) setLoading(false);
+    }, 2000);
+
     return () => clearTimeout(timer);
-  }, [profile?.id, profileLoading, router]); // Dependency profile.id instead of profile object
+  }, [profile?.id, profileLoading]); // Dependency profile.id instead of profile object
 
   const fetchCourses = async () => {
+    if (isFetching.current) return;
+
     try {
-      if (courses.length === 0) {
-        setLoading(true);
-      }
+      isFetching.current = true;
       addLog('Iniciando fetchCourses...');
+
       const { data, error } = await supabase
         .from('courses')
         .select('*')
         .order('nombre', { ascending: true });
 
       if (error) {
-        addLog(`Error Supabase: ${error.message}`);
+        addLog(`Error: ${error.message}`);
         console.error('Error fetching courses:', error);
-        setCourses([]);
       } else {
         addLog(`Éxito: ${data?.length || 0} cursos.`);
-        console.log('Courses fetched:', data);
         setCourses(data || []);
+        hasLoadedOnce.current = true;
       }
     } catch (err) {
       addLog(`Catch Error: ${err instanceof Error ? err.message : '?'}`);
       console.error('Catch error:', err);
-      setCourses([]);
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
   };
 

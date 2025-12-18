@@ -1,7 +1,6 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/page": "app/page.js",
   "/(authenticated)/dashboard/page": "app/(authenticated)/dashboard/page.js",
-  "/(authenticated)/dashboard/courses/page": "app/(authenticated)/dashboard/courses/page.js",
-  "/(authenticated)/dashboard/professors/page": "app/(authenticated)/dashboard/professors/page.js",
-  "/(authenticated)/dashboard/professors/[id]/page": "app/(authenticated)/dashboard/professors/[id]/page.js",
-  "/(authenticated)/dashboard/grupos/page": "app/(authenticated)/dashboard/grupos/page.js"
+  "/(authenticated)/dashboard/courses/page": "app/(authenticated)/dashboard/courses/page.js"
 }

@@ -41,15 +41,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/(authenticated)/dashboard/professors/page.js"
     ],
-    "/(authenticated)/dashboard/professors/[id]/page": [
+    "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(authenticated)/dashboard/professors/[id]/page.js"
-    ],
-    "/(authenticated)/dashboard/grupos/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(authenticated)/dashboard/grupos/page.js"
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }

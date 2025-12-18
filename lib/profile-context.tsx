@@ -96,9 +96,11 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         if (!isMounted) return;
 
         if (event === 'SIGNED_IN' && session?.user) {
-          setCurrentUserId(session.user.id);
+          const userId = session.user.id;
+          setCurrentUserId(userId);
 
-          // Only show global loading if we don't have a profile yet
+          // SOLO ponemos loading si realmente no tenemos nada para mostrar aún
+          // Esto evita que la app parpadee al refrescar tokens
           if (!profile) {
             setLoading(true);
           }
@@ -106,7 +108,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
           const { data, error } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('id', userId)
             .single();
 
           if (isMounted) {
