@@ -84,6 +84,7 @@ export default function CoursesPage() {
         console.error('Error fetching courses:', error);
         setCourses([]);
       } else {
+        console.log('Courses fetched:', data);
         setCourses(data || []);
       }
     } catch (err) {
