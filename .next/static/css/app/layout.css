@@ -563,6 +563,9 @@ video {
 .visible {
   visibility: visible;
 }
+.invisible {
+  visibility: hidden;
+}
 .static {
   position: static;
 }
@@ -722,6 +725,9 @@ video {
 }
 .z-\[60\] {
   z-index: 60;
+}
+.z-\[200\] {
+  z-index: 200;
 }
 .order-1 {
   order: 1;

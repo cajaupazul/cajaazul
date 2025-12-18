@@ -95,12 +95,20 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (!isMounted) return;
 
+        console.log(`[AUTH_CHANGE] Event: ${event}, User: ${session?.user?.id?.slice(0, 5) || 'none'}`);
+
         if (event === 'SIGNED_IN' && session?.user) {
           const userId = session.user.id;
+
+          // Si el ID de usuario no ha cambiado, no forzamos recarga del perfil
+          // a menos que el perfil actual sea nulo.
+          if (userId === currentUserId && profile) {
+            return;
+          }
+
           setCurrentUserId(userId);
 
-          // SOLO ponemos loading si realmente no tenemos nada para mostrar aún
-          // Esto evita que la app parpadee al refrescar tokens
+          // SOLO ponemos loading si realmente no tenemos nada válido en memoria
           if (!profile) {
             setLoading(true);
           }
@@ -112,12 +120,15 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             .single();
 
           if (isMounted) {
-            if (data) setProfile(data);
+            if (data) {
+              setProfile(data);
+            }
             setLoading(false);
           }
         } else if (event === 'SIGNED_OUT') {
           setProfile(null);
           setCurrentUserId(null);
+          setLoading(false);
           if (subscriptionRef.current) {
             subscriptionRef.current.unsubscribe();
           }
