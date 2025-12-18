@@ -154,7 +154,7 @@ export default function AuthenticatedLayout({
             }}
           >
             <div className="flex items-center space-x-3">
-              <Avatar className="h-14 w-14 ring-2 flex-shrink-0" style={{ ringColor: colors?.primary + '40' }}>
+              <Avatar className="h-14 w-14 ring-2 flex-shrink-0" style={{ boxShadow: `0 0 0 2px ${colors?.primary}40` }}>
                 <AvatarImage src={profile?.avatar_url || ''} alt={profile?.nombre || 'Usuario'} />
                 <AvatarFallback style={{ backgroundColor: colors?.primary, color: 'white' }}>
                   {profile?.nombre?.charAt(0) || 'U'}
@@ -273,7 +273,7 @@ export default function AuthenticatedLayout({
                 <span className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ backgroundColor: colors?.primary }}></span>
               </button>
               {!sidebarOpen && (
-                <Avatar className="h-10 w-10 cursor-pointer ring-2 flex-shrink-0" style={{ ringColor: colors?.primary + '40' }}>
+                <Avatar className="h-10 w-10 cursor-pointer ring-2 flex-shrink-0" style={{ boxShadow: `0 0 0 2px ${colors?.primary}40` }}>
                   <AvatarImage src={profile?.avatar_url || ''} alt={profile?.nombre || 'Usuario'} />
                   <AvatarFallback style={{ backgroundColor: colors?.primary, color: 'white' }}>
                     {profile?.nombre?.charAt(0) || 'U'}

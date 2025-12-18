@@ -92,7 +92,7 @@ export default function GruposPage() {
 
   const triggerConfetti = () => {
     const end = Date.now() + 1000;
-    const colors = [colors?.primary || '#3b82f6', '#ffffff'];
+    const confettiColors = [colors?.primary || '#3b82f6', '#ffffff'];
 
     (function frame() {
       confetti({
@@ -100,14 +100,14 @@ export default function GruposPage() {
         angle: 60,
         spread: 55,
         origin: { x: 0 },
-        colors: colors
+        colors: confettiColors
       });
       confetti({
         particleCount: 2,
         angle: 120,
         spread: 55,
         origin: { x: 1 },
-        colors: colors
+        colors: confettiColors
       });
 
       if (Date.now() < end) {

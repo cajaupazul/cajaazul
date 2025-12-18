@@ -22,14 +22,14 @@ export default function GrupoDetailPage() {
   const { profile } = useProfile();
   const { colors } = useTheme();
 
-  const [grupo, setGrupo] = useState(null);
-  const [miembros, setMiembros] = useState([]);
+  const [grupo, setGrupo] = useState<any>(null);
+  const [miembros, setMiembros] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMember, setIsMember] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editData, setEditData] = useState({ link_whatsapp: '' });
-  const [hoveredMiembro, setHoveredMiembro] = useState(null);
+  const [hoveredMiembro, setHoveredMiembro] = useState<string | null>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function GrupoDetailPage() {
     }
   }, [grupoId, profile]);
 
-  const handleMiembroHover = (e, userId) => {
+  const handleMiembroHover = (e: React.MouseEvent<HTMLElement>, userId: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const cardWidth = 320;

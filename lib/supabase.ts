@@ -59,6 +59,8 @@ export type Professor = {
   facultad: string | null;
   avatar_url: string | null;
   background_image_url: string | null;
+  email: string | null;
+  otros_cursos: string | null;
   created_at: string;
   averageRating?: number;
 };

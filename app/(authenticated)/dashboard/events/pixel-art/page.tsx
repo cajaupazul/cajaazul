@@ -22,7 +22,7 @@ const COLORS = [
 export default function EventosPixelArtPage() {
   const { colors } = useTheme();
   const { profile } = useProfile();
-  const canvasRef = useRef(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [grid, setGrid] = useState(Array(GRID_SIZE * GRID_SIZE).fill('#FFFFFF'));
   const [selectedColor, setSelectedColor] = useState('#000000');
   const [isDrawing, setIsDrawing] = useState(false);
@@ -39,12 +39,12 @@ export default function EventosPixelArtPage() {
     setIsDrawing(false);
   };
 
-  const handleCanvasMouseMove = (e) => {
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     handleCanvasClick(e);
   };
 
-  const handleCanvasClick = (e) => {
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -74,6 +74,7 @@ export default function EventosPixelArtPage() {
     canvas.width = GRID_SIZE * cellSize;
     canvas.height = GRID_SIZE * cellSize;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
     grid.forEach((color, index) => {
       const row = Math.floor(index / GRID_SIZE);
@@ -96,6 +97,7 @@ export default function EventosPixelArtPage() {
     canvas.width = GRID_SIZE * cellSize;
     canvas.height = GRID_SIZE * cellSize;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
     grid.forEach((color, index) => {
       const row = Math.floor(index / GRID_SIZE);
@@ -193,8 +195,8 @@ export default function EventosPixelArtPage() {
                     key={color}
                     onClick={() => setSelectedColor(color)}
                     className={`w-full h-10 rounded-lg border-2 transition-all ${selectedColor === color
-                        ? 'border-white scale-110'
-                        : 'border-gray-600 hover:border-gray-400'
+                      ? 'border-white scale-110'
+                      : 'border-gray-600 hover:border-gray-400'
                       }`}
                     style={{ backgroundColor: color }}
                     title={color}

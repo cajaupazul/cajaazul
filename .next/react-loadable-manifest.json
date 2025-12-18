@@ -1,28 +1,29 @@
 {
   "app\\(authenticated)\\dashboard\\events\\page.tsx -> @/components/pixel-art/pixel-canvas": {
-    "id": "app\\(authenticated)\\dashboard\\events\\page.tsx -> @/components/pixel-art/pixel-canvas",
+    "id": 1893,
     "files": [
-      "static/chunks/_app-pages-browser_components_pixel-art_pixel-canvas_tsx.js"
+      "static/chunks/137-7c01c277e0f0cc48.js",
+      "static/chunks/893.1caa61ccd3fdfd82.js"
     ]
   },
   "node_modules\\@supabase\\auth-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch": {
-    "id": "node_modules\\@supabase\\auth-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch",
+    "id": 485,
     "files": []
   },
   "node_modules\\@supabase\\functions-js\\dist\\module\\helper.js -> @supabase/node-fetch": {
-    "id": "node_modules\\@supabase\\functions-js\\dist\\module\\helper.js -> @supabase/node-fetch",
+    "id": 485,
     "files": []
   },
   "node_modules\\@supabase\\realtime-js\\dist\\module\\RealtimeClient.js -> @supabase/node-fetch": {
-    "id": "node_modules\\@supabase\\realtime-js\\dist\\module\\RealtimeClient.js -> @supabase/node-fetch",
+    "id": 485,
     "files": []
   },
   "node_modules\\@supabase\\storage-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch": {
-    "id": "node_modules\\@supabase\\storage-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch",
+    "id": 485,
     "files": []
   },
   "node_modules\\@supabase\\storage-js\\dist\\module\\lib\\vectors\\helpers.js -> @supabase/node-fetch": {
-    "id": "node_modules\\@supabase\\storage-js\\dist\\module\\lib\\vectors\\helpers.js -> @supabase/node-fetch",
+    "id": 485,
     "files": []
   }
 }

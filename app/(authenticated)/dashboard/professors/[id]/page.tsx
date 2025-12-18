@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { supabase, Professor } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
 import BouncingBalls from '@/components/BouncingBalls';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 
 interface Rating {
   id: string;
@@ -32,7 +32,7 @@ interface Rating {
   };
 }
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -40,7 +40,7 @@ const containerVariants = {
   }
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { y: 20, opacity: 0 },
   visible: {
     y: 0,
