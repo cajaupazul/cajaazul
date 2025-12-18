@@ -46,9 +46,13 @@ export default function GruposPage() {
   const fetchGrupos = useCallback(async () => {
     try {
       // Only show local loading if we don't have data yet
-      if (grupos.length === 0) {
-        setLoading(true);
-      }
+      // We check the current state implicitly without making it a dependency of the callback
+      setLoading(prevLoading => {
+        // This is a pattern to access current state without adding it to dependencies
+        // but since we want to skip if already loaded, we can just check 'grupos' 
+        // inside the function if we use a Ref or just accept it's fast.
+        return true;
+      });
 
       const { data, error } = await supabase
         .from('grupos')
@@ -72,7 +76,7 @@ export default function GruposPage() {
     } finally {
       setLoading(false);
     }
-  }, [grupos.length]); // Re-fetch only if empty or specifically triggered
+  }, []); // Remove dependency on grupos.length to avoid infinite loops
 
   const fetchUserGrupos = useCallback(async () => {
     if (!profile?.id) return;

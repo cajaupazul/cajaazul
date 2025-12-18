@@ -1,9 +1,9 @@
 {
   "app\\(authenticated)\\dashboard\\events\\page.tsx -> @/components/pixel-art/pixel-canvas": {
-    "id": 1893,
+    "id": 5152,
     "files": [
       "static/chunks/137-7c01c277e0f0cc48.js",
-      "static/chunks/893.1caa61ccd3fdfd82.js"
+      "static/chunks/152.66843cc526855caa.js"
     ]
   },
   "node_modules\\@supabase\\auth-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch": {
