@@ -97,19 +97,22 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
         if (event === 'SIGNED_IN' && session?.user) {
           setCurrentUserId(session.user.id);
-          setLoading(true);
 
-          const { data } = await supabase
+          // Only show global loading if we don't have a profile yet
+          if (!profile) {
+            setLoading(true);
+          }
+
+          const { data, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
 
-          if (isMounted && data) {
-            setProfile(data);
+          if (isMounted) {
+            if (data) setProfile(data);
+            setLoading(false);
           }
-
-          setLoading(false);
         } else if (event === 'SIGNED_OUT') {
           setProfile(null);
           setCurrentUserId(null);
@@ -160,6 +163,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('Error refreshing profile:', error);
+      } finally {
+        setLoading(false);
       }
     }
   };

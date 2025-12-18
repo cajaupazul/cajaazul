@@ -110,7 +110,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-          setLoading(true);
+          // Only show global loading if we don't have faculty data yet
+          if (!faculty) {
+            setLoading(true);
+          }
           await loadUserFaculty();
         }
       }

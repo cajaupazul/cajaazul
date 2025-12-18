@@ -98,7 +98,10 @@ export default function AuthenticatedLayout({
     { label: 'Nosotros', href: '/dashboard/about', icon: Info },
   ];
 
-  if (!authChecked || profileLoading) {
+  // Show full screen loader only if we haven't checked auth yet OR 
+  // if we are loading the profile but don't have the data in memory yet.
+  // This prevents flickering/stalling on tab refocus (handled by Supabase refocus checks).
+  if (!authChecked || (profileLoading && !profile)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-bb-dark">
         <div className="flex flex-col items-center gap-4">
