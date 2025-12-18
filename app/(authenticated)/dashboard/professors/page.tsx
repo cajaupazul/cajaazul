@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,6 +52,8 @@ export default function ProfessorsPage() {
   const [loading, setLoading] = useState(true);
   const [savedProfessors, setSavedProfessors] = useState<Set<string>>(new Set());
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const isFetching = useRef(false);
+  const hasLoadedOnce = useRef(false);
   const [formData, setFormData] = useState({
     nombre: '',
     especialidad: '',
@@ -61,8 +63,9 @@ export default function ProfessorsPage() {
   });
 
   useEffect(() => {
-    // 1. Initial Fetch on Mount (Optimistic)
-    fetchProfessors();
+    if (!hasLoadedOnce.current) {
+      fetchProfessors();
+    }
 
     const initializeUserData = async () => {
       if (profile?.id) {
@@ -78,17 +81,20 @@ export default function ProfessorsPage() {
       router.push('/auth/login');
     }
 
-    // Safety timeout
-    const timer = setTimeout(() => setLoading(false), 3000);
+    // Safety timeout shorter
+    const timer = setTimeout(() => {
+      if (!hasLoadedOnce.current) setLoading(false);
+    }, 2000);
+
     return () => clearTimeout(timer);
-  }, [profile?.id, profileLoading, router]);
+  }, [profile?.id, profileLoading]);
 
   const fetchProfessors = async () => {
+    if (isFetching.current) return;
+
     try {
+      isFetching.current = true;
       addLog('Iniciando fetchProfessors...');
-      if (professors.length === 0) {
-        setLoading(true);
-      }
 
       const { data: professorsData, error: professorsError } = await supabase
         .from('professors')
@@ -119,11 +125,14 @@ export default function ProfessorsPage() {
         });
 
         setProfessors(professorsWithRatings);
+        hasLoadedOnce.current = true;
       }
     } catch (error) {
+      addLog(`Error: ${error instanceof Error ? error.message : '?'}`);
       console.error('Error fetching professors:', error);
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
   };
 

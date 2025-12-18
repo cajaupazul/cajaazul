@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProfile } from '@/lib/profile-context';
 
@@ -41,6 +41,10 @@ export default function CoursesPage() {
   const [selectedCareer, setSelectedCareer] = useState('todos');
   const [loading, setLoading] = useState(true);
   const [savedCourses, setSavedCourses] = useState<string[]>([]);
+  const [itemsPerPage] = useState(25);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [creatingCourse, setCreatingCourse] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>('');
   const isFetching = useRef(false); // Prevenir peticiones duplicadas
   const hasLoadedOnce = useRef(false); // Mantener datos visibles
   const router = useRouter();
