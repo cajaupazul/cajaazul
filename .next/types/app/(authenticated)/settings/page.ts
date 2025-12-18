@@ -1,8 +1,8 @@
-// File: C:\Users\huama\Downloads\bolt descomprimido\project-bolt-sb1-emsbaasg\project\app\(authenticated)\dashboard\settings\page.tsx
-import * as entry from '../../../../../../app/(authenticated)/dashboard/settings/page.js'
+// File: C:\Users\huama\Downloads\bolt descomprimido\project-bolt-sb1-emsbaasg\project\app\(authenticated)\settings\page.tsx
+import * as entry from '../../../../../app/(authenticated)/settings/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../../../../app/(authenticated)/dashboard/settings/page.js')
+type TEntry = typeof import('../../../../../app/(authenticated)/settings/page.js')
 
 // Check that the entry is a valid entry
 checkFields<Diff<{
