@@ -35,14 +35,23 @@ export default function CommunityPage() {
   }, []);
 
   const fetchPosts = async () => {
-    const { data } = await supabase
-      .from('posts')
-      .select('*, profiles(*)')
-      .order('created_at', { ascending: false })
-      .limit(50);
+    try {
+      if (posts.length === 0) {
+        setLoading(true);
+      }
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*, profiles(*)')
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-    if (data) setPosts(data);
-    setLoading(false);
+      if (error) throw error;
+      if (data) setPosts(data);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreatePost = async (e: React.FormEvent) => {
@@ -218,14 +227,12 @@ export default function CommunityPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleLikePost(post.id)}
-                      className={`text-slate-500 hover:text-red-600 hover:bg-red-50 ${
-                        likedPosts.has(post.id) ? 'text-red-600' : ''
-                      }`}
+                      className={`text-slate-500 hover:text-red-600 hover:bg-red-50 ${likedPosts.has(post.id) ? 'text-red-600' : ''
+                        }`}
                     >
                       <Heart
-                        className={`h-4 w-4 mr-2 ${
-                          likedPosts.has(post.id) ? 'fill-current' : ''
-                        }`}
+                        className={`h-4 w-4 mr-2 ${likedPosts.has(post.id) ? 'fill-current' : ''
+                          }`}
                       />
                       <span className="text-xs font-medium">{post.likes || 0}</span>
                     </Button>

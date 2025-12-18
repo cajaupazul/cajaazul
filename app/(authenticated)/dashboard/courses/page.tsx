@@ -59,6 +59,9 @@ export default function CoursesPage() {
 
   const fetchCourses = async () => {
     try {
+      if (courses.length === 0) {
+        setLoading(true);
+      }
       const { data, error } = await supabase
         .from('courses')
         .select('*')
@@ -415,8 +418,8 @@ export default function CoursesPage() {
                         toggleSavedCourse(course.id);
                       }}
                       className={`text-lg transition-colors ${savedCourses.includes(course.id)
-                          ? 'text-yellow-400'
-                          : 'text-bb-text-secondary hover:text-yellow-400'
+                        ? 'text-yellow-400'
+                        : 'text-bb-text-secondary hover:text-yellow-400'
                         }`}
                       aria-label="Guardar curso"
                     >

@@ -53,40 +53,48 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/auth/login');
-        return;
+      try {
+        if (!profile || courses.length === 0) {
+          setLoading(true);
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          router.push('/auth/login');
+          return;
+        }
+
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profileData) setProfile(profileData);
+
+        const { data: coursesData } = await supabase
+          .from('courses')
+          .select('*')
+          .limit(3)
+          .order('nombre', { ascending: true });
+
+        if (coursesData) setCourses(coursesData);
+
+        // Initial fetch for counts
+        const { count: matCount } = await supabase
+          .from('materials')
+          .select('*', { count: 'exact', head: true });
+        if (matCount !== null) setMaterialsCount(matCount);
+
+        const { count: userCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+        if (userCount !== null) setCommunityCount(userCount);
+      } catch (error) {
+        console.error('Error in dashboard checkUser:', error);
+      } finally {
+        setLoading(false);
       }
-
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profileData) setProfile(profileData);
-
-      const { data: coursesData } = await supabase
-        .from('courses')
-        .select('*')
-        .limit(3)
-        .order('nombre', { ascending: true });
-
-      if (coursesData) setCourses(coursesData);
-
-      // Initial fetch for counts
-      const { count: matCount } = await supabase
-        .from('materials')
-        .select('*', { count: 'exact', head: true });
-      if (matCount !== null) setMaterialsCount(matCount);
-
-      const { count: userCount } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-      if (userCount !== null) setCommunityCount(userCount);
-
-      setLoading(false);
     };
 
     setGreeting(getGreeting());

@@ -45,7 +45,11 @@ export default function GruposPage() {
   // Memoized fetch function
   const fetchGrupos = useCallback(async () => {
     try {
-      setLoading(true);
+      // Only show local loading if we don't have data yet
+      if (grupos.length === 0) {
+        setLoading(true);
+      }
+
       const { data, error } = await supabase
         .from('grupos')
         .select(`
@@ -68,7 +72,7 @@ export default function GruposPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [grupos.length]); // Re-fetch only if empty or specifically triggered
 
   const fetchUserGrupos = useCallback(async () => {
     if (!profile?.id) return;
@@ -86,9 +90,16 @@ export default function GruposPage() {
   }, [profile?.id]);
 
   useEffect(() => {
+    // We can fetch groups independently
     fetchGrupos();
-    fetchUserGrupos();
-  }, [fetchGrupos, fetchUserGrupos]);
+  }, [fetchGrupos]);
+
+  useEffect(() => {
+    // User groups depends on profile
+    if (profile?.id) {
+      fetchUserGrupos();
+    }
+  }, [profile?.id, fetchUserGrupos]);
 
   const triggerConfetti = () => {
     const end = Date.now() + 1000;

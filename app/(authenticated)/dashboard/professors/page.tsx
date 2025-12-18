@@ -67,45 +67,42 @@ export default function ProfessorsPage() {
   }, []);
 
   const fetchProfessors = async () => {
-    const { data: professorsData } = await supabase
-      .from('professors')
-      .select('*')
-      .order('nombre', { ascending: true });
-
-    if (professorsData) {
-      // Update background images if missing (legacy support)
-      const professorsToUpdate = professorsData.filter(p => !p.background_image_url);
-      if (professorsToUpdate.length > 0) {
-        for (const prof of professorsToUpdate) {
-          const bgUrl = getRandomBackgroundImage();
-          await supabase.from('professors').update({ background_image_url: bgUrl }).eq('id', prof.id);
-          prof.background_image_url = bgUrl;
-        }
+    try {
+      if (professors.length === 0) {
+        setLoading(true);
       }
 
-      const professorsWithRatings = await Promise.all(
-        professorsData.map(async (prof) => {
-          const { data: ratingsData } = await supabase
-            .from('professor_ratings')
-            .select('puntuacion')
-            .eq('professor_id', prof.id);
+      const { data: professorsData, error: professorsError } = await supabase
+        .from('professors')
+        .select(`
+          *,
+          professor_ratings (puntuacion)
+        `)
+        .order('nombre', { ascending: true });
 
-          const ratings = ratingsData || [];
+      if (professorsError) throw professorsError;
+
+      if (professorsData) {
+        const professorsWithRatings = professorsData.map((prof: any) => {
+          const ratings = prof.professor_ratings || [];
           const averageRating = ratings.length > 0
-            ? (ratings.reduce((sum, r) => sum + (r.puntuacion || 0), 0) / ratings.length)
+            ? (ratings.reduce((sum: number, r: any) => sum + (r.puntuacion || 0), 0) / ratings.length)
             : 0;
 
           return {
             ...prof,
             averageRating: Math.round(averageRating * 10) / 10,
             ratingCount: ratings.length,
-          };
-        })
-      );
+          } as ProfessorWithRating;
+        });
 
-      setProfessors(professorsWithRatings);
+        setProfessors(professorsWithRatings);
+      }
+    } catch (error) {
+      console.error('Error fetching professors:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const fetchSavedProfessors = async (userId: string) => {
