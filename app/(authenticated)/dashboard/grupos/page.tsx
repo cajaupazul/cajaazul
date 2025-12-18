@@ -31,6 +31,8 @@ export default function GruposPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingGrupo, setEditingGrupo] = useState<any>(null);
+  const isFetching = useRef(false);
+  const hasLoadedOnce = useRef(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -49,16 +51,10 @@ export default function GruposPage() {
 
   // Memoized fetch function
   const fetchGrupos = useCallback(async () => {
+    if (isFetching.current) return;
     try {
+      isFetching.current = true;
       addLog('Iniciando fetchGrupos...');
-      // Only show local loading if we don't have data yet
-      // We check the current state implicitly without making it a dependency of the callback
-      setLoading(prevLoading => {
-        // This is a pattern to access current state without adding it to dependencies
-        // but since we want to skip if already loaded, we can just check 'grupos' 
-        // inside the function if we use a Ref or just accept it's fast.
-        return true;
-      });
 
       const { data, error } = await supabase
         .from('grupos')
@@ -81,10 +77,13 @@ export default function GruposPage() {
         counts[grupo.id] = grupo.grupo_miembros?.[0]?.count || 0;
       });
       setMiembrosCuenta(counts);
+      hasLoadedOnce.current = true;
     } catch (error) {
+      addLog(`Error: ${error instanceof Error ? error.message : '?'}`);
       console.error('Error cargando grupos:', error);
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
   }, []); // Remove dependency on grupos.length to avoid infinite loops
 
@@ -105,7 +104,9 @@ export default function GruposPage() {
 
   useEffect(() => {
     // 1. Initial Fetch on Mount (Optimistic - Public Data)
-    fetchGrupos();
+    if (!hasLoadedOnce.current) {
+      fetchGrupos();
+    }
 
     // 2. Fetch User Specific Data (Dependent on Auth)
     if (profile?.id) {
@@ -118,7 +119,9 @@ export default function GruposPage() {
     }
 
     // Safety timeout
-    const timer = setTimeout(() => setLoading(false), 3000);
+    const timer = setTimeout(() => {
+      if (!hasLoadedOnce.current) setLoading(false);
+    }, 2000);
     return () => clearTimeout(timer);
   }, [profile?.id, profileLoading, fetchGrupos, fetchUserGrupos]);
 
