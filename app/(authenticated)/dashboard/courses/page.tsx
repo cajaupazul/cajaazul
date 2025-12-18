@@ -58,14 +58,16 @@ export default function CoursesPage() {
   const { profile, loading: profileLoading } = useProfile();
 
   useEffect(() => {
-    if (!profileLoading) {
-      if (profile) {
-        fetchCourses();
-      } else {
-        router.push('/auth/login');
-      }
+    // 1. Initial Fetch on Mount (Optimistic)
+    // We fetch immediately because RLS is public/permissive for reading
+    fetchCourses();
+
+    // 2. Auth Check / Protection
+    if (!profileLoading && !profile) {
+      router.push('/auth/login');
     }
 
+    // 3. Safety Timeout
     const timer = setTimeout(() => setLoading(false), 3000);
     return () => clearTimeout(timer);
   }, [profile, profileLoading, router]);

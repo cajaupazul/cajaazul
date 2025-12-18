@@ -22,15 +22,15 @@ export default function CommunityPage() {
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!profileLoading) {
-      if (profile) {
-        fetchPosts();
-      } else {
-        router.push('/auth/login');
-      }
+    // 1. Initial Fetch on Mount (Optimistic)
+    fetchPosts();
+
+    // 2. Auth Check
+    if (!profileLoading && !profile) {
+      router.push('/auth/login');
     }
 
-    // Safety timeout: forzar fin de carga a los 3s
+    // Safety timeout
     const timer = setTimeout(() => setLoading(false), 3000);
     return () => clearTimeout(timer);
   }, [profile, profileLoading, router]);

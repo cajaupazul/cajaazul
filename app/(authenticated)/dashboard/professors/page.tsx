@@ -56,25 +56,22 @@ export default function ProfessorsPage() {
   });
 
   useEffect(() => {
-    const initializePage = async () => {
-      try {
-        if (profile) {
-          await fetchSavedProfessors(profile.id);
-        }
-        await fetchProfessors();
-      } catch (error) {
-        console.error('Error initializing ProfessorsPage:', error);
-      } finally {
-        setLoading(false);
+    // 1. Initial Fetch on Mount (Optimistic)
+    // We fetch immediately because RLS is public/permissive for reading
+    fetchProfessors();
+
+    const initializeUserData = async () => {
+      if (profile) {
+        await fetchSavedProfessors(profile.id);
       }
     };
 
-    if (!profileLoading) {
-      if (profile) {
-        initializePage();
-      } else {
-        router.push('/auth/login');
-      }
+    if (profile) {
+      initializeUserData();
+    }
+
+    if (!profileLoading && !profile) {
+      router.push('/auth/login');
     }
 
     // Safety timeout

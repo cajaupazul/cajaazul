@@ -94,17 +94,21 @@ export default function GruposPage() {
   }, [profile?.id]);
 
   useEffect(() => {
-    if (!profileLoading) {
-      if (profile) {
-        fetchGrupos();
-        fetchUserGrupos();
-      } else {
-        // Optional: Redirect if needed, or handle unauth state
-        // router.push('/auth/login');
-      }
+    // 1. Initial Fetch on Mount (Optimistic - Public Data)
+    fetchGrupos();
+
+    // 2. Fetch User Specific Data (Dependent on Auth)
+    if (profile) {
+      fetchUserGrupos();
     }
 
-    // Safety timeout to ensure loading spinner persists no longer than 3s
+    // 3. Auth Check
+    if (!profileLoading && !profile) {
+      // Optional: Redirect if needed
+      // router.push('/auth/login');
+    }
+
+    // Safety timeout
     const timer = setTimeout(() => setLoading(false), 3000);
     return () => clearTimeout(timer);
   }, [profile, profileLoading, fetchGrupos, fetchUserGrupos]);
