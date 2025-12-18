@@ -42,25 +42,15 @@ export default function AuthenticatedLayout({
   const { colors, loading: themeLoading } = useTheme();
   const { profile, loading: profileLoading } = useProfile();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // Auth protection moved to ProfileContext and page level for better stability
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        setAuthChecked(true);
-        router.replace('/auth/login');
-        return;
-      }
-
-      setAuthChecked(true);
-    };
-
-    checkAuth();
-  }, [router]);
+    if (!profileLoading && !profile) {
+      router.replace('/auth/login');
+    }
+  }, [profile, profileLoading, router]);
 
   const handleLogoutClick = () => {
     setShowLogoutConfirm(true);
@@ -101,12 +91,14 @@ export default function AuthenticatedLayout({
   // Show full screen loader only if we haven't checked auth yet OR 
   // if we are loading the profile but don't have the data in memory yet.
   // This prevents flickering/stalling on tab refocus (handled by Supabase refocus checks).
-  if (!authChecked || (profileLoading && !profile)) {
+  // Solo mostramos el spinner global si REALMENTE estamos cargando y NO tenemos perfil aún.
+  // Una vez que el perfil existe, la app se mantiene visible incluso si hay refrescos en segundo plano.
+  if (profileLoading && !profile) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-bb-dark">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-faculty-primary"></div>
-          <p className="text-bb-text-secondary">Cargando...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-bb-text-secondary">Cargando perfil...</p>
         </div>
       </div>
     );

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase, Profile } from '@/lib/supabase';
 
 interface ProfileContextType {
@@ -132,7 +132,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const updateProfile = (updatedProfile: Profile) => {
+  const updateProfile = useCallback((updatedProfile: Profile) => {
     if (updatedProfile.id === currentUserId) {
       setProfile(updatedProfile);
       // Guardar cambios en Supabase automáticamente
@@ -147,9 +147,9 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
           if (error) console.error('Error updating profile:', error);
         });
     }
-  };
+  }, [currentUserId]);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (currentUserId) {
       try {
         const { data } = await supabase
@@ -167,10 +167,17 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     }
-  };
+  }, [currentUserId]);
+
+  const value = useMemo(() => ({
+    profile,
+    loading,
+    updateProfile,
+    refreshProfile
+  }), [profile, loading, updateProfile, refreshProfile]);
 
   return (
-    <ProfileContext.Provider value={{ profile, loading, updateProfile, refreshProfile }}>
+    <ProfileContext.Provider value={value}>
       {children}
     </ProfileContext.Provider>
   );

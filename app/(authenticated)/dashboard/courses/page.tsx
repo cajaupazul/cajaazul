@@ -65,7 +65,6 @@ export default function CoursesPage() {
 
   useEffect(() => {
     // 1. Initial Fetch on Mount (Optimistic)
-    // We fetch immediately because RLS is public/permissive for reading
     fetchCourses();
 
     // 2. Auth Check / Protection
@@ -76,7 +75,7 @@ export default function CoursesPage() {
     // 3. Safety Timeout
     const timer = setTimeout(() => setLoading(false), 3000);
     return () => clearTimeout(timer);
-  }, [profile, profileLoading, router]);
+  }, [profile?.id, profileLoading, router]); // Dependency profile.id instead of profile object
 
   const fetchCourses = async () => {
     try {

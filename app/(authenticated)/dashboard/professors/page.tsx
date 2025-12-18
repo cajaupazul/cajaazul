@@ -62,16 +62,15 @@ export default function ProfessorsPage() {
 
   useEffect(() => {
     // 1. Initial Fetch on Mount (Optimistic)
-    // We fetch immediately because RLS is public/permissive for reading
     fetchProfessors();
 
     const initializeUserData = async () => {
-      if (profile) {
+      if (profile?.id) {
         await fetchSavedProfessors(profile.id);
       }
     };
 
-    if (profile) {
+    if (profile?.id) {
       initializeUserData();
     }
 
@@ -82,7 +81,7 @@ export default function ProfessorsPage() {
     // Safety timeout
     const timer = setTimeout(() => setLoading(false), 3000);
     return () => clearTimeout(timer);
-  }, [profile, profileLoading, router]);
+  }, [profile?.id, profileLoading, router]);
 
   const fetchProfessors = async () => {
     try {

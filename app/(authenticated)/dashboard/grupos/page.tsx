@@ -108,20 +108,19 @@ export default function GruposPage() {
     fetchGrupos();
 
     // 2. Fetch User Specific Data (Dependent on Auth)
-    if (profile) {
+    if (profile?.id) {
       fetchUserGrupos();
     }
 
     // 3. Auth Check
     if (!profileLoading && !profile) {
       // Optional: Redirect if needed
-      // router.push('/auth/login');
     }
 
     // Safety timeout
     const timer = setTimeout(() => setLoading(false), 3000);
     return () => clearTimeout(timer);
-  }, [profile, profileLoading, fetchGrupos, fetchUserGrupos]);
+  }, [profile?.id, profileLoading, fetchGrupos, fetchUserGrupos]);
 
   const triggerConfetti = () => {
     const end = Date.now() + 1000;
