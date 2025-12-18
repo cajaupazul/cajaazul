@@ -19,7 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
 export default function GruposPage() {
-  const { profile } = useProfile();
+  const { profile, loading: profileLoading } = useProfile();
   const { colors } = useTheme();
   const [grupos, setGrupos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,16 +94,20 @@ export default function GruposPage() {
   }, [profile?.id]);
 
   useEffect(() => {
-    // We can fetch groups independently
-    fetchGrupos();
-  }, [fetchGrupos]);
-
-  useEffect(() => {
-    // User groups depends on profile
-    if (profile?.id) {
-      fetchUserGrupos();
+    if (!profileLoading) {
+      if (profile) {
+        fetchGrupos();
+        fetchUserGrupos();
+      } else {
+        // Optional: Redirect if needed, or handle unauth state
+        // router.push('/auth/login');
+      }
     }
-  }, [profile?.id, fetchUserGrupos]);
+
+    // Safety timeout to ensure loading spinner persists no longer than 3s
+    const timer = setTimeout(() => setLoading(false), 3000);
+    return () => clearTimeout(timer);
+  }, [profile, profileLoading, fetchGrupos, fetchUserGrupos]);
 
   const triggerConfetti = () => {
     const end = Date.now() + 1000;
