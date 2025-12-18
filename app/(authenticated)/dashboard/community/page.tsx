@@ -7,32 +7,33 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, MessageCircle, Share2, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, MessageSquare, Heart, Share2, MessageCircle } from 'lucide-react';
 import { supabase, Post, Profile } from '@/lib/supabase';
+import { useProfile } from '@/lib/profile-context';
+import { useRouter } from 'next/navigation';
 
 export default function CommunityPage() {
+  const router = useRouter();
+  const { profile, loading: profileLoading } = useProfile();
   const [posts, setPosts] = useState<(Post & { profiles?: Profile })[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [postContent, setPostContent] = useState('');
-  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const initializePage = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-        if (profile) setCurrentUser(profile);
+    if (!profileLoading) {
+      if (profile) {
+        fetchPosts();
+      } else {
+        router.push('/auth/login');
       }
-      fetchPosts();
-    };
-    initializePage();
-  }, []);
+    }
+
+    // Safety timeout: forzar fin de carga a los 3s
+    const timer = setTimeout(() => setLoading(false), 3000);
+    return () => clearTimeout(timer);
+  }, [profile, profileLoading, router]);
 
   const fetchPosts = async () => {
     try {
@@ -56,10 +57,10 @@ export default function CommunityPage() {
 
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!postContent.trim() || !currentUser) return;
+    if (!postContent.trim() || !profile) return;
 
     const { error } = await supabase.from('posts').insert({
-      user_id: currentUser.id,
+      user_id: profile.id,
       contenido: postContent,
     });
 
@@ -126,9 +127,9 @@ export default function CommunityPage() {
               <DialogTrigger asChild>
                 <div className="flex items-center gap-4 cursor-pointer">
                   <Avatar className="h-12 w-12 flex-shrink-0">
-                    <AvatarImage src={currentUser?.avatar_url || ''} />
+                    <AvatarImage src={profile?.avatar_url || ''} />
                     <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-semibold">
-                      {currentUser?.nombre?.charAt(0)}
+                      {profile?.nombre?.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <Input
@@ -193,7 +194,7 @@ export default function CommunityPage() {
                         </p>
                       </div>
                     </div>
-                    {currentUser?.id === post.user_id && (
+                    {profile?.id === post.user_id && (
                       <Button
                         variant="ghost"
                         size="sm"

@@ -91,6 +91,11 @@ export default function DashboardPage() {
       router.push('/auth/login');
     }
 
+    // Safety timeout to prevent infinite loading spinner
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
+
     // Real-time subscriptions
     const materialsSubscription = supabase
       .channel('materials-count-changes')
@@ -123,6 +128,7 @@ export default function DashboardPage() {
     return () => {
       supabase.removeChannel(materialsSubscription);
       supabase.removeChannel(profilesSubscription);
+      clearTimeout(timer);
     };
   }, [router, profile, profileLoading]);
 

@@ -76,6 +76,10 @@ export default function ProfessorsPage() {
         router.push('/auth/login');
       }
     }
+
+    // Safety timeout
+    const timer = setTimeout(() => setLoading(false), 3000);
+    return () => clearTimeout(timer);
   }, [profile, profileLoading, router]);
 
   const fetchProfessors = async () => {

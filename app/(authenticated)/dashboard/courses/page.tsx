@@ -65,6 +65,9 @@ export default function CoursesPage() {
         router.push('/auth/login');
       }
     }
+
+    const timer = setTimeout(() => setLoading(false), 3000);
+    return () => clearTimeout(timer);
   }, [profile, profileLoading, router]);
 
   const fetchCourses = async () => {
