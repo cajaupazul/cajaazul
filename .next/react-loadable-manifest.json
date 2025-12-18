@@ -1,4 +1,10 @@
 {
+  "app\\(authenticated)\\dashboard\\events\\page.tsx -> @/components/pixel-art/pixel-canvas": {
+    "id": "app\\(authenticated)\\dashboard\\events\\page.tsx -> @/components/pixel-art/pixel-canvas",
+    "files": [
+      "static/chunks/_app-pages-browser_components_pixel-art_pixel-canvas_tsx.js"
+    ]
+  },
   "node_modules\\@supabase\\auth-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch": {
     "id": "node_modules\\@supabase\\auth-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch",
     "files": []

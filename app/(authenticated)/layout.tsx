@@ -1,9 +1,10 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/lib/theme-context';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
+import { useDashboardData } from '@/lib/dashboard-data-context';
 import {
   BookOpen,
   LogOut,
@@ -41,16 +42,23 @@ export default function AuthenticatedLayout({
   const pathname = usePathname();
   const { colors, loading: themeLoading } = useTheme();
   const { profile, loading: profileLoading } = useProfile();
+  const { refreshAll, courses, professors, grupos } = useDashboardData();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const dataFetched = useRef(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Auth protection moved to ProfileContext and page level for better stability
   useEffect(() => {
+    if (profile && !dataFetched.current) {
+      console.log('Profile ready, triggering global prefetch...');
+      refreshAll(profile.id);
+      dataFetched.current = true;
+    }
+
     if (!profileLoading && !profile) {
       router.replace('/auth/login');
     }
-  }, [profile, profileLoading, router]);
+  }, [profile, profileLoading, router, refreshAll]);
 
   const handleLogoutClick = () => {
     setShowLogoutConfirm(true);

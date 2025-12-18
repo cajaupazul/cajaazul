@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
 import { useTheme } from '@/lib/theme-context';
+import { useDashboardData } from '@/lib/dashboard-data-context';
 import {
   Plus,
   Search,
@@ -20,19 +21,19 @@ import confetti from 'canvas-confetti';
 
 export default function GruposPage() {
   const { profile, loading: profileLoading } = useProfile();
-  const [debugLog, setDebugLog] = useState<string[]>([]);
-  const addLog = (msg: string) => {
-    setDebugLog(prev => [msg, ...prev].slice(0, 5));
-    console.log(`[GRUPOS_DEBUG] ${msg}`);
-  };
+  const {
+    grupos,
+    userGrupos,
+    miembrosCuenta,
+    loading: globalLoading,
+    fetchGrupos,
+    fetchUserGrupos
+  } = useDashboardData();
+
   const { colors } = useTheme();
-  const [grupos, setGrupos] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingGrupo, setEditingGrupo] = useState<any>(null);
-  const isFetching = useRef(false);
-  const hasLoadedOnce = useRef(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -46,84 +47,14 @@ export default function GruposPage() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
 
-  const [miembrosCuenta, setMiembrosCuenta] = useState<Record<string, number>>({});
-  const [userGrupos, setUserGrupos] = useState(new Set());
-
-  // Memoized fetch function
-  const fetchGrupos = useCallback(async () => {
-    if (isFetching.current) return;
-    try {
-      isFetching.current = true;
-      addLog('Iniciando fetchGrupos...');
-
-      const { data, error } = await supabase
-        .from('grupos')
-        .select(`
-          *,
-          grupo_miembros(count)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        addLog(`Error: ${error.message}`);
-        throw error;
-      }
-
-      addLog(`Éxito: ${data?.length || 0} grupos.`);
-      setGrupos(data || []);
-
-      const counts: Record<string, number> = {};
-      data?.forEach(grupo => {
-        counts[grupo.id] = grupo.grupo_miembros?.[0]?.count || 0;
-      });
-      setMiembrosCuenta(counts);
-      hasLoadedOnce.current = true;
-    } catch (error) {
-      addLog(`Error: ${error instanceof Error ? error.message : '?'}`);
-      console.error('Error cargando grupos:', error);
-    } finally {
-      setLoading(false);
-      isFetching.current = false;
-    }
-  }, []); // Remove dependency on grupos.length to avoid infinite loops
-
-  const fetchUserGrupos = useCallback(async () => {
-    if (!profile?.id) return;
-    try {
-      const { data, error } = await supabase
-        .from('grupo_miembros')
-        .select('grupo_id')
-        .eq('user_id', profile.id);
-
-      if (error) throw error;
-      setUserGrupos(new Set(data?.map(m => m.grupo_id) || []));
-    } catch (error) {
-      console.error('Error cargando grupos del usuario:', error);
-    }
-  }, [profile?.id]);
-
   useEffect(() => {
-    // 1. Initial Fetch on Mount (Optimistic - Public Data)
-    if (!hasLoadedOnce.current) {
+    if (grupos.length === 0 && !globalLoading.grupos) {
       fetchGrupos();
     }
-
-    // 2. Fetch User Specific Data (Dependent on Auth)
-    if (profile?.id) {
-      fetchUserGrupos();
+    if (userGrupos.size === 0 && profile?.id) {
+      fetchUserGrupos(profile.id);
     }
-
-    // 3. Auth Check
-    if (!profileLoading && !profile) {
-      // Optional: Redirect if needed
-    }
-
-    // Safety timeout
-    const timer = setTimeout(() => {
-      if (!hasLoadedOnce.current) setLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [profile?.id, profileLoading, fetchGrupos, fetchUserGrupos]);
+  }, [profile?.id, grupos.length, globalLoading.grupos, userGrupos.size, fetchGrupos, fetchUserGrupos]);
 
   const triggerConfetti = () => {
     const end = Date.now() + 1000;
@@ -161,8 +92,10 @@ export default function GruposPage() {
 
       if (error) throw error;
 
-      setUserGrupos(prev => new Set([...prev, grupoId]));
-      setMiembrosCuenta(prev => ({ ...prev, [grupoId]: (prev[grupoId] || 0) + 1 }));
+      if (profile?.id) {
+        fetchUserGrupos(profile.id);
+      }
+      fetchGrupos(); // To update counts
       triggerConfetti();
     } catch (error) {
       console.error('Error uniéndose al grupo:', error);
@@ -182,11 +115,10 @@ export default function GruposPage() {
         .eq('user_id', profile?.id);
 
       if (error) throw error;
-
-      const newUserGrupos = new Set(userGrupos);
-      newUserGrupos.delete(grupoId);
-      setUserGrupos(newUserGrupos);
-      setMiembrosCuenta(prev => ({ ...prev, [grupoId]: Math.max(0, (prev[grupoId] || 0) - 1) }));
+      if (profile?.id) {
+        fetchUserGrupos(profile.id);
+      }
+      fetchGrupos(); // To update counts
     } catch (error) {
       console.error('Error abandonando grupo:', error);
     }
@@ -298,7 +230,9 @@ export default function GruposPage() {
     grupo.tipo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) {
+  const isLoading = globalLoading.grupos && grupos.length === 0;
+
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-bb-dark">
         <div className="relative">
@@ -316,15 +250,13 @@ export default function GruposPage() {
     <div className="min-h-screen bg-bb-dark p-8 relative overflow-hidden">
 
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Panel de Diagnóstico */}
+        {/* Panel de Cache (Simplificado) */}
         <div className="fixed bottom-4 right-4 p-4 bg-black/80 border border-emerald-500 rounded-lg text-[10px] text-emerald-300 z-[100] w-64 shadow-2xl backdrop-blur-md">
-          <p className="font-bold border-b border-emerald-500/30 mb-2 pb-1 text-emerald-400">GRUPOS DEBUG PANEL</p>
-          <p>Auth: {profileLoading ? 'Loading...' : (profile ? `Ok (${profile.id.slice(0, 5)})` : 'No Profile')}</p>
-          <p>Grupos State: {grupos.length}</p>
-          <div className="mt-2 text-gray-400">
-            {debugLog.map((log, i) => <div key={i} className="truncate">• {log}</div>)}
-          </div>
-          <button onClick={() => fetchGrupos()} className="mt-2 h-6 text-[10px] w-full bg-emerald-900/50 hover:bg-emerald-800 rounded">Forzar Recarga</button>
+          <p className="font-bold border-b border-emerald-500/30 mb-2 pb-1 text-emerald-400">GRUPOS CACHE</p>
+          <p>En Cache: {grupos.length}</p>
+          <button onClick={() => fetchGrupos()} className="mt-2 h-6 text-[10px] w-full bg-emerald-900/50 hover:bg-emerald-800 rounded" disabled={globalLoading.grupos}>
+            {globalLoading.grupos ? 'Sincronizando...' : 'Refrescar Grupos'}
+          </button>
         </div>
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4">

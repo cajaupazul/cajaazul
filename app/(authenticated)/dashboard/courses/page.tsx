@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProfile } from '@/lib/profile-context';
+import { useDashboardData } from '@/lib/dashboard-data-context';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,18 +36,15 @@ const FACULTADES = [
 const CICLOS = Array.from({ length: 13 }, (_, i) => i.toString());
 
 export default function CoursesPage() {
-  const [courses, setCourses] = useState<Course[]>([]);
+  const { courses, loading: globalLoading, fetchCourses } = useDashboardData();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCycle, setSelectedCycle] = useState('todos');
   const [selectedCareer, setSelectedCareer] = useState('todos');
-  const [loading, setLoading] = useState(true);
   const [savedCourses, setSavedCourses] = useState<string[]>([]);
   const [itemsPerPage] = useState(25);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creatingCourse, setCreatingCourse] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>('');
-  const isFetching = useRef(false); // Prevenir peticiones duplicadas
-  const hasLoadedOnce = useRef(false); // Mantener datos visibles
   const router = useRouter();
   const [formData, setFormData] = useState({
     nombre: '',
@@ -66,51 +64,14 @@ export default function CoursesPage() {
   };
 
   useEffect(() => {
-    // Solo cargamos si no se está cargando ya
-    if (!hasLoadedOnce.current) {
+    if (courses.length === 0 && !globalLoading.courses && profile) {
       fetchCourses();
     }
 
     if (!profileLoading && !profile) {
       router.push('/auth/login');
     }
-
-    // El timeout de seguridad ahora es más corto ya que fetchCourses es la fuente de verdad
-    const timer = setTimeout(() => {
-      if (!hasLoadedOnce.current) setLoading(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [profile?.id, profileLoading]); // Dependency profile.id instead of profile object
-
-  const fetchCourses = async () => {
-    if (isFetching.current) return;
-
-    try {
-      isFetching.current = true;
-      addLog('Iniciando fetchCourses...');
-
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .order('nombre', { ascending: true });
-
-      if (error) {
-        addLog(`Error: ${error.message}`);
-        console.error('Error fetching courses:', error);
-      } else {
-        addLog(`Éxito: ${data?.length || 0} cursos.`);
-        setCourses(data || []);
-        hasLoadedOnce.current = true;
-      }
-    } catch (err) {
-      addLog(`Catch Error: ${err instanceof Error ? err.message : '?'}`);
-      console.error('Catch error:', err);
-    } finally {
-      setLoading(false);
-      isFetching.current = false;
-    }
-  };
+  }, [profile, profileLoading, courses.length, globalLoading.courses, fetchCourses]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -226,7 +187,9 @@ export default function CoursesPage() {
   const cycles = Array.from(new Set(courses.map((c) => c.ciclo))).sort();
   const careers = Array.from(new Set(courses.map((c) => c.carrera)));
 
-  if (loading) {
+  const isLoading = globalLoading.courses && courses.length === 0;
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-bb-dark">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -252,15 +215,14 @@ export default function CoursesPage() {
             </Button>
           </DialogTrigger>
 
-          {/* Panel de Diagnóstico Temporal */}
+          {/* Panel de Diagnóstico Temporal (Opcional, ahora más simple) */}
           <div className="fixed bottom-4 right-4 p-4 bg-black/80 border border-blue-500 rounded-lg text-[10px] text-blue-300 z-[100] w-64 shadow-2xl backdrop-blur-md">
-            <p className="font-bold border-b border-blue-500/30 mb-2 pb-1 text-blue-400">DEBUG PANEL</p>
+            <p className="font-bold border-b border-blue-500/30 mb-2 pb-1 text-blue-400">DASHBOARD DATA STATE</p>
             <p>Auth: {profileLoading ? 'Loading...' : (profile ? `Ok (${profile.id.slice(0, 5)})` : 'No Profile')}</p>
-            <p>Courses State: {courses.length}</p>
-            <div className="mt-2 text-gray-400">
-              {debugLog.map((log, i) => <div key={i} className="truncate">• {log}</div>)}
-            </div>
-            <Button size="sm" onClick={() => fetchCourses()} className="mt-2 h-6 text-[10px] w-full bg-blue-900/50 hover:bg-blue-800">Forzar Recarga</Button>
+            <p>Cursos en Cache: {courses.length}</p>
+            <Button size="sm" onClick={() => fetchCourses()} className="mt-2 h-6 text-[10px] w-full bg-blue-900/50 hover:bg-blue-800" disabled={globalLoading.courses}>
+              {globalLoading.courses ? 'Sincronizando...' : 'Refrescar Cache'}
+            </Button>
           </div>
 
           <DialogContent className="bg-bb-card border-bb-border text-bb-text max-w-md max-h-screen overflow-y-auto">

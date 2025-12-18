@@ -14,6 +14,7 @@ import BouncingBalls from '@/components/BouncingBalls';
 import { useTheme } from '@/lib/theme-context';
 import { useRouter } from 'next/navigation';
 import { useProfile } from '@/lib/profile-context';
+import { useDashboardData } from '@/lib/dashboard-data-context';
 
 
 interface ProfessorWithRating extends Professor {
@@ -47,13 +48,10 @@ export default function ProfessorsPage() {
     setDebugLog(prev => [msg, ...prev].slice(0, 5));
     console.log(`[PROF_DEBUG] ${msg}`);
   };
-  const [professors, setProfessors] = useState<ProfessorWithRating[]>([]);
+  const { professors, loading: globalLoading, fetchProfessors } = useDashboardData();
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
   const [savedProfessors, setSavedProfessors] = useState<Set<string>>(new Set());
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const isFetching = useRef(false);
-  const hasLoadedOnce = useRef(false);
   const [formData, setFormData] = useState({
     nombre: '',
     especialidad: '',
@@ -63,7 +61,7 @@ export default function ProfessorsPage() {
   });
 
   useEffect(() => {
-    if (!hasLoadedOnce.current) {
+    if (professors.length === 0 && !globalLoading.professors && profile) {
       fetchProfessors();
     }
 
@@ -80,61 +78,9 @@ export default function ProfessorsPage() {
     if (!profileLoading && !profile) {
       router.push('/auth/login');
     }
+  }, [profile, profileLoading, professors.length, globalLoading.professors, fetchProfessors]);
 
-    // Safety timeout shorter
-    const timer = setTimeout(() => {
-      if (!hasLoadedOnce.current) setLoading(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [profile?.id, profileLoading]);
-
-  const fetchProfessors = async () => {
-    if (isFetching.current) return;
-
-    try {
-      isFetching.current = true;
-      addLog('Iniciando fetchProfessors...');
-
-      const { data: professorsData, error: professorsError } = await supabase
-        .from('professors')
-        .select(`
-          *,
-          professor_ratings (puntuacion)
-        `)
-        .order('nombre', { ascending: true });
-
-      if (professorsError) {
-        addLog(`Error: ${professorsError.message}`);
-        throw professorsError;
-      }
-
-      if (professorsData) {
-        addLog(`Éxito: ${professorsData.length} profs.`);
-        const professorsWithRatings = professorsData.map((prof: any) => {
-          const ratings = prof.professor_ratings || [];
-          const averageRating = ratings.length > 0
-            ? (ratings.reduce((sum: number, r: any) => sum + (r.puntuacion || 0), 0) / ratings.length)
-            : 0;
-
-          return {
-            ...prof,
-            averageRating: Math.round(averageRating * 10) / 10,
-            ratingCount: ratings.length,
-          } as ProfessorWithRating;
-        });
-
-        setProfessors(professorsWithRatings);
-        hasLoadedOnce.current = true;
-      }
-    } catch (error) {
-      addLog(`Error: ${error instanceof Error ? error.message : '?'}`);
-      console.error('Error fetching professors:', error);
-    } finally {
-      setLoading(false);
-      isFetching.current = false;
-    }
-  };
+  // Global fetch is now in context
 
   const fetchSavedProfessors = async (userId: string) => {
     const { data } = await supabase
@@ -208,7 +154,9 @@ export default function ProfessorsPage() {
     professor.especialidad?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (loading) {
+  const isLoading = globalLoading.professors && professors.length === 0;
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-bb-dark">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
@@ -226,15 +174,13 @@ export default function ProfessorsPage() {
         variants={containerVariants}
         className="max-w-7xl mx-auto relative z-10"
       >
-        {/* Panel de Diagnóstico */}
+        {/* Panel de Datos (Simplificado) */}
         <div className="fixed bottom-4 right-4 p-4 bg-black/80 border border-indigo-500 rounded-lg text-[10px] text-indigo-300 z-[100] w-64 shadow-2xl backdrop-blur-md">
-          <p className="font-bold border-b border-indigo-500/30 mb-2 pb-1 text-indigo-400">PROF DEBUG PANEL</p>
-          <p>Auth: {profileLoading ? 'Loading...' : (profile ? `Ok (${profile.id.slice(0, 5)})` : 'No Profile')}</p>
-          <p>Professors State: {professors.length}</p>
-          <div className="mt-2 text-gray-400">
-            {debugLog.map((log, i) => <div key={i} className="truncate">• {log}</div>)}
-          </div>
-          <Button size="sm" onClick={() => fetchProfessors()} className="mt-2 h-6 text-[10px] w-full bg-indigo-900/50 hover:bg-indigo-800">Forzar Recarga</Button>
+          <p className="font-bold border-b border-indigo-500/30 mb-2 pb-1 text-indigo-400">PROFESSORS CACHE</p>
+          <p>En Cache: {professors.length}</p>
+          <Button size="sm" onClick={() => fetchProfessors()} className="mt-2 h-6 text-[10px] w-full bg-indigo-900/50 hover:bg-indigo-800" disabled={globalLoading.professors}>
+            {globalLoading.professors ? 'Sincronizando...' : 'Refrescar Profesores'}
+          </Button>
         </div>
         {/* Header */}
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">

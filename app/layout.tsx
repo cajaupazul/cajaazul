@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ProfileProvider } from "@/lib/profile-context";
+import { DashboardDataProvider } from "@/lib/dashboard-data-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,7 +22,9 @@ export default function RootLayout({
       <body className="bg-bb-dark text-bb-text antialiased">
         <ThemeProvider>
           <ProfileProvider>
-            {children}
+            <DashboardDataProvider>
+              {children}
+            </DashboardDataProvider>
           </ProfileProvider>
         </ThemeProvider>
       </body>
