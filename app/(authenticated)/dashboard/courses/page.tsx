@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useProfile } from '@/lib/profile-context';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -53,9 +55,17 @@ export default function CoursesPage() {
     imagen: null as File | null,
   });
 
+  const { profile, loading: profileLoading } = useProfile();
+
   useEffect(() => {
-    fetchCourses();
-  }, []);
+    if (!profileLoading) {
+      if (profile) {
+        fetchCourses();
+      } else {
+        router.push('/auth/login');
+      }
+    }
+  }, [profile, profileLoading, router]);
 
   const fetchCourses = async () => {
     try {

@@ -12,8 +12,9 @@ import { supabase, Professor } from '@/lib/supabase';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import BouncingBalls from '@/components/BouncingBalls';
 import { useTheme } from '@/lib/theme-context';
-
 import { useRouter } from 'next/navigation';
+import { useProfile } from '@/lib/profile-context';
+
 
 interface ProfessorWithRating extends Professor {
   averageRating: number;
@@ -40,11 +41,11 @@ const itemVariants: Variants = {
 export default function ProfessorsPage() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { profile, loading: profileLoading } = useProfile();
   const [professors, setProfessors] = useState<ProfessorWithRating[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [savedProfessors, setSavedProfessors] = useState<Set<string>>(new Set());
-  const [currentUserId, setCurrentUserId] = useState<string>('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -56,15 +57,26 @@ export default function ProfessorsPage() {
 
   useEffect(() => {
     const initializePage = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-        await fetchSavedProfessors(user.id);
+      try {
+        if (profile) {
+          await fetchSavedProfessors(profile.id);
+        }
+        await fetchProfessors();
+      } catch (error) {
+        console.error('Error initializing ProfessorsPage:', error);
+      } finally {
+        setLoading(false);
       }
-      await fetchProfessors();
     };
-    initializePage();
-  }, []);
+
+    if (!profileLoading) {
+      if (profile) {
+        initializePage();
+      } else {
+        router.push('/auth/login');
+      }
+    }
+  }, [profile, profileLoading, router]);
 
   const fetchProfessors = async () => {
     try {
@@ -156,18 +168,18 @@ export default function ProfessorsPage() {
   };
 
   const toggleSaveProfessor = async (professorId: string) => {
-    if (!currentUserId) return;
+    if (!profile?.id) return;
     const isSaved = savedProfessors.has(professorId);
 
     if (isSaved) {
-      await supabase.from('user_professors').delete().eq('user_id', currentUserId).eq('professor_id', professorId);
+      await supabase.from('user_professors').delete().eq('user_id', profile.id).eq('professor_id', professorId);
       setSavedProfessors((prev) => {
         const newSet = new Set(prev);
         newSet.delete(professorId);
         return newSet;
       });
     } else {
-      await supabase.from('user_professors').insert({ user_id: currentUserId, professor_id: professorId });
+      await supabase.from('user_professors').insert({ user_id: profile.id, professor_id: professorId });
       setSavedProfessors((prev) => new Set([...prev, professorId]));
     }
   };

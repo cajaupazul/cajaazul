@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { Profile, Course } from '@/lib/supabase';
+import { supabase, Profile, Course } from '@/lib/supabase';
 import {
   BookOpen,
   Users,
@@ -20,6 +19,7 @@ import { motion, Variants } from 'framer-motion';
 import Link from 'next/link';
 import BouncingBalls from '@/components/BouncingBalls';
 import { useTheme } from '@/lib/theme-context';
+import { useProfile } from '@/lib/profile-context';
 
 // Greetings based on time of day
 const getGreeting = () => {
@@ -41,7 +41,7 @@ const motivationalQuotes = [
 export default function DashboardPage() {
   const router = useRouter();
   const { colors } = useTheme();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { profile, loading: profileLoading } = useProfile();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState('');
@@ -52,26 +52,11 @@ export default function DashboardPage() {
   const [communityCount, setCommunityCount] = useState(0);
 
   useEffect(() => {
-    const checkUser = async () => {
+    const fetchData = async () => {
       try {
-        if (!profile || courses.length === 0) {
-          setLoading(true);
-        }
+        if (!profile) return;
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          router.push('/auth/login');
-          return;
-        }
-
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (profileData) setProfile(profileData);
-
+        // Fetch courses for the dashboard
         const { data: coursesData } = await supabase
           .from('courses')
           .select('*')
@@ -91,7 +76,7 @@ export default function DashboardPage() {
           .select('*', { count: 'exact', head: true });
         if (userCount !== null) setCommunityCount(userCount);
       } catch (error) {
-        console.error('Error in dashboard checkUser:', error);
+        console.error('Error in Dashboard fetchData:', error);
       } finally {
         setLoading(false);
       }
@@ -99,7 +84,12 @@ export default function DashboardPage() {
 
     setGreeting(getGreeting());
     setMotivational(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
-    checkUser();
+
+    if (!profileLoading && profile) {
+      fetchData();
+    } else if (!profileLoading && !profile) {
+      router.push('/auth/login');
+    }
 
     // Real-time subscriptions
     const materialsSubscription = supabase
@@ -134,7 +124,7 @@ export default function DashboardPage() {
       supabase.removeChannel(materialsSubscription);
       supabase.removeChannel(profilesSubscription);
     };
-  }, [router]);
+  }, [router, profile, profileLoading]);
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
