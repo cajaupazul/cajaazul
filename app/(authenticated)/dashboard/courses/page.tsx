@@ -236,6 +236,7 @@ export default function CoursesPage() {
               Agregar Curso
             </Button>
           </DialogTrigger>
+
           <DialogContent className="bg-bb-card border-bb-border text-bb-text max-w-md max-h-screen overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Agregar Nuevo Curso</DialogTitle>
@@ -389,82 +390,84 @@ export default function CoursesPage() {
         </span>
       </div>
 
-      {filteredCourses.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filteredCourses.map((course) => (
-            <div
-              key={course.id}
-              className="group cursor-pointer overflow-hidden rounded-lg shadow-md glass-card transition-all hover:shadow-lg hover:border-blue-500/30"
-              onClick={() => router.push(`/dashboard/courses/${course.id}`)}
-            >
-              <div className="relative h-40 overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600">
-                {course.imagen_url ? (
-                  <img
-                    src={course.imagen_url}
-                    alt={course.nombre}
-                    className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="h-full w-full bg-gradient-to-br from-blue-400 via-blue-500 to-teal-600 transition-transform group-hover:scale-105" />
-                )}
-              </div>
-
-              <div className="p-4">
-                <span className="text-xs font-semibold text-bb-text-secondary uppercase">
-                  {course.codigo}
-                </span>
-
-                <h3 className="mt-2 line-clamp-2 text-sm font-bold text-bb-text group-hover:text-blue-400 transition-colors">
-                  {course.nombre}
-                </h3>
-
-                <div className="mt-2 text-xs text-bb-text-secondary space-y-1">
-                  {course.carrera && <div>{course.carrera}</div>}
-                  {course.ciclo && <div>Ciclo {course.ciclo}</div>}
+      {
+        filteredCourses.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {filteredCourses.map((course) => (
+              <div
+                key={course.id}
+                className="group cursor-pointer overflow-hidden rounded-lg shadow-md glass-card transition-all hover:shadow-lg hover:border-blue-500/30"
+                onClick={() => router.push(`/dashboard/courses/${course.id}`)}
+              >
+                <div className="relative h-40 overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600">
+                  {course.imagen_url ? (
+                    <img
+                      src={course.imagen_url}
+                      alt={course.nombre}
+                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-blue-400 via-blue-500 to-teal-600 transition-transform group-hover:scale-105" />
+                  )}
                 </div>
 
-                <div className="mt-3 flex items-center justify-between pt-3 border-t border-bb-border">
-                  <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-green-500/20">
-                    Abierto
-                  </Badge>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleSavedCourse(course.id);
-                      }}
-                      className={`text-lg transition-colors ${savedCourses.includes(course.id)
-                        ? 'text-yellow-400'
-                        : 'text-bb-text-secondary hover:text-yellow-400'
-                        }`}
-                      aria-label="Guardar curso"
-                    >
-                      ★
-                    </button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/dashboard/courses/${course.id}`);
-                      }}
-                      className="text-blue-500 hover:bg-blue-500/10 hover:text-blue-400"
-                    >
-                      Ver más
-                    </Button>
+                <div className="p-4">
+                  <span className="text-xs font-semibold text-bb-text-secondary uppercase">
+                    {course.codigo}
+                  </span>
+
+                  <h3 className="mt-2 line-clamp-2 text-sm font-bold text-bb-text group-hover:text-blue-400 transition-colors">
+                    {course.nombre}
+                  </h3>
+
+                  <div className="mt-2 text-xs text-bb-text-secondary space-y-1">
+                    {course.carrera && <div>{course.carrera}</div>}
+                    {course.ciclo && <div>Ciclo {course.ciclo}</div>}
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between pt-3 border-t border-bb-border">
+                    <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-green-500/20">
+                      Abierto
+                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSavedCourse(course.id);
+                        }}
+                        className={`text-lg transition-colors ${savedCourses.includes(course.id)
+                          ? 'text-yellow-400'
+                          : 'text-bb-text-secondary hover:text-yellow-400'
+                          }`}
+                        aria-label="Guardar curso"
+                      >
+                        ★
+                      </button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/dashboard/courses/${course.id}`);
+                        }}
+                        className="text-blue-500 hover:bg-blue-500/10 hover:text-blue-400"
+                      >
+                        Ver más
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-bb-text-secondary text-lg">
-            {searchQuery ? 'No se encontraron cursos' : 'No hay cursos disponibles'}
-          </p>
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-bb-text-secondary text-lg">
+              {searchQuery ? 'No se encontraron cursos' : 'No hay cursos disponibles'}
+            </p>
+          </div>
+        )
+      }
+    </div >
   );
 }
