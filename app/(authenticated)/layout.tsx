@@ -41,7 +41,7 @@ export default function AuthenticatedLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { colors, loading: themeLoading } = useTheme();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, session, loading: profileLoading } = useProfile();
   const { refreshAll, courses, professors, grupos } = useDashboardData();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const dataFetched = useRef(false);
@@ -49,16 +49,18 @@ export default function AuthenticatedLayout({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    if (profile && !dataFetched.current) {
-      console.log('Profile ready, triggering global prefetch...');
+    // Solo cuando tenemos sesión Y perfil, y no hemos cargado datos esta vez
+    if (session && profile && !dataFetched.current) {
+      console.log('Session & Profile ready, triggering global prefetch...');
       refreshAll(profile.id);
       dataFetched.current = true;
     }
 
-    if (!profileLoading && !profile) {
+    // Redirect logic
+    if (!profileLoading && !session) {
       router.replace('/auth/login');
     }
-  }, [profile, profileLoading, router, refreshAll]);
+  }, [session, profile, profileLoading, router, refreshAll]);
 
   const handleLogoutClick = () => {
     setShowLogoutConfirm(true);
@@ -101,7 +103,10 @@ export default function AuthenticatedLayout({
   // This prevents flickering/stalling on tab refocus (handled by Supabase refocus checks).
   // No desmontamos los hijos nunca para evitar perder el estado.
   // En su lugar, mostramos un overlay si realmente estamos en carga inicial.
-  const isInitialLoading = profileLoading && !profile;
+  // Mostramos el loader si:
+  // 1. Todavía estamos verificando la sesión inicial (profileLoading es true)
+  // 2. Tenemos sesión pero aún no hemos cargado el perfil (profile es null)
+  const isInitialLoading = profileLoading || (session && !profile);
 
   return (
     <div className="relative flex h-screen bg-bb-dark transition-colors duration-300">

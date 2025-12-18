@@ -55,7 +55,7 @@ export default function CoursesPage() {
     imagen: null as File | null,
   });
 
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, session, loading: profileLoading } = useProfile();
   const [debugLog, setDebugLog] = useState<string[]>([]);
 
   const addLog = (msg: string) => {
@@ -64,14 +64,15 @@ export default function CoursesPage() {
   };
 
   useEffect(() => {
-    if (courses.length === 0 && !globalLoading.courses && profile) {
+    // Solo cargamos si tenemos sesión activa
+    if (session && courses.length === 0 && !globalLoading.courses) {
       fetchCourses();
     }
 
-    if (!profileLoading && !profile) {
+    if (!profileLoading && !session) {
       router.push('/auth/login');
     }
-  }, [profile, profileLoading, courses.length, globalLoading.courses, fetchCourses]);
+  }, [session, profileLoading, courses.length, globalLoading.courses, fetchCourses, router]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

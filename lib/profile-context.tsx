@@ -2,9 +2,11 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase, Profile } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
 
 interface ProfileContextType {
   profile: Profile | null;
+  session: Session | null;
   loading: boolean;
   updateProfile: (updatedProfile: Profile) => void;
   refreshProfile: () => Promise<void>;
@@ -14,125 +16,70 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const subscriptionRef = useRef<any>(null);
+  const profileRef = useRef<Profile | null>(null);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (!error && data) {
+        setProfile(data);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
 
-    const initializeProfile = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!isMounted) return;
-
-        if (user) {
-          setCurrentUserId(user.id);
-
-          // Cargar perfil del usuario
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-
-          if (!isMounted) return;
-
-          if (error) {
-            console.error('Error loading profile:', error);
-            setProfile(null);
-          } else if (data) {
-            setProfile(data);
-          }
-
-          // Suscribirse a cambios en tiempo real SOLO para este usuario
-          if (subscriptionRef.current) {
-            subscriptionRef.current.unsubscribe();
-          }
-
-          subscriptionRef.current = supabase
-            .channel(`profile_${user.id}_${Date.now()}`)
-            .on(
-              'postgres_changes',
-              {
-                event: '*',
-                schema: 'public',
-                table: 'profiles',
-                filter: `id=eq.${user.id}`,
-              },
-              (payload: any) => {
-                if (isMounted && payload.new?.id === user.id) {
-                  setProfile(payload.new);
-                }
-              }
-            )
-            .subscribe((status) => {
-              if (status === 'SUBSCRIBED') {
-                console.log('Profile subscription active for user:', user.id);
-              }
-            });
-        } else {
-          setProfile(null);
-          setCurrentUserId(null);
+    // 1. Get initial session
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      if (isMounted) {
+        setSession(initialSession);
+        if (initialSession?.user) {
+          fetchProfile(initialSession.user.id);
         }
-      } catch (error) {
-        console.error('Error initializing profile:', error);
-        if (isMounted) {
-          setProfile(null);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
-    };
+    });
 
-    initializeProfile();
-
-    // Escuchar cambios de autenticación
+    // 2. Listen for auth changes
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event, currentSession) => {
         if (!isMounted) return;
 
-        console.log(`[AUTH_CHANGE] Event: ${event}, User: ${session?.user?.id?.slice(0, 5) || 'none'}`);
+        console.log(`[AUTH_CHANGE] Event: ${event}, User: ${currentSession?.user?.id?.slice(0, 5) || 'none'}`);
 
-        if (event === 'SIGNED_IN' && session?.user) {
-          const userId = session.user.id;
+        setSession(currentSession);
 
-          // Si el ID de usuario no ha cambiado, no forzamos recarga del perfil
-          // a menos que el perfil actual sea nulo.
-          if (userId === currentUserId && profile) {
-            return;
-          }
-
-          setCurrentUserId(userId);
-
-          // SOLO ponemos loading si realmente no tenemos nada válido en memoria
-          if (!profile) {
-            setLoading(true);
-          }
-
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
-
-          if (isMounted) {
-            if (data) {
-              setProfile(data);
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (currentSession?.user) {
+            // Use ref to check up-to-date profile state
+            if (!profileRef.current || profileRef.current.id !== currentSession.user.id) {
+              await fetchProfile(currentSession.user.id);
             }
-            setLoading(false);
           }
         } else if (event === 'SIGNED_OUT') {
           setProfile(null);
-          setCurrentUserId(null);
-          setLoading(false);
           if (subscriptionRef.current) {
             subscriptionRef.current.unsubscribe();
+            subscriptionRef.current = null;
           }
         }
+
+        setLoading(false);
       }
     );
 
@@ -143,51 +90,75 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         subscriptionRef.current.unsubscribe();
       }
     };
-  }, []);
+  }, [fetchProfile]);
+
+  // Separate effect for real-time profile updates
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const userId = session.user.id;
+
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe();
+    }
+
+    subscriptionRef.current = supabase
+      .channel(`profile_realtime_${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userId}`,
+        },
+        (payload: any) => {
+          if (payload.new?.id === userId) {
+            setProfile(payload.new);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
+      }
+    };
+  }, [session?.user?.id]);
 
   const updateProfile = useCallback((updatedProfile: Profile) => {
-    if (updatedProfile.id === currentUserId) {
+    if (updatedProfile.id === session?.user?.id) {
       setProfile(updatedProfile);
-      // Guardar cambios en Supabase automáticamente
       supabase
         .from('profiles')
         .update({
           avatar_url: updatedProfile.avatar_url,
           background_url: updatedProfile.background_url,
+          nombre: updatedProfile.nombre,
+          carrera: updatedProfile.carrera
         })
-        .eq('id', currentUserId)
+        .eq('id', session.user.id)
         .then(({ error }) => {
-          if (error) console.error('Error updating profile:', error);
+          if (error) console.error('Error auto-syncing profile:', error);
         });
     }
-  }, [currentUserId]);
+  }, [session?.user?.id]);
 
   const refreshProfile = useCallback(async () => {
-    if (currentUserId) {
-      try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', currentUserId)
-          .single();
-
-        if (data) {
-          setProfile(data);
-        }
-      } catch (error) {
-        console.error('Error refreshing profile:', error);
-      } finally {
-        setLoading(false);
-      }
+    if (session?.user?.id) {
+      await fetchProfile(session.user.id);
     }
-  }, [currentUserId]);
+  }, [session?.user?.id, fetchProfile]);
 
   const value = useMemo(() => ({
     profile,
+    session,
     loading,
     updateProfile,
     refreshProfile
-  }), [profile, loading, updateProfile, refreshProfile]);
+  }), [profile, session, loading, updateProfile, refreshProfile]);
 
   return (
     <ProfileContext.Provider value={value}>

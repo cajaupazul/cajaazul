@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
 export default function GruposPage() {
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, session, loading: profileLoading } = useProfile();
   const {
     grupos,
     userGrupos,
@@ -48,13 +48,13 @@ export default function GruposPage() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
 
   useEffect(() => {
-    if (grupos.length === 0 && !globalLoading.grupos) {
+    if (session && grupos.length === 0 && !globalLoading.grupos) {
       fetchGrupos();
     }
-    if (userGrupos.size === 0 && profile?.id) {
-      fetchUserGrupos(profile.id);
+    if (session?.user?.id && userGrupos.size === 0) {
+      fetchUserGrupos(session.user.id);
     }
-  }, [profile?.id, grupos.length, globalLoading.grupos, userGrupos.size, fetchGrupos, fetchUserGrupos]);
+  }, [session, grupos.length, globalLoading.grupos, userGrupos.size, fetchGrupos, fetchUserGrupos]);
 
   const triggerConfetti = () => {
     const end = Date.now() + 1000;
@@ -85,16 +85,16 @@ export default function GruposPage() {
   const handleUnirse = async (e: React.MouseEvent, grupoId: string) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!session?.user?.id) return;
+
     try {
       const { error } = await supabase
         .from('grupo_miembros')
-        .insert([{ grupo_id: grupoId, user_id: profile?.id }]);
+        .insert([{ grupo_id: grupoId, user_id: session.user.id }]);
 
       if (error) throw error;
 
-      if (profile?.id) {
-        fetchUserGrupos(profile.id);
-      }
+      fetchUserGrupos(session.user.id);
       fetchGrupos(); // To update counts
       triggerConfetti();
     } catch (error) {
@@ -105,6 +105,7 @@ export default function GruposPage() {
   const handleAbandonar = async (e: React.MouseEvent, grupoId: string) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!session?.user?.id) return;
     if (!confirm('¿Estás seguro de abandonar este grupo?')) return;
 
     try {
@@ -112,12 +113,10 @@ export default function GruposPage() {
         .from('grupo_miembros')
         .delete()
         .eq('grupo_id', grupoId)
-        .eq('user_id', profile?.id);
+        .eq('user_id', session.user.id);
 
       if (error) throw error;
-      if (profile?.id) {
-        fetchUserGrupos(profile.id);
-      }
+      fetchUserGrupos(session.user.id);
       fetchGrupos(); // To update counts
     } catch (error) {
       console.error('Error abandonando grupo:', error);

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase, Course, Professor } from '@/lib/supabase';
+import { useProfile } from './profile-context';
 
 interface DashboardDataContextType {
     courses: Course[];
@@ -24,11 +25,15 @@ interface DashboardDataContextType {
 const DashboardDataContext = createContext<DashboardDataContextType | undefined>(undefined);
 
 export function DashboardDataProvider({ children }: { children: React.ReactNode }) {
+    const { session } = useProfile();
     const [courses, setCourses] = useState<Course[]>([]);
     const [professors, setProfessors] = useState<any[]>([]);
     const [grupos, setGrupos] = useState<any[]>([]);
     const [userGrupos, setUserGrupos] = useState<Set<string>>(new Set());
     const [miembrosCuenta, setMiembrosCuenta] = useState<Record<string, number>>({});
+
+    // Tracking per-session fetches to avoid loops
+    const initialFetchDone = useRef(false);
 
     const [loading, setLoading] = useState({
         courses: false,
@@ -37,6 +42,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     });
 
     const fetchCourses = useCallback(async () => {
+        if (!session) return;
         setLoading(prev => ({ ...prev, courses: true }));
         try {
             const { data, error } = await supabase
@@ -50,9 +56,10 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         } finally {
             setLoading(prev => ({ ...prev, courses: false }));
         }
-    }, []);
+    }, [session]);
 
     const fetchProfessors = useCallback(async () => {
+        if (!session) return;
         setLoading(prev => ({ ...prev, professors: true }));
         try {
             const { data, error } = await supabase
@@ -81,9 +88,10 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         } finally {
             setLoading(prev => ({ ...prev, professors: false }));
         }
-    }, []);
+    }, [session]);
 
     const fetchGrupos = useCallback(async () => {
+        if (!session) return;
         setLoading(prev => ({ ...prev, grupos: true }));
         try {
             const { data, error } = await supabase
@@ -105,10 +113,10 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         } finally {
             setLoading(prev => ({ ...prev, grupos: false }));
         }
-    }, []);
+    }, [session]);
 
     const fetchUserGrupos = useCallback(async (userId: string) => {
-        if (!userId) return;
+        if (!userId || !session) return;
         try {
             const { data, error } = await supabase
                 .from('grupo_miembros')
@@ -121,16 +129,18 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         } catch (e) {
             console.error('Error fetching user groups:', e);
         }
-    }, []);
+    }, [session]);
 
     const refreshAll = useCallback(async (userId?: string) => {
+        if (!session) return;
+
         await Promise.all([
             fetchCourses(),
             fetchProfessors(),
             fetchGrupos(),
-            userId ? fetchUserGrupos(userId) : Promise.resolve()
+            (userId || session.user.id) ? fetchUserGrupos(userId || session.user.id) : Promise.resolve()
         ]);
-    }, [fetchCourses, fetchProfessors, fetchGrupos, fetchUserGrupos]);
+    }, [session, fetchCourses, fetchProfessors, fetchGrupos, fetchUserGrupos]);
 
     const value = useMemo(() => ({
         courses,
@@ -163,3 +173,4 @@ export function useDashboardData() {
     }
     return context;
 }
+

@@ -42,7 +42,7 @@ const itemVariants: Variants = {
 export default function ProfessorsPage() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, session, loading: profileLoading } = useProfile();
   const [debugLog, setDebugLog] = useState<string[]>([]);
   const addLog = (msg: string) => {
     setDebugLog(prev => [msg, ...prev].slice(0, 5));
@@ -61,24 +61,24 @@ export default function ProfessorsPage() {
   });
 
   useEffect(() => {
-    if (professors.length === 0 && !globalLoading.professors && profile) {
+    if (session && professors.length === 0 && !globalLoading.professors) {
       fetchProfessors();
     }
 
     const initializeUserData = async () => {
-      if (profile?.id) {
-        await fetchSavedProfessors(profile.id);
+      if (session?.user?.id) {
+        await fetchSavedProfessors(session.user.id);
       }
     };
 
-    if (profile?.id) {
+    if (session?.user?.id) {
       initializeUserData();
     }
 
-    if (!profileLoading && !profile) {
+    if (!profileLoading && !session) {
       router.push('/auth/login');
     }
-  }, [profile, profileLoading, professors.length, globalLoading.professors, fetchProfessors]);
+  }, [session, profileLoading, professors.length, globalLoading.professors, fetchProfessors, router]);
 
   // Global fetch is now in context
 
