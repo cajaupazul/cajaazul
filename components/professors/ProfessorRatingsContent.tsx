@@ -62,12 +62,14 @@ interface ProfessorRatingsContentProps {
     professor: Professor;
     initialRatings: Rating[];
     courseMapping?: Record<string, string>;
+    aggregatedOtherCourses?: string[];
 }
 
 export default function ProfessorRatingsContent({
     professor,
     initialRatings,
-    courseMapping = {}
+    courseMapping = {},
+    aggregatedOtherCourses = []
 }: ProfessorRatingsContentProps) {
     const router = useRouter();
     const { colors } = useTheme();
@@ -304,16 +306,16 @@ export default function ProfessorRatingsContent({
                             </div>
                         )}
 
-                        {professor.otros_cursos && (
-                            <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
-                                <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-                                    </svg>
-                                    Otros Cursos
-                                </h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {professor.otros_cursos.split(',').map((curso: string, idx: number) => {
+                        <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
+                            <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+                                </svg>
+                                Otros Cursos
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                                {aggregatedOtherCourses.length > 0 ? (
+                                    aggregatedOtherCourses.map((curso: string, idx: number) => {
                                         const trimmedCurso = curso.trim();
                                         const courseId = courseMapping[trimmedCurso];
 
@@ -334,10 +336,12 @@ export default function ProfessorRatingsContent({
                                                 {trimmedCurso}
                                             </span>
                                         );
-                                    })}
-                                </div>
+                                    })
+                                ) : (
+                                    <p className="text-sm text-bb-text-secondary">No se encontraron otros cursos.</p>
+                                )}
                             </div>
-                        )}
+                        </div>
                     </div>
 
                     <div className="space-y-6">
