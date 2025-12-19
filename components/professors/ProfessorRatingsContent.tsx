@@ -62,6 +62,7 @@ interface ProfessorRatingsContentProps {
     professor: Professor;
     initialRatings: Rating[];
     courseMapping?: Record<string, string>;
+    professorLinkMapping?: Record<string, string>;
     aggregatedOtherCourses?: string[];
 }
 
@@ -69,6 +70,7 @@ export default function ProfessorRatingsContent({
     professor,
     initialRatings,
     courseMapping = {},
+    professorLinkMapping = {},
     aggregatedOtherCourses = []
 }: ProfessorRatingsContentProps) {
     const router = useRouter();
@@ -176,7 +178,14 @@ export default function ProfessorRatingsContent({
                         <div className="flex-1 space-y-2">
                             <h1 className="text-3xl md:text-4xl font-black text-bb-text">{professor.nombre}</h1>
                             <div className="flex flex-wrap gap-1 justify-center md:justify-start">
-                                {professor.especialidad && courseMapping[professor.especialidad.toLowerCase()] ? (
+                                {professor.especialidad && professorLinkMapping[professor.especialidad.toLowerCase()] ? (
+                                    <Link
+                                        href={`/dashboard/professors/${professorLinkMapping[professor.especialidad.toLowerCase()]}`}
+                                        className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-lg text-sm border border-blue-500/20 hover:bg-blue-500/20 transition-colors font-bold"
+                                    >
+                                        {professor.especialidad}
+                                    </Link>
+                                ) : professor.especialidad && courseMapping[professor.especialidad.toLowerCase()] ? (
                                     <Link
                                         href={`/dashboard/courses/${courseMapping[professor.especialidad.toLowerCase()]}`}
                                         className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-lg text-sm border border-blue-500/20 hover:bg-blue-500/20 transition-colors font-bold"
@@ -317,7 +326,24 @@ export default function ProfessorRatingsContent({
                                 {aggregatedOtherCourses.length > 0 ? (
                                     aggregatedOtherCourses.map((curso: string, idx: number) => {
                                         const trimmedCurso = curso.trim();
+                                        const trimmedCurso = curso.trim();
+                                        const professorId = professorLinkMapping[trimmedCurso.toLowerCase()];
                                         const courseId = courseMapping[trimmedCurso.toLowerCase()];
+
+                                        // Priority 1: Link to professor profile if exists
+                                        if (professorId) {
+                                            return (
+                                                <Link 
+                                                    key={idx} 
+                                                    href={`/dashboard/professors/${professorId}`}
+                                                    className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium hover:bg-purple-500/20 transition-colors"
+                                                >
+                                                    {trimmedCurso}
+                                                </Link>
+                                            );
+                                        }
+
+                                        // Priority 2: Link to course page if exists
 
                                         if (courseId) {
                                             return (

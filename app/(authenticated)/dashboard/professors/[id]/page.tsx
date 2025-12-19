@@ -32,7 +32,7 @@ export default async function ProfessorRatingsPage({ params }: { params: { id: s
     { data: ratingsData }
   ] = await Promise.all([
     supabase.from('professors')
-      .select('especialidad, otros_cursos')
+      .select('id, especialidad, otros_cursos')
       .ilike('nombre', currentProf.nombre),
     supabase.from('professor_ratings')
       .select('*, profiles(nombre, avatar_url, background_url, bio, carrera, link_instagram)')
@@ -43,6 +43,9 @@ export default async function ProfessorRatingsPage({ params }: { params: { id: s
   // 4. Aggregate unique courses across all records (case-insensitive for uniqueness)
   const uniqueCoursesMap = new Map<string, string>(); // Original Name -> Lowercase Version
 
+  // NEW: Create professor link mapping (especialidad -> professor ID)
+  const professorLinkMapping: Record<string, string> = {};
+
   const processCourseName = (name: string) => {
     const trimmed = name.trim();
     if (trimmed) {
@@ -52,7 +55,13 @@ export default async function ProfessorRatingsPage({ params }: { params: { id: s
 
   if (allProfRecords) {
     allProfRecords.forEach(rec => {
-      if (rec.especialidad) processCourseName(rec.especialidad);
+      // Map especialidad to professor ID for interlinking
+      if (rec.especialidad) {
+        const especialidadLower = rec.especialidad.trim().toLowerCase();
+        professorLinkMapping[especialidadLower] = rec.id;
+        processCourseName(rec.especialidad);
+      }
+
       if (rec.otros_cursos) {
         rec.otros_cursos.split(',').forEach((c: string) => processCourseName(c));
       }
@@ -63,11 +72,7 @@ export default async function ProfessorRatingsPage({ params }: { params: { id: s
   const allUniqueCourseOriginalNames = Array.from(uniqueCoursesMap.values());
   const allUniqueCourseLowerNames = Array.from(uniqueCoursesMap.keys());
 
-  // 5. Fetch course mapping (Case-insensitive matching)
-  // We'll fetch all courses whose name is in our lowercase list
-  // Note: Supabase .in is case-sensitive, so we fetch and filter in JS if needed or just use multiple ilike
-  // For better reliability with many courses, we fetch naming matches carefully.
-
+  // 5. Fetch course mapping (Case-insensitive matching) - as fallback
   const { data: matchedCourses } = await supabase
     .from('courses')
     .select('id, nombre')
@@ -79,7 +84,6 @@ export default async function ProfessorRatingsPage({ params }: { params: { id: s
   });
 
   // If some are missing, maybe they have different casing. 
-  // We can try to fetch all if the list is small, or use .or with ilike
   const missingLowerNames = allUniqueCourseLowerNames.filter(name => !courseMapping[name]);
 
   if (missingLowerNames.length > 0) {
@@ -106,6 +110,7 @@ export default async function ProfessorRatingsPage({ params }: { params: { id: s
       professor={currentProf}
       initialRatings={ratingsData || []}
       courseMapping={courseMapping}
+      professorLinkMapping={professorLinkMapping}
       aggregatedOtherCourses={aggregatedOtherCourses}
     />
   );
