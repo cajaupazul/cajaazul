@@ -1,7 +1,7 @@
 {
   "/(authenticated)/dashboard/page": "app/(authenticated)/dashboard/page.js",
+  "/(authenticated)/dashboard/grupos/page": "app/(authenticated)/dashboard/grupos/page.js",
   "/(authenticated)/dashboard/courses/page": "app/(authenticated)/dashboard/courses/page.js",
   "/(authenticated)/dashboard/professors/page": "app/(authenticated)/dashboard/professors/page.js",
-  "/(authenticated)/dashboard/grupos/page": "app/(authenticated)/dashboard/grupos/page.js",
   "/(authenticated)/profile/page": "app/(authenticated)/profile/page.js"
 }

@@ -103,7 +103,6 @@ export default function RegisterPage() {
           .insert({
             id: authData.user.id,
             nombre: formData.nombre.trim(),
-            email: formData.email.trim(),
             universidad: formData.universidad,
             carrera: formData.carrera,
             avatar_url: null,
@@ -152,7 +151,7 @@ export default function RegisterPage() {
           <div className="absolute top-10 left-10 w-72 h-72 bg-white rounded-full"></div>
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-white rounded-full"></div>
         </div>
-        
+
         {/* Placeholder Image */}
         <div className="relative z-10 text-center">
           {imageUrl && (

@@ -33,27 +33,63 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
 
+      if (error && error.code === 'PGRST116') {
+        // Profile not found, let's try to create a default one
+        console.log('Profile not found for authenticated user, creating default...');
+
+        // Get user metadata from current session if available
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          const defaultProfile = {
+            id: userId,
+            nombre: user.user_metadata?.nombre || user.email?.split('@')[0] || 'Usuario',
+            universidad: user.user_metadata?.universidad || 'Universidad Nacional',
+            carrera: user.user_metadata?.carrera || 'General',
+            puntos: 0,
+            avatar_url: null,
+            bio: null
+          };
+
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert(defaultProfile)
+            .select()
+            .single();
+
+          if (!insertError && newProfile) {
+            setProfile(newProfile);
+            return;
+          } else {
+            console.error('Error creating default profile:', insertError);
+          }
+        }
+      }
+
       if (!error && data) {
         setProfile(data);
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error fetching/creating profile:', error);
     }
   }, []);
 
   useEffect(() => {
     let isMounted = true;
 
-    // 1. Get initial session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      if (isMounted) {
-        setSession(initialSession);
-        if (initialSession?.user) {
-          fetchProfile(initialSession.user.id);
-        }
-        setLoading(false);
+    // 1. Get initial session and profile
+    const initialize = async () => {
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      if (!isMounted) return;
+
+      setSession(initialSession);
+      if (initialSession?.user) {
+        await fetchProfile(initialSession.user.id);
       }
-    });
+      setLoading(false);
+    };
+
+    initialize();
 
     // 2. Listen for auth changes
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
@@ -66,10 +102,12 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (currentSession?.user) {
+            setLoading(true);
             // Use ref to check up-to-date profile state
             if (!profileRef.current || profileRef.current.id !== currentSession.user.id) {
               await fetchProfile(currentSession.user.id);
             }
+            setLoading(false);
           }
         } else if (event === 'SIGNED_OUT') {
           setProfile(null);
@@ -77,9 +115,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             subscriptionRef.current.unsubscribe();
             subscriptionRef.current = null;
           }
+          setLoading(false);
         }
-
-        setLoading(false);
       }
     );
 
