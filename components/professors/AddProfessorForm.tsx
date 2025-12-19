@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { supabase, Profile } from '@/lib/supabase';
-import { AlertCircle, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
+import { supabase, Profile, Professor } from '@/lib/supabase';
+import { AlertCircle, CheckCircle2, Loader2, ArrowLeft, Search, User } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AddProfessorFormProps {
     profile: Profile | null;
@@ -19,7 +20,11 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [checking, setChecking] = useState(false);
+    const [searching, setSearching] = useState(false);
     const [duplicateError, setDuplicateError] = useState(false);
+    const [suggestions, setSuggestions] = useState<Professor[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const suggestionRef = useRef<HTMLDivElement>(null);
 
     const [formData, setFormData] = useState({
         nombre: '',
@@ -29,7 +34,44 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
         otros_cursos: '',
     });
 
-    // Real-time validation for duplicates
+    // Close suggestions when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
+                setShowSuggestions(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Search for matches/suggestions as user types name
+    useEffect(() => {
+        const searchProfessors = async () => {
+            if (formData.nombre.trim().length >= 3) {
+                setSearching(true);
+                const { data, error } = await supabase
+                    .from('professors')
+                    .select('*')
+                    .ilike('nombre', `%${formData.nombre.trim()}%`)
+                    .limit(5);
+
+                if (!error && data) {
+                    setSuggestions(data);
+                    setShowSuggestions(data.length > 0);
+                }
+                setSearching(false);
+            } else {
+                setSuggestions([]);
+                setShowSuggestions(false);
+            }
+        };
+
+        const timer = setTimeout(searchProfessors, 300);
+        return () => clearTimeout(timer);
+    }, [formData.nombre]);
+
+    // Check for exact duplicates (name + specialty)
     useEffect(() => {
         const checkDuplicate = async () => {
             if (formData.nombre.trim().length > 3 && formData.especialidad.trim().length > 2) {
@@ -59,6 +101,18 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
         setFormData(prev => ({ ...prev, [id]: value }));
+        if (id === 'nombre') setShowSuggestions(true);
+    };
+
+    const handleSelectSuggestion = (prof: Professor) => {
+        setFormData({
+            nombre: prof.nombre,
+            especialidad: prof.especialidad || '',
+            facultad: prof.facultad || '',
+            email: prof.email || '',
+            otros_cursos: prof.otros_cursos || '',
+        });
+        setShowSuggestions(false);
     };
 
     const getRandomBackgroundImage = () => {
@@ -73,14 +127,14 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
 
         setLoading(true);
         try {
-            const { data, error } = await supabase.from('professors').insert({
+            const { error } = await supabase.from('professors').insert({
                 nombre: formData.nombre.trim(),
                 especialidad: formData.especialidad.trim(),
                 facultad: formData.facultad.trim() || null,
                 email: formData.email.trim() || null,
                 otros_cursos: formData.otros_cursos.trim() || null,
                 background_image_url: getRandomBackgroundImage(),
-            }).select().single();
+            });
 
             if (error) throw error;
 
@@ -114,18 +168,63 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                 <CardContent className="pt-8">
                     <form onSubmit={handleSubmit} className="space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-3">
+                            <div className="space-y-3 relative">
                                 <Label htmlFor="nombre" className="text-bb-text text-sm font-bold uppercase tracking-wider">
                                     Nombre Completo *
                                 </Label>
-                                <Input
-                                    id="nombre"
-                                    value={formData.nombre}
-                                    onChange={handleChange}
-                                    placeholder="Ej: Dr. Juan García"
-                                    required
-                                    className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-lg"
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="nombre"
+                                        value={formData.nombre}
+                                        onChange={handleChange}
+                                        onFocus={() => formData.nombre.length >= 3 && setShowSuggestions(true)}
+                                        placeholder="Ej: Dr. Juan García"
+                                        required
+                                        className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-lg pl-10"
+                                        autoComplete="off"
+                                    />
+                                    <Search className="absolute left-3 top-3.5 w-5 h-5 text-gray-500" />
+                                    {searching && (
+                                        <div className="absolute right-3 top-3.5">
+                                            <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Autocomplete Suggestions */}
+                                <AnimatePresence>
+                                    {showSuggestions && suggestions.length > 0 && (
+                                        <motion.div
+                                            ref={suggestionRef}
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            className="absolute z-50 w-full mt-2 bg-bb-card border border-bb-border rounded-xl shadow-2xl overflow-hidden"
+                                        >
+                                            <div className="p-2 border-b border-bb-border bg-bb-darker/50">
+                                                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest px-2">¿Es alguno de estos profesores?</p>
+                                            </div>
+                                            <div className="max-h-60 overflow-y-auto">
+                                                {suggestions.map((prof) => (
+                                                    <button
+                                                        key={prof.id}
+                                                        type="button"
+                                                        onClick={() => handleSelectSuggestion(prof)}
+                                                        className="w-full flex items-center gap-3 p-3 hover:bg-bb-hover transition-colors text-left border-b border-bb-border last:border-0"
+                                                    >
+                                                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                                                            <User className="w-4 h-4" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-bold text-bb-text truncate">{prof.nombre}</p>
+                                                            <p className="text-xs text-bb-text-secondary truncate">{prof.especialidad} • {prof.facultad || 'Facultad General'}</p>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
 
                             <div className="space-y-3">
@@ -207,7 +306,7 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                                 </motion.div>
                             )}
 
-                            {!duplicateError && formData.nombre.trim().length > 3 && formData.especialidad.trim().length > 2 && !checking && (
+                            {!duplicateError && formData.nombre.trim().length > 3 && formData.especialidad.trim().length > 2 && !checking && !searching && (
                                 <motion.div
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -250,6 +349,3 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
         </div>
     );
 }
-
-// Framer Motion placeholders if not imported globally
-import { motion, AnimatePresence } from 'framer-motion';
