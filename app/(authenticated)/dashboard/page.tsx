@@ -86,15 +86,21 @@ export default function DashboardPage() {
     setMotivational(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
 
     if (!profileLoading && profile) {
+      console.log('Dashboard: Profile ready, fetching data...');
       fetchData();
     } else if (!profileLoading && !profile) {
+      console.log('Dashboard: No profile found, redirecting...');
       router.push('/auth/login');
     }
 
     // Safety timeout to prevent infinite loading spinner
     const timer = setTimeout(() => {
-      setLoading(false);
-    }, 4000);
+      console.log('Dashboard: Safety timeout reached.');
+      setLoading(p => {
+        if (p) console.warn('Dashboard: Stuck in loading, forcing visible...');
+        return false;
+      });
+    }, 5000);
 
     // Real-time subscriptions
     const materialsSubscription = supabase
@@ -130,7 +136,7 @@ export default function DashboardPage() {
       supabase.removeChannel(profilesSubscription);
       clearTimeout(timer);
     };
-  }, [router, profile, profileLoading]);
+  }, [router, profile?.id, profileLoading]);
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
