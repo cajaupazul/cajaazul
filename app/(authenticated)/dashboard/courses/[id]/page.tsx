@@ -58,7 +58,6 @@ export default async function CourseDetailPage({ params }: { params: { id: strin
   return (
     <CourseDetailContent
       course={course}
-      materials={materials || []}
       topProfessor={topProfessor}
       allProfessors={allProfessors}
       initialMaterials={materials || []}
