@@ -31,10 +31,27 @@ export default async function ProfessorRatingsPage({ params }: { params: { id: s
     notFound();
   }
 
+  // 3. Fetch course mapping for linking
+  const courseNames = [
+    profData.especialidad,
+    ...(profData.otros_cursos ? profData.otros_cursos.split(',').map((c: any) => c.trim()) : [])
+  ].filter(Boolean);
+
+  const { data: matchedCourses } = await supabase
+    .from('courses')
+    .select('id, nombre')
+    .in('nombre', courseNames);
+
+  const courseMapping: Record<string, string> = {};
+  matchedCourses?.forEach(c => {
+    courseMapping[c.nombre] = c.id;
+  });
+
   return (
     <ProfessorRatingsContent
       professor={profData}
       initialRatings={ratingsData || []}
+      courseMapping={courseMapping}
     />
   );
 }

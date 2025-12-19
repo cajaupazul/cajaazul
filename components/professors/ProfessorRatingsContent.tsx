@@ -61,9 +61,14 @@ const getColorFromName = (nombre: string) => {
 interface ProfessorRatingsContentProps {
     professor: Professor;
     initialRatings: Rating[];
+    courseMapping?: Record<string, string>;
 }
 
-export default function ProfessorRatingsContent({ professor, initialRatings }: ProfessorRatingsContentProps) {
+export default function ProfessorRatingsContent({
+    professor,
+    initialRatings,
+    courseMapping = {}
+}: ProfessorRatingsContentProps) {
     const router = useRouter();
     const { colors } = useTheme();
     const [ratings, setRatings] = useState<Rating[]>(initialRatings);
@@ -169,9 +174,21 @@ export default function ProfessorRatingsContent({ professor, initialRatings }: P
                         <div className="flex-1 space-y-2">
                             <h1 className="text-3xl md:text-4xl font-black text-bb-text">{professor.nombre}</h1>
                             <div className="flex flex-wrap gap-1 justify-center md:justify-start">
-                                <span className="bg-bb-darker text-bb-text px-3 py-1 rounded-lg text-sm border border-bb-border">
-                                    {professor.especialidad}
-                                </span>
+                                {professor.especialidad && courseMapping[professor.especialidad] ? (
+                                    <Link
+                                        href={`/dashboard/courses/${courseMapping[professor.especialidad]}`}
+                                        className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-lg text-sm border border-blue-500/20 hover:bg-blue-500/20 transition-colors font-bold"
+                                    >
+                                        {professor.especialidad}
+                                    </Link>
+                                ) : (
+                                    professor.especialidad && (
+                                        <span className="bg-bb-darker text-bb-text px-3 py-1 rounded-lg text-sm border border-bb-border">
+                                            {professor.especialidad}
+                                        </span>
+                                    )
+                                )}
+
                                 {professor.facultad && (
                                     <span className="bg-bb-card text-bb-text-secondary px-3 py-1 rounded-lg text-sm border border-bb-border">
                                         {professor.facultad}
@@ -296,11 +313,28 @@ export default function ProfessorRatingsContent({ professor, initialRatings }: P
                                     Otros Cursos
                                 </h3>
                                 <div className="flex flex-wrap gap-2">
-                                    {professor.otros_cursos.split(',').map((curso: string, idx: number) => (
-                                        <span key={idx} className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium">
-                                            {curso.trim()}
-                                        </span>
-                                    ))}
+                                    {professor.otros_cursos.split(',').map((curso: string, idx: number) => {
+                                        const trimmedCurso = curso.trim();
+                                        const courseId = courseMapping[trimmedCurso];
+
+                                        if (courseId) {
+                                            return (
+                                                <Link
+                                                    key={idx}
+                                                    href={`/dashboard/courses/${courseId}`}
+                                                    className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium hover:bg-purple-500/20 transition-colors"
+                                                >
+                                                    {trimmedCurso}
+                                                </Link>
+                                            );
+                                        }
+
+                                        return (
+                                            <span key={idx} className="px-4 py-2 rounded-xl bg-bb-darker text-bb-text-secondary border border-bb-border text-sm font-medium">
+                                                {trimmedCurso}
+                                            </span>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
