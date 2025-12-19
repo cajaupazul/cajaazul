@@ -176,9 +176,9 @@ export default function ProfessorRatingsContent({
                         <div className="flex-1 space-y-2">
                             <h1 className="text-3xl md:text-4xl font-black text-bb-text">{professor.nombre}</h1>
                             <div className="flex flex-wrap gap-1 justify-center md:justify-start">
-                                {professor.especialidad && courseMapping[professor.especialidad] ? (
+                                {professor.especialidad && courseMapping[professor.especialidad.toLowerCase()] ? (
                                     <Link
-                                        href={`/dashboard/courses/${courseMapping[professor.especialidad]}`}
+                                        href={`/dashboard/courses/${courseMapping[professor.especialidad.toLowerCase()]}`}
                                         className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-lg text-sm border border-blue-500/20 hover:bg-blue-500/20 transition-colors font-bold"
                                     >
                                         {professor.especialidad}
@@ -317,7 +317,7 @@ export default function ProfessorRatingsContent({
                                 {aggregatedOtherCourses.length > 0 ? (
                                     aggregatedOtherCourses.map((curso: string, idx: number) => {
                                         const trimmedCurso = curso.trim();
-                                        const courseId = courseMapping[trimmedCurso];
+                                        const courseId = courseMapping[trimmedCurso.toLowerCase()];
 
                                         if (courseId) {
                                             return (

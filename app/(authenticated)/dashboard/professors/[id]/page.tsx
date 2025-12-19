@@ -40,42 +40,66 @@ export default async function ProfessorRatingsPage({ params }: { params: { id: s
       .order('created_at', { ascending: false })
   ]);
 
-  // 4. Aggregate unique courses across all records
-  const uniqueCourses = new Set<string>();
+  // 4. Aggregate unique courses across all records (case-insensitive for uniqueness)
+  const uniqueCoursesMap = new Map<string, string>(); // Original Name -> Lowercase Version
+
+  const processCourseName = (name: string) => {
+    const trimmed = name.trim();
+    if (trimmed) {
+      uniqueCoursesMap.set(trimmed.toLowerCase(), trimmed);
+    }
+  };
+
   if (allProfRecords) {
     allProfRecords.forEach(rec => {
-      if (rec.especialidad) uniqueCourses.add(rec.especialidad.trim());
+      if (rec.especialidad) processCourseName(rec.especialidad);
       if (rec.otros_cursos) {
-        rec.otros_cursos.split(',').forEach((c: string) => {
-          const trimmed = c.trim();
-          if (trimmed) uniqueCourses.add(trimmed);
-        });
+        rec.otros_cursos.split(',').forEach((c: string) => processCourseName(c));
       }
     });
   }
 
-  // Remove the current specialty from the set to avoid duplication in UI
-  if (currentProf.especialidad) {
-    uniqueCourses.delete(currentProf.especialidad.trim());
-  }
+  // Get original names for display, but keep track of lowercase for matching
+  const allUniqueCourseOriginalNames = Array.from(uniqueCoursesMap.values());
+  const allUniqueCourseLowerNames = Array.from(uniqueCoursesMap.keys());
 
-  const aggregatedOtherCourses = Array.from(uniqueCourses);
-
-  // 5. Fetch course mapping for linking
-  const courseNamesToQuery = [
-    currentProf.especialidad,
-    ...aggregatedOtherCourses
-  ].filter(Boolean);
+  // 5. Fetch course mapping (Case-insensitive matching)
+  // We'll fetch all courses whose name is in our lowercase list
+  // Note: Supabase .in is case-sensitive, so we fetch and filter in JS if needed or just use multiple ilike
+  // For better reliability with many courses, we fetch naming matches carefully.
 
   const { data: matchedCourses } = await supabase
     .from('courses')
     .select('id, nombre')
-    .in('nombre', courseNamesToQuery);
+    .in('nombre', allUniqueCourseOriginalNames); // Direct match first
 
   const courseMapping: Record<string, string> = {};
   matchedCourses?.forEach(c => {
-    courseMapping[c.nombre] = c.id;
+    courseMapping[c.nombre.toLowerCase()] = c.id;
   });
+
+  // If some are missing, maybe they have different casing. 
+  // We can try to fetch all if the list is small, or use .or with ilike
+  const missingLowerNames = allUniqueCourseLowerNames.filter(name => !courseMapping[name]);
+
+  if (missingLowerNames.length > 0) {
+    // Try a more flexible search for missing ones
+    const orQuery = missingLowerNames.map(name => `nombre.ilike.${name}`).join(',');
+    const { data: extraMatches } = await supabase
+      .from('courses')
+      .select('id, nombre')
+      .or(orQuery);
+
+    extraMatches?.forEach(c => {
+      courseMapping[c.nombre.toLowerCase()] = c.id;
+    });
+  }
+
+  // Prepare final list for UI (excluding current specialty)
+  const currentSpecialtyLower = currentProf.especialidad?.trim().toLowerCase();
+  const aggregatedOtherCourses = allUniqueCourseOriginalNames.filter(name =>
+    name.toLowerCase() !== currentSpecialtyLower
+  );
 
   return (
     <ProfessorRatingsContent
