@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Star, Mail } from 'lucide-react';
-import UploadMaterialsForm from './upload-materials-form';
+import UploadMaterialsForm from '@/components/courses/upload-materials-form';
 import { Course, Professor } from '@/lib/supabase';
 
 type TabType = 'presentaciones' | 'examenes' | 'otros';
