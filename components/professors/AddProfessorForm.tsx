@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { supabase, Profile, Professor } from '@/lib/supabase';
-import { AlertCircle, CheckCircle2, Loader2, ArrowLeft, Search, User } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, ArrowLeft, Search, User, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -48,17 +48,21 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
     // Search for matches/suggestions as user types name
     useEffect(() => {
         const searchProfessors = async () => {
-            if (formData.nombre.trim().length >= 3) {
+            const query = formData.nombre.trim();
+            if (query.length >= 2) {
                 setSearching(true);
                 const { data, error } = await supabase
                     .from('professors')
                     .select('*')
-                    .ilike('nombre', `%${formData.nombre.trim()}%`)
-                    .limit(5);
+                    .ilike('nombre', `%${query}%`)
+                    .limit(6);
 
                 if (!error && data) {
                     setSuggestions(data);
-                    setShowSuggestions(data.length > 0);
+                    // Open suggestions if we have input and either data or searching
+                    setShowSuggestions(true);
+                } else {
+                    setSuggestions([]);
                 }
                 setSearching(false);
             } else {
@@ -67,20 +71,22 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
             }
         };
 
-        const timer = setTimeout(searchProfessors, 300);
+        const timer = setTimeout(searchProfessors, 150); // Faster search
         return () => clearTimeout(timer);
     }, [formData.nombre]);
 
     // Check for exact duplicates (name + specialty)
     useEffect(() => {
         const checkDuplicate = async () => {
-            if (formData.nombre.trim().length > 3 && formData.especialidad.trim().length > 2) {
+            const name = formData.nombre.trim();
+            const specialty = formData.especialidad.trim();
+            if (name.length > 3 && specialty.length > 2) {
                 setChecking(true);
                 const { data, error } = await supabase
                     .from('professors')
                     .select('id')
-                    .ilike('nombre', formData.nombre.trim())
-                    .ilike('especialidad', formData.especialidad.trim())
+                    .ilike('nombre', name)
+                    .ilike('especialidad', specialty)
                     .limit(1);
 
                 if (!error && data && data.length > 0) {
@@ -94,14 +100,13 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
             }
         };
 
-        const timer = setTimeout(checkDuplicate, 500);
+        const timer = setTimeout(checkDuplicate, 400);
         return () => clearTimeout(timer);
     }, [formData.nombre, formData.especialidad]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
         setFormData(prev => ({ ...prev, [id]: value }));
-        if (id === 'nombre') setShowSuggestions(true);
     };
 
     const handleSelectSuggestion = (prof: Professor) => {
@@ -162,7 +167,7 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                 <CardHeader className="border-b border-bb-border pb-8">
                     <CardTitle className="text-3xl font-bold text-bb-text">Agregar Nuevo Profesor</CardTitle>
                     <CardDescription className="text-bb-text-secondary text-base mt-2">
-                        Completa la información del profesor para que otros estudiantes puedan encontrar sus referencias y calificar su desempeño.
+                        Verifica si el profesor ya existe para evitar duplicados. Si aparece en las sugerencias, selecciónalo para completar sus datos.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-8">
@@ -177,10 +182,10 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                                         id="nombre"
                                         value={formData.nombre}
                                         onChange={handleChange}
-                                        onFocus={() => formData.nombre.length >= 3 && setShowSuggestions(true)}
-                                        placeholder="Ej: Dr. Juan García"
+                                        onFocus={() => formData.nombre.length >= 2 && setShowSuggestions(true)}
+                                        placeholder="Escribe para buscar..."
                                         required
-                                        className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-lg pl-10"
+                                        className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-xl pl-10"
                                         autoComplete="off"
                                     />
                                     <Search className="absolute left-3 top-3.5 w-5 h-5 text-gray-500" />
@@ -191,36 +196,58 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                                     )}
                                 </div>
 
-                                {/* Autocomplete Suggestions */}
+                                {/* Autocomplete Suggestions UI */}
                                 <AnimatePresence>
-                                    {showSuggestions && suggestions.length > 0 && (
+                                    {showSuggestions && (formData.nombre.length >= 2) && (
                                         <motion.div
                                             ref={suggestionRef}
-                                            initial={{ opacity: 0, y: -10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -10 }}
-                                            className="absolute z-50 w-full mt-2 bg-bb-card border border-bb-border rounded-xl shadow-2xl overflow-hidden"
+                                            initial={{ opacity: 0, y: -5, scale: 0.98 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: -5, scale: 0.98 }}
+                                            className="absolute z-[100] w-full mt-1 bg-bb-card border border-bb-border rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden"
                                         >
-                                            <div className="p-2 border-b border-bb-border bg-bb-darker/50">
-                                                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest px-2">¿Es alguno de estos profesores?</p>
+                                            <div className="p-3 border-b border-bb-border bg-bb-darker/80 flex items-center justify-between">
+                                                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Coincidencias encontradas</span>
+                                                {searching && <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />}
                                             </div>
-                                            <div className="max-h-60 overflow-y-auto">
-                                                {suggestions.map((prof) => (
-                                                    <button
-                                                        key={prof.id}
-                                                        type="button"
-                                                        onClick={() => handleSelectSuggestion(prof)}
-                                                        className="w-full flex items-center gap-3 p-3 hover:bg-bb-hover transition-colors text-left border-b border-bb-border last:border-0"
-                                                    >
-                                                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
-                                                            <User className="w-4 h-4" />
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <p className="text-sm font-bold text-bb-text truncate">{prof.nombre}</p>
-                                                            <p className="text-xs text-bb-text-secondary truncate">{prof.especialidad} • {prof.facultad || 'Facultad General'}</p>
-                                                        </div>
-                                                    </button>
-                                                ))}
+
+                                            <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                                {suggestions.length > 0 ? (
+                                                    suggestions.map((prof) => (
+                                                        <button
+                                                            key={prof.id}
+                                                            type="button"
+                                                            onClick={() => handleSelectSuggestion(prof)}
+                                                            className="w-full flex items-center gap-4 p-4 hover:bg-blue-500/10 transition-all text-left border-b border-bb-border last:border-0 group"
+                                                        >
+                                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center text-blue-400 shrink-0 group-hover:scale-110 transition-transform">
+                                                                <User className="w-5 h-5" />
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="text-sm font-bold text-bb-text truncate group-hover:text-blue-400 transition-colors">{prof.nombre}</p>
+                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                    <span className="text-[10px] font-bold bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded uppercase">{prof.especialidad}</span>
+                                                                    <span className="text-[10px] text-bb-text-secondary truncate">{prof.facultad || 'Facultad General'}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-[10px] font-bold text-blue-400/0 group-hover:text-blue-400/100 transition-all pr-2">
+                                                                SELECCIONAR
+                                                            </div>
+                                                        </button>
+                                                    ))
+                                                ) : !searching ? (
+                                                    <div className="p-8 text-center bg-bb-darker/30">
+                                                        <Info className="w-8 h-8 text-bb-text-secondary mx-auto mb-3 opacity-20" />
+                                                        <p className="text-sm font-medium text-bb-text-secondary">No hay coincidencias exactas.</p>
+                                                        <p className="text-[10px] text-bb-text-secondary/50 mt-1">Puedes continuar creando uno nuevo.</p>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+
+                                            <div className="p-3 bg-bb-darker/50 border-t border-bb-border">
+                                                <p className="text-[10px] text-center text-bb-text-secondary">
+                                                    Si no ves al profesor, termina de escribir para crearlo.
+                                                </p>
                                             </div>
                                         </motion.div>
                                     )}
@@ -236,7 +263,7 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                                     value={formData.facultad}
                                     onChange={handleChange}
                                     placeholder="Ej: Ingeniería"
-                                    className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-lg"
+                                    className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-xl"
                                 />
                             </div>
 
@@ -251,7 +278,7 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                                         onChange={handleChange}
                                         placeholder="Ej: Cálculo I"
                                         required
-                                        className={`bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-lg pr-10 ${duplicateError ? 'border-red-500/50 ring-red-500/10' : ''}`}
+                                        className={`bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-xl pr-10 ${duplicateError ? 'border-red-500/50 ring-red-500/10' : ''}`}
                                     />
                                     {checking && (
                                         <div className="absolute right-3 top-3">
@@ -271,7 +298,7 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                                     value={formData.email}
                                     onChange={handleChange}
                                     placeholder="prof@universidad.edu"
-                                    className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-lg"
+                                    className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-xl"
                                 />
                             </div>
                         </div>
@@ -285,7 +312,7 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                                 value={formData.otros_cursos}
                                 onChange={handleChange}
                                 placeholder="Ej: Álgebra, Estadística, Física I (Separados por comas)"
-                                className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-lg"
+                                className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-xl"
                             />
                         </div>
 
@@ -296,12 +323,19 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
                                 >
-                                    <Alert variant="destructive" className="bg-red-500/10 border-red-500/50 text-red-400 rounded-xl">
-                                        <AlertCircle className="h-5 w-5" />
-                                        <AlertTitle className="font-bold">Profesor ya registrado</AlertTitle>
-                                        <AlertDescription className="text-sm opacity-90">
-                                            Ya existe un profesor con el nombre "{formData.nombre}" para la materia "{formData.especialidad}". Verifica si es la misma persona antes de continuar.
-                                        </AlertDescription>
+                                    <Alert variant="destructive" className="bg-red-500/10 border-red-500/50 text-red-400 rounded-2xl overflow-hidden p-6">
+                                        <div className="flex gap-4">
+                                            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
+                                                <AlertCircle className="h-6 w-6 text-red-500" />
+                                            </div>
+                                            <div>
+                                                <AlertTitle className="text-lg font-bold">Profesor ya registrado</AlertTitle>
+                                                <AlertDescription className="text-sm opacity-90 mt-1">
+                                                    Ya existe un profesor llamado <span className="font-bold underline decoration-red-500/30">"{formData.nombre}"</span> para la materia <span className="font-bold underline decoration-red-500/30">"{formData.especialidad}"</span>.
+                                                    <br />No es necesario volver a crearlo.
+                                                </AlertDescription>
+                                            </div>
+                                        </div>
                                     </Alert>
                                 </motion.div>
                             )}
@@ -311,9 +345,11 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                 >
-                                    <div className="flex items-center gap-2 text-green-400 text-sm font-medium bg-green-500/10 p-3 rounded-lg border border-green-500/20">
-                                        <CheckCircle2 className="w-4 h-4" />
-                                        La combinación de profesor y materia parece estar disponible.
+                                    <div className="flex items-center gap-3 text-green-400 text-sm font-bold bg-green-500/10 p-5 rounded-2xl border border-green-500/20">
+                                        <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center shrink-0">
+                                            <CheckCircle2 className="w-5 h-5" />
+                                        </div>
+                                        Este profesor y materia están disponibles para registro.
                                     </div>
                                 </motion.div>
                             )}
@@ -324,18 +360,18 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                                 type="button"
                                 variant="outline"
                                 onClick={() => router.back()}
-                                className="flex-1 h-12 border-bb-border bg-bb-darker hover:bg-bb-hover text-bb-text font-bold rounded-xl transition-all"
+                                className="flex-1 h-14 border-bb-border bg-bb-darker hover:bg-bb-hover text-bb-text font-bold rounded-2xl transition-all"
                             >
                                 Cancelar
                             </Button>
                             <Button
                                 type="submit"
                                 disabled={loading || duplicateError || checking}
-                                className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all border-0"
+                                className="flex-1 h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-2xl shadow-xl shadow-blue-500/20 transition-all border-0 text-lg group"
                             >
                                 {loading ? (
                                     <>
-                                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                        <Loader2 className="w-6 h-6 mr-2 animate-spin" />
                                         Guardando...
                                     </>
                                 ) : (
