@@ -131,59 +131,13 @@ export default function ProfessorsContent({
                             />
                         </div>
 
-                        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 border-0">
-                                    <Plus className="h-5 w-5 mr-2" />
-                                    Agregar Profesor
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="bg-bb-card border-bb-border text-bb-text sm:max-w-lg max-h-[85vh] overflow-y-auto">
-                                <DialogHeader>
-                                    <DialogTitle className="text-2xl font-bold">Agregar Nuevo Profesor</DialogTitle>
-                                    <DialogDescription className="text-bb-text-secondary">
-                                        Comparte información sobre un profesor para que otros estudiantes puedan calificarlo.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <form onSubmit={handleCreateProfessor} className="space-y-5 mt-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="nombre" className="text-bb-text text-xs font-semibold uppercase tracking-wide">Nombre *</Label>
-                                            <Input id="nombre" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                                                placeholder="Ej: Dr. Juan García" required className="bg-bb-darker border-bb-border text-bb-text h-11" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="facultad" className="text-bb-text text-xs font-semibold uppercase tracking-wide">Facultad</Label>
-                                            <Input id="facultad" value={formData.facultad} onChange={(e) => setFormData({ ...formData, facultad: e.target.value })}
-                                                placeholder="Ej: Ingeniería" className="bg-bb-darker border-bb-border text-bb-text h-11" />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="especialidad" className="text-bb-text text-xs font-semibold uppercase tracking-wide">Materia Principal *</Label>
-                                            <Input id="especialidad" value={formData.especialidad} onChange={(e) => setFormData({ ...formData, especialidad: e.target.value })}
-                                                placeholder="Ej: Cálculo I" required className="bg-bb-darker border-bb-border text-bb-text h-11" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="email" className="text-bb-text text-xs font-semibold uppercase tracking-wide">Correo Electrónico</Label>
-                                            <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                placeholder="prof@universidad.edu" className="bg-bb-darker border-bb-border text-bb-text h-11" />
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="otros_cursos" className="text-bb-text text-xs font-semibold uppercase tracking-wide">Otros Cursos que Dicta</Label>
-                                        <Input id="otros_cursos" value={formData.otros_cursos} onChange={(e) => setFormData({ ...formData, otros_cursos: e.target.value })}
-                                            placeholder="Ej: Álgebra, Estadística, Física I" className="bg-bb-darker border-bb-border text-bb-text h-11" />
-                                    </div>
-
-                                    <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 font-bold h-12 mt-4 text-base">
-                                        Guardar Profesor
-                                    </Button>
-                                </form>
-                            </DialogContent>
-                        </Dialog>
+                        <Button
+                            onClick={() => router.push('/dashboard/professors/nuevo')}
+                            className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 border-0"
+                        >
+                            <Plus className="h-5 w-5 mr-2" />
+                            Agregar Profesor
+                        </Button>
                     </motion.div>
                 </div>
 
