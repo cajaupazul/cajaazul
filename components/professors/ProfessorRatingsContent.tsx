@@ -326,15 +326,14 @@ export default function ProfessorRatingsContent({
                                 {aggregatedOtherCourses.length > 0 ? (
                                     aggregatedOtherCourses.map((curso: string, idx: number) => {
                                         const trimmedCurso = curso.trim();
-                                        const trimmedCurso = curso.trim();
                                         const professorId = professorLinkMapping[trimmedCurso.toLowerCase()];
                                         const courseId = courseMapping[trimmedCurso.toLowerCase()];
 
                                         // Priority 1: Link to professor profile if exists
                                         if (professorId) {
                                             return (
-                                                <Link 
-                                                    key={idx} 
+                                                <Link
+                                                    key={idx}
                                                     href={`/dashboard/professors/${professorId}`}
                                                     className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium hover:bg-purple-500/20 transition-colors"
                                                 >
