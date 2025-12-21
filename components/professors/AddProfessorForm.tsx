@@ -134,8 +134,9 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
     };
 
     const getRandomBackgroundImage = () => {
-        const randomId = Math.floor(Math.random() * 100000);
-        return `https://picsum.photos/500/200?random=${randomId}`;
+        // Use Unsplash for high-quality nature backgrounds
+        const randomSeed = Math.floor(Math.random() * 10000);
+        return `https://source.unsplash.com/1600x900/?nature,landscape&sig=${randomSeed}`;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
