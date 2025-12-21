@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Star, MessageCircle, TrendingUp, ArrowLeft, Trophy, Sparkles, Share2, Instagram } from 'lucide-react';
+import { Star, MessageCircle, TrendingUp, ArrowLeft, Trophy, Sparkles, Share2, Instagram, User, Info } from 'lucide-react';
 import Link from 'next/link';
 import { supabase, Professor } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
@@ -64,6 +64,12 @@ interface ProfessorRatingsContentProps {
     courseMapping?: Record<string, string>;
     professorLinkMapping?: Record<string, string>;
     aggregatedOtherCourses?: string[];
+    relatedProfessors?: Array<{
+        id: string;
+        nombre: string;
+        especialidad: string;
+        facultad?: string;
+    }>;
 }
 
 export default function ProfessorRatingsContent({
@@ -71,7 +77,8 @@ export default function ProfessorRatingsContent({
     initialRatings,
     courseMapping = {},
     professorLinkMapping = {},
-    aggregatedOtherCourses = []
+    aggregatedOtherCourses = [],
+    relatedProfessors = []
 }: ProfessorRatingsContentProps) {
     const router = useRouter();
     const { colors } = useTheme();
@@ -137,7 +144,7 @@ export default function ProfessorRatingsContent({
                 initial="hidden"
                 animate="visible"
                 variants={containerVariants}
-                className="max-w-4xl mx-auto relative z-10"
+                className="max-w-7xl mx-auto relative z-10"
             >
                 <motion.div variants={itemVariants} className="mb-8">
                     <Link href="/dashboard/professors">
@@ -351,7 +358,50 @@ export default function ProfessorRatingsContent({
                     <div className="space-y-6">
                         <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
                             <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
-                                <TrendingUp className="w-5 h-5 text-green-400" />
+                                <User className="w-5 h-5 text-green-400" />
+                                Otros Profesores de {professor.especialidad}
+                            </h3>
+
+                            {relatedProfessors.length > 0 ? (
+                                <div className="space-y-3">
+                                    {relatedProfessors.map((prof) => (
+                                        <Link
+                                            key={prof.id}
+                                            href={`/dashboard/professors/${prof.id}`}
+                                            className="block p-4 rounded-xl bg-bb-darker border border-bb-border hover:border-green-500/50 hover:bg-green-500/5 transition-all group"
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500/20 to-blue-500/20 flex items-center justify-center text-green-400 font-bold text-sm shrink-0 group-hover:scale-110 transition-transform">
+                                                    {prof.nombre.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-bb-text group-hover:text-green-400 transition-colors truncate">
+                                                        {prof.nombre}
+                                                    </p>
+                                                    {prof.facultad && (
+                                                        <p className="text-xs text-bb-text-secondary truncate mt-0.5">
+                                                            {prof.facultad}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8">
+                                    <Info className="w-8 h-8 text-bb-text-secondary mx-auto mb-2 opacity-20" />
+                                    <p className="text-sm text-bb-text-secondary">
+                                        No hay otros profesores de {professor.especialidad}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Summary Card Below */}
+                        <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
+                            <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
+                                <TrendingUp className="w-5 h-5 text-blue-400" />
                                 Resumen
                             </h3>
                             <div className="space-y-4">

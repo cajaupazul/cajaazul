@@ -29,7 +29,8 @@ export default async function ProfessorRatingsPage({ params }: { params: { id: s
   // 3. Fetch all records for the same professor name to consolidate courses
   const [
     { data: allProfRecords },
-    { data: ratingsData }
+    { data: ratingsData },
+    { data: relatedProfessors }
   ] = await Promise.all([
     supabase.from('professors')
       .select('id, especialidad, otros_cursos')
@@ -37,7 +38,15 @@ export default async function ProfessorRatingsPage({ params }: { params: { id: s
     supabase.from('professor_ratings')
       .select('*, profiles(nombre, avatar_url, background_url, bio, carrera, link_instagram)')
       .eq('professor_id', professorId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false }),
+    // NEW: Fetch professors teaching the same course
+    currentProf.especialidad
+      ? supabase.from('professors')
+        .select('id, nombre, especialidad, facultad')
+        .ilike('especialidad', currentProf.especialidad)
+        .neq('id', professorId) // Exclude current professor
+        .limit(10)
+      : Promise.resolve({ data: null, error: null })
   ]);
 
   // 4. Aggregate unique courses across all records (case-insensitive for uniqueness)
@@ -112,6 +121,7 @@ export default async function ProfessorRatingsPage({ params }: { params: { id: s
       courseMapping={courseMapping}
       professorLinkMapping={professorLinkMapping}
       aggregatedOtherCourses={aggregatedOtherCourses}
+      relatedProfessors={relatedProfessors || []}
     />
   );
 }
