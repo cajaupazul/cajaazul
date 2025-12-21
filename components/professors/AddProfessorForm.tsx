@@ -49,17 +49,30 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
     useEffect(() => {
         const searchProfessors = async () => {
             const query = formData.nombre.trim();
-            if (query.length >= 2) {
+            if (query.length >= 1) { // Reduced from 2 to 1
                 setSearching(true);
+
+                // Search in multiple fields for better results
                 const { data, error } = await supabase
                     .from('professors')
                     .select('*')
-                    .ilike('nombre', `%${query}%`)
-                    .limit(6);
+                    .or(`nombre.ilike.%${query}%,especialidad.ilike.%${query}%,facultad.ilike.%${query}%`)
+                    .limit(20); // Increased from 6 to 20
 
                 if (!error && data) {
-                    setSuggestions(data);
-                    // Open suggestions if we have input and either data or searching
+                    // Sort results: prioritize matches in name field
+                    const sorted = data.sort((a, b) => {
+                        const aNameMatch = a.nombre.toLowerCase().includes(query.toLowerCase());
+                        const bNameMatch = b.nombre.toLowerCase().includes(query.toLowerCase());
+
+                        if (aNameMatch && !bNameMatch) return -1;
+                        if (!aNameMatch && bNameMatch) return 1;
+
+                        // If both match in name, sort alphabetically
+                        return a.nombre.localeCompare(b.nombre);
+                    });
+
+                    setSuggestions(sorted);
                     setShowSuggestions(true);
                 } else {
                     setSuggestions([]);
@@ -182,7 +195,7 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
                                         id="nombre"
                                         value={formData.nombre}
                                         onChange={handleChange}
-                                        onFocus={() => formData.nombre.length >= 2 && setShowSuggestions(true)}
+                                        onFocus={() => formData.nombre.length >= 1 && setShowSuggestions(true)}
                                         placeholder="Escribe para buscar..."
                                         required
                                         className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-xl pl-10"
@@ -198,7 +211,7 @@ export default function AddProfessorForm({ profile }: AddProfessorFormProps) {
 
                                 {/* Autocomplete Suggestions UI */}
                                 <AnimatePresence>
-                                    {showSuggestions && (formData.nombre.length >= 2) && (
+                                    {showSuggestions && (formData.nombre.length >= 1) && (
                                         <motion.div
                                             ref={suggestionRef}
                                             initial={{ opacity: 0, y: -5, scale: 0.98 }}
