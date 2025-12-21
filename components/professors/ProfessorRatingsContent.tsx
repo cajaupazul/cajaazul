@@ -58,6 +58,21 @@ const getColorFromName = (nombre: string) => {
     return colors[Math.abs(hash) % colors.length];
 };
 
+// Function to upgrade old low-quality images to high-quality Unsplash
+const getHighQualityBackgroundImage = (url: string | null, professorName: string): string => {
+    // If URL is from Picsum (old low quality), replace with Unsplash
+    if (!url || url.includes('picsum.photos')) {
+        // Use professor name to generate consistent seed for same professor
+        const seed = professorName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        return `https://source.unsplash.com/1600x900/?nature,landscape&sig=${seed}`;
+    }
+    // If already Unsplash but low resolution, upgrade it
+    if (url.includes('source.unsplash.com') && !url.includes('1600x900')) {
+        return url.replace(/\d+x\d+/, '1600x900');
+    }
+    return url;
+};
+
 interface ProfessorRatingsContentProps {
     professor: Professor;
     initialRatings: Rating[];
@@ -163,7 +178,7 @@ export default function ProfessorRatingsContent({
                         <div className="relative h-32 overflow-hidden">
                             <div
                                 className="absolute inset-0 bg-cover bg-center"
-                                style={{ backgroundImage: `url('${professor.background_image_url}')` }}
+                                style={{ backgroundImage: `url('${getHighQualityBackgroundImage(professor.background_image_url, professor.nombre)}')` }}
                             />
                             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-bb-card/60 to-bb-card" />
                         </div>
