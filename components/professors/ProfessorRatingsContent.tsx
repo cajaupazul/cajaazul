@@ -185,16 +185,9 @@ export default function ProfessorRatingsContent({
                                     >
                                         {professor.especialidad}
                                     </Link>
-                                ) : professor.especialidad && courseMapping[professor.especialidad.toLowerCase()] ? (
-                                    <Link
-                                        href={`/dashboard/courses/${courseMapping[professor.especialidad.toLowerCase()]}`}
-                                        className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-lg text-sm border border-blue-500/20 hover:bg-blue-500/20 transition-colors font-bold"
-                                    >
-                                        {professor.especialidad}
-                                    </Link>
                                 ) : (
                                     professor.especialidad && (
-                                        <span className="bg-bb-darker text-bb-text px-3 py-1 rounded-lg text-sm border border-bb-border">
+                                        <span className="bg-bb-darker/50 text-bb-text/40 px-3 py-1 rounded-lg text-sm border border-bb-border/50 opacity-50 cursor-not-allowed">
                                             {professor.especialidad}
                                         </span>
                                     )
@@ -327,9 +320,8 @@ export default function ProfessorRatingsContent({
                                     aggregatedOtherCourses.map((curso: string, idx: number) => {
                                         const trimmedCurso = curso.trim();
                                         const professorId = professorLinkMapping[trimmedCurso.toLowerCase()];
-                                        const courseId = courseMapping[trimmedCurso.toLowerCase()];
 
-                                        // Priority 1: Link to professor profile if exists
+                                        // Only link if professor profile exists
                                         if (professorId) {
                                             return (
                                                 <Link
@@ -342,22 +334,9 @@ export default function ProfessorRatingsContent({
                                             );
                                         }
 
-                                        // Priority 2: Link to course page if exists
-
-                                        if (courseId) {
-                                            return (
-                                                <Link
-                                                    key={idx}
-                                                    href={`/dashboard/courses/${courseId}`}
-                                                    className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium hover:bg-purple-500/20 transition-colors"
-                                                >
-                                                    {trimmedCurso}
-                                                </Link>
-                                            );
-                                        }
-
+                                        // If no professor profile exists, show as disabled/grayed out
                                         return (
-                                            <span key={idx} className="px-4 py-2 rounded-xl bg-bb-darker text-bb-text-secondary border border-bb-border text-sm font-medium">
+                                            <span key={idx} className="px-4 py-2 rounded-xl bg-bb-darker/50 text-bb-text-secondary/40 border border-bb-border/50 text-sm font-medium opacity-50 cursor-not-allowed">
                                                 {trimmedCurso}
                                             </span>
                                         );
