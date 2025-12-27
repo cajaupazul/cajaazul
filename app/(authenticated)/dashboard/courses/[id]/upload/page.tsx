@@ -61,7 +61,29 @@ export default async function UploadPage({ params }: { params: { id: string } })
     // Agregar los encontrados por texto
     matchedProfs?.forEach(p => professorsMap.set(p.id, p));
 
-    const allProfessors = Array.from(professorsMap.values());
+    let initialProfessors = Array.from(professorsMap.values());
+
+    // Filter duplicates by name, prioritizing the one with exact specialty match
+    const uniqueProfessorsByName = new Map();
+
+    initialProfessors.forEach((p: any) => {
+        const normalizedName = p.nombre.toLowerCase().trim();
+        const existing = uniqueProfessorsByName.get(normalizedName);
+
+        const isExactMatch = p.especialidad?.toLowerCase().trim() === courseNameClean.toLowerCase();
+
+        if (!existing) {
+            uniqueProfessorsByName.set(normalizedName, p);
+        } else {
+            // Replace if current has exact specialty match and existing doesn't
+            const existingIsExact = existing.especialidad?.toLowerCase().trim() === courseNameClean.toLowerCase();
+            if (isExactMatch && !existingIsExact) {
+                uniqueProfessorsByName.set(normalizedName, p);
+            }
+        }
+    });
+
+    const allProfessors = Array.from(uniqueProfessorsByName.values());
 
 
     return (

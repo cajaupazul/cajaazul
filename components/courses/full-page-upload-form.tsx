@@ -277,7 +277,12 @@ export default function FullPageUploadForm({
                                     </SelectItem>
                                     {allProfessors.map((prof) => (
                                         <SelectItem key={prof.id} value={prof.id}>
-                                            {prof.nombre}
+                                            <span className="font-medium text-slate-900">{prof.nombre}</span>
+                                            {prof.especialidad && (
+                                                <span className="ml-2 text-xs text-slate-500 font-normal">
+                                                    ({prof.especialidad})
+                                                </span>
+                                            )}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
