@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Star, Mail } from 'lucide-react';
-import UploadMaterialsForm from '@/components/courses/upload-materials-form';
 import { Course, Professor } from '@/lib/supabase';
 
 type TabType = 'presentaciones' | 'examenes' | 'otros';
@@ -164,11 +164,15 @@ export default function CourseDetailContent({
                                         </button>
                                     ))}
                                 </div>
-                                <UploadMaterialsForm
-                                    courseId={course.id}
-                                    allProfessors={allProfessors}
-                                    onMaterialUploaded={handleMaterialUploaded}
-                                />
+                                <Link
+                                    href={`/dashboard/courses/${course.id}/upload`}
+                                    className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-primary-foreground hover:bg-blue-700 h-10 px-4 py-2"
+                                >
+                                    <div className="flex items-center gap-2 text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>
+                                        Subir Material
+                                    </div>
+                                </Link>
                             </div>
 
                             <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
