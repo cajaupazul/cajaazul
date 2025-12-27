@@ -27,28 +27,42 @@ export default async function UploadPage({ params }: { params: { id: string } })
     }
 
     // 3. Obtener profesores vinculados al curso
-    // Primero obtenemos los IDs de la relación course_professors
+    // Estrategia híbrida:
+    // A. Buscar por relación estricta en course_professors
     const { data: cpData } = await supabase
         .from('course_professors')
         .select('professor_id')
         .eq('course_id', courseId);
 
-    let allProfessors: any[] = [];
+    const linkedProfIds = cpData?.map(cp => cp.professor_id) || [];
 
-    if (cpData && cpData.length > 0) {
-        const profIds = cpData.map(cp => cp.professor_id);
+    // B. Buscar por coincidencia de nombre (especialidad u otros_cursos)
+    // Normalizamos el nombre del curso para mejorar la búsqueda
+    const courseNameClean = course.nombre.trim();
 
-        // Luego obtenemos los detalles completos de esos profesores
-        const { data: profs } = await supabase
+    const { data: matchedProfs } = await supabase
+        .from('professors')
+        .select('*')
+        .or(`especialidad.ilike.%${courseNameClean}%,otros_cursos.ilike.%${courseNameClean}%`);
+
+    // Combinar resultados sin duplicados
+    const professorsMap = new Map();
+
+    // Agregar los de relación estricta (si existen, los traemos por ID)
+    if (linkedProfIds.length > 0) {
+        const { data: linkedProfs } = await supabase
             .from('professors')
             .select('*')
-            .in('id', profIds)
-            .order('nombre');
+            .in('id', linkedProfIds);
 
-        if (profs) {
-            allProfessors = profs;
-        }
+        linkedProfs?.forEach(p => professorsMap.set(p.id, p));
     }
+
+    // Agregar los encontrados por texto
+    matchedProfs?.forEach(p => professorsMap.set(p.id, p));
+
+    const allProfessors = Array.from(professorsMap.values());
+
 
     return (
         <div className="min-h-screen bg-slate-50">
