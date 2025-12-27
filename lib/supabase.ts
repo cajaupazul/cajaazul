@@ -42,6 +42,7 @@ export type Material = {
   id: string;
   course_id: string;
   user_id: string;
+  professor_id: string | null;
   titulo: string;
   descripcion: string | null;
   url_archivo: string;
@@ -50,6 +51,7 @@ export type Material = {
   created_at: string;
   profiles?: Profile;
   courses?: Course;
+  professors?: Professor;
 };
 
 export type Professor = {

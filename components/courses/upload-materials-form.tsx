@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, UserPlus } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -21,9 +21,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Professor } from '@/lib/supabase';
+import Link from 'next/link';
 
 interface UploadMaterialsFormProps {
     courseId: string;
+    allProfessors: Professor[];
     onMaterialUploaded: () => void;
 }
 
@@ -36,6 +39,7 @@ const MATERIAL_TYPES = [
 
 export default function UploadMaterialsForm({
     courseId,
+    allProfessors,
     onMaterialUploaded,
 }: UploadMaterialsFormProps) {
     const [open, setOpen] = useState(false);
@@ -43,6 +47,7 @@ export default function UploadMaterialsForm({
     const [file, setFile] = useState<File | null>(null);
     const [fileName, setFileName] = useState('');
     const [materialType, setMaterialType] = useState('otro');
+    const [professorId, setProfessorId] = useState<string>('none');
     const [description, setDescription] = useState('');
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,6 +106,7 @@ export default function UploadMaterialsForm({
             const { error: insertError } = await supabase.from('materials').insert({
                 course_id: courseId,
                 user_id: userId,
+                professor_id: professorId === 'none' ? null : professorId,
                 titulo: fileName.trim(),
                 descripcion: description.trim() || null,
                 url_archivo: materialUrl,
@@ -161,6 +167,39 @@ export default function UploadMaterialsForm({
                                 ))}
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    {/* Profesor (Opcional) */}
+                    <div>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="professor">Profesor (Opcional)</Label>
+                            <Link
+                                href="/dashboard/professors"
+                                className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
+                                target="_blank"
+                            >
+                                <UserPlus className="h-2.5 w-2.5" />
+                                Agregar nuevo
+                            </Link>
+                        </div>
+                        <Select value={professorId} onValueChange={setProfessorId}>
+                            <SelectTrigger className="mt-2 text-sm">
+                                <SelectValue placeholder="Seleccionar profesor..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">Ninguno / General</SelectItem>
+                                {allProfessors.map((prof) => (
+                                    <SelectItem key={prof.id} value={prof.id}>
+                                        {prof.nombre}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {allProfessors.length === 0 && (
+                            <p className="text-[10px] text-slate-500 mt-1 italic">
+                                No hay profesores registrados para este curso todavía.
+                            </p>
+                        )}
                     </div>
 
                     {/* Nombre del Material */}

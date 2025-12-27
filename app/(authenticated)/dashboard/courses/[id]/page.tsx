@@ -21,7 +21,7 @@ export default async function CourseDetailPage({ params }: { params: { id: strin
     { data: materials }
   ] = await Promise.all([
     supabase.from('courses').select('*').eq('id', courseId).single(),
-    supabase.from('materials').select('*').eq('course_id', courseId).order('created_at', { ascending: false })
+    supabase.from('materials').select('*, professors(nombre)').eq('course_id', courseId).order('created_at', { ascending: false })
   ]);
 
   if (!course) {

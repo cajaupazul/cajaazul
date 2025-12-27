@@ -86,9 +86,14 @@ export default function CourseDetailContent({
                             className={`p-4 ${bgColor} rounded-lg hover:shadow-md transition-all border ${borderColor} flex flex-col items-center gap-2 group cursor-pointer`}
                         >
                             <span className="text-4xl group-hover:scale-110 transition-transform">{icon}</span>
-                            <p className="text-xs font-medium text-slate-700 text-center line-clamp-2 group-hover:text-slate-900">
+                            <p className="text-xs font-medium text-slate-700 text-center line-clamp-2 group-hover:text-slate-900 leading-tight">
                                 {material.titulo}
                             </p>
+                            {material.professors?.nombre && (
+                                <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full mt-1">
+                                    {material.professors.nombre}
+                                </span>
+                            )}
                         </a>
                     );
                 })}
@@ -159,7 +164,11 @@ export default function CourseDetailContent({
                                         </button>
                                     ))}
                                 </div>
-                                <UploadMaterialsForm courseId={course.id} onMaterialUploaded={handleMaterialUploaded} />
+                                <UploadMaterialsForm
+                                    courseId={course.id}
+                                    allProfessors={allProfessors}
+                                    onMaterialUploaded={handleMaterialUploaded}
+                                />
                             </div>
 
                             <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
