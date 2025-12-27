@@ -4,6 +4,7 @@ import { useTheme } from '@/lib/theme-context';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
+import { logout } from '@/lib/auth-actions';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import {
   BookOpen,
@@ -66,23 +67,18 @@ export default function AuthenticatedLayout({
     setShowLogoutConfirm(true);
   };
 
+
+
   const handleLogoutConfirm = async () => {
     setShowLogoutConfirm(false);
     setIsLoggingOut(true);
 
     try {
-      // Execute sign out and delay in parallel
-      await Promise.all([
-        supabase.auth.signOut(),
-        new Promise(resolve => setTimeout(resolve, 3000))
-      ]);
+      await logout();
     } catch (error) {
       console.error('Error logging out:', error);
-      // Ensure specific delay even on error
-      await new Promise(resolve => setTimeout(resolve, 3000));
-    } finally {
-      // Use router for client-side transition which is safer in SPA
-      router.replace('/auth/login');
+      // Fallback
+      window.location.href = '/auth/login';
     }
   };
 

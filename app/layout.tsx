@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ProfileProvider } from "@/lib/profile-context";
 import { DashboardDataProvider } from "@/lib/dashboard-data-context";
+import { createClient } from "@/lib/supabase-server";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,11 +10,14 @@ export const metadata: Metadata = {
   description: "Plataforma educativa premium para gestión de cursos",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+
   return (
     <html lang="es">
       <head>
@@ -21,7 +25,7 @@ export default function RootLayout({
       </head>
       <body className="bg-bb-dark text-bb-text antialiased">
         <ThemeProvider>
-          <ProfileProvider>
+          <ProfileProvider initialSession={session}>
             <DashboardDataProvider>
               {children}
             </DashboardDataProvider>

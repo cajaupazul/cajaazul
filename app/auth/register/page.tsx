@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Eye, EyeOff } from 'lucide-react';
+import { register } from '@/lib/auth-actions';
 
 const FACULTADES = [
   'Facultad de Ciencias Empresariales',
@@ -53,6 +54,8 @@ export default function RegisterPage() {
     fetchImage();
   }, []);
 
+
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -70,75 +73,22 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email.trim(),
-        password: formData.password,
-        options: {
-          data: {
-            nombre: formData.nombre.trim(),
-            universidad: formData.universidad,
-            carrera: formData.carrera,
-          },
-        },
-      });
+      const fd = new FormData();
+      fd.append('email', formData.email.trim());
+      fd.append('password', formData.password);
+      fd.append('nombre', formData.nombre.trim());
+      fd.append('universidad', formData.universidad);
+      fd.append('carrera', formData.carrera);
 
-      if (authError) {
-        console.error('Auth error:', authError);
-        setError(authError.message || 'Error al crear la cuenta');
+      const result = await register(fd);
+
+      if (result?.error) {
+        setError(result.error);
         setLoading(false);
-        return;
       }
-
-      if (!authData.user) {
-        setError('Error al crear la cuenta');
-        setLoading(false);
-        return;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      try {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            nombre: formData.nombre.trim(),
-            universidad: formData.universidad,
-            carrera: formData.carrera,
-            avatar_url: null,
-            bio: null,
-            puntos: 0,
-          });
-
-        if (profileError) {
-          console.error('Profile error:', profileError);
-          setError('Error al crear el perfil: ' + profileError.message);
-          setLoading(false);
-          return;
-        }
-      } catch (profileException) {
-        console.error('Profile exception:', profileException);
-        setError('Error al crear el perfil');
-        setLoading(false);
-        return;
-      }
-
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: formData.email.trim(),
-        password: formData.password,
-      });
-
-      if (signInError) {
-        console.error('Sign in error:', signInError);
-        router.push('/dashboard');
-        return;
-      }
-
-      router.push('/dashboard');
     } catch (err) {
       console.error('General error:', err);
       setError('Error en el servidor');
-    } finally {
       setLoading(false);
     }
   };

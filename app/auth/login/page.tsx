@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { login } from '@/lib/auth-actions';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,22 +35,24 @@ export default function LoginPage() {
     fetchImage();
   }, []);
 
+
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('password', password);
 
-    if (error) {
-      setError(error.message);
+    const result = await login(formData);
+
+    if (result?.error) {
+      setError(result.error);
       setLoading(false);
-    } else {
-      router.push('/dashboard');
     }
+    // Success redirect is handled inside the server action
   };
 
   return (
@@ -60,7 +63,7 @@ export default function LoginPage() {
           <div className="absolute top-10 left-10 w-72 h-72 bg-white rounded-full"></div>
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-white rounded-full"></div>
         </div>
-        
+
         {/* Placeholder Image */}
         <div className="relative z-10 text-center">
           {imageUrl && (

@@ -14,10 +14,16 @@ interface ProfileContextType {
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
-export function ProfileProvider({ children }: { children: React.ReactNode }) {
+export function ProfileProvider({
+  children,
+  initialSession = null
+}: {
+  children: React.ReactNode,
+  initialSession?: Session | null
+}) {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(initialSession);
+  const [loading, setLoading] = useState(!initialSession);
   const subscriptionRef = useRef<any>(null);
   const profileRef = useRef<Profile | null>(null);
 
@@ -79,14 +85,19 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
     // 1. Get initial session and profile
     const initialize = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      if (!isMounted) return;
-
-      setSession(initialSession);
       if (initialSession?.user) {
         await fetchProfile(initialSession.user.id);
+        setLoading(false);
+      } else {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
+        setSession(currentSession);
+        if (currentSession?.user) {
+          await fetchProfile(currentSession.user.id);
+        }
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initialize();
