@@ -63,6 +63,12 @@ export function ThemeProvider({
   const [loading, setLoading] = useState(!initialFaculty);
   const [themeMode, setThemeModeState] = useState<ThemeMode>('glass');
 
+  // Sync with server-side prop
+  useEffect(() => {
+    setFacultyState(initialFaculty);
+    if (initialFaculty) setLoading(false);
+  }, [initialFaculty]);
+
   // Load theme from localStorage
   useEffect(() => {
     const savedTheme = localStorage.getItem('themeMode') as ThemeMode;

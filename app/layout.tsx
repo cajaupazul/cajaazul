@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description: "Plataforma educativa premium para gestión de cursos",
 };
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function RootLayout({
   children,
 }: {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { supabase, Course, Professor } from '@/lib/supabase';
 import { useProfile } from './profile-context';
 
@@ -40,6 +40,18 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         professors: false,
         grupos: false
     });
+
+    // Clear data when user logs out
+    useEffect(() => {
+        if (!session) {
+            setCourses([]);
+            setProfessors([]);
+            setGrupos([]);
+            setUserGrupos(new Set());
+            setMiembrosCuenta({});
+            initialFetchDone.current = false;
+        }
+    }, [session]);
 
     const fetchCourses = useCallback(async () => {
         if (!session) return;

@@ -29,6 +29,15 @@ export function ProfileProvider({
   const subscriptionRef = useRef<any>(null);
   const profileRef = useRef<Profile | null>(null);
 
+  // Sync state with server-side props when they change (e.g. login/logout)
+  useEffect(() => {
+    setSession(initialSession);
+    setProfile(initialProfile);
+    if (initialSession || initialProfile) {
+      setLoading(false);
+    }
+  }, [initialSession, initialProfile]);
+
   useEffect(() => {
     profileRef.current = profile;
   }, [profile]);
