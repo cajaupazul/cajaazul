@@ -18,14 +18,25 @@ export default async function RootLayout({
   const supabase = createClient();
   const { data: { session } } = await supabase.auth.getSession();
 
+  // Fetch initial profile data on server for hydration
+  let initialProfile = null;
+  if (session?.user) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+    initialProfile = data;
+  }
+
   return (
     <html lang="es">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
       <body className="bg-bb-dark text-bb-text antialiased">
-        <ThemeProvider>
-          <ProfileProvider initialSession={session}>
+        <ThemeProvider initialFaculty={initialProfile?.carrera}>
+          <ProfileProvider initialSession={session} initialProfile={initialProfile}>
             <DashboardDataProvider>
               {children}
             </DashboardDataProvider>

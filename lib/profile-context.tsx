@@ -16,14 +16,16 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({
   children,
-  initialSession = null
+  initialSession = null,
+  initialProfile = null
 }: {
   children: React.ReactNode,
-  initialSession?: Session | null
+  initialSession?: Session | null,
+  initialProfile?: Profile | null
 }) {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(initialProfile);
   const [session, setSession] = useState<Session | null>(initialSession);
-  const [loading, setLoading] = useState(!initialSession);
+  const [loading, setLoading] = useState(!initialSession && !initialProfile);
   const subscriptionRef = useRef<any>(null);
   const profileRef = useRef<Profile | null>(null);
 
@@ -85,6 +87,11 @@ export function ProfileProvider({
 
     // 1. Get initial session and profile
     const initialize = async () => {
+      if (initialProfile) {
+        setLoading(false);
+        return;
+      }
+
       if (initialSession?.user) {
         await fetchProfile(initialSession.user.id);
         setLoading(false);

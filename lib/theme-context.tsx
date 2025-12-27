@@ -52,9 +52,15 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const useTheme = () => useContext(ThemeContext);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [faculty, setFacultyState] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+export function ThemeProvider({
+  children,
+  initialFaculty = null
+}: {
+  children: React.ReactNode,
+  initialFaculty?: string | null
+}) {
+  const [faculty, setFacultyState] = useState<string | null>(initialFaculty);
+  const [loading, setLoading] = useState(!initialFaculty);
   const [themeMode, setThemeModeState] = useState<ThemeMode>('glass');
 
   // Load theme from localStorage
@@ -79,6 +85,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Escuchar cambios de autenticación
   useEffect(() => {
     const loadUserFaculty = async () => {
+      if (initialFaculty) {
+        setLoading(false);
+        return;
+      }
       try {
         const { data: { user } } = await supabase.auth.getUser();
 
