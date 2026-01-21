@@ -7,14 +7,14 @@ import { createClient } from '@supabase/supabase-js';
 export const runtime = 'edge';
 
 const MP_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-// Initialize Supabase Admin for secure fetching
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 export async function POST(req: NextRequest) {
     try {
+        // Initialize Supabase Admin inside function for Edge compatibility
+        const supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
         const { productId, userId } = await req.json();
 
         if (!productId || !userId) {

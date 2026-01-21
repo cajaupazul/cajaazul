@@ -5,15 +5,13 @@ export const runtime = 'edge';
 
 const MP_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
 
-// Initialize Supabase with Service Role Key
-// IMPORTANT: Use environment variables directly for Edge compatibility
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 export async function POST(req: NextRequest) {
     try {
+        // Initialize Supabase Admin client inside function (not at module level) for Edge compatibility
+        const supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
         const { searchParams } = new URL(req.url);
         const type = searchParams.get('type') || searchParams.get('topic');
         const id = searchParams.get('data.id') || searchParams.get('id');
