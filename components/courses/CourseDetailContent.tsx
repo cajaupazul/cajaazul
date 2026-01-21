@@ -1,0 +1,379 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Course, Professor } from '@/lib/supabase';
+import SecureFileModal from '@/components/secure/SecureFileModal';
+
+type TabType = 'todos' | 'presentaciones' | 'examenes' | 'otros';
+
+interface CourseDetailContentProps {
+    course: Course;
+    topProfessor: any;
+    allProfessors: any[];
+    initialMaterials: any[];
+}
+
+export default function CourseDetailContent({
+    course,
+    topProfessor,
+    allProfessors,
+    initialMaterials
+}: CourseDetailContentProps) {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const [materials, setMaterials] = useState<any[]>(initialMaterials);
+    const [activeTab, setActiveTab] = useState<TabType>('todos');
+    const [viewingFile, setViewingFile] = useState<{ path: string; name: string } | null>(null);
+    const [selectedProfessorId, setSelectedProfessorId] = useState<string>(searchParams.get('professor') || 'all');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+    // Sync state with url param
+    useEffect(() => {
+        const profId = searchParams.get('professor');
+        if (profId) setSelectedProfessorId(profId);
+    }, [searchParams]);
+
+    // Sync state with props when Server Component re-renders
+    useEffect(() => {
+        setMaterials(initialMaterials);
+    }, [initialMaterials]);
+
+    const handleMaterialUploaded = () => {
+        router.refresh();
+    };
+
+    const filteredMaterials = useMemo(() => {
+        if (selectedProfessorId === 'all') return materials;
+        return materials.filter(m => m.professor_id === selectedProfessorId);
+    }, [materials, selectedProfessorId]);
+
+    const presentaciones = filteredMaterials.filter(
+        (m) => m.tipo?.toLowerCase().includes('ppt') || m.tipo?.toLowerCase().includes('presentacion')
+    );
+
+    const examenes = filteredMaterials.filter((m) => m.tipo?.toLowerCase().includes('examen'));
+
+    const otros = filteredMaterials.filter(
+        (m) =>
+            !m.tipo?.toLowerCase().includes('ppt') &&
+            !m.tipo?.toLowerCase().includes('presentacion') &&
+            !m.tipo?.toLowerCase().includes('examen')
+    );
+
+    const tabs = [
+        { id: 'todos' as TabType, label: '📂 Todo', count: filteredMaterials.length },
+        { id: 'presentaciones' as TabType, label: '📊 Presentaciones', count: presentaciones.length },
+        { id: 'examenes' as TabType, label: '📝 Exámenes Pasados', count: examenes.length },
+        { id: 'otros' as TabType, label: '📚 Otros Recursos', count: otros.length },
+    ];
+
+    const renderMaterialGrid = (mats: any[]) => {
+        if (mats.length === 0) {
+            return (
+                <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
+                    <FolderRoot className="w-12 h-12 mb-3" />
+                    <p className="text-bb-text-secondary font-medium">Aún no hay materiales aquí</p>
+                </div>
+            );
+        }
+
+        if (viewMode === 'list') {
+            return (
+                <div className="space-y-2">
+                    {mats.map((material) => {
+                        const materialType = material.tipo?.toLowerCase() || '';
+                        let icon = <LayoutPanelLeft className="w-5 h-5" />;
+                        let colorClass = 'text-blue-400';
+                        let bgClass = 'bg-blue-500/10';
+
+                        if (materialType.includes('ppt') || materialType.includes('presentacion')) {
+                            colorClass = 'text-orange-400';
+                            bgClass = 'bg-orange-500/10';
+                        } else if (materialType.includes('examen')) {
+                            icon = <FileText className="w-5 h-5" />;
+                            colorClass = 'text-red-400';
+                            bgClass = 'bg-red-500/10';
+                        }
+
+                        return (
+                            <div
+                                key={material.id}
+                                onClick={() => setViewingFile({ path: material.url_archivo, name: material.titulo })}
+                                className="flex items-center justify-between p-3 bg-bb-darker/30 hover:bg-bb-card rounded-xl border border-bb-border/50 hover:border-blue-500/30 transition-all cursor-pointer group active:scale-[0.99]"
+                            >
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <div className={`p-2 rounded-lg ${bgClass} ${colorClass} group-hover:scale-110 transition-transform`}>
+                                        {icon}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-bold text-white truncate">
+                                            {material.titulo}
+                                        </p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <Badge variant="outline" className={`text-[9px] uppercase font-black py-0 px-1.5 ${colorClass} border-current opacity-70`}>
+                                                {materialType || 'material'}
+                                            </Badge>
+                                            {material.professors?.nombre && (
+                                                <span className="text-[10px] text-bb-text-secondary font-medium truncate">
+                                                    por {material.professors.nombre}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4 px-2">
+                                    <Button variant="ghost" size="sm" className="hidden sm:flex text-bb-text-secondary hover:text-white h-8 px-2 text-xs font-bold">
+                                        Ver Documento
+                                    </Button>
+                                    <LayoutPanelLeft className="w-4 h-4 text-bb-text-secondary group-hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all" />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        return (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
+                {mats.map((material) => {
+                    const materialType = material.tipo?.toLowerCase() || '';
+                    let bgColor = 'bg-blue-500/10';
+                    let borderColor = 'border-blue-500/20';
+                    let textColor = 'text-blue-400';
+                    let icon = <LayoutPanelLeft className="w-6 h-6 md:w-8 md:h-8" />;
+
+                    if (materialType.includes('ppt') || materialType.includes('presentacion')) {
+                        bgColor = 'bg-orange-500/10';
+                        borderColor = 'border-orange-500/20';
+                        textColor = 'text-orange-400';
+                        icon = <LayoutPanelLeft className="w-6 h-6 md:w-8 md:h-8" />;
+                    } else if (materialType.includes('examen')) {
+                        bgColor = 'bg-red-500/10';
+                        borderColor = 'border-red-500/20';
+                        textColor = 'text-red-400';
+                        icon = <FileText className="w-6 h-6 md:w-8 md:h-8" />;
+                    }
+
+                    return (
+                        <div
+                            key={material.id}
+                            onClick={() => setViewingFile({ path: material.url_archivo, name: material.titulo })}
+                            className={`p-3 md:p-4 ${bgColor} rounded-xl hover:bg-opacity-20 transition-all border ${borderColor} flex flex-col items-center gap-2 md:gap-3 group cursor-pointer active:scale-95`}
+                        >
+                            <div className={`${textColor} group-hover:scale-110 transition-transform`}>
+                                {icon}
+                            </div>
+                            <p className="text-[10px] md:text-xs font-bold text-bb-text text-center line-clamp-2 group-hover:text-white leading-tight">
+                                {material.titulo}
+                            </p>
+                            {material.professors?.nombre && (
+                                <span className="text-[8px] md:text-[9px] text-bb-text-secondary bg-bb-darker/50 px-2 py-0.5 rounded-md font-bold truncate max-w-full">
+                                    {material.professors.nombre}
+                                </span>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    return (
+        <div className="flex-1 overflow-auto bg-bb-dark">
+            <div className="relative h-40 md:h-64 bg-bb-darker border-b border-bb-border">
+                {course.imagen_url ? (
+                    <img src={course.imagen_url} alt={course.nombre} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-600/20 via-bb-darker to-teal-600/20" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-bb-dark/60 to-transparent" />
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="absolute top-4 left-4 bg-bb-dark/50 border-bb-border hover:bg-bb-card text-white backdrop-blur-md"
+                    onClick={() => router.back()}
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                </Button>
+            </div>
+
+            <div className="w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 max-w-7xl mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2">
+                        <div className="mb-8">
+                            <div className="flex items-start justify-between mb-4 flex-wrap gap-4">
+                                <div>
+                                    <p className="text-xs md:text-sm font-black text-blue-400 uppercase mb-1 tracking-widest">
+                                        {course.codigo}
+                                    </p>
+                                    <h1 className="text-2xl md:text-4xl font-black text-white leading-tight">{course.nombre}</h1>
+                                </div>
+                                <Badge className="bg-green-500/10 text-green-400 border border-green-500/20 font-bold">Abierto</Badge>
+                            </div>
+
+                            <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs md:text-sm text-bb-text-secondary mb-6 font-medium">
+                                <div><span className="text-bb-text/50">Facultad:</span> {course.facultad}</div>
+                                <div><span className="text-bb-text/50">Carrera:</span> {course.carrera}</div>
+                                <div><span className="text-bb-text/50">Ciclo:</span> {course.ciclo}</div>
+                            </div>
+
+                            {course.descripcion && <p className="text-bb-text-secondary leading-relaxed text-sm md:text-base">{course.descripcion}</p>}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mb-6 overscroll-x-auto no-scrollbar">
+                            <button
+                                onClick={() => setSelectedProfessorId('all')}
+                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${selectedProfessorId === 'all'
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20'
+                                    : 'bg-bb-card text-bb-text-secondary border-bb-border hover:border-bb-text hover:text-bb-text'
+                                    }`}
+                            >
+                                <Filter className="w-3 h-3" /> Todos
+                            </button>
+                            {allProfessors.map((prof) => (
+                                <button
+                                    key={prof.id}
+                                    onClick={() => setSelectedProfessorId(prof.id)}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${selectedProfessorId === prof.id
+                                        ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20'
+                                        : 'bg-bb-card text-bb-text-secondary border-bb-border hover:border-bb-text hover:text-bb-text'
+                                        }`}
+                                >
+                                    {prof.nombre}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="w-full">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
+                                <div className="flex gap-1 border-b border-bb-border overflow-x-auto no-scrollbar flex-1 pb-px">
+                                    {tabs.map((tab) => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`px-3 md:px-4 py-3 font-bold text-[11px] md:text-sm transition-all relative whitespace-nowrap flex-1 sm:flex-none text-center ${activeTab === tab.id ? 'text-blue-400' : 'text-bb-text-secondary hover:text-bb-text'
+                                                }`}
+                                        >
+                                            <span className="flex items-center justify-center gap-1.5 md:gap-2">
+                                                {tab.label.split(' ')[1]}
+                                                <span className={`text-[9px] md:text-xs font-bold px-1.5 py-0.5 rounded-md ${activeTab === tab.id ? 'bg-blue-500/20 text-blue-400' : 'bg-bb-darker text-bb-text-secondary'}`}>
+                                                    {tab.count}
+                                                </span>
+                                            </span>
+                                            {activeTab === tab.id && (
+                                                <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></motion.div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex items-center gap-2 self-center sm:self-auto bg-bb-darker/50 p-1 rounded-xl border border-bb-border">
+                                    <button
+                                        onClick={() => setViewMode('grid')}
+                                        className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                        title="Vista Cuadrícula"
+                                    >
+                                        <LayoutPanelLeft className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('list')}
+                                        className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                        title="Vista Lista"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-list"><line x1="8" x2="21" y1="6" y2="6" /><line x1="8" x2="21" y1="12" y2="12" /><line x1="8" x2="21" y1="18" y2="18" /><line x1="3" x2="3.01" y1="6" y2="6" /><line x1="3" x2="3.01" y1="12" y2="12" /><line x1="3" x2="3.01" y1="18" y2="18" /></svg>
+                                    </button>
+                                </div>
+                                <Link
+                                    href={`/dashboard/courses/${course.id}/upload`}
+                                    className="inline-flex items-center justify-center rounded-xl text-xs md:text-sm font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 h-11 px-6 shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>
+                                        Subir Material
+                                    </div>
+                                </Link>
+                            </div>
+
+                            <div className="bg-bb-card p-4 md:p-6 rounded-2xl border border-bb-border shadow-2xl shadow-black/40">
+                                {activeTab === 'todos' && renderMaterialGrid(filteredMaterials)}
+                                {activeTab === 'presentaciones' && renderMaterialGrid(presentaciones)}
+                                {activeTab === 'examenes' && renderMaterialGrid(examenes)}
+                                {activeTab === 'otros' && renderMaterialGrid(otros)}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="lg:col-span-1">
+                        <div className="sticky top-8 space-y-6">
+                            {topProfessor ? (
+                                <div className="bg-bb-card rounded-2xl border border-bb-border overflow-hidden shadow-xl">
+                                    <div className="bg-gradient-to-r from-blue-600 to-blue-800 h-24"></div>
+                                    <div className="px-6 pb-6">
+                                        <div className="-mt-12 mb-4">
+                                            <img
+                                                src={topProfessor.avatar_url || '/profes/tl.webp'}
+                                                alt={topProfessor.nombre}
+                                                className="w-20 h-20 rounded-2xl border-4 border-bb-card object-cover shadow-lg bg-bb-sidebar"
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).src = '/profes/tl.webp';
+                                                }}
+                                            />
+                                        </div>
+                                        <h3 className="font-bold text-white text-lg mb-0.5">{topProfessor.nombre}</h3>
+                                        <p className="text-xs text-bb-text-secondary mb-3">{topProfessor.especialidad}</p>
+                                        <div className="flex items-center gap-2 mb-5">
+                                            <div className="flex items-center">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star key={i} className={`h-3.5 w-3.5 ${i < Math.round(topProfessor.averageRating) ? 'fill-yellow-400 text-yellow-400' : 'text-bb-darker'}`} />
+                                                ))}
+                                            </div>
+                                            <span className="text-sm font-bold text-white">{topProfessor.averageRating.toFixed(1)}</span>
+                                        </div>
+                                        <Button className="w-full bg-bb-darker hover:bg-bb-dark text-white border border-bb-border font-bold">
+                                            <Mail className="h-4 w-4 mr-2" /> Contactar
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-bb-card p-8 rounded-2xl border border-bb-border text-center">
+                                    <p className="text-bb-text-secondary text-sm font-medium">No hay profesores asignados</p>
+                                </div>
+                            )}
+
+                            {allProfessors.length > 1 && (
+                                <div className="bg-bb-card rounded-2xl border border-bb-border p-6 shadow-xl">
+                                    <h4 className="font-bold text-white mb-4 flex items-center gap-2">
+                                        <Users className="w-4 h-4 text-blue-400" /> Otros profesores
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {allProfessors.map((prof) => (
+                                            prof.id !== topProfessor?.id && (
+                                                <div key={prof.id} className="p-3 bg-bb-darker/50 rounded-xl border border-bb-border/50 hover:border-blue-500/30 transition-colors">
+                                                    <p className="font-bold text-sm text-bb-text">{prof.nombre}</p>
+                                                    <p className="text-[10px] text-bb-text-secondary mt-0.5">{prof.especialidad}</p>
+                                                </div>
+                                            )
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <SecureFileModal
+                isOpen={!!viewingFile}
+                onClose={() => setViewingFile(null)}
+                filePath={viewingFile?.path || null}
+                fileName={viewingFile?.name || null}
+            />
+        </div>
+    );
+}
