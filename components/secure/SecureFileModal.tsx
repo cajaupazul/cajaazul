@@ -1,7 +1,12 @@
 'use client';
 
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import SecureFileViewer from './SecureFileViewer';
+import dynamic from 'next/dynamic';
+
+const SecureFileViewer = dynamic(() => import('./SecureFileViewer'), {
+    ssr: false,
+    loading: () => <div className="flex items-center justify-center h-full text-white/50">Cargando visor...</div>
+});
 
 interface SecureFileModalProps {
     isOpen: boolean;
