@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase, Profile } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
 import {
@@ -46,6 +46,19 @@ export default function GruposContent({
         tipo: '',
         link_whatsapp: '',
     });
+
+    // Sincronizar estado local cuando los datos iniciales cambian (desde el contexto global)
+    useEffect(() => {
+        setGrupos(initialGrupos);
+    }, [initialGrupos]);
+
+    useEffect(() => {
+        setUserGrupos(new Set(userGruposIds));
+    }, [userGruposIds]);
+
+    useEffect(() => {
+        setMiembrosCuenta(miembrosCounts);
+    }, [miembrosCounts]);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [uploadingLogo, setUploadingLogo] = useState(false);

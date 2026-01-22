@@ -118,14 +118,29 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
                 `)
                 .order('created_at', { ascending: false });
 
-            if (!error && data) {
-                setGrupos(data);
+            if (error) {
+                console.error('[FETCH_GRUPOS] Error:', error.message, error.details);
+            }
+
+            if (data) {
+                // Normalizar datos por si hay discrepancias de casing de Supabase UI
+                const normalized = data.map((g: any) => ({
+                    ...g,
+                    nombre: g.nombre || g.Nombre || 'Sin nombre',
+                    descripcion: g.descripcion || g.Descripcion || '',
+                    logo_url: g.logo_url || g.Logo_url || null,
+                    banner_url: g.banner_url || g.Banner_url || null
+                }));
+
+                setGrupos(normalized);
                 const counts: Record<string, number> = {};
-                data.forEach((grupo: any) => {
+                normalized.forEach((grupo: any) => {
                     counts[grupo.id] = grupo.grupo_miembros?.[0]?.count || 0;
                 });
                 setMiembrosCuenta(counts);
             }
+        } catch (err) {
+            console.error('[FETCH_GRUPOS] Fatal error:', err);
         } finally {
             setLoading(prev => ({ ...prev, grupos: false }));
         }
