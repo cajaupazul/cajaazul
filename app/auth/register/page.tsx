@@ -140,8 +140,7 @@ function RegisterContent() {
       }
 
       if (authData.user) {
-        // Create initial profile record manually if it's not handled by trigger
-        console.log('[REGISTER_SUCCESS] User created, waiting for session...');
+        console.log('[REGISTER_SUCCESS] User created. Database triggers will handle profile creation.');
       }
     } catch (err: any) {
       console.error('[REGISTER_EXCEPTION]', err);

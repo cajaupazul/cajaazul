@@ -105,58 +105,26 @@ export function ProfileProvider({
 
     isFetching.current = true;
 
-    // We don't set loading=true here to avoid flickering if re-fetching.
-    // Initial load handling is done by the caller or initial state.
-
     try {
       console.log(`[PROFILE_CONTEXT] Fetching profile for: ${userId}`);
 
+      // READ-ONLY: We ONLY read. Profile creation IS handled by DB Triggers.
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle();
+        .single();
 
       if (error) {
-        console.error('[PROFILE_CONTEXT] Error fetching profile:', error);
-        // Do NOT block UI on read error, just continue.
-      }
-
-      if (data) {
+        console.error('[PROFILE_CONTEXT] Error fetching profile:', error.message);
+        // If error is 406 or no data, it means NO profile exists. 
+        // We do NOT create it here. The Layout will handle logout if profile remains null.
+        setProfile(null);
+        saveProfileToCache(null);
+      } else if (data) {
         setProfile(data);
         saveProfileToCache(data);
         hasInitializedProfile.current = true; // Mark as initialized
-      } else {
-        console.log('[PROFILE_CONTEXT] No profile found. Attempting to create one...');
-
-        // Auto-create profile from user metadata logic
-        const user = currentSession.user;
-        const defaultProfile = {
-          id: userId,
-          nombre: user.user_metadata?.nombre || user.email?.split('@')[0] || 'Usuario',
-          universidad: user.user_metadata?.universidad || 'Universidad del Pacífico',
-          carrera: user.user_metadata?.carrera || 'General',
-          puntos: 0,
-          avatar_url: null,
-          bio: null,
-          email: user.email // Ensure email is captured if schema requires it
-        };
-
-        const { data: newProfile, error: insertError } = await supabase
-          .from('profiles')
-          .insert(defaultProfile)
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error('[PROFILE_CONTEXT] Failed to auto-create profile:', insertError);
-          // We continue, ensuring loading is released.
-        } else if (newProfile) {
-          console.log('[PROFILE_CONTEXT] Profile created successfully.');
-          setProfile(newProfile);
-          saveProfileToCache(newProfile);
-          hasInitializedProfile.current = true; // Mark as initialized
-        }
       }
     } catch (err) {
       console.error('[PROFILE_CONTEXT] Unexpected error in fetchProfile:', err);
