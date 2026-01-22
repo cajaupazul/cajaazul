@@ -3,11 +3,16 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
+import { useProfile } from '@/lib/profile-context';
 
 export function GoogleButton({ text = 'Continuar con Google' }: { text?: string }) {
     const [loading, setLoading] = useState(false);
+    const { clearProfile } = useProfile();
 
     const handleGoogleLogin = async () => {
+        // NUCLEAR OPTION: Clear old state before OAuth
+        clearProfile();
+
         setLoading(true);
 
         // SAFE OAUTH LOGIC:

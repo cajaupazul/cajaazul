@@ -14,6 +14,7 @@ interface ProfileContextType {
   loading: boolean;
   updateProfile: (updatedProfile: Profile) => void;
   refreshProfile: () => Promise<void>;
+  clearProfile: () => void;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -71,6 +72,20 @@ export function ProfileProvider({
       localStorage.removeItem(STORAGE_KEY);
     }
   };
+
+  // EXPLICIT RESET METHOD
+  const clearProfile = useCallback(() => {
+    console.log('[PROFILE_CONTEXT] Explicitly cleaning state...');
+    setProfile(null);
+    setSession(null);
+    setLoading(true); // Reset to loading until new auth proves otherwise
+    lastFetchedUserId.current = null;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.clear(); // Nuclear option for safety
+      sessionStorage.clear();
+    }
+  }, []);
 
   const fetchProfile = useCallback(async (userId: string, currentSession: Session) => {
     // Prevent duplicate fetches for the same user if already in progress
@@ -163,8 +178,9 @@ export function ProfileProvider({
             if (cached) {
               try {
                 const p = JSON.parse(cached);
+                // STRICT CHECK: If cache doesn't match current session, wipe it immediately
                 if (p.id !== initialSession.user.id) {
-                  // Cache belongs to another user, clear it
+                  console.warn('[PROFILE_CONTEXT] Cache mismatch detected. Clearing old profile.');
                   setProfile(null);
                   localStorage.removeItem(STORAGE_KEY);
                   setLoading(true); // Force loading to true to refetch for the new user
@@ -191,10 +207,25 @@ export function ProfileProvider({
         setSession(newSession);
         if (!newSession) {
           // LOGOUT or Session Expiry -> Clear Everything correctly
+          console.log('[AUTH_CHANGE] Session ended. Cleaning up.');
           setProfile(null);
           setLoading(false); // User signed out? Loading done.
           lastFetchedUserId.current = null;
           localStorage.removeItem(STORAGE_KEY);
+        } else {
+          // New session detected! Verify profile match immediately
+          const cached = localStorage.getItem(STORAGE_KEY);
+          if (cached) {
+            try {
+              const p = JSON.parse(cached);
+              if (p.id !== newSession.user.id) {
+                console.warn('[AUTH_CHANGE] New user detected. Resetting profile state.');
+                setProfile(null); // Clear old user VISUALLY
+                localStorage.removeItem(STORAGE_KEY);
+                // Do NOT set loading=false here, let fetchProfile handle it
+              }
+            } catch { }
+          }
         }
       }
     });
@@ -208,6 +239,13 @@ export function ProfileProvider({
   // 2. Profile Sync Effect - Reacts to Session changes
   useEffect(() => {
     if (!session?.user?.id) return;
+
+    // Strict double-check: If we have a profile but IDs mismatch, clear it NOW
+    if (profile && profile.id !== session.user.id) {
+      console.error('[PROFILE_SYNC] CRITICAL: Profile/Session mismatch. Purging profile.');
+      setProfile(null);
+      localStorage.removeItem(STORAGE_KEY);
+    }
 
     // Proactive Domain Check - kept from original requirements but purely for session validity
     if (session.user.email && !session.user.email.endsWith('@alum.up.edu.pe')) {
@@ -241,7 +279,7 @@ export function ProfileProvider({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session, fetchProfile]);
+  }, [session, fetchProfile, profile]); // Added profile to dependencies logic internally if needed, but strict check handles it
 
 
   const updateProfile = useCallback((updatedProfile: Profile) => {
@@ -262,8 +300,9 @@ export function ProfileProvider({
     session,
     loading,
     updateProfile,
-    refreshProfile
-  }), [profile, session, loading, updateProfile, refreshProfile]);
+    refreshProfile,
+    clearProfile
+  }), [profile, session, loading, updateProfile, refreshProfile, clearProfile]);
 
   return (
     <ProfileContext.Provider value={value}>

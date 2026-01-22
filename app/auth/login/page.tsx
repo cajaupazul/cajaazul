@@ -24,7 +24,7 @@ export default function LoginPage() {
 
 function LoginContent() {
   const router = useRouter();
-  const { session, loading: profileLoading } = useProfile();
+  const { session, loading: profileLoading, clearProfile } = useProfile();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,9 +38,10 @@ function LoginContent() {
   useEffect(() => {
     // REDUNDANT CLEANUP: Ensure we start clean when entering the login page
     if (typeof window !== 'undefined') {
+      // Also invoke the context clearer if possible, but pure localStorage is safer here
+      // clearProfile(); // Can't call side-effect here strictly without loop risk, handled on click
       localStorage.clear();
       sessionStorage.clear();
-      console.log('[LOGIN_PAGE_CLEANUP] Initialized clean state');
     }
   }, []);
 
@@ -99,6 +100,10 @@ function LoginContent() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // NUCLEAR OPTION: Clear old state before thinking about logging in
+    clearProfile();
+
     setLoading(true);
     setError('');
 
@@ -110,6 +115,7 @@ function LoginContent() {
         setLoading(false);
         return;
       }
+
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: emailTrimmed,
