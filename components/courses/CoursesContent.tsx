@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Search, Plus, Trash2 } from 'lucide-react';
 import { supabase, Course, Profile } from '@/lib/supabase';
+import { useDashboardData } from '@/lib/dashboard-data-context';
 import {
     Select,
     SelectContent,
@@ -46,6 +47,12 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
     const [savedCourses, setSavedCourses] = useState<string[]>([]);
     const [itemsPerPage] = useState(25);
     const router = useRouter();
+    const { removeCourse } = useDashboardData();
+
+    // Sync local state when global state changes (e.g. from props)
+    useEffect(() => {
+        setCourses(initialCourses);
+    }, [initialCourses]);
 
 
     const filteredCourses = courses.filter((course) => {
@@ -186,6 +193,7 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
                                                             const { error } = await supabase.from('courses').delete().eq('id', course.id);
                                                             if (!error) {
                                                                 setCourses(prev => prev.filter(c => c.id !== course.id));
+                                                                removeCourse(course.id);
                                                             } else {
                                                                 alert('Error al eliminar curso');
                                                             }
