@@ -22,6 +22,8 @@ interface DashboardDataContextType {
     refreshAll: (userId?: string) => Promise<void>;
     addCourse: (course: Course) => void;
     removeCourse: (courseId: string) => void;
+    addProfessor: (professor: any) => void;
+    removeProfessor: (professorId: string) => void;
 }
 
 const DashboardDataContext = createContext<DashboardDataContextType | undefined>(undefined);
@@ -164,6 +166,18 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         setCourses(prev => prev.filter(c => c.id !== courseId));
     }, []);
 
+    const addProfessor = useCallback((professor: any) => {
+        setProfessors(prev => {
+            // Check if professor already exists in list (by ID)
+            if (prev.find(p => p.id === professor.id)) return prev;
+            return [...prev, professor].sort((a, b) => a.nombre.localeCompare(b.nombre));
+        });
+    }, []);
+
+    const removeProfessor = useCallback((professorId: string) => {
+        setProfessors(prev => prev.filter(p => p.id !== professorId));
+    }, []);
+
     const value = useMemo(() => ({
         courses,
         professors,
@@ -177,10 +191,12 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         fetchUserGrupos,
         refreshAll,
         addCourse,
-        removeCourse
+        removeCourse,
+        addProfessor,
+        removeProfessor
     }), [
         courses, professors, grupos, userGrupos, miembrosCuenta, loading,
-        fetchCourses, fetchProfessors, fetchGrupos, fetchUserGrupos, refreshAll, addCourse, removeCourse
+        fetchCourses, fetchProfessors, fetchGrupos, fetchUserGrupos, refreshAll, addCourse, removeCourse, addProfessor, removeProfessor
     ]);
 
     return (

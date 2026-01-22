@@ -13,6 +13,21 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Autocomplete } from '@/components/ui/Autocomplete';
 import { courseCatalog } from '@/lib/data/courseCatalog';
+import { useDashboardData } from '@/lib/dashboard-data-context';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+
+const FACULTADES = [
+    'Facultad de Ciencias Empresariales',
+    'Facultad de Derecho',
+    'Facultad de Economía y Finanzas',
+    'Facultad de Ingeniería',
+];
 
 interface AddProfessorFormProps {
     profile: Profile | null;
@@ -23,6 +38,7 @@ interface AddProfessorFormProps {
 
 export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal = false }: AddProfessorFormProps) {
     const router = useRouter();
+    const { addProfessor } = useDashboardData();
     const [loading, setLoading] = useState(false);
     const [checking, setChecking] = useState(false);
     const [searching, setSearching] = useState(false);
@@ -221,7 +237,7 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
 
         setLoading(true);
         try {
-            const { error } = await supabase.from('professors').insert({
+            const { data, error } = await supabase.from('professors').insert({
                 nombre: formData.nombre.trim(),
                 especialidad: formData.especialidad.trim(),
                 facultad: formData.facultad.trim() || null,
@@ -229,9 +245,13 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
                 otros_cursos: formData.otros_cursos.trim() || null,
                 background_image_url: getRandomBackgroundImage(),
                 avatar_url: '/profes/tl.webp', // Default avatar
-            });
+            }).select().single();
 
             if (error) throw error;
+
+            if (data) {
+                addProfessor(data);
+            }
 
             if (onSuccess) {
                 onSuccess();
@@ -352,64 +372,24 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
 
                             <div className="space-y-3 relative">
                                 <Label htmlFor="facultad" className="text-bb-text text-sm font-bold uppercase tracking-wider">
-                                    Facultad
+                                    Facultad *
                                 </Label>
-                                <div className="relative">
-                                    <Input
-                                        id="facultad"
-                                        value={formData.facultad}
-                                        onChange={handleChange}
-                                        onFocus={() => formData.facultad.length >= 1 && setShowFacultySuggestions(true)}
-                                        placeholder="EJ: INGENIERÍA"
-                                        className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-xl pl-10 uppercase"
-                                        autoComplete="off"
-                                    />
-                                    <Search className="absolute left-3 top-3.5 w-5 h-5 text-gray-500" />
-                                    {searchingFaculties && (
-                                        <div className="absolute right-3 top-3.5">
-                                            <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-                                        </div>
-                                    )}
-
-                                    {/* Faculty Suggestions UI */}
-                                    <AnimatePresence>
-                                        {showFacultySuggestions && (formData.facultad.length >= 1) && (
-                                            <motion.div
-                                                ref={facultySuggestionRef}
-                                                initial={{ opacity: 0, y: -5, scale: 0.98 }}
-                                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                exit={{ opacity: 0, y: -5, scale: 0.98 }}
-                                                className="absolute z-[110] w-full mt-1 bg-bb-card border border-bb-border rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden"
-                                            >
-                                                <div className="p-3 border-b border-bb-border bg-bb-darker/80 flex items-center justify-between">
-                                                    <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">FACULTADES EXISTENTES</span>
-                                                </div>
-
-                                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                                    {facultySuggestions.length > 0 ? (
-                                                        facultySuggestions.map((fac, i) => (
-                                                            <button
-                                                                key={i}
-                                                                type="button"
-                                                                onClick={() => handleSelectFacultySuggestion(fac)}
-                                                                className="w-full flex items-center gap-3 p-3 hover:bg-blue-500/10 transition-all text-left border-b border-bb-border last:border-0 group"
-                                                            >
-                                                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0 group-hover:scale-110 transition-transform">
-                                                                    <Info className="w-4 h-4" />
-                                                                </div>
-                                                                <p className="text-sm font-bold text-bb-text truncate group-hover:text-blue-400 transition-colors uppercase">{fac}</p>
-                                                            </button>
-                                                        ))
-                                                    ) : !searchingFaculties ? (
-                                                        <div className="p-6 text-center bg-bb-darker/30">
-                                                            <p className="text-xs text-bb-text-secondary uppercase">Nueva facultad</p>
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
+                                <Select
+                                    value={formData.facultad}
+                                    onValueChange={(val) => setFormData(prev => ({ ...prev, facultad: val }))}
+                                    required
+                                >
+                                    <SelectTrigger className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-xl pl-4 uppercase">
+                                        <SelectValue placeholder="SELECCIONA UNA FACULTAD" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-bb-card border-bb-border text-bb-text">
+                                        {FACULTADES.map((faculty) => (
+                                            <SelectItem key={faculty} value={faculty} className="focus:bg-bb-hover focus:text-bb-text uppercase">
+                                                {faculty}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <Autocomplete

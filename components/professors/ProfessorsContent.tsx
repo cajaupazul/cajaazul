@@ -5,11 +5,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Star, Search, Plus, GraduationCap, Trophy, Trash2 } from 'lucide-react';
 import { supabase, Professor, Profile } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import AddProfessorForm from '@/components/professors/AddProfessorForm';
+import { useEffect } from 'react';
+import { useDashboardData } from '@/lib/dashboard-data-context';
 
 interface ProfessorsContentProps {
     initialProfessors: any[];
@@ -71,10 +71,15 @@ export default function ProfessorsContent({
     profile
 }: ProfessorsContentProps) {
     const router = useRouter();
+    const { removeProfessor } = useDashboardData();
     const [professors, setProfessors] = useState<any[]>(initialProfessors);
     const [searchQuery, setSearchQuery] = useState('');
     const [savedProfessors, setSavedProfessors] = useState<Set<string>>(new Set(initialSavedProfessors));
-    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+    // Sync local state when global state changes (e.g. from props)
+    useEffect(() => {
+        setProfessors(initialProfessors);
+    }, [initialProfessors]);
 
     const filteredProfessors = professors.filter((professor) => {
         if (!searchQuery) return true;
@@ -115,7 +120,7 @@ export default function ProfessorsContent({
                         </div>
 
                         <Button
-                            onClick={() => setCreateDialogOpen(true)}
+                            onClick={() => router.push('/dashboard/professors/nuevo')}
                             className="h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl w-full sm:w-auto"
                         >
                             <Plus className="h-5 w-5 mr-2" />
@@ -154,6 +159,7 @@ export default function ProfessorsContent({
                                                             const { error } = await supabase.from('professors').delete().eq('id', professor.id);
                                                             if (!error) {
                                                                 setProfessors(prev => prev.filter(p => p.id !== professor.id));
+                                                                removeProfessor(professor.id);
                                                             } else {
                                                                 alert('Error al eliminar profesor');
                                                             }
@@ -252,7 +258,7 @@ export default function ProfessorsContent({
                         </p>
                         {!searchQuery && (
                             <Button
-                                onClick={() => setCreateDialogOpen(true)}
+                                onClick={() => router.push('/dashboard/professors/nuevo')}
                                 className="mt-6 bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 h-12 rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-105 active:scale-95"
                             >
                                 <Plus className="h-5 w-5 mr-2" />
@@ -263,20 +269,6 @@ export default function ProfessorsContent({
                 )}
             </div>
 
-            {/* Panel para completar datos del profe (Modal) */}
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-                <DialogContent className="bg-bb-card border-bb-border text-bb-text max-w-4xl rounded-[2.5rem] overflow-y-auto max-h-[90vh] custom-scrollbar p-0 border-0">
-                    <AddProfessorForm
-                        profile={profile}
-                        isModal={true}
-                        onSuccess={() => {
-                            setCreateDialogOpen(false);
-                            router.refresh();
-                        }}
-                        onCancel={() => setCreateDialogOpen(false)}
-                    />
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }
