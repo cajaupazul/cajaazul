@@ -56,88 +56,64 @@ export default function AuthenticatedLayout({
   const dataFetched = useRef(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // 1. Core Auth Guard & Fail-Close Security
-  // This is the definitive gatekeeper for the authenticated section.
+  // 1. Core Auth Guard
   useEffect(() => {
-    // If loading is finished...
+    // If we're not loading the session/profile state anymore
     if (!profileLoading) {
-      // CASE A: No session -> Immediate redirect to login
       if (!session) {
-        console.log('[AUTH_GUARD] No session found. Redirecting to login...');
-        window.location.replace('/auth/login');
-        return;
-      }
-
-      // CASE B: Session exists but NO profile -> Fail-Close Security
-      // This means the user is authenticated in Supabase but doesn't exist in our 'profiles' table.
-      if (!profile) {
-        console.warn('[AUTH_GUARD] Session exists but Profile is missing. Fail-Close triggered.');
-        // We sign out and clear everything to prevent "phantom" access
-        supabase.auth.signOut().finally(() => {
-          window.location.replace('/auth/login?error=PROFILE_NOT_FOUND');
+        console.log('[AUTH_GUARD] No session. Redirecting...');
+        router.replace('/auth/login');
+      } else if (!profile) {
+        console.warn('[AUTH_GUARD] Profile missing. Signing out...');
+        supabase.auth.signOut().then(() => {
+          router.replace('/auth/login?error=profile_not_found');
         });
-        return;
       }
-
-      // CASE C: Session and Profile exist -> We are safe to stay here.
-      console.log('[AUTH_GUARD] Auth identity established for:', profile.email);
     }
-  }, [profileLoading, session, profile]);
+  }, [profileLoading, session, profile, router]);
 
-  // 2. Data fetching: Only once session and profile are 100% confirmed.
+  // 2. Data fetching
   useEffect(() => {
     if (session && profile && !dataFetched.current) {
-      console.log('[AUTH_GUARD] Session & Profile confirmed. Fetching data...');
       refreshAll(profile.id);
       dataFetched.current = true;
     }
   }, [session, profile, refreshAll]);
 
-  // 3. Handle mobile detection and auto-close sidebar
+  // 3. Mobile handling
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      if (mobile) {
-        setSidebarOpen(false);
-      }
+      if (mobile) setSidebarOpen(false);
     };
-
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 4. Fetch equipped frame for sidebar avatar
+  // 4. Fetch equipped frame
   useEffect(() => {
     const fetchEquippedFrame = async () => {
       if (!profile?.active_frame_key) {
         setEquippedFrame(null);
         return;
       }
-
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('shop_items')
         .select('*')
         .eq('frame_key', profile.active_frame_key)
         .single();
-
-      if (!error && data) {
-        setEquippedFrame(data);
-      }
+      if (data) setEquippedFrame(data);
     };
-
     fetchEquippedFrame();
   }, [profile?.active_frame_key]);
 
-  const handleLogoutClick = () => {
-    setShowLogoutConfirm(true);
-  };
+  const handleLogoutClick = () => setShowLogoutConfirm(true);
 
   const handleLogoutConfirm = async () => {
     setShowLogoutConfirm(false);
-    console.log('[LOGOUT] Initiating sign out...');
-    supabase.auth.signOut();
+    await supabase.auth.signOut();
   };
 
   const isActive = (href: string) => pathname === href;
@@ -159,19 +135,17 @@ export default function AuthenticatedLayout({
     { label: 'Nosotros', href: '/dashboard/about', icon: Info },
   ];
 
-  // Render logic:
-  // We show a full-screen stable loader until exactly session AND profile are ready.
-  // This eliminates any intermediate "broken" or "null" states.
-  if (profileLoading || !session || !profile) {
+  // While checking initial session, show minimal splash
+  if (profileLoading && !session) {
     return (
-      <div className="min-h-screen bg-bb-dark flex items-center justify-center flex-col gap-4">
+      <div className="min-h-screen bg-bb-dark flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-white/10 border-t-blue-500 rounded-full animate-spin" />
-        <p className="text-white/60 font-bold tracking-widest text-xs uppercase animate-pulse">
-          Protegiendo Sesión...
-        </p>
       </div>
     );
   }
+
+  // If no session after load, don't render children (redirect will happen)
+  if (!session) return null;
 
   const isInitialLoading = false;
 

@@ -24,13 +24,13 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
       <body className="bg-bb-dark text-bb-text antialiased">
-        <ThemeProvider>
-          <ProfileProvider>
+        <ProfileProvider>
+          <ThemeProvider>
             <DashboardDataProvider>
               {children}
             </DashboardDataProvider>
-          </ProfileProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </ProfileProvider>
       </body>
     </html>
   );

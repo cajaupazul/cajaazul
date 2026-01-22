@@ -1,6 +1,6 @@
 'use client';
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from './supabase';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useProfile } from './profile-context';
 
 export const FACULTY_COLORS = {
   'Facultad de Ciencias Empresariales': {
@@ -27,38 +27,32 @@ export const FACULTY_COLORS = {
     dark: '#CC9900',
     light: '#FFFBF0',
   },
-};
+} as const;
 
-// Define types for the 2 modes
 export type ThemeMode = 'light' | 'dark';
 
 interface ThemeContextType {
   faculty: string | null;
-  colors: typeof FACULTY_COLORS[keyof typeof FACULTY_COLORS] | null;
+  colors: typeof FACULTY_COLORS[keyof typeof FACULTY_COLORS];
   setFaculty: (faculty: string) => void;
   loading: boolean;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({
-  faculty: null,
-  colors: null,
-  setFaculty: () => { },
-  loading: true,
-  themeMode: 'dark',
-  setThemeMode: () => { },
-});
+const DEFAULT_COLORS = FACULTY_COLORS['Facultad de Ciencias Empresariales'];
 
-export const useTheme = () => useContext(ThemeContext);
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({
-  children
-}: {
-  children: React.ReactNode
-}) {
-  const [faculty, setFacultyState] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) throw new Error('useTheme must be used within ThemeProvider');
+  return context;
+};
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const { profile, loading: profileLoading } = useProfile();
+  const [facultyState, setFacultyState] = useState<string | null>(null);
   const [themeMode, setThemeModeState] = useState<ThemeMode>('dark');
 
   // Load theme from localStorage
@@ -68,9 +62,7 @@ export function ThemeProvider({
       setThemeModeState(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
     } else {
-      setThemeModeState('dark');
       document.documentElement.setAttribute('data-theme', 'dark');
-      localStorage.setItem('themeMode', 'dark');
     }
   }, []);
 
@@ -80,71 +72,40 @@ export function ThemeProvider({
     document.documentElement.setAttribute('data-theme', mode);
   };
 
-  // Function to load the faculty from the user's profile
-  const loadUserFaculty = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('carrera')
-          .eq('id', user.id)
-          .single();
-        if (profile?.carrera) {
-          setFacultyState(profile.carrera);
-        } else {
-          setFacultyState(null);
-        }
-      } else {
-        setFacultyState(null);
-      }
-    } catch (error) {
-      console.error('Error loading user faculty:', error);
-      setFacultyState(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Sync faculty from profile
   useEffect(() => {
-    loadUserFaculty();
-
-    // Listen for session changes (login/logout, profile changes)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event) => {
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-          await loadUserFaculty();
-        }
-      }
-    );
-
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, []);
-
-  // Apply custom CSS variables whenever faculty changes
-  useEffect(() => {
-    if (faculty && faculty in FACULTY_COLORS) {
-      const colors = FACULTY_COLORS[faculty as keyof typeof FACULTY_COLORS];
-      document.documentElement.style.setProperty('--faculty-primary', colors.primary);
-      document.documentElement.style.setProperty('--faculty-secondary', colors.secondary);
-      document.documentElement.style.setProperty('--faculty-dark', colors.dark);
-      document.documentElement.style.setProperty('--faculty-light', colors.light);
+    if (profile?.carrera) {
+      setFacultyState(profile.carrera);
     }
-  }, [faculty]);
+  }, [profile?.carrera]);
 
-  const setFaculty = (newFaculty: string) => {
-    setFacultyState(newFaculty);
-  };
+  // Apply custom CSS variables
+  useEffect(() => {
+    const activeFaculty = facultyState || 'Facultad de Ciencias Empresariales';
+    const colors = FACULTY_COLORS[activeFaculty as keyof typeof FACULTY_COLORS] || DEFAULT_COLORS;
 
-  const colors = faculty && faculty in FACULTY_COLORS
-    ? FACULTY_COLORS[faculty as keyof typeof FACULTY_COLORS]
-    : FACULTY_COLORS['Facultad de Ciencias Empresariales'];
+    document.documentElement.style.setProperty('--faculty-primary', colors.primary);
+    document.documentElement.style.setProperty('--faculty-secondary', colors.secondary);
+    document.documentElement.style.setProperty('--faculty-dark', colors.dark);
+    document.documentElement.style.setProperty('--faculty-light', colors.light);
+  }, [facultyState]);
+
+  const colors = useMemo(() => {
+    const activeFaculty = facultyState || 'Facultad de Ciencias Empresariales';
+    return FACULTY_COLORS[activeFaculty as keyof typeof FACULTY_COLORS] || DEFAULT_COLORS;
+  }, [facultyState]);
+
+  const value = useMemo(() => ({
+    faculty: facultyState,
+    colors,
+    setFaculty: setFacultyState,
+    loading: profileLoading,
+    themeMode,
+    setThemeMode
+  }), [facultyState, colors, profileLoading, themeMode]);
 
   return (
-    <ThemeContext.Provider value={{ faculty, colors, setFaculty, loading, themeMode, setThemeMode }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
