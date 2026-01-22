@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Star, MessageCircle, TrendingUp, ArrowLeft, Trophy, Sparkles, Share2, Instagram, User, Info, ArrowRight, Upload, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { supabase, Professor, Profile } from '@/lib/supabase';
+import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
 import BouncingBalls from '@/components/BouncingBalls';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
@@ -541,12 +541,16 @@ export default function ProfessorRatingsContent({
 
                     <div className={`relative z-10 p-8 flex flex-col md:flex-row gap-8 items-center md:items-start text-center md:text-left ${professor.background_image_url ? '-mt-16' : ''}`}>
                         <div className="relative group">
-                            <AvatarWithFrame
-                                size={128} // w-32 (32 * 4 = 128)
-                                avatarUrl={professor.avatar_url || '/profes/tl.webp'}
-                                name={professor.nombre}
-                                className="shadow-2xl ring-4 ring-bb-card bg-bb-sidebar overflow-hidden"
-                            />
+                            <div className="h-24 w-24 md:h-32 md:w-32 rounded-2xl md:rounded-3xl flex items-center justify-center bg-bb-sidebar border-4 border-bb-card shadow-2xl overflow-hidden relative z-20 transition-transform duration-500 hover:scale-105">
+                                <img
+                                    src={getStorageUrl(professor.avatar_url || '/profes/tl.webp', 'profile-avatars', PLACEHOLDERS.AVATAR)}
+                                    alt={professor.nombre}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).src = '/profes/tl.webp';
+                                    }}
+                                />
+                            </div>
                             <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-xl flex items-center gap-1 border border-yellow-400/50 z-30">
                                 <Star className="w-3.5 h-3.5 fill-white" /> {avgRating}
                             </div>

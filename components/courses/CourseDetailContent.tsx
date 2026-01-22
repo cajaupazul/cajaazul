@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Course, Professor } from '@/lib/supabase';
+import { Course, Professor, getStorageUrl } from '@/lib/supabase';
+import { PLACEHOLDERS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
 
 type TabType = 'todos' | 'presentaciones' | 'examenes' | 'otros';
@@ -335,9 +336,9 @@ export default function CourseDetailContent({
                                                 <div className="flex items-center gap-3">
                                                     <div className="relative shrink-0">
                                                         <img
-                                                            src={prof.avatar_url || '/profes/tl.webp'}
+                                                            src={getStorageUrl(prof.avatar_url || '/profes/tl.webp', 'profile-avatars', PLACEHOLDERS.AVATAR)}
                                                             alt={prof.nombre}
-                                                            className="w-12 h-12 rounded-xl object-cover border border-bb-border/50 shadow-sm"
+                                                            className="w-12 h-12 rounded-xl object-cover border border-bb-border/50 shadow-sm transition-transform group-hover:scale-105"
                                                             onError={(e) => {
                                                                 (e.target as HTMLImageElement).src = '/profes/tl.webp';
                                                             }}

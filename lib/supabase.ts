@@ -23,6 +23,9 @@ export function getStorageUrl(path: string | null | undefined, bucket: string = 
   // If it's a data URL, return it
   if (path.startsWith('data:')) return path;
 
+  // If it's a public static asset, return it
+  if (path.startsWith('/')) return path;
+
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl || fallback || '';
 }

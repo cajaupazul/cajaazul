@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Star, Search, Plus, GraduationCap, Trophy, Trash2 } from 'lucide-react';
-import { supabase, Professor, Profile } from '@/lib/supabase';
+import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useDashboardData } from '@/lib/dashboard-data-context';
+import { PLACEHOLDERS } from '@/lib/constants';
 
 interface ProfessorsContentProps {
     initialProfessors: any[];
@@ -180,7 +181,7 @@ export default function ProfessorsContent({
                                                         className="h-14 w-14 md:h-20 md:w-20 rounded-xl md:rounded-2xl flex items-center justify-center bg-bb-sidebar border-2 border-bb-card shadow-xl overflow-hidden"
                                                     >
                                                         <img
-                                                            src={professor.avatar_url || '/profes/tl.webp'}
+                                                            src={getStorageUrl(professor.avatar_url || '/profes/tl.webp', 'profile-avatars', PLACEHOLDERS.AVATAR)}
                                                             alt={professor.nombre}
                                                             className="w-full h-full object-cover"
                                                             onError={(e) => {
