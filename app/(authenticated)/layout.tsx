@@ -58,6 +58,8 @@ export default function AuthenticatedLayout({
 
   // 1. Core Auth Guard: If we are still hydrating session, show loading.
   // This prevents any "flicker" or "none" user states from triggering a redirect prematurely.
+  // 1. Core Auth Guard: If we are still hydrating session, show loading.
+  // This prevents any "flicker" or "none" user states from triggering a redirect prematurely.
   useEffect(() => {
     if (!profileLoading && !session) {
       console.log('[AUTH_GUARD] Session lost or expired, redirecting to login...');

@@ -51,19 +51,23 @@ export function ProfileProvider({
   });
 
   // Refs to track state effectively without causing re-renders
-  const lastFetchedUserId = useRef<string | null>(null);
+  // SINGLETON PATTERN: Track if we have already initialized the profile for the current session
+  const hasInitializedProfile = useRef(false);
   const isFetching = useRef(false);
 
   // Fallback to release loading state if something hangs indefinitely
   useEffect(() => {
     const safetyTimer = setTimeout(() => {
       if (loading) {
-        console.warn('[PROFILE_CONTEXT] Safety timer triggered: Forcing loading to false explicitly.');
+        // Only warn if we truly don't have a profile yet
+        if (!profile) {
+          console.warn('[PROFILE_CONTEXT] Safety timer triggered: Forcing loading to false explicitly.');
+        }
         setLoading(false);
       }
     }, 8000); // 8 seconds max loading time
     return () => clearTimeout(safetyTimer);
-  }, [loading]);
+  }, [loading, profile]);
 
   const saveProfileToCache = (data: Profile | null) => {
     if (data) {
@@ -79,7 +83,8 @@ export function ProfileProvider({
     setProfile(null);
     setSession(null);
     setLoading(true); // Reset to loading until new auth proves otherwise
-    lastFetchedUserId.current = null;
+    hasInitializedProfile.current = false;
+    isFetching.current = false;
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.clear(); // Nuclear option for safety
@@ -88,11 +93,17 @@ export function ProfileProvider({
   }, []);
 
   const fetchProfile = useCallback(async (userId: string, currentSession: Session) => {
-    // Prevent duplicate fetches for the same user if already in progress
-    if (isFetching.current && lastFetchedUserId.current === userId) return;
+    // SINGLETON CHECK: If we already fetched for this session, DO NOT fetch again.
+    // This prevents re-fetching on navigation.
+    if (hasInitializedProfile.current) {
+      console.log('[PROFILE_CONTEXT] Profile already initialized for this session. Skipping fetch.');
+      return;
+    }
+
+    // Prevent duplicate parallel fetches
+    if (isFetching.current) return;
 
     isFetching.current = true;
-    lastFetchedUserId.current = userId;
 
     // We don't set loading=true here to avoid flickering if re-fetching.
     // Initial load handling is done by the caller or initial state.
@@ -114,11 +125,9 @@ export function ProfileProvider({
       if (data) {
         setProfile(data);
         saveProfileToCache(data);
+        hasInitializedProfile.current = true; // Mark as initialized
       } else {
         console.log('[PROFILE_CONTEXT] No profile found. Attempting to create one...');
-
-        // Check if we hit a race condition where cache has it but DB read missed (rare but possible) or valid cache exists
-        // If we have a cached profile for THIS user, keep it rather than nuking it, unless sure.
 
         // Auto-create profile from user metadata logic
         const user = currentSession.user;
@@ -141,12 +150,12 @@ export function ProfileProvider({
 
         if (insertError) {
           console.error('[PROFILE_CONTEXT] Failed to auto-create profile:', insertError);
-          // Critical: We stop here but we MUST release loading. 
-          // We do NO redirects here.
+          // We continue, ensuring loading is released.
         } else if (newProfile) {
           console.log('[PROFILE_CONTEXT] Profile created successfully.');
           setProfile(newProfile);
           saveProfileToCache(newProfile);
+          hasInitializedProfile.current = true; // Mark as initialized
         }
       }
     } catch (err) {
@@ -172,6 +181,7 @@ export function ProfileProvider({
             setLoading(false); // No session = no profile to load = done.
             setProfile(null);
             localStorage.removeItem(STORAGE_KEY);
+            hasInitializedProfile.current = false;
           } else {
             // If we have session, check if our cached profile matches this user
             const cached = localStorage.getItem(STORAGE_KEY);
@@ -183,12 +193,17 @@ export function ProfileProvider({
                   console.warn('[PROFILE_CONTEXT] Cache mismatch detected. Clearing old profile.');
                   setProfile(null);
                   localStorage.removeItem(STORAGE_KEY);
-                  setLoading(true); // Force loading to true to refetch for the new user
+                  hasInitializedProfile.current = false; // Need to fetch new
+                  setLoading(true);
+                } else {
+                  // It matches! We consider it initialized.
+                  hasInitializedProfile.current = true;
                 }
               } catch {
                 // If parsing fails, clear the bad cache
                 setProfile(null);
                 localStorage.removeItem(STORAGE_KEY);
+                hasInitializedProfile.current = false;
                 setLoading(true);
               }
             }
@@ -209,8 +224,8 @@ export function ProfileProvider({
           // LOGOUT or Session Expiry -> Clear Everything correctly
           console.log('[AUTH_CHANGE] Session ended. Cleaning up.');
           setProfile(null);
-          setLoading(false); // User signed out? Loading done.
-          lastFetchedUserId.current = null;
+          setLoading(false);
+          hasInitializedProfile.current = false; // Reset singleton
           localStorage.removeItem(STORAGE_KEY);
         } else {
           // New session detected! Verify profile match immediately
@@ -220,9 +235,9 @@ export function ProfileProvider({
               const p = JSON.parse(cached);
               if (p.id !== newSession.user.id) {
                 console.warn('[AUTH_CHANGE] New user detected. Resetting profile state.');
-                setProfile(null); // Clear old user VISUALLY
+                setProfile(null);
                 localStorage.removeItem(STORAGE_KEY);
-                // Do NOT set loading=false here, let fetchProfile handle it
+                hasInitializedProfile.current = false; // Force re-fetch
               }
             } catch { }
           }
@@ -245,6 +260,7 @@ export function ProfileProvider({
       console.error('[PROFILE_SYNC] CRITICAL: Profile/Session mismatch. Purging profile.');
       setProfile(null);
       localStorage.removeItem(STORAGE_KEY);
+      hasInitializedProfile.current = false;
     }
 
     // Proactive Domain Check - kept from original requirements but purely for session validity
@@ -252,13 +268,14 @@ export function ProfileProvider({
       // We perform the redirect/signout entirely separately to avoid blocking the fetch logic
       console.warn('[AUTH_GUARD] Invalid domain. Signing out...');
       localStorage.removeItem(STORAGE_KEY); // Security cleanup
-      supabase.auth.signOut().then(() => {
-        window.location.href = `/auth/login?error=${encodeURIComponent(AUTH_CONFIG.messages.domainError)}`;
-      });
+      // !!! IMPORTANT: We do NOT redirect here directly inside the context to avoid loops.
+      // We let the UI or specific auth guards handle visual redirects.
+      // We just ensure the session is killed.
+      supabase.auth.signOut();
       return;
     }
 
-    // Trigger profile fetch
+    // Trigger profile fetch - internal logic will skip if hasInitializedProfile is true
     fetchProfile(session.user.id, session);
 
     // Realtime subscription for profile updates
@@ -279,7 +296,7 @@ export function ProfileProvider({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session, fetchProfile, profile]); // Added profile to dependencies logic internally if needed, but strict check handles it
+  }, [session, fetchProfile]); // Removed profile from dependencies to avoid loop, managed internally
 
 
   const updateProfile = useCallback((updatedProfile: Profile) => {
@@ -291,6 +308,8 @@ export function ProfileProvider({
 
   const refreshProfile = useCallback(async () => {
     if (session?.user?.id) {
+      // Force allow re-fetch on manual refresh
+      hasInitializedProfile.current = false;
       await fetchProfile(session.user.id, session);
     }
   }, [session, fetchProfile]);
