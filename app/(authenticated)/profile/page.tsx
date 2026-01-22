@@ -38,6 +38,8 @@ export default function ProfilePage() {
   const [backgroundImage, setBackgroundImage] = useState('');
   const [equippedFrame, setEquippedFrame] = useState<ShopItem | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [stagedAvatarUrl, setStagedAvatarUrl] = useState<string | null>(null);
+  const [stagedBackgroundUrl, setStagedBackgroundUrl] = useState<string | null>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,23 +97,16 @@ export default function ProfilePage() {
       const fileName = `bg-${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `backgrounds/${fileName}`;
 
-      // Eliminar archivo anterior si existe
-      try {
-        const { data: files } = await supabase.storage
-          .from('profile-avatars')
-          .list('backgrounds');
-
-        if (files) {
-          for (const file of files) {
-            if (file.name.startsWith(`bg-${profile.id}`)) {
-              await supabase.storage
-                .from('profile-avatars')
-                .remove([`backgrounds/${file.name}`]);
-            }
+      // Clean up previous staged background if it exists
+      if (stagedBackgroundUrl) {
+        try {
+          const oldPath = stagedBackgroundUrl.split('/').pop();
+          if (oldPath) {
+            await supabase.storage.from('profile-avatars').remove([`backgrounds/${oldPath}`]);
           }
+        } catch (err) {
+          console.error('Error cleaning up staged background:', err);
         }
-      } catch (err) {
-        console.log('No previous background to delete');
       }
 
       const { error: uploadError } = await supabase.storage
@@ -122,17 +117,9 @@ export default function ProfilePage() {
 
       const { data } = supabase.storage.from('profile-avatars').getPublicUrl(filePath);
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ background_url: data.publicUrl })
-        .eq('id', profile.id);
-
-      if (updateError) throw updateError;
-
-      setProfile({ ...profile, background_url: data.publicUrl });
+      setStagedBackgroundUrl(data.publicUrl);
       setBackgroundImage(data.publicUrl);
-      updateProfile({ ...profile, background_url: data.publicUrl });
-      console.log('Background uploaded successfully:', data.publicUrl);
+      setFormData(prev => ({ ...prev, background_url: data.publicUrl }));
     } catch (error) {
       console.error('Error uploading background:', error);
       alert('Error al subir la imagen de fondo');
@@ -151,6 +138,18 @@ export default function ProfilePage() {
       const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
+      // Clean up previous staged avatar if it exists
+      if (stagedAvatarUrl) {
+        try {
+          const oldPath = stagedAvatarUrl.split('/').pop();
+          if (oldPath) {
+            await supabase.storage.from('profile-avatars').remove([`avatars/${oldPath}`]);
+          }
+        } catch (err) {
+          console.error('Error cleaning up staged avatar:', err);
+        }
+      }
+
       const { error: uploadError } = await supabase.storage
         .from('profile-avatars')
         .upload(filePath, file, { upsert: true });
@@ -159,15 +158,8 @@ export default function ProfilePage() {
 
       const { data } = supabase.storage.from('profile-avatars').getPublicUrl(filePath);
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: data.publicUrl })
-        .eq('id', profile.id);
-
-      if (updateError) throw updateError;
-
-      setProfile({ ...profile, avatar_url: data.publicUrl });
-      setFormData({ ...formData, avatar_url: data.publicUrl });
+      setStagedAvatarUrl(data.publicUrl);
+      setFormData(prev => ({ ...prev, avatar_url: data.publicUrl }));
     } catch (error) {
       console.error('Error uploading file:', error);
     } finally {
@@ -200,12 +192,52 @@ export default function ProfilePage() {
 
       if (error) throw error;
 
-      setProfile({ ...profile, ...formData });
-      updateProfile({ ...profile, ...formData });
+      // Cleanup storage: Delete old images if they were replaced
+      if (stagedAvatarUrl && profile.avatar_url && !profile.avatar_url.includes('default')) {
+        const oldFile = profile.avatar_url.split('/').pop();
+        if (oldFile) {
+          await supabase.storage.from('profile-avatars').remove([`avatars/${oldFile}`]);
+        }
+      }
+      if (stagedBackgroundUrl && profile.background_url && !profile.background_url.includes('placeholder')) {
+        const oldFile = profile.background_url.split('/').pop();
+        if (oldFile) {
+          await supabase.storage.from('profile-avatars').remove([`backgrounds/${oldFile}`]);
+        }
+      }
+
+      setProfile({ ...profile, ...dataToSave });
+      updateProfile({ ...profile, ...dataToSave });
       setEditing(false);
+      setStagedAvatarUrl(null);
+      setStagedBackgroundUrl(null);
     } catch (error) {
       console.error('Error updating profile:', error);
     }
+  };
+
+  const handleCancel = async () => {
+    if (!profile) return;
+
+    // Cleanup storage: Delete any staged images that weren't saved
+    if (stagedAvatarUrl) {
+      const fileName = stagedAvatarUrl.split('/').pop();
+      if (fileName) {
+        await supabase.storage.from('profile-avatars').remove([`avatars/${fileName}`]);
+      }
+    }
+    if (stagedBackgroundUrl) {
+      const fileName = stagedBackgroundUrl.split('/').pop();
+      if (fileName) {
+        await supabase.storage.from('profile-avatars').remove([`backgrounds/${fileName}`]);
+      }
+    }
+
+    setEditing(false);
+    setFormData(profile);
+    setBackgroundImage(profile.background_url || '');
+    setStagedAvatarUrl(null);
+    setStagedBackgroundUrl(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -316,7 +348,7 @@ export default function ProfilePage() {
                       name="nombre"
                       value={formData.nombre || ''}
                       onChange={handleInputChange}
-                      className="bg-bb-card border border-bb-border rounded-lg px-4 py-2 text-bb-text w-full backdrop-blur"
+                      className="bg-bb-card border border-bb-border rounded-lg px-4 py-2 text-bb-text w-full backdrop-blur-md focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
                     />
                   ) : (
                     <>
@@ -370,10 +402,7 @@ export default function ProfilePage() {
                 </button>
                 {editing && (
                   <button
-                    onClick={() => {
-                      setEditing(false);
-                      setFormData(profile);
-                    }}
+                    onClick={handleCancel}
                     className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold bg-bb-card hover:bg-bb-hover text-bb-text transition-all backdrop-blur text-sm md:text-base w-full sm:w-auto justify-center border border-bb-border"
                   >
                     <X className="w-4 h-4" />
