@@ -20,6 +20,7 @@ interface DashboardDataContextType {
     fetchGrupos: () => Promise<void>;
     fetchUserGrupos: (userId: string) => Promise<void>;
     refreshAll: (userId?: string) => Promise<void>;
+    addCourse: (course: Course) => void;
 }
 
 const DashboardDataContext = createContext<DashboardDataContextType | undefined>(undefined);
@@ -154,6 +155,10 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         ]);
     }, [session, fetchCourses, fetchProfessors, fetchGrupos, fetchUserGrupos]);
 
+    const addCourse = useCallback((course: Course) => {
+        setCourses(prev => [...prev, course].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+    }, []);
+
     const value = useMemo(() => ({
         courses,
         professors,
@@ -165,10 +170,11 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         fetchProfessors,
         fetchGrupos,
         fetchUserGrupos,
-        refreshAll
+        refreshAll,
+        addCourse
     }), [
         courses, professors, grupos, userGrupos, miembrosCuenta, loading,
-        fetchCourses, fetchProfessors, fetchGrupos, fetchUserGrupos, refreshAll
+        fetchCourses, fetchProfessors, fetchGrupos, fetchUserGrupos, refreshAll, addCourse
     ]);
 
     return (

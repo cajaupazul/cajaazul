@@ -36,8 +36,11 @@ const generateRandomCode = () => {
     return result;
 };
 
+import { useDashboardData } from '@/lib/dashboard-data-context';
+
 export default function NewCourseForm() {
     const router = useRouter();
+    const { addCourse } = useDashboardData();
     const [creatingCourse, setCreatingCourse] = useState(false);
     const [imagePreview, setImagePreview] = useState<string>('');
     const [isGeneratingCode, setIsGeneratingCode] = useState(true);
@@ -127,7 +130,7 @@ export default function NewCourseForm() {
                 imagenUrl = publicUrlData.publicUrl;
             }
 
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('courses')
                 .insert({
                     nombre: formData.nombre.trim().toUpperCase(),
@@ -137,13 +140,19 @@ export default function NewCourseForm() {
                     descripcion: formData.descripcion.trim() || null,
                     carrera: formData.facultad, // We'll store the faculty in carrera for now to maintain compatibility with existing fields
                     imagen_url: imagenUrl || null,
-                });
+                })
+                .select()
+                .single();
 
             if (error) throw error;
 
+            if (data) {
+                addCourse(data);
+            }
+
             alert('¡Curso creado exitosamente!');
             router.push('/dashboard/courses');
-            router.refresh();
+            // router.refresh(); // Optional: kept for server component consistency, but UI is already updated.
 
         } catch (error: any) {
             console.error('Error:', error);
