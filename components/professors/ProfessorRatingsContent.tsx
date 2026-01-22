@@ -263,6 +263,9 @@ export default function ProfessorRatingsContent({
     const [replyToId, setReplyToId] = useState<string | null>(null);
     const [replyText, setReplyText] = useState('');
     const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Sync state with props when Server Component re-renders
     useEffect(() => {
@@ -427,17 +430,41 @@ export default function ProfessorRatingsContent({
     };
 
     const handleDeleteComment = async (commentId: string) => {
-        if (!confirm('¿Estás seguro de que quieres eliminar este comentario?')) return;
+        setCommentToDelete(commentId);
+        setIsDeleteDialogOpen(true);
+    };
 
-        const { error } = await supabase
-            .from('professor_comments')
-            .delete()
-            .eq('id', commentId);
+    const confirmDelete = async () => {
+        if (!commentToDelete) return;
 
-        if (!error) {
-            router.refresh();
-        } else {
-            alert(`Error al eliminar: ${error.message}`);
+        const idToDelete = commentToDelete;
+        setIsDeleting(true);
+
+        // Optimistic update
+        const previousComments = [...comments];
+        setComments(prev => prev.filter(c => c.id !== idToDelete));
+
+        try {
+            const { error } = await supabase
+                .from('professor_comments')
+                .delete()
+                .eq('id', idToDelete);
+
+            if (error) {
+                // Rollback on error
+                setComments(previousComments);
+                alert(`Error al eliminar: ${error.message}`);
+            } else {
+                // Sucessfully deleted, Realtime will handle other tabs
+                // but we stay optimistic here.
+                setIsDeleteDialogOpen(false);
+                setCommentToDelete(null);
+            }
+        } catch (err) {
+            setComments(previousComments);
+            console.error('Delete error:', err);
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -887,6 +914,39 @@ export default function ProfessorRatingsContent({
                             </div>
                         </div>
                     </div>
+
+                    {/* Delete Confirmation Modal */}
+                    <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                        <DialogContent className="bg-bb-card border-bb-border text-bb-text sm:max-w-md text-center">
+                            <DialogHeader>
+                                <DialogTitle className="text-xl font-bold">¿Eliminar comentario?</DialogTitle>
+                                <DialogDescription className="text-bb-text-secondary pt-2">
+                                    Esta acción no se puede deshacer. El comentario desaparecerá permanentemente.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="flex flex-col gap-3 mt-4">
+                                <Button
+                                    disabled={isDeleting}
+                                    onClick={confirmDelete}
+                                    className="w-full bg-red-600 hover:bg-red-500 text-white font-bold h-12 rounded-xl shadow-lg active:scale-95 transition-all"
+                                >
+                                    {isDeleting ? (
+                                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        "Eliminar permanentemente"
+                                    )}
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    disabled={isDeleting}
+                                    onClick={() => setIsDeleteDialogOpen(false)}
+                                    className="w-full text-bb-text-secondary hover:text-white font-bold h-12 rounded-xl transition-all"
+                                >
+                                    Cancelar
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
 
                     {/* Social Wall Style Comments (Cleaned) */}
                     {comments.length > 0 ? (
