@@ -93,11 +93,71 @@ export default function AuthenticatedLayout({
     }
   }, [session, profile, refreshAll]);
 
-  // ... (mobile detection useEffect keeps same)
+  // 3. Handle mobile detection and auto-close sidebar
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setSidebarOpen(false);
+      }
+    };
 
-  // ... (equipped frame useEffect keeps same)
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
-  // ... (logout handlers keep same)
+  // 4. Fetch equipped frame for sidebar avatar
+  useEffect(() => {
+    const fetchEquippedFrame = async () => {
+      if (!profile?.active_frame_key) {
+        setEquippedFrame(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('shop_items')
+        .select('*')
+        .eq('frame_key', profile.active_frame_key)
+        .single();
+
+      if (!error && data) {
+        setEquippedFrame(data);
+      }
+    };
+
+    fetchEquippedFrame();
+  }, [profile?.active_frame_key]);
+
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setShowLogoutConfirm(false);
+    console.log('[LOGOUT] Initiating sign out...');
+    supabase.auth.signOut();
+  };
+
+  const isActive = (href: string) => pathname === href;
+
+  const navItems = [
+    { label: 'Inicio', href: '/dashboard', icon: Home },
+    { label: 'Cursos', href: '/dashboard/courses', icon: BookOpen },
+    { label: 'Profesores', href: '/dashboard/professors', icon: Users },
+    { label: 'Tienda', href: '/dashboard/store', icon: ShoppingBag },
+    ...(profile?.role === 'admin' || profile?.role === 'superadmin'
+      ? [
+        { label: 'Administrar Tienda', href: '/admin/shop', icon: ShieldCheck },
+        { label: 'Configurar Precios', href: '/admin/store-config', icon: Settings }
+      ]
+      : []),
+    { label: 'Inventario', href: '/inventory', icon: Package },
+    { label: 'Eventos', href: '/dashboard/events', icon: Calendar },
+    { label: 'Grupos', href: '/dashboard/grupos', icon: Layers },
+    { label: 'Nosotros', href: '/dashboard/about', icon: Info },
+  ];
 
   // Render logic:
   // We show a full-screen stable loader until exactly session AND profile are ready.
@@ -113,8 +173,7 @@ export default function AuthenticatedLayout({
     );
   }
 
-  // Once here, we are 100% sure session and profile are valid.
-  const isInitialLoading = false; // We already gated above for the entire page
+  const isInitialLoading = false;
 
   return (
     <div className="relative flex h-screen bg-bb-dark transition-colors duration-300">
