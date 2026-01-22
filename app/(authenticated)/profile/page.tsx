@@ -43,6 +43,52 @@ export default function ProfilePage() {
   const bgInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  const cleanupStorage = async (keepAvatarUrl?: string | null, keepBgUrl?: string | null) => {
+    if (!profile) return;
+
+    const folders = ['avatars', 'backgrounds', ''];
+    const keepAvatarFile = keepAvatarUrl?.split('/').pop();
+    const keepBgFile = keepBgUrl?.split('/').pop();
+
+    for (const folder of folders) {
+      try {
+        const { data: files, error } = await supabase.storage
+          .from('profile-avatars')
+          .list(folder, {
+            limit: 100,
+          });
+
+        if (error) {
+          console.error(`Error listing files in ${folder}:`, error);
+          continue;
+        }
+
+        if (!files || files.length === 0) continue;
+
+        const filesToDelete = files
+          .filter(file => {
+            // Check if file belongs to user (starts with profile.id or bg-profile.id)
+            const isUserFile = file.name.startsWith(profile.id) ||
+              file.name.startsWith(`bg-${profile.id}`);
+            if (!isUserFile) return false;
+
+            // Don't delete the ones we want to keep
+            if (file.name === keepAvatarFile || file.name === keepBgFile) return false;
+
+            return true;
+          })
+          .map(file => folder ? `${folder}/${file.name}` : file.name);
+
+        if (filesToDelete.length > 0) {
+          console.log(`Cleaning up ${filesToDelete.length} files in ${folder}:`, filesToDelete);
+          await supabase.storage.from('profile-avatars').remove(filesToDelete);
+        }
+      } catch (err) {
+        console.error(`Unexpected error cleaning ${folder}:`, err);
+      }
+    }
+  };
+
   useEffect(() => {
     const fetchUserEmail = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -97,18 +143,6 @@ export default function ProfilePage() {
       const fileName = `bg-${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `backgrounds/${fileName}`;
 
-      // Clean up previous staged background if it exists
-      if (stagedBackgroundUrl) {
-        try {
-          const oldPath = stagedBackgroundUrl.split('/').pop();
-          if (oldPath) {
-            await supabase.storage.from('profile-avatars').remove([`backgrounds/${oldPath}`]);
-          }
-        } catch (err) {
-          console.error('Error cleaning up staged background:', err);
-        }
-      }
-
       const { error: uploadError } = await supabase.storage
         .from('profile-avatars')
         .upload(filePath, file, { upsert: true });
@@ -137,18 +171,6 @@ export default function ProfilePage() {
       const fileExt = file.name.split('.').pop();
       const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
-
-      // Clean up previous staged avatar if it exists
-      if (stagedAvatarUrl) {
-        try {
-          const oldPath = stagedAvatarUrl.split('/').pop();
-          if (oldPath) {
-            await supabase.storage.from('profile-avatars').remove([`avatars/${oldPath}`]);
-          }
-        } catch (err) {
-          console.error('Error cleaning up staged avatar:', err);
-        }
-      }
 
       const { error: uploadError } = await supabase.storage
         .from('profile-avatars')
@@ -192,19 +214,8 @@ export default function ProfilePage() {
 
       if (error) throw error;
 
-      // Cleanup storage: Delete old images if they were replaced
-      if (stagedAvatarUrl && profile.avatar_url && !profile.avatar_url.includes('default')) {
-        const oldFile = profile.avatar_url.split('/').pop();
-        if (oldFile) {
-          await supabase.storage.from('profile-avatars').remove([`avatars/${oldFile}`]);
-        }
-      }
-      if (stagedBackgroundUrl && profile.background_url && !profile.background_url.includes('placeholder')) {
-        const oldFile = profile.background_url.split('/').pop();
-        if (oldFile) {
-          await supabase.storage.from('profile-avatars').remove([`backgrounds/${oldFile}`]);
-        }
-      }
+      // Robust cleanup: list and delete ALL user files except the new ones
+      await cleanupStorage(dataToSave.avatar_url, dataToSave.background_url);
 
       setProfile({ ...profile, ...dataToSave });
       updateProfile({ ...profile, ...dataToSave });
@@ -219,19 +230,8 @@ export default function ProfilePage() {
   const handleCancel = async () => {
     if (!profile) return;
 
-    // Cleanup storage: Delete any staged images that weren't saved
-    if (stagedAvatarUrl) {
-      const fileName = stagedAvatarUrl.split('/').pop();
-      if (fileName) {
-        await supabase.storage.from('profile-avatars').remove([`avatars/${fileName}`]);
-      }
-    }
-    if (stagedBackgroundUrl) {
-      const fileName = stagedBackgroundUrl.split('/').pop();
-      if (fileName) {
-        await supabase.storage.from('profile-avatars').remove([`backgrounds/${fileName}`]);
-      }
-    }
+    // Robust cleanup: delete any new files, leaving ONLY the original ones
+    await cleanupStorage(profile.avatar_url || undefined, profile.background_url || undefined);
 
     setEditing(false);
     setFormData(profile);
