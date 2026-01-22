@@ -16,7 +16,7 @@ import { motion, Variants } from 'framer-motion';
 import Link from 'next/link';
 import BouncingBalls from '@/components/BouncingBalls';
 import { useTheme } from '@/lib/theme-context';
-import { Profile, Course } from '@/lib/supabase';
+import { Profile, Course, getStorageUrl } from '@/lib/supabase';
 import OptionsSelector from '@/components/OptionsSelector';
 
 interface DashboardContentProps {
@@ -85,7 +85,7 @@ export default function DashboardContent({
                         <div className="flex flex-wrap items-center gap-2 text-bb-text-secondary px-3 md:px-4">
                             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-bb-card border border-bb-border">
                                 {profile?.avatar_url && (profile.avatar_url.includes('/logo/') || profile.avatar_url.includes('fce.png')) && (
-                                    <img src={profile.avatar_url} alt="Faculty" className="w-4 h-4 object-contain" />
+                                    <img src={getStorageUrl(profile.avatar_url)} alt="Faculty" className="w-4 h-4 object-contain" />
                                 )}
                                 <span className="text-[10px] md:text-xs font-semibold">
                                     {profile?.carrera || 'Facultad'}

@@ -10,6 +10,23 @@ if (typeof window !== 'undefined') {
 
 export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
+/**
+ * Resolves a storage path or full URL to a valid public URL.
+ * Detects if the input is already a full URL.
+ */
+export function getStorageUrl(path: string | null | undefined, bucket: string = 'profile-avatars', fallback?: string): string {
+  if (!path) return fallback || '';
+
+  // If it's already a full URL, return it
+  if (path.startsWith('http')) return path;
+
+  // If it's a data URL, return it
+  if (path.startsWith('data:')) return path;
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  return data.publicUrl || fallback || '';
+}
+
 export type Profile = {
   id: string;
   nombre: string;

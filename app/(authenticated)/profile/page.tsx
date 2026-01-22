@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { supabase, Profile, ShopItem } from '@/lib/supabase';
+import { supabase, Profile, ShopItem, getStorageUrl } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
 import { useProfile } from '@/lib/profile-context';
 import { useRouter } from 'next/navigation';
@@ -149,11 +149,9 @@ export default function ProfilePage() {
 
       if (uploadError) throw uploadError;
 
-      const { data } = supabase.storage.from('profile-avatars').getPublicUrl(filePath);
-
-      setStagedBackgroundUrl(data.publicUrl);
-      setBackgroundImage(data.publicUrl);
-      setFormData(prev => ({ ...prev, background_url: data.publicUrl }));
+      setStagedBackgroundUrl(filePath);
+      setBackgroundImage(filePath);
+      setFormData(prev => ({ ...prev, background_url: filePath }));
     } catch (error) {
       console.error('Error uploading background:', error);
       alert('Error al subir la imagen de fondo');
@@ -178,10 +176,8 @@ export default function ProfilePage() {
 
       if (uploadError) throw uploadError;
 
-      const { data } = supabase.storage.from('profile-avatars').getPublicUrl(filePath);
-
-      setStagedAvatarUrl(data.publicUrl);
-      setFormData(prev => ({ ...prev, avatar_url: data.publicUrl }));
+      setStagedAvatarUrl(filePath);
+      setFormData(prev => ({ ...prev, avatar_url: filePath }));
     } catch (error) {
       console.error('Error uploading file:', error);
     } finally {
@@ -271,9 +267,7 @@ export default function ProfilePage() {
         <div
           className="absolute inset-0 h-64 md:h-96 bg-cover bg-center"
           style={{
-            backgroundImage: backgroundImage
-              ? `url(${backgroundImage})`
-              : `url(${PLACEHOLDERS.BACKGROUND})`,
+            backgroundImage: `url(${getStorageUrl(backgroundImage, 'profile-avatars', PLACEHOLDERS.BACKGROUND)})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}
@@ -308,7 +302,7 @@ export default function ProfilePage() {
             <div className="relative">
               <AvatarWithFrame
                 size={140}
-                avatarUrl={profile.avatar_url}
+                avatarUrl={getStorageUrl(formData.avatar_url || profile.avatar_url, 'profile-avatars', PLACEHOLDERS.AVATAR)}
                 frameUrl={equippedFrame?.image_url}
                 frameScale={equippedFrame?.frame_settings?.profile?.scale}
                 offsetX={equippedFrame?.frame_settings?.profile?.x}

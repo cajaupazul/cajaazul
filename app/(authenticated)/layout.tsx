@@ -4,7 +4,7 @@ export const runtime = 'edge';
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/lib/theme-context';
 import { useRouter, usePathname } from 'next/navigation';
-import { supabase, ShopItem } from '@/lib/supabase';
+import { supabase, ShopItem, getStorageUrl } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
@@ -237,7 +237,7 @@ export default function AuthenticatedLayout({
               <div className="relative">
                 <AvatarWithFrame
                   size={56}
-                  avatarUrl={profile?.avatar_url}
+                  avatarUrl={getStorageUrl(profile?.avatar_url)}
                   frameUrl={equippedFrame?.image_url}
                   frameScale={equippedFrame?.frame_settings?.card?.scale}
                   offsetX={equippedFrame?.frame_settings?.card?.x}
@@ -377,7 +377,7 @@ export default function AuthenticatedLayout({
                   <div className={`relative ${sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100 block'} transition-opacity duration-300`}>
                     <AvatarWithFrame
                       size={40}
-                      avatarUrl={profile?.avatar_url}
+                      avatarUrl={getStorageUrl(profile?.avatar_url)}
                       frameUrl={equippedFrame?.image_url}
                       frameScale={equippedFrame?.frame_settings?.navbar?.scale}
                       offsetX={equippedFrame?.frame_settings?.navbar?.x}

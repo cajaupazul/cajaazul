@@ -3,6 +3,7 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PLACEHOLDERS } from '@/lib/constants';
+import { getStorageUrl } from '@/lib/supabase';
 
 interface AvatarWithFrameProps {
     avatarUrl?: string | null;
@@ -49,7 +50,7 @@ export function AvatarWithFrame({
             {/* 1. Contenedor del Avatar (Aplica el recorte circular) */}
             <div className="w-full h-full rounded-full overflow-hidden relative z-10 border-2 border-bb-border/50 bg-bb-sidebar">
                 <Avatar className="w-full h-full rounded-none">
-                    <AvatarImage src={avatarUrl || PLACEHOLDERS.AVATAR} className="object-cover w-full h-full" />
+                    <AvatarImage src={getStorageUrl(avatarUrl, 'profile-avatars', PLACEHOLDERS.AVATAR)} className="object-cover w-full h-full" />
                     <AvatarFallback className="text-white font-bold rounded-none" style={{ fontSize: actualSize * 0.4 }}>
                         {fallbackChar}
                     </AvatarFallback>
