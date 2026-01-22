@@ -135,18 +135,30 @@ export default function GrupoDetailContent({
     };
 
     const handleDeleteGrupo = async () => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar este grupo?')) {
-            try {
-                const { error } = await supabase
-                    .from('grupos')
-                    .delete()
-                    .eq('id', grupo.id);
+        if (!window.confirm('¿Estás seguro de que deseas eliminar este grupo? Esta acción borrará permanentemente todos los datos e imágenes asociados.')) return;
 
-                if (error) throw error;
-                router.push('/dashboard/grupos');
-            } catch (error) {
-                console.error('Error eliminando:', error);
+        try {
+            // 1. Eliminar archivos del storage si existen
+            const filesToDelete = [];
+            if (grupo.logo_url && !grupo.logo_url.startsWith('http')) filesToDelete.push(grupo.logo_url);
+            if (grupo.banner_url && !grupo.banner_url.startsWith('http')) filesToDelete.push(grupo.banner_url);
+
+            if (filesToDelete.length > 0) {
+                console.log('[DELETE_GRUPO] Eliminando archivos del storage:', filesToDelete);
+                await supabase.storage.from('grupos').remove(filesToDelete);
             }
+
+            // 2. Eliminar registro del grupo
+            const { error } = await supabase
+                .from('grupos')
+                .delete()
+                .eq('id', grupo.id);
+
+            if (error) throw error;
+            router.push('/dashboard/grupos');
+        } catch (error) {
+            console.error('Error eliminando:', error);
+            alert('Error al eliminar el grupo. Por favor intenta de nuevo.');
         }
     };
 
