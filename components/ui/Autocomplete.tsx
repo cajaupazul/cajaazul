@@ -64,6 +64,15 @@ export function Autocomplete({
         setIsOpen(false);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            if (isOpen && filteredItems.length > 0) {
+                e.preventDefault();
+                handleSelect(filteredItems[0]);
+            }
+        }
+    };
+
     const handleFocus = () => {
         if (searchTerm.length > 0) {
             const filtered = items.filter(item =>
@@ -88,6 +97,7 @@ export function Autocomplete({
                     value={searchTerm}
                     onChange={handleInputChange}
                     onFocus={handleFocus}
+                    onKeyDown={handleKeyDown}
                     placeholder={placeholder}
                     className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 pl-11 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0088CC]/50 transition-all"
                 />
@@ -110,6 +120,7 @@ export function Autocomplete({
                                 {filteredItems.map((item, index) => (
                                     <button
                                         key={index}
+                                        type="button"
                                         onClick={() => handleSelect(item)}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3"
                                     >

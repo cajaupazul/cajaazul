@@ -47,15 +47,6 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
     const [showSuggestions, setShowSuggestions] = useState(false);
     const suggestionRef = useRef<HTMLDivElement>(null);
 
-    // Removed legacy course suggestion state
-
-    // Removed legacy course suggestion state
-
-    const [facultySuggestions, setFacultySuggestions] = useState<string[]>([]);
-    const [showFacultySuggestions, setShowFacultySuggestions] = useState(false);
-    const [searchingFaculties, setSearchingFaculties] = useState(false);
-    const facultySuggestionRef = useRef<HTMLDivElement>(null);
-
     const [formData, setFormData] = useState({
         nombre: '',
         especialidad: '', // Materia Principal
@@ -69,9 +60,6 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
         const handleClickOutside = (event: MouseEvent) => {
             if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
                 setShowSuggestions(false);
-            }
-            if (facultySuggestionRef.current && !facultySuggestionRef.current.contains(event.target as Node)) {
-                setShowFacultySuggestions(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -123,36 +111,7 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
 
     // Removed legacy course suggestion effect
 
-    // Search for existing faculties as user types faculty
-    useEffect(() => {
-        const searchFaculties = async () => {
-            const query = formData.facultad.trim();
-            if (query.length >= 1) {
-                setSearchingFaculties(true);
-                const { data, error } = await supabase
-                    .from('professors')
-                    .select('facultad')
-                    .ilike('facultad', `%${query}%`)
-                    .limit(100);
-
-                if (!error && data) {
-                    const uniqueFaculties = Array.from(new Set(
-                        data.map(p => p.facultad?.trim().toUpperCase()).filter(Boolean)
-                    )).sort((a, b) => a.localeCompare(b));
-
-                    setFacultySuggestions(uniqueFaculties as string[]);
-                    setShowFacultySuggestions(true);
-                }
-                setSearchingFaculties(false);
-            } else {
-                setFacultySuggestions([]);
-                setShowFacultySuggestions(false);
-            }
-        };
-
-        const timer = setTimeout(searchFaculties, 150);
-        return () => clearTimeout(timer);
-    }, [formData.facultad]);
+    // Search for existing faculties as user types faculty (Unused in Select mode)
 
     // Check for exact duplicates (Super Strict)
     useEffect(() => {
@@ -208,10 +167,7 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
 
     // Removed unused handler
 
-    const handleSelectFacultySuggestion = (facultyName: string) => {
-        setFormData(prev => ({ ...prev, facultad: facultyName.toUpperCase() }));
-        setShowFacultySuggestions(false);
-    };
+    // Removed unused handler
 
     const getRandomBackgroundImage = () => {
         const NATURE_BG_IDS = [
@@ -234,6 +190,20 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
         e.preventDefault();
 
         if (duplicateError) return;
+
+        // Manual validation to prevent accidental submissions from custom components
+        if (!formData.nombre.trim()) {
+            alert('Por favor, ingresa el nombre del profesor.');
+            return;
+        }
+        if (!formData.especialidad.trim()) {
+            alert('Por favor, selecciona o ingresa la materia principal.');
+            return;
+        }
+        if (!formData.facultad.trim()) {
+            alert('Por favor, selecciona una facultad.');
+            return;
+        }
 
         setLoading(true);
         try {
