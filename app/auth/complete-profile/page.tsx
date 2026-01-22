@@ -66,6 +66,16 @@ export default function CompleteProfilePage() {
                 .single();
 
             if (profile) {
+                // FAIL-SAFE: If profile is already complete, redirect to dashboard
+                const isProfileComplete = profile.nombre &&
+                    profile.carrera &&
+                    !['Estudiante', 'General', 'Carrera', ''].includes(profile.carrera);
+
+                if (isProfileComplete) {
+                    router.replace('/dashboard');
+                    return;
+                }
+
                 setUserProfile(profile);
                 // Si el nombre es el de gmail (contiene @ o es igual al email), mostrar vacío.
                 // O si es igual al google_full_name, mostrar vacío para forzar personalización.

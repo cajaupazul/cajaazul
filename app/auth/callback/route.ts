@@ -34,8 +34,7 @@ export async function GET(request: Request) {
 
             if (profile) {
                 const isComplete = profile.nombre &&
-                    profile.nombre !== profile.google_full_name &&
-                    profile.nombre !== profile.email?.split('@')[0] &&
+                    profile.nombre.trim().length > 0 &&
                     profile.carrera &&
                     !['Estudiante', 'General', 'Carrera', ''].includes(profile.carrera);
 
