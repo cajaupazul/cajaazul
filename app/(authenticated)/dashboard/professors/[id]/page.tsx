@@ -159,10 +159,32 @@ export default function ProfessorRatingsPage({ params }: { params: any }) {
           .in('nombre', allUniqueCourseOriginalNames);
 
         const cMapping: Record<string, string> = {};
+        const additionalCourses: any[] = [];
         matchedCourses?.forEach(c => {
           cMapping[c.nombre.toLowerCase()] = c.id;
+          additionalCourses.push(c);
         });
         setCourseMapping(cMapping);
+
+        // Merge linked courses (junction table) with matched courses (fuzzy name match)
+        const allCoursesMap = new Map();
+
+        // Add courses from junction table
+        coursesTaughtData?.forEach((ct: any) => {
+          if (ct.courses) {
+            const cArr = Array.isArray(ct.courses) ? ct.courses : [ct.courses];
+            cArr.forEach((c: any) => {
+              if (c) allCoursesMap.set(c.id, c);
+            });
+          }
+        });
+
+        // Add additional discovered courses
+        additionalCourses.forEach(c => {
+          allCoursesMap.set(c.id, c);
+        });
+
+        setCoursesTaught(Array.from(allCoursesMap.values()));
 
         const currentSpecialtyLower = currentProf.especialidad?.trim().toLowerCase();
         setAggregatedOtherCourses(allUniqueCourseOriginalNames.filter(name =>

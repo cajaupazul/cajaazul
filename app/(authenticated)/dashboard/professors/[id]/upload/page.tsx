@@ -34,7 +34,7 @@ export default function ProfessorUploadPage({ params }: { params: any }) {
                 // 1. Fetch professor details
                 const { data: profData, error: profError } = await supabase
                     .from('professors')
-                    .select('nombre')
+                    .select('nombre, especialidad, otros_cursos')
                     .eq('id', professorId)
                     .single();
 
@@ -44,18 +44,49 @@ export default function ProfessorUploadPage({ params }: { params: any }) {
                 }
                 setProfessor(profData);
 
-                // 2. Fetch courses taught by the professor
+                // 2. Fetch courses taught by the professor (strict and fuzzy)
                 const { data: cpData } = await supabase
                     .from('course_professors')
                     .select('courses(id, nombre)')
                     .eq('professor_id', professorId);
 
-                const courses = cpData?.map((item: any) => ({
-                    id: item.courses.id,
-                    nombre: item.courses.nombre
-                })) || [];
+                const coursesMap = new Map();
 
-                setCoursesTaught(courses);
+                // Add strict links
+                cpData?.forEach((item: any) => {
+                    if (item.courses) {
+                        const courseArr = Array.isArray(item.courses) ? item.courses : [item.courses];
+                        courseArr.forEach((c: any) => {
+                            if (c) coursesMap.set(c.id, c);
+                        });
+                    }
+                });
+
+                // Fuzzy matches based on specialty and other courses
+                const searchTerms = new Set<string>();
+                if (profData.especialidad) searchTerms.add(profData.especialidad.trim());
+                if (profData.otros_cursos) {
+                    profData.otros_cursos.split(',').forEach((c: string) => {
+                        const trimmed = c.trim();
+                        if (trimmed) searchTerms.add(trimmed);
+                    });
+                }
+
+                if (searchTerms.size > 0) {
+                    const fuzzyTerms = Array.from(searchTerms);
+                    for (const term of fuzzyTerms) {
+                        const { data: fuzzyResult } = await supabase
+                            .from('courses')
+                            .select('id, nombre')
+                            .ilike('nombre', `%${term}%`);
+
+                        fuzzyResult?.forEach((c: any) => {
+                            coursesMap.set(c.id, c);
+                        });
+                    }
+                }
+
+                setCoursesTaught(Array.from(coursesMap.values()));
 
             } catch (err) {
                 console.error('Error fetching professor upload data:', err);
