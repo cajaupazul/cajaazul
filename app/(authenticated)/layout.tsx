@@ -184,7 +184,8 @@ export default function AuthenticatedLayout({
   return (
     <div className="relative flex h-screen bg-bb-dark transition-colors duration-300">
       {/* Overlay de Carga Global */}
-      {(isInitialLoading || (session && !profile)) && (
+      {/* Overlay de Carga Global */}
+      {isInitialLoading && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-bb-dark">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-faculty-primary" style={{ borderColor: colors?.primary }}></div>
@@ -194,7 +195,7 @@ export default function AuthenticatedLayout({
       )}
 
       {/* El contenido se mantiene montado siempre */}
-      <div className={`flex w-full h-full ${(isInitialLoading || (session && !profile)) ? 'invisible' : 'visible'}`}>
+      <div className={`flex w-full h-full ${isInitialLoading ? 'invisible' : 'visible'}`}>
 
         {/* MOBILE OVERLAY BACKDROP */}
         {sidebarOpen && (
