@@ -26,7 +26,13 @@ export function getStorageUrl(path: string | null | undefined, bucket: string = 
   // If it's a public static asset, return it
   if (path.startsWith('/')) return path;
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  // Ensure we don't have a double bucket in the URL if the path already starts with the bucket name
+  let cleanPath = path;
+  if (path.startsWith(`${bucket}/`)) {
+    cleanPath = path.replace(`${bucket}/`, '');
+  }
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(cleanPath);
   return data.publicUrl || fallback || '';
 }
 

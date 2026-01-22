@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase, Profile } from '@/lib/supabase';
+import { supabase, Profile, getStorageUrl } from '@/lib/supabase';
+import { PLACEHOLDERS } from '@/lib/constants';
 import { useTheme } from '@/lib/theme-context';
 import {
     ArrowLeft,
@@ -43,14 +44,24 @@ export default function GrupoDetailContent({
     const [miembros, setMiembros] = useState<Miembro[]>(initialMiembros);
     const [isMember, setIsMember] = useState(initialIsMember);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [editData, setEditData] = useState({ link_whatsapp: grupo.link_whatsapp || '' });
+    const [editData, setEditData] = useState({
+        nombre: grupo.nombre || '',
+        descripcion: grupo.descripcion || '',
+        tipo: grupo.tipo || '',
+        link_whatsapp: grupo.link_whatsapp || ''
+    });
     const [hoveredMiembro, setHoveredMiembro] = useState<string | null>(null);
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
 
     useEffect(() => {
         setMiembros(initialMiembros);
         setIsMember(initialIsMember);
-        setEditData({ link_whatsapp: grupo.link_whatsapp || '' });
+        setEditData({
+            nombre: grupo.nombre || '',
+            descripcion: grupo.descripcion || '',
+            tipo: grupo.tipo || '',
+            link_whatsapp: grupo.link_whatsapp || ''
+        });
     }, [initialMiembros, initialIsMember, grupo]);
 
     const handleMiembroHover = (e: React.MouseEvent<HTMLElement>, userId: string) => {
@@ -103,11 +114,16 @@ export default function GrupoDetailContent({
         }
     };
 
-    const handleUpdateWhatsapp = async () => {
+    const handleUpdateGrupo = async () => {
         try {
             const { error } = await supabase
                 .from('grupos')
-                .update({ link_whatsapp: editData.link_whatsapp })
+                .update({
+                    nombre: editData.nombre,
+                    descripcion: editData.descripcion,
+                    tipo: editData.tipo,
+                    link_whatsapp: editData.link_whatsapp
+                })
                 .eq('id', grupo.id);
 
             if (error) throw error;
@@ -141,7 +157,7 @@ export default function GrupoDetailContent({
                 <div
                     className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
                     style={{
-                        backgroundImage: grupo.banner_url ? `url(${grupo.banner_url})` : undefined,
+                        backgroundImage: grupo.banner_url ? `url(${getStorageUrl(grupo.banner_url, 'grupos')})` : undefined,
                         backgroundColor: colors?.primary + '20',
                     }}
                 >
@@ -170,9 +186,9 @@ export default function GrupoDetailContent({
                     <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8">
                         {/* Logo Fluid */}
                         <div
-                            className="w-24 h-24 md:w-40 md:h-40 rounded-2xl md:rounded-3xl border-4 border-[#0a0a0a] shadow-2xl flex-shrink-0 bg-cover bg-center flex items-center justify-center text-3xl md:text-5xl font-black transition-all"
+                            className="w-24 h-24 md:w-40 md:h-40 rounded-2xl md:rounded-3xl border-4 border-[#0a0a0a] shadow-2xl flex-shrink-0 bg-cover bg-center flex items-center justify-center text-3xl md:text-5xl font-black transition-all overflow-hidden"
                             style={{
-                                backgroundImage: grupo.logo_url ? `url(${grupo.logo_url})` : undefined,
+                                backgroundImage: grupo.logo_url ? `url(${getStorageUrl(grupo.logo_url, 'grupos')})` : undefined,
                                 backgroundColor: colors?.primary,
                                 boxShadow: `0 20px 50px ${colors?.primary}40`
                             }}
@@ -336,7 +352,7 @@ export default function GrupoDetailContent({
                                         >
                                             <div className="flex items-center gap-4">
                                                 <Avatar className="w-12 h-12 md:w-14 md:h-14 rounded-xl border-2 border-white/5 group-hover:border-blue-500/50 transition-all">
-                                                    <AvatarImage src={p?.avatar_url || ''} />
+                                                    <AvatarImage src={getStorageUrl(p?.avatar_url)} />
                                                     <AvatarFallback className="bg-white/10 font-bold">{p?.nombre?.charAt(0).toUpperCase()}</AvatarFallback>
                                                 </Avatar>
                                                 <div className="min-w-0 flex-1">
@@ -357,7 +373,7 @@ export default function GrupoDetailContent({
                                                     <div className="h-24 bg-cover bg-center" style={{ backgroundImage: p?.background_url ? `url('${p.background_url}')` : 'none', backgroundColor: colors?.primary + '20' }} />
                                                     <div className="px-6 pb-6 -mt-10 flex flex-col items-center">
                                                         <Avatar className="w-20 h-20 border-4 border-[#121212] shadow-2xl rounded-2xl">
-                                                            <AvatarImage src={p?.avatar_url || ''} />
+                                                            <AvatarImage src={getStorageUrl(p?.avatar_url)} />
                                                             <AvatarFallback className="text-2xl font-black">{p?.nombre?.charAt(0).toUpperCase()}</AvatarFallback>
                                                         </Avatar>
                                                         <h4 className="mt-4 font-black text-lg text-center tracking-tight truncate w-full">{p?.nombre}</h4>
@@ -396,24 +412,57 @@ export default function GrupoDetailContent({
                 </div>
             )}
 
-            {/* Edit Modal (Manteniendo funcionalidad original) */}
             {showEditModal && (
                 <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-                    <div className="bg-[#121212] rounded-[2rem] w-full max-w-md border border-white/10 shadow-3xl p-8 animate-in zoom-in-95 duration-300">
+                    <div className="bg-[#121212] rounded-[2rem] w-full max-w-lg border border-white/10 shadow-3xl p-8 animate-in zoom-in-95 duration-300">
                         <h2 className="text-2xl font-black mb-6 uppercase tracking-tighter">Ajustes del Grupo</h2>
-                        <div className="mb-8">
-                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-2 px-1">Enlace de WhatsApp</label>
-                            <input
-                                type="url"
-                                value={editData.link_whatsapp}
-                                onChange={(e) => setEditData({ ...editData, link_whatsapp: e.target.value })}
-                                placeholder="https://chat.whatsapp.com/..."
-                                className="w-full px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500 transition-all text-sm"
-                            />
+
+                        <div className="space-y-4 mb-8">
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-2 px-1">Nombre</label>
+                                <input
+                                    type="text"
+                                    value={editData.nombre}
+                                    onChange={(e) => setEditData({ ...editData, nombre: e.target.value })}
+                                    className="w-full px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500 transition-all text-sm"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-2 px-1">Categoría</label>
+                                <input
+                                    type="text"
+                                    value={editData.tipo}
+                                    onChange={(e) => setEditData({ ...editData, tipo: e.target.value })}
+                                    className="w-full px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500 transition-all text-sm"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-2 px-1">Descripción</label>
+                                <textarea
+                                    value={editData.descripcion}
+                                    onChange={(e) => setEditData({ ...editData, descripcion: e.target.value })}
+                                    rows={4}
+                                    className="w-full px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500 transition-all text-sm resize-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-2 px-1">Enlace de WhatsApp</label>
+                                <input
+                                    type="url"
+                                    value={editData.link_whatsapp}
+                                    onChange={(e) => setEditData({ ...editData, link_whatsapp: e.target.value })}
+                                    placeholder="https://chat.whatsapp.com/..."
+                                    className="w-full px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500 transition-all text-sm"
+                                />
+                            </div>
                         </div>
+
                         <div className="flex gap-3">
                             <button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-white/40 font-bold hover:text-white/70 transition-all text-sm">Cancelar</button>
-                            <button onClick={handleUpdateWhatsapp} className="flex-1 px-4 py-3 rounded-xl bg-white text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-white/10 hover:bg-gray-200 transition-all">Guardar</button>
+                            <button onClick={handleUpdateGrupo} className="flex-1 px-4 py-3 rounded-xl bg-white text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-white/10 hover:bg-gray-200 transition-all">Guardar</button>
                         </div>
                     </div>
                 </div>

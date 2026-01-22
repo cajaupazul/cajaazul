@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase, Profile } from '@/lib/supabase';
+import { supabase, Profile, getStorageUrl } from '@/lib/supabase';
+import { PLACEHOLDERS } from '@/lib/constants';
 import { useTheme } from '@/lib/theme-context';
 import {
     Plus,
@@ -104,10 +105,13 @@ export default function GruposContent({
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
         const filePath = `${profile.id}/${fileName}`;
         try {
-            await supabase.storage.from('grupos').upload(filePath, file);
-            const { data } = supabase.storage.from('grupos').getPublicUrl(filePath);
-            return data.publicUrl;
-        } catch (error) { return null; }
+            const { error } = await supabase.storage.from('grupos').upload(filePath, file);
+            if (error) throw error;
+            return filePath;
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            return null;
+        }
     };
 
     const handleCreateGrupo = async (e: React.FormEvent) => {
@@ -184,9 +188,9 @@ export default function GruposContent({
                                     <motion.div key={grupo.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                                         <Link href={`/dashboard/grupos/${grupo.id}`} className="group block h-full rounded-2xl overflow-hidden bg-bb-card border border-bb-border hover:border-blue-500/30 transition-all shadow-xl relative">
                                             <div className="h-28 md:h-40 relative overflow-hidden">
-                                                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: grupo.banner_url ? `url(${grupo.banner_url})` : undefined, backgroundColor: '#1e293b' }} />
+                                                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: grupo.banner_url ? `url(${getStorageUrl(grupo.banner_url, 'grupos')})` : undefined, backgroundColor: '#1e293b' }} />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-bb-card to-transparent" />
-                                                {isAdmin && (
+                                                {(grupo.created_by === profile?.id || profile?.role === 'admin' || profile?.role === 'superadmin') && (
                                                     <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingGrupo(grupo); setFormData({ nombre: grupo.nombre, descripcion: grupo.descripcion || '', tipo: grupo.tipo, link_whatsapp: grupo.link_whatsapp || '' }); setShowModal(true); }} className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <Settings className="w-4 h-4" />
                                                     </button>
@@ -195,7 +199,7 @@ export default function GruposContent({
                                             </div>
                                             <div className="p-3 md:p-6 pt-8 md:pt-12 relative text-white flex-1 flex flex-col">
                                                 <div className="absolute -top-7 md:-top-10 left-3 md:left-6 w-14 h-14 md:w-20 md:h-20 rounded-xl md:rounded-2xl border-4 border-bb-card bg-blue-600 flex items-center justify-center text-xl md:text-2xl font-bold overflow-hidden">
-                                                    {grupo.logo_url ? <img src={grupo.logo_url} className="w-full h-full object-cover" /> : grupo.nombre.charAt(0).toUpperCase()}
+                                                    {grupo.logo_url ? <img src={getStorageUrl(grupo.logo_url, 'grupos')} className="w-full h-full object-cover" /> : grupo.nombre.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div className="flex justify-between items-start mb-1 md:mb-2 pl-16 md:pl-24 text-[10px] md:text-xs text-gray-400">
                                                     <div className="flex items-center gap-1.5"><Users className="w-3 md:w-3.5 h-3 md:h-3.5" /> {miembrosCuenta[grupo.id] || 0}</div>
@@ -273,6 +277,6 @@ export default function GruposContent({
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 }

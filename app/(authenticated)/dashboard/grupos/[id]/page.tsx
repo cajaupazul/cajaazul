@@ -45,7 +45,7 @@ export default function GrupoDetailPage({ params }: { params: any }) {
           return;
         }
         setGrupo(grupoData);
-        setIsAdmin(grupoData.created_by === session?.user?.id);
+        setIsAdmin(grupoData.created_by === session?.user?.id || currentProfile?.role === 'admin' || currentProfile?.role === 'superadmin');
 
         // 2. Fetch members
         const { data: miembrosData } = await supabase
