@@ -6,6 +6,8 @@ import { AUTH_CONFIG } from '@/lib/auth-config';
 import { Profile } from '@/lib/supabase';
 import { Session } from '@supabase/supabase-js';
 
+const STORAGE_KEY = 'campuslink_profile_v1';
+
 interface ProfileContextType {
   profile: Profile | null;
   session: Session | null;
@@ -21,9 +23,31 @@ export function ProfileProvider({
 }: {
   children: React.ReactNode
 }) {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  // Initialize profile from localStorage for instant render
+  const [profile, setProfile] = useState<Profile | null>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        try {
+          return JSON.parse(cached);
+        } catch (e) {
+          console.error('Error parsing cached profile', e);
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+    }
+    return null;
+  });
+
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  // If we have a cached profile, we are NOT loading visually (Optimistic UI)
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem(STORAGE_KEY);
+    }
+    return true;
+  });
 
   // Refs to track state effectively without causing re-renders
   const lastFetchedUserId = useRef<string | null>(null);
@@ -39,6 +63,14 @@ export function ProfileProvider({
     }, 8000); // 8 seconds max loading time
     return () => clearTimeout(safetyTimer);
   }, [loading]);
+
+  const saveProfileToCache = (data: Profile | null) => {
+    if (data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  };
 
   const fetchProfile = useCallback(async (userId: string, currentSession: Session) => {
     // Prevent duplicate fetches for the same user if already in progress
@@ -66,8 +98,12 @@ export function ProfileProvider({
 
       if (data) {
         setProfile(data);
+        saveProfileToCache(data);
       } else {
         console.log('[PROFILE_CONTEXT] No profile found. Attempting to create one...');
+
+        // Check if we hit a race condition where cache has it but DB read missed (rare but possible) or valid cache exists
+        // If we have a cached profile for THIS user, keep it rather than nuking it, unless sure.
 
         // Auto-create profile from user metadata logic
         const user = currentSession.user;
@@ -95,6 +131,7 @@ export function ProfileProvider({
         } else if (newProfile) {
           console.log('[PROFILE_CONTEXT] Profile created successfully.');
           setProfile(newProfile);
+          saveProfileToCache(newProfile);
         }
       }
     } catch (err) {
@@ -115,8 +152,30 @@ export function ProfileProvider({
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         if (mounted) {
           setSession(initialSession);
+
           if (!initialSession) {
             setLoading(false); // No session = no profile to load = done.
+            setProfile(null);
+            localStorage.removeItem(STORAGE_KEY);
+          } else {
+            // If we have session, check if our cached profile matches this user
+            const cached = localStorage.getItem(STORAGE_KEY);
+            if (cached) {
+              try {
+                const p = JSON.parse(cached);
+                if (p.id !== initialSession.user.id) {
+                  // Cache belongs to another user, clear it
+                  setProfile(null);
+                  localStorage.removeItem(STORAGE_KEY);
+                  setLoading(true); // Force loading to true to refetch for the new user
+                }
+              } catch {
+                // If parsing fails, clear the bad cache
+                setProfile(null);
+                localStorage.removeItem(STORAGE_KEY);
+                setLoading(true);
+              }
+            }
           }
         }
       } catch (e) {
@@ -131,9 +190,11 @@ export function ProfileProvider({
       if (mounted) {
         setSession(newSession);
         if (!newSession) {
+          // LOGOUT or Session Expiry -> Clear Everything correctly
           setProfile(null);
           setLoading(false); // User signed out? Loading done.
           lastFetchedUserId.current = null;
+          localStorage.removeItem(STORAGE_KEY);
         }
       }
     });
@@ -152,6 +213,7 @@ export function ProfileProvider({
     if (session.user.email && !session.user.email.endsWith('@alum.up.edu.pe')) {
       // We perform the redirect/signout entirely separately to avoid blocking the fetch logic
       console.warn('[AUTH_GUARD] Invalid domain. Signing out...');
+      localStorage.removeItem(STORAGE_KEY); // Security cleanup
       supabase.auth.signOut().then(() => {
         window.location.href = `/auth/login?error=${encodeURIComponent(AUTH_CONFIG.messages.domainError)}`;
       });
@@ -168,7 +230,9 @@ export function ProfileProvider({
         { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` },
         (payload: any) => {
           if (payload.new && payload.new.id === session.user.id) {
-            setProfile(payload.new as Profile);
+            const newP = payload.new as Profile;
+            setProfile(newP);
+            saveProfileToCache(newP);
           }
         }
       )
@@ -183,6 +247,7 @@ export function ProfileProvider({
   const updateProfile = useCallback((updatedProfile: Profile) => {
     if (updatedProfile.id === session?.user?.id) {
       setProfile(updatedProfile);
+      saveProfileToCache(updatedProfile);
     }
   }, [session?.user?.id]);
 
