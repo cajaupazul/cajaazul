@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import FullPageProfessorUploadForm from '@/components/professors/FullPageProfessorUploadForm';
 
@@ -9,6 +9,8 @@ export const runtime = 'edge';
 
 export default function ProfessorUploadPage({ params }: { params: any }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const preselectedCourseId = searchParams.get('courseId');
     const [loading, setLoading] = useState(true);
     const [professor, setProfessor] = useState<any>(null);
     const [coursesTaught, setCoursesTaught] = useState<any[]>([]);
@@ -88,6 +90,7 @@ export default function ProfessorUploadPage({ params }: { params: any }) {
                 professorId={unwrappedParams.id}
                 professorName={professor.nombre}
                 coursesTaught={coursesTaught}
+                preselectedCourseId={preselectedCourseId}
             />
         </div>
     );

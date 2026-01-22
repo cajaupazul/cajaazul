@@ -20,6 +20,7 @@ interface FullPageProfessorUploadFormProps {
     professorId: string;
     professorName: string;
     coursesTaught: { id: string; nombre: string }[];
+    preselectedCourseId?: string | null;
 }
 
 const MATERIAL_TYPES = [
@@ -33,12 +34,13 @@ export default function FullPageProfessorUploadForm({
     professorId,
     professorName,
     coursesTaught,
+    preselectedCourseId,
 }: FullPageProfessorUploadFormProps) {
     const router = useRouter();
     const [uploading, setUploading] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
     const [materialType, setMaterialType] = useState('otro');
-    const [courseId, setCourseId] = useState<string>(coursesTaught[0]?.id || '');
+    const [courseId, setCourseId] = useState<string>(preselectedCourseId || coursesTaught[0]?.id || '');
     const [description, setDescription] = useState('');
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

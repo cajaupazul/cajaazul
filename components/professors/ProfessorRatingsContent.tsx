@@ -525,7 +525,11 @@ export default function ProfessorRatingsContent({
                             </Dialog>
                             <Button
                                 className="w-full bg-bb-darker border border-bb-border hover:bg-bb-hover font-bold h-11 text-bb-text active:scale-95 transition-transform"
-                                onClick={() => router.push(`/dashboard/professors/${professor.id}/upload`)}
+                                onClick={() => {
+                                    const primaryCourseId = professor.especialidad ? courseMapping[professor.especialidad.toLowerCase()] : null;
+                                    const uploadUrl = `/dashboard/professors/${professor.id}/upload${primaryCourseId ? `?courseId=${primaryCourseId}` : ''}`;
+                                    router.push(uploadUrl);
+                                }}
                             >
                                 <Upload className="h-4 w-4 mr-2" />
                                 Subir
