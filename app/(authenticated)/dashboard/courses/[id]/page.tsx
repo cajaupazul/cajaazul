@@ -51,30 +51,69 @@ export default function CourseDetailPage({ params }: { params: any }) {
         setCourse(courseData);
         setMaterials(materialsData || []);
 
-        // 2. Fetch professors
-        const { data: cpData } = await supabase
-          .from('course_professors')
-          .select('professor_id')
-          .eq('course_id', courseId);
+        // 2. Fetch professors (junction table, fuzzy match, and contributors)
+        const courseNameClean = courseData.nombre.trim();
 
-        if (cpData && cpData.length > 0) {
-          const profIds = cpData.map(cp => cp.professor_id);
-          const { data: profs } = await supabase
+        // Parallel fetch for all potential associations
+        const [
+          { data: cpData },
+          { data: matchedProfs },
+          { data: materialProfs }
+        ] = await Promise.all([
+          supabase.from('course_professors').select('professor_id').eq('course_id', courseId),
+          supabase.from('professors')
+            .select('*, professor_ratings(puntuacion)')
+            .or(`especialidad.ilike.%${courseNameClean}%,otros_cursos.ilike.%${courseNameClean}%`),
+          supabase.from('materials')
+            .select('professor_id')
+            .eq('course_id', courseId)
+            .not('professor_id', 'is', null)
+        ]);
+
+        const professorsMap = new Map();
+
+        // Helper to format and add professor to map
+        const addProfToMap = (p: any) => {
+          if (!p) return;
+          const ratings = p.professor_ratings || [];
+          const avg = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.puntuacion, 0) / ratings.length : 0;
+          professorsMap.set(p.id, { ...p, averageRating: avg });
+        };
+
+        // 1. Add direct matches from name search
+        matchedProfs?.forEach(addProfToMap);
+
+        // 2. Add professors explicitly linked in junction table
+        const linkedProfIds = cpData?.map(cp => cp.professor_id) || [];
+        if (linkedProfIds.length > 0) {
+          const { data: linkedProfs } = await supabase
             .from('professors')
             .select('*, professor_ratings(puntuacion)')
-            .in('id', profIds);
+            .in('id', linkedProfIds);
+          linkedProfs?.forEach(addProfToMap);
+        }
 
-          if (profs) {
-            const formattedProfs = profs.map(p => {
-              const ratings = p.professor_ratings || [];
-              const avg = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.puntuacion, 0) / ratings.length : 0;
-              return { ...p, averageRating: avg };
-            });
-
-            setAllProfessors(formattedProfs);
-            const top = formattedProfs.reduce((prev, curr) => (prev.averageRating > curr.averageRating) ? prev : curr, formattedProfs[0]);
-            setTopProfessor(top);
+        // 3. Add professors who have contributed materials
+        const contributorIds = Array.from(new Set(materialProfs?.map(m => m.professor_id).filter(Boolean)));
+        if (contributorIds.length > 0) {
+          const missingIds = contributorIds.filter(id => !professorsMap.has(id));
+          if (missingIds.length > 0) {
+            const { data: contriProfs } = await supabase
+              .from('professors')
+              .select('*, professor_ratings(puntuacion)')
+              .in('id', missingIds);
+            contriProfs?.forEach(addProfToMap);
           }
+        }
+
+        const finalProfs = Array.from(professorsMap.values());
+        setAllProfessors(finalProfs);
+
+        if (finalProfs.length > 0) {
+          const top = finalProfs.reduce((prev, curr) => (prev.averageRating > curr.averageRating) ? prev : curr, finalProfs[0]);
+          setTopProfessor(top);
+        } else {
+          setTopProfessor(null);
         }
       } catch (err) {
         console.error('Error fetching course detail:', err);

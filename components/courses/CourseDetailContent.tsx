@@ -227,28 +227,37 @@ export default function CourseDetailContent({
                             {course.descripcion && <p className="text-bb-text-secondary leading-relaxed text-sm md:text-base">{course.descripcion}</p>}
                         </div>
 
-                        <div className="flex flex-wrap gap-2 mb-6 overscroll-x-auto no-scrollbar">
-                            <button
-                                onClick={() => setSelectedProfessorId('all')}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${selectedProfessorId === 'all'
-                                    ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20'
-                                    : 'bg-bb-card text-bb-text-secondary border-bb-border hover:border-bb-text hover:text-bb-text'
-                                    }`}
-                            >
-                                <Filter className="w-3 h-3" /> Todos
-                            </button>
-                            {allProfessors.map((prof) => (
+                        <div className="mb-6">
+                            <div className="flex items-center gap-2 mb-3 px-1">
+                                <div className="p-1.5 bg-blue-500/10 rounded-lg">
+                                    <Filter className="w-4 h-4 text-blue-400" />
+                                </div>
+                                <h4 className="text-xs font-black text-white uppercase tracking-wider">Filtrar por profesor</h4>
+                            </div>
+                            <div className="flex flex-nowrap gap-2 overflow-x-auto pb-4 no-scrollbar -mx-1 px-1 overscroll-contain">
                                 <button
-                                    key={prof.id}
-                                    onClick={() => setSelectedProfessorId(prof.id)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${selectedProfessorId === prof.id
-                                        ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20'
-                                        : 'bg-bb-card text-bb-text-secondary border-bb-border hover:border-bb-text hover:text-bb-text'
+                                    onClick={() => setSelectedProfessorId('all')}
+                                    className={`px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all shrink-0 border ${selectedProfessorId === 'all'
+                                        ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/30 active:scale-95'
+                                        : 'bg-bb-card text-bb-text-secondary border-bb-border hover:border-bb-text/30 hover:text-bb-text'
                                         }`}
                                 >
-                                    {prof.nombre}
+                                    Todos los materiales
                                 </button>
-                            ))}
+                                {allProfessors.map((prof) => (
+                                    <button
+                                        key={prof.id}
+                                        onClick={() => setSelectedProfessorId(prof.id)}
+                                        className={`px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all shrink-0 border flex items-center gap-2 ${selectedProfessorId === prof.id
+                                            ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/30 active:scale-95'
+                                            : 'bg-bb-card text-bb-text-secondary border-bb-border hover:border-bb-text/30 hover:text-bb-text'
+                                            }`}
+                                    >
+                                        <div className={`w-1.5 h-1.5 rounded-full ${selectedProfessorId === prof.id ? 'bg-white' : 'bg-bb-border'}`} />
+                                        {prof.nombre}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         <div className="w-full">
@@ -311,56 +320,50 @@ export default function CourseDetailContent({
 
                     <div className="lg:col-span-1">
                         <div className="sticky top-8 space-y-6">
-                            {topProfessor ? (
-                                <div className="bg-bb-card rounded-2xl border border-bb-border overflow-hidden shadow-xl">
-                                    <div className="bg-gradient-to-r from-blue-600 to-blue-800 h-24"></div>
-                                    <div className="px-6 pb-6">
-                                        <div className="-mt-12 mb-4">
-                                            <img
-                                                src={topProfessor.avatar_url || '/profes/tl.webp'}
-                                                alt={topProfessor.nombre}
-                                                className="w-20 h-20 rounded-2xl border-4 border-bb-card object-cover shadow-lg bg-bb-sidebar"
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = '/profes/tl.webp';
-                                                }}
-                                            />
-                                        </div>
-                                        <h3 className="font-bold text-white text-lg mb-0.5">{topProfessor.nombre}</h3>
-                                        <p className="text-xs text-bb-text-secondary mb-3">{topProfessor.especialidad}</p>
-                                        <div className="flex items-center gap-2 mb-5">
-                                            <div className="flex items-center">
-                                                {[...Array(5)].map((_, i) => (
-                                                    <Star key={i} className={`h-3.5 w-3.5 ${i < Math.round(topProfessor.averageRating) ? 'fill-yellow-400 text-yellow-400' : 'text-bb-darker'}`} />
-                                                ))}
-                                            </div>
-                                            <span className="text-sm font-bold text-white">{topProfessor.averageRating.toFixed(1)}</span>
-                                        </div>
-                                        <Button className="w-full bg-bb-darker hover:bg-bb-dark text-white border border-bb-border font-bold">
-                                            <Mail className="h-4 w-4 mr-2" /> Contactar
-                                        </Button>
+                            {allProfessors.length > 0 ? (
+                                <div className="space-y-4">
+                                    <h4 className="font-bold text-white mb-2 flex items-center gap-2 px-1">
+                                        <Users className="w-4 h-4 text-blue-400" /> Profesores del curso
+                                    </h4>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {allProfessors.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0)).map((prof) => (
+                                            <Link
+                                                key={prof.id}
+                                                href={`/dashboard/professors/${prof.id}`}
+                                                className={`group p-3 bg-bb-card rounded-2xl border transition-all hover:shadow-lg hover:shadow-blue-500/10 active:scale-95 ${selectedProfessorId === prof.id ? 'border-blue-500/50 bg-blue-500/5' : 'border-bb-border hover:border-blue-500/30'}`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="relative shrink-0">
+                                                        <img
+                                                            src={prof.avatar_url || '/profes/tl.webp'}
+                                                            alt={prof.nombre}
+                                                            className="w-12 h-12 rounded-xl object-cover border border-bb-border/50 shadow-sm"
+                                                            onError={(e) => {
+                                                                (e.target as HTMLImageElement).src = '/profes/tl.webp';
+                                                            }}
+                                                        />
+                                                        {prof.averageRating > 0 && (
+                                                            <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-bb-dark text-[8px] font-black px-1 rounded-md border border-bb-dark">
+                                                                {prof.averageRating.toFixed(1)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="font-bold text-sm text-bb-text truncate group-hover:text-blue-400 transition-colors">{prof.nombre}</p>
+                                                        <p className="text-[10px] text-bb-text-secondary truncate mt-0.5">{prof.especialidad || 'Catedrático'}</p>
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        ))}
                                     </div>
                                 </div>
                             ) : (
                                 <div className="bg-bb-card p-8 rounded-2xl border border-bb-border text-center">
-                                    <p className="text-bb-text-secondary text-sm font-medium">No hay profesores asignados</p>
-                                </div>
-                            )}
-
-                            {allProfessors.length > 1 && (
-                                <div className="bg-bb-card rounded-2xl border border-bb-border p-6 shadow-xl">
-                                    <h4 className="font-bold text-white mb-4 flex items-center gap-2">
-                                        <Users className="w-4 h-4 text-blue-400" /> Otros profesores
-                                    </h4>
-                                    <div className="space-y-3">
-                                        {allProfessors.map((prof) => (
-                                            prof.id !== topProfessor?.id && (
-                                                <div key={prof.id} className="p-3 bg-bb-darker/50 rounded-xl border border-bb-border/50 hover:border-blue-500/30 transition-colors">
-                                                    <p className="font-bold text-sm text-bb-text">{prof.nombre}</p>
-                                                    <p className="text-[10px] text-bb-text-secondary mt-0.5">{prof.especialidad}</p>
-                                                </div>
-                                            )
-                                        ))}
+                                    <div className="w-12 h-12 rounded-full bg-bb-darker flex items-center justify-center mx-auto mb-3">
+                                        <Users className="w-6 h-6 text-bb-text/20" />
                                     </div>
+                                    <p className="text-bb-text-secondary text-sm font-medium">No hay profesores asignados</p>
+                                    <p className="text-[10px] text-bb-text/30 mt-1 uppercase font-bold tracking-tighter">Sube material para vincular uno</p>
                                 </div>
                             )}
                         </div>
