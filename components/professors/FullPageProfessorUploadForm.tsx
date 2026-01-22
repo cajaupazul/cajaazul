@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase';
-import { Upload, X, GraduationCap, BookOpen, ArrowLeft, FileText, LayoutPanelLeft, CheckCircle } from 'lucide-react';
+import { Upload, X, GraduationCap, BookOpen, ArrowLeft, FileText, CheckCircle } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -15,6 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import Link from 'next/link';
 
 interface FullPageProfessorUploadFormProps {
     professorId: string;
@@ -23,10 +23,10 @@ interface FullPageProfessorUploadFormProps {
 }
 
 const MATERIAL_TYPES = [
-    { value: 'ppt', label: '📊 Presentación (PPT)' },
-    { value: 'examen', label: '📝 Examen Pasado' },
-    { value: 'guia', label: '📚 Guía de Estudio' },
-    { value: 'otro', label: '📎 Otro Material' },
+    { value: 'ppt', label: '📊 Presentación (PPT)', description: 'Diapositivas de clase' },
+    { value: 'examen', label: '📝 Examen Pasado', description: 'Parciales, finales o prácticas' },
+    { value: 'guia', label: '📚 Guía de Estudio', description: 'Resúmenes y apuntes' },
+    { value: 'otro', label: '📎 Otro Material', description: 'Cualquier otro recurso útil' },
 ];
 
 export default function FullPageProfessorUploadForm({
@@ -36,76 +36,72 @@ export default function FullPageProfessorUploadForm({
 }: FullPageProfessorUploadFormProps) {
     const router = useRouter();
     const [uploading, setUploading] = useState(false);
-    const [file, setFile] = useState<File | null>(null);
-    const [fileName, setFileName] = useState('');
+    const [files, setFiles] = useState<File[]>([]);
     const [materialType, setMaterialType] = useState('otro');
     const [courseId, setCourseId] = useState<string>(coursesTaught[0]?.id || '');
     const [description, setDescription] = useState('');
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFile = e.target.files?.[0];
-        if (selectedFile) {
-            setFile(selectedFile);
-            setFileName(selectedFile.name.split('.')[0]); // Default to filename without extension
+        const selectedFiles = Array.from(e.target.files || []);
+        if (selectedFiles.length > 0) {
+            setFiles(prev => [...prev, ...selectedFiles]);
         }
     };
 
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!file || !fileName.trim() || !materialType || !courseId) {
-            alert('Por favor completa todos los campos');
+        if (files.length === 0 || !materialType || !courseId) {
+            alert('Por favor selecciona al menos un archivo y el curso de referencia');
             return;
         }
 
         setUploading(true);
 
         try {
-            // Crear nombre único para el archivo
-            const fileExt = file.name.split('.').pop();
-            const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Usuario no autenticado');
+            const userId = user.id;
 
-            // Subir archivo a storage
-            const { error: uploadError } = await supabase.storage
-                .from('course_materials')
-                .upload(storagePath, file, {
-                    cacheControl: '3600',
-                    upsert: false,
-                    contentType: file.type,
+            for (const file of files) {
+                // 1. Crear nombre único para el archivo
+                const fileExt = file.name.split('.').pop();
+                const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+                // 2. Subir archivo a Supabase Storage
+                const { error: uploadError } = await supabase.storage
+                    .from('course_materials')
+                    .upload(storagePath, file, {
+                        cacheControl: '3600',
+                        upsert: false,
+                        contentType: file.type,
+                    });
+
+                if (uploadError) throw new Error(`Error al subir ${file.name}: ${uploadError.message}`);
+
+                // 3. Obtener URL pública
+                const { data: publicUrlData } = supabase.storage
+                    .from('course_materials')
+                    .getPublicUrl(storagePath);
+
+                const materialUrl = publicUrlData.publicUrl;
+
+                // 4. Insertar en base de datos
+                const { error: insertError } = await supabase.from('materials').insert({
+                    course_id: courseId,
+                    user_id: userId,
+                    professor_id: professorId,
+                    titulo: file.name.split('.')[0] || file.name,
+                    descripcion: description.trim() || null,
+                    url_archivo: materialUrl,
+                    tipo: materialType,
+                    descargas: 0,
                 });
 
-            if (uploadError) {
-                throw new Error(`Error al subir el archivo: ${uploadError.message}`);
+                if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
             }
 
-            // Obtener URL pública
-            const { data: publicUrlData } = supabase.storage
-                .from('course_materials')
-                .getPublicUrl(storagePath);
-
-            const materialUrl = publicUrlData.publicUrl;
-
-            // Obtener ID del usuario actual
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
-            const userId = user?.id || 'anonymous';
-
-            // Insertar registro en la tabla materials
-            const { error: insertError } = await supabase.from('materials').insert({
-                course_id: courseId,
-                user_id: userId,
-                professor_id: professorId,
-                titulo: fileName.trim(),
-                descripcion: description.trim() || null,
-                url_archivo: materialUrl,
-                tipo: materialType,
-                descargas: 0,
-            });
-
-            if (insertError) throw insertError;
-
-            alert('¡Material subido exitosamente!');
+            // Éxito
             router.push(`/dashboard/professors/${professorId}`);
             router.refresh();
         } catch (error: any) {
@@ -117,175 +113,181 @@ export default function FullPageProfessorUploadForm({
     };
 
     return (
-        <div className="max-w-4xl mx-auto py-10 px-6">
-            <div className="mb-10 flex items-center justify-between">
-                <div>
-                    <Button
-                        variant="ghost"
-                        className="pl-0 text-bb-text-secondary hover:text-bb-text hover:bg-transparent mb-4"
-                        onClick={() => router.back()}
-                    >
-                        <ArrowLeft className="h-5 w-5 mr-1" /> Volver al perfil
-                    </Button>
-                    <h1 className="text-4xl font-black text-bb-text uppercase tracking-tight">Subir Material</h1>
-                    <p className="text-bb-text-secondary mt-2">Estás subiendo material para el profesor: <span className="text-blue-400 font-bold">{professorName}</span></p>
-                </div>
+        <div className="max-w-3xl mx-auto py-8 px-4">
+            <div className="mb-8">
+                <Button
+                    variant="ghost"
+                    className="pl-0 hover:bg-transparent hover:text-blue-600 mb-2"
+                    onClick={() => router.back()}
+                >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Volver al perfil
+                </Button>
+                <h1 className="text-3xl font-bold text-slate-900">Subir Material</h1>
+                <p className="text-slate-500 mt-2">
+                    Estás subiendo material para el profesor: <span className="font-semibold text-blue-600">{professorName}</span>
+                </p>
             </div>
 
-            <form onSubmit={handleUpload} className="space-y-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Left Column: Details */}
-                    <div className="space-y-6">
-                        <div className="bg-bb-card border border-bb-border rounded-3xl p-8 space-y-6 shadow-xl">
-                            <h2 className="text-xl font-black text-bb-text flex items-center gap-2">
-                                <FileText className="w-5 h-5 text-blue-400" /> Detalles del Recurso
-                            </h2>
+            <form onSubmit={handleUpload} className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                {/* 1. Selección de Archivo */}
+                <div className="space-y-4">
+                    <Label className="text-lg font-semibold flex items-center gap-2">
+                        <CheckCircle className={`h-5 w-5 ${files.length > 0 ? 'text-green-500' : 'text-slate-300'}`} />
+                        1. Selecciona los archivos
+                    </Label>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="course" className="text-bb-text font-bold flex items-center gap-2">
-                                    <BookOpen className="w-4 h-4 text-purple-400" /> Curso de Referencia *
-                                </Label>
-                                <Select value={courseId} onValueChange={setCourseId} required>
-                                    <SelectTrigger className="bg-bb-darker border-bb-border text-bb-text h-12 text-lg">
-                                        <SelectValue placeholder="Selecciona un curso" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-bb-card border-bb-border text-bb-text">
-                                        {coursesTaught.map((course) => (
-                                            <SelectItem key={course.id} value={course.id} className="focus:bg-bb-hover">
-                                                {course.nombre}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-[10px] text-bb-text-secondary italic">El material se vinculará a este curso y profesor simultáneamente.</p>
+                    <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${files.length > 0 ? 'border-blue-500 bg-blue-50/50' : 'border-slate-300 hover:border-blue-500 hover:bg-slate-50'
+                        }`}>
+                        <input
+                            id="file"
+                            type="file"
+                            multiple
+                            onChange={handleFileChange}
+                            className="hidden"
+                            accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
+                        />
+                        <label htmlFor="file" className="cursor-pointer block w-full h-full">
+                            <div className="flex flex-col items-center gap-4 py-4">
+                                <div className={`w-16 h-16 rounded-full flex items-center justify-center ${files.length > 0 ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600'}`}>
+                                    <Upload className="h-8 w-8" />
+                                </div>
+                                <div>
+                                    <p className="text-lg font-medium text-slate-700">Arrastra tus archivos aquí o haz clic para explorar</p>
+                                    <p className="text-sm text-slate-500 mt-1">Soporta múltiples archivos: PDF, PPT, Word, Imágenes, ZIP</p>
+                                </div>
                             </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="type" className="text-bb-text font-bold flex items-center gap-2">
-                                    <GraduationCap className="w-4 h-4 text-blue-400" /> Categoría de Material *
-                                </Label>
-                                <Select value={materialType} onValueChange={setMaterialType}>
-                                    <SelectTrigger className="bg-bb-darker border-bb-border text-bb-text h-12 text-lg">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-bb-card border-bb-border text-bb-text">
-                                        {MATERIAL_TYPES.map((type) => (
-                                            <SelectItem key={type.value} value={type.value} className="focus:bg-bb-hover">
-                                                {type.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="fileName" className="text-bb-text font-bold">Título del Material *</Label>
-                                <Input
-                                    id="fileName"
-                                    value={fileName}
-                                    onChange={(e) => setFileName(e.target.value)}
-                                    placeholder="Ej: Clase 01 - Introducción"
-                                    className="bg-bb-darker border-bb-border text-bb-text h-12 text-lg focus:ring-blue-500"
-                                    required
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="description" className="text-bb-text font-bold">Descripción (Opcional)</Label>
-                                <Textarea
-                                    id="description"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="¿De qué trata este archivo?"
-                                    className="bg-bb-darker border-bb-border text-bb-text min-h-[120px]"
-                                />
-                            </div>
-                        </div>
+                        </label>
                     </div>
 
-                    {/* Right Column: File & Submit */}
-                    <div className="space-y-6">
-                        <div className="bg-bb-card border border-bb-border rounded-3xl p-8 space-y-6 shadow-xl">
-                            <h2 className="text-xl font-black text-bb-text flex items-center gap-2">
-                                <Upload className="w-5 h-5 text-green-400" /> Archivo Digital
-                            </h2>
-
-                            <div className="space-y-4">
-                                <div className={`border-2 border-dashed rounded-3xl p-10 text-center transition-all ${file ? 'border-blue-500 bg-blue-500/5' : 'border-bb-border hover:border-blue-500/50 bg-bb-darker/50'
-                                    }`}>
-                                    <input
-                                        id="file"
-                                        type="file"
-                                        onChange={handleFileChange}
-                                        className="hidden"
-                                        accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
-                                    />
-                                    <label
-                                        htmlFor="file"
-                                        className="cursor-pointer flex flex-col items-center gap-4 group"
-                                    >
-                                        <div className={`w-20 h-20 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 ${file ? 'bg-blue-500 text-white' : 'bg-bb-border text-bb-text-secondary'
-                                            }`}>
-                                            <Upload className="h-10 w-10" />
-                                        </div>
-                                        <div>
-                                            <p className="font-black text-bb-text text-xl">
-                                                {file ? '¡Archivo Seleccionado!' : 'Selecciona tu archivo'}
-                                            </p>
-                                            <p className="text-sm text-bb-text-secondary mt-2">
-                                                PDF, PPT, DOC, XLS, Imágenes o ZIP
-                                            </p>
-                                        </div>
-                                    </label>
-                                </div>
-
-                                {file && (
-                                    <div className="p-4 bg-blue-500/10 rounded-2xl flex items-center justify-between border border-blue-500/20 group">
-                                        <div className="flex items-center gap-3 overflow-hidden">
-                                            <div className="p-2 bg-blue-500/20 rounded-lg">
-                                                <LayoutPanelLeft className="w-5 h-5 text-blue-400" />
+                    {files.length > 0 && (
+                        <div className="space-y-2 mt-4">
+                            <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Archivos Seleccionados ({files.length})</Label>
+                            <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar border border-slate-100 rounded-xl p-2">
+                                {files.map((f, i) => (
+                                    <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200 group">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <FileText className="h-4 w-4 text-blue-500 shrink-0" />
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold text-slate-700 truncate">{f.name}</p>
+                                                <p className="text-[10px] text-slate-500">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
                                             </div>
-                                            <span className="text-sm font-bold text-blue-400 truncate">
-                                                {file.name}
-                                            </span>
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setFile(null);
-                                                setFileName('');
-                                            }}
-                                            className="text-bb-text-secondary hover:text-red-400 p-2 transition-colors"
+                                            onClick={() => setFiles(prev => prev.filter((_, idx) => idx !== i))}
+                                            className="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-md transition-colors"
                                         >
-                                            <X className="h-5 w-5" />
+                                            <X className="h-4 w-4" />
                                         </button>
                                     </div>
-                                )}
+                                ))}
                             </div>
                         </div>
+                    )}
+                </div>
 
-                        <div className="bg-blue-600/5 border border-blue-500/20 rounded-3xl p-8 space-y-4">
-                            <div className="flex items-start gap-4">
-                                <div className="p-2 bg-blue-500/20 rounded-lg">
-                                    <CheckCircle className="w-6 h-6 text-blue-400" />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-sm text-bb-text font-bold italic">Contribución a la Comunidad</p>
-                                    <p className="text-[11px] text-bb-text-secondary leading-relaxed mt-1">
-                                        Tu aporte ayuda a miles de estudiantes a prepararse mejor. Asegúrate de que el material sea legible y esté bien categorizado.
-                                    </p>
-                                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* 2. Detalles del Material */}
+                    <div className="space-y-4">
+                        <Label className="text-lg font-semibold flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-sm font-bold">2</span>
+                            Detalles del lote
+                        </Label>
+
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="type">Categoría de material</Label>
+                                <Select value={materialType} onValueChange={setMaterialType}>
+                                    <SelectTrigger className="mt-1.5 h-11">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {MATERIAL_TYPES.map((type) => (
+                                            <SelectItem key={type.value} value={type.value}>
+                                                <div className="flex flex-col py-1">
+                                                    <span className="font-medium text-slate-900">{type.label}</span>
+                                                    <span className="text-xs text-slate-500">{type.description}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
-                            <Button
-                                type="submit"
-                                className="w-full bg-blue-600 hover:bg-blue-700 h-16 text-white text-xl font-black shadow-2xl shadow-blue-600/20 mt-4 active:scale-[0.98] transition-all"
-                                disabled={uploading || !file}
-                            >
-                                {uploading ? 'SUBIENDO CONTENIDO...' : 'PUBLICAR MATERIAL'}
-                            </Button>
+                            <div>
+                                <Label htmlFor="description">Descripción común (Opcional)</Label>
+                                <Input
+                                    id="description"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    placeholder="Describe brevemente este contenido"
+                                    className="mt-1.5 h-11"
+                                />
+                            </div>
                         </div>
                     </div>
+
+                    {/* 3. Asociación (Curso) */}
+                    <div className="space-y-4">
+                        <Label className="text-lg font-semibold flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-sm font-bold">3</span>
+                            Asociación
+                        </Label>
+
+                        <div className="p-5 bg-slate-50 rounded-lg border border-slate-100">
+                            <div className="flex items-center justify-between mb-2">
+                                <Label htmlFor="course" className="text-slate-700">Curso de Referencia *</Label>
+                                <Link
+                                    href="/dashboard/courses"
+                                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline"
+                                    target="_blank"
+                                >
+                                    <BookOpen className="h-3 w-3" />
+                                    Ver Cursos
+                                </Link>
+                            </div>
+
+                            <Select value={courseId} onValueChange={setCourseId}>
+                                <SelectTrigger className="h-11 bg-white">
+                                    <SelectValue placeholder="Selecciona un curso" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {coursesTaught.length > 0 ? (
+                                        coursesTaught.map((course) => (
+                                            <SelectItem key={course.id} value={course.id}>
+                                                <span className="font-medium text-slate-900">{course.nombre}</span>
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <p className="p-2 text-xs text-slate-500 italic">No tienes cursos vinculados.</p>
+                                    )}
+                                </SelectContent>
+                            </Select>
+
+                            <p className="text-xs text-slate-500 mt-3 leading-relaxed">
+                                El material se vinculará a este profesor y al curso seleccionado simultáneamente. Esto ayudará a otros estudiantes a encontrar materiales en ambas secciones.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="pt-6 border-t border-slate-100 flex justify-end gap-3">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => router.back()}
+                        className="w-32"
+                    >
+                        Cancelar
+                    </Button>
+                    <Button
+                        type="submit"
+                        disabled={uploading || files.length === 0}
+                        className="w-48 bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all text-white font-bold"
+                    >
+                        {uploading ? 'Subiendo...' : 'Publicar Materiales'}
+                    </Button>
                 </div>
             </form>
         </div>
