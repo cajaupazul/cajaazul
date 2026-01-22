@@ -270,6 +270,84 @@ export default function ProfessorRatingsContent({
         setComments(initialComments);
     }, [initialMaterials, initialComments]);
 
+    // Realtime Subscriptions
+    useEffect(() => {
+        const channel = supabase
+            .channel(`professor_comments:${professor.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'professor_comments',
+                    filter: `professor_id=eq.${professor.id}`
+                },
+                async (payload) => {
+                    const newComment = payload.new as ProfessorComment;
+
+                    // Avoid duplicates if refresh already happened
+                    setComments(prev => {
+                        if (prev.some(c => c.id === newComment.id)) return prev;
+
+                        // To show the profile properly, we need to fetch it
+                        // Realtime payloads don't include joined data
+                        const fetchProfile = async () => {
+                            const { data: profileData } = await supabase
+                                .from('profiles')
+                                .select('nombre, avatar_url, active_frame_key')
+                                .eq('id', newComment.user_id)
+                                .single();
+
+                            if (profileData) {
+                                setComments(current =>
+                                    current.map(c =>
+                                        c.id === newComment.id
+                                            ? { ...c, profiles: profileData }
+                                            : c
+                                    )
+                                );
+                            }
+                        };
+
+                        fetchProfile();
+
+                        // Add to top (reverse chronological order)
+                        return [newComment, ...prev];
+                    });
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'DELETE',
+                    schema: 'public',
+                    table: 'professor_comments',
+                    filter: `professor_id=eq.${professor.id}`
+                },
+                (payload) => {
+                    setComments(prev => prev.filter(c => c.id !== payload.old.id));
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'professor_comments',
+                    filter: `professor_id=eq.${professor.id}`
+                },
+                (payload) => {
+                    const updated = payload.new as ProfessorComment;
+                    setComments(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c));
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [professor.id]);
+
     // Pre-fill rating if user has already rated
     useEffect(() => {
         const fetchUserRating = async () => {
