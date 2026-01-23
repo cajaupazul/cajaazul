@@ -60,6 +60,13 @@ export default function CourseDetailContent({
         return nonSyllabusMaterials.filter(m => m.professor_id === selectedProfessorId);
     }, [materials, selectedProfessorId]);
 
+    // Find if there is a syllabus in materials as a fallback
+    const fallbackSyllabusUrl = useMemo(() => {
+        return materials.find(m => m.tipo === 'syllabus')?.archivo_url;
+    }, [materials]);
+
+    const effectiveSyllabusUrl = course.syllabus_url || fallbackSyllabusUrl;
+
     const presentaciones = filteredMaterials.filter(
         (m) => m.tipo?.toLowerCase().includes('ppt') || m.tipo?.toLowerCase().includes('presentacion')
     );
