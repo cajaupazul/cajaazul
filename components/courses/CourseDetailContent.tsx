@@ -229,23 +229,23 @@ export default function CourseDetailContent({
                                     </p>
                                     <h1 className="text-3xl md:text-5xl font-black text-white leading-tight tracking-tighter uppercase">{course.nombre}</h1>
                                 </div>
-                                <div className="flex flex-col items-end gap-4">
+                                <div className="flex flex-col items-end gap-3 self-center">
                                     <Badge className="bg-green-500/10 text-green-400 border border-green-500/20 font-black px-4 py-1.5 uppercase tracking-widest text-[10px]">Abierto</Badge>
 
-                                    {course.syllabus_url && (
+                                    {effectiveSyllabusUrl && (
                                         <motion.a
                                             initial={{ opacity: 0, scale: 0.9 }}
                                             animate={{ opacity: 1, scale: 1 }}
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
-                                            href={getStorageUrl(course.syllabus_url, 'course_materials')}
+                                            href={getStorageUrl(effectiveSyllabusUrl, 'course_materials')}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex items-center gap-3 px-5 py-2.5 bg-[#121212]/40 backdrop-blur-md border border-white/10 rounded-xl hover:bg-white hover:text-black transition-all group overflow-hidden relative"
+                                            className="flex items-center gap-2.5 px-4 py-2 bg-[#121212]/60 backdrop-blur-md border border-white/10 rounded-xl hover:bg-white hover:text-black transition-all group overflow-hidden relative shadow-xl"
                                         >
-                                            <FileText className="w-4 h-4 text-blue-400 group-hover:text-black transition-colors" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">Ver Sílabo</span>
-                                            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-teal-600/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <FileText className="w-3.5 h-3.5 text-blue-400 group-hover:text-black transition-colors" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Ver Sílabo</span>
+                                            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-teal-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </motion.a>
                                     )}
                                 </div>
