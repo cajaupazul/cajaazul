@@ -131,6 +131,10 @@ export default function CourseDetailContent({
                             icon = <FileText className="w-5 h-5" />;
                             colorClass = 'text-red-400';
                             bgClass = 'bg-red-500/10';
+                        } else if (materialType.includes('syllabus')) {
+                            icon = <FileText className="w-5 h-5" />;
+                            colorClass = 'text-teal-400';
+                            bgClass = 'bg-teal-500/10';
                         }
 
                         return (
@@ -345,6 +349,7 @@ export default function CourseDetailContent({
 
                             <div className="bg-bb-card p-4 md:p-6 rounded-2xl border border-bb-border shadow-2xl shadow-black/40">
                                 {activeTab === 'todos' && renderMaterialGrid(filteredMaterials)}
+                                {activeTab === 'silabo' && renderMaterialGrid(filteredMaterials)}
                                 {activeTab === 'presentaciones' && renderMaterialGrid(presentaciones)}
                                 {activeTab === 'examenes' && renderMaterialGrid(examenes)}
                                 {activeTab === 'otros' && renderMaterialGrid(otros)}
