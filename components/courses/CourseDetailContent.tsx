@@ -50,21 +50,27 @@ export default function CourseDetailContent({
     };
 
     const filteredMaterials = useMemo(() => {
-        // First, filter out syllabus materials from the initial list
-        const nonSyllabusMaterials = (materials || []).filter(m => m.tipo !== 'syllabus');
-
-        // Then, apply the professor filter
-        let results = nonSyllabusMaterials;
+        let results = materials || [];
 
         if (activeTab === 'silabo') {
-            // Find the active syllabus (from course or materials)
-            const syllabusMaterial = materials?.find(m =>
+            // Show only syllabus materials
+            return results.filter(m =>
                 m.tipo?.toLowerCase() === 'syllabus' ||
                 (m.titulo || '').toLowerCase().includes('silabo') ||
                 (m.titulo || '').toLowerCase().includes('sílabo')
             );
-            return syllabusMaterial ? [syllabusMaterial] : [];
         }
+
+        if (activeTab === 'todos') {
+            // Show ALL materials including syllabus
+            if (selectedProfessorId !== 'all') {
+                results = results.filter(m => m.professor_id === selectedProfessorId);
+            }
+            return results;
+        }
+
+        // For other tabs, exclude syllabus
+        results = results.filter(m => m.tipo !== 'syllabus');
 
         if (selectedProfessorId !== 'all') {
             results = results.filter(m => m.professor_id === selectedProfessorId);
@@ -98,7 +104,7 @@ export default function CourseDetailContent({
     );
 
     const tabs = [
-        { id: 'todos' as TabType, label: '📂 Todo', count: (materials || []).filter(m => m.tipo !== 'syllabus').length },
+        { id: 'todos' as TabType, label: '📂 Todo', count: (materials || []).length },
         { id: 'silabo' as TabType, label: '📖 Sílabo', count: syllabusMaterialForHeader ? 1 : 0 },
         { id: 'presentaciones' as TabType, label: '📊 Presentaciones', count: presentaciones.length },
         { id: 'examenes' as TabType, label: '📝 Exámenes Pasados', count: examenes.length },
