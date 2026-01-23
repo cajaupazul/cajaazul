@@ -64,10 +64,10 @@ export default function CourseDetailContent({
     const fallbackSyllabusUrl = useMemo(() => {
         const syllabus = materials?.find(m =>
             m.tipo?.toLowerCase() === 'syllabus' ||
-            m.nombre?.toLowerCase().includes('silabo') ||
-            m.nombre?.toLowerCase().includes('sílabo')
+            (m.titulo || '').toLowerCase().includes('silabo') ||
+            (m.titulo || '').toLowerCase().includes('sílabo')
         );
-        return syllabus?.archivo_url;
+        return syllabus?.url_archivo;
     }, [materials]);
 
     const effectiveSyllabusUrl = course.syllabus_url || fallbackSyllabusUrl;
@@ -234,38 +234,34 @@ export default function CourseDetailContent({
                                     </p>
                                     <h1 className="text-3xl md:text-5xl font-black text-white leading-tight tracking-tighter uppercase">{course.nombre}</h1>
                                 </div>
-                                <div className="flex flex-col items-end gap-5 self-center">
+                                <div className="flex flex-col items-end gap-5 shrink-0 pt-2">
                                     <Badge className="bg-green-500/10 text-green-400 border border-green-500/20 font-black px-4 py-1.5 uppercase tracking-widest text-[10px]">Abierto</Badge>
 
-                                    {effectiveSyllabusUrl ? (
+                                    {effectiveSyllabusUrl && (
                                         <motion.div
-                                            initial={{ opacity: 0, x: 20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            className="w-full max-w-[240px] bg-[#121212]/60 backdrop-blur-xl border border-white/5 rounded-2xl p-4 shadow-2xl relative group overflow-hidden"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="w-64 bg-bb-card/50 backdrop-blur-xl border border-white/5 rounded-2xl p-4 shadow-2xl relative group overflow-hidden"
                                         >
                                             <div className="flex items-center gap-4 relative z-10">
                                                 <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center shrink-0 border border-blue-500/10">
                                                     <FileText className="w-5 h-5 text-blue-400" />
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-[10px] font-black text-white uppercase tracking-tight truncate">Sílabo Oficial</p>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-[10px] font-black text-white uppercase tracking-tight truncate mb-1">Sílabo Oficial</p>
                                                     <Link
                                                         href={getStorageUrl(effectiveSyllabusUrl, 'course_materials')}
                                                         target="_blank"
-                                                        className="text-[9px] text-blue-400 font-bold hover:underline"
+                                                        className="inline-flex items-center px-2 py-1 bg-white text-black text-[9px] font-black uppercase tracking-tighter rounded-md hover:bg-blue-400 hover:text-white transition-all transform group-active:scale-95"
                                                     >
-                                                        Abrir Archivo
+                                                        Abrir Documento
                                                     </Link>
                                                 </div>
                                             </div>
 
-                                            {/* Decoration */}
-                                            <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+                                            {/* Minimalist Decoration */}
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                                         </motion.div>
-                                    ) : (
-                                        <div className="text-[9px] text-bb-text/40 font-bold uppercase tracking-widest italic pr-2">
-                                            Sílabo no disponible
-                                        </div>
                                     )}
                                 </div>
                             </div>
