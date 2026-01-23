@@ -249,33 +249,6 @@ export default function CourseDetailContent({
                                 </div>
                                 <div className="flex flex-col items-end gap-5 shrink-0 pt-2">
                                     <Badge className="bg-green-500/10 text-green-400 border border-green-500/20 font-black px-4 py-1.5 uppercase tracking-widest text-[10px]">Abierto</Badge>
-
-                                    {effectiveSyllabusUrl && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="w-64 bg-bb-card/50 backdrop-blur-xl border border-white/5 rounded-2xl p-4 shadow-2xl relative group overflow-hidden"
-                                        >
-                                            <div className="flex items-center gap-4 relative z-10">
-                                                <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center shrink-0 border border-blue-500/10">
-                                                    <FileText className="w-5 h-5 text-blue-400" />
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-[10px] font-black text-white uppercase tracking-tight truncate mb-1">Sílabo Oficial</p>
-                                                    <Link
-                                                        href={getStorageUrl(effectiveSyllabusUrl, 'course_materials')}
-                                                        target="_blank"
-                                                        className="inline-flex items-center px-2 py-1 bg-white text-black text-[9px] font-black uppercase tracking-tighter rounded-md hover:bg-blue-400 hover:text-white transition-all transform group-active:scale-95"
-                                                    >
-                                                        Abrir Documento
-                                                    </Link>
-                                                </div>
-                                            </div>
-
-                                            {/* Minimalist Decoration */}
-                                            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                                        </motion.div>
-                                    )}
                                 </div>
                             </div>
 
