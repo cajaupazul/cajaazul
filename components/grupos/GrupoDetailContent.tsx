@@ -11,6 +11,9 @@ import {
     Settings,
     Trash2,
     Instagram,
+    FileText,
+    Upload,
+    ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -38,7 +41,7 @@ export default function GrupoDetailContent({
     profile,
 }: GrupoDetailContentProps) {
     const router = useRouter();
-    const { colors } = useTheme();
+    const { colors, themeMode } = useTheme();
 
     const [activeTab, setActiveTab] = useState<'pizarra' | 'miembros' | 'galeria' | 'recursos'>('pizarra');
     const [miembros, setMiembros] = useState<Miembro[]>(initialMiembros);
@@ -48,8 +51,11 @@ export default function GrupoDetailContent({
         nombre: grupo.nombre || '',
         descripcion: grupo.descripcion || '',
         tipo: grupo.tipo || '',
-        link_whatsapp: grupo.link_whatsapp || ''
+        link_whatsapp: grupo.link_whatsapp || '',
+        syllabus_url: grupo.syllabus_url || ''
     });
+    const [syllabusFile, setSyllabusFile] = useState<File | null>(null);
+    const [uploadingSyllabus, setUploadingSyllabus] = useState(false);
     const [hoveredMiembro, setHoveredMiembro] = useState<string | null>(null);
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
 
@@ -60,7 +66,8 @@ export default function GrupoDetailContent({
             nombre: grupo.nombre || '',
             descripcion: grupo.descripcion || '',
             tipo: grupo.tipo || '',
-            link_whatsapp: grupo.link_whatsapp || ''
+            link_whatsapp: grupo.link_whatsapp || '',
+            syllabus_url: grupo.syllabus_url || ''
         });
     }, [initialMiembros, initialIsMember, grupo]);
 
@@ -104,7 +111,7 @@ export default function GrupoDetailContent({
             const { error } = await supabase
                 .from('grupo_miembros')
                 .delete()
-                .eq('grupo_id', grupo.id)
+                .eq('id', grupo.id)
                 .eq('user_id', profile?.id);
 
             if (error) throw error;
@@ -116,21 +123,42 @@ export default function GrupoDetailContent({
 
     const handleUpdateGrupo = async () => {
         try {
+            let finalSyllabusUrl = editData.syllabus_url;
+
+            if (syllabusFile) {
+                setUploadingSyllabus(true);
+                const fileExt = syllabusFile.name.split('.').pop();
+                const fileName = `${Date.now()}-syllabus.${fileExt}`;
+                const filePath = `${profile?.id}/${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('grupos')
+                    .upload(filePath, syllabusFile);
+
+                if (uploadError) throw uploadError;
+                finalSyllabusUrl = filePath;
+            }
+
             const { error } = await supabase
                 .from('grupos')
                 .update({
                     nombre: editData.nombre,
                     descripcion: editData.descripcion,
                     tipo: editData.tipo,
-                    link_whatsapp: editData.link_whatsapp
+                    link_whatsapp: editData.link_whatsapp,
+                    syllabus_url: finalSyllabusUrl
                 })
                 .eq('id', grupo.id);
 
             if (error) throw error;
             setShowEditModal(false);
+            setSyllabusFile(null);
             router.refresh();
         } catch (error) {
             console.error('Error actualizando:', error);
+            alert('Error al actualizar el grupo.');
+        } finally {
+            setUploadingSyllabus(false);
         }
     };
 
@@ -163,7 +191,7 @@ export default function GrupoDetailContent({
     };
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] text-white">
+        <div className={`min-h-screen ${themeMode === 'light' ? 'bg-gray-50 text-gray-900' : 'bg-[#0a0a0a] text-white'}`}>
             {/* Minimalist Header / Banner */}
             <div className="relative h-[30vh] md:h-[45vh] overflow-hidden">
                 <div
@@ -250,8 +278,37 @@ export default function GrupoDetailContent({
                 </div>
             </div>
 
+            {/* Syllabus Section - Quick Access */}
+            {grupo.syllabus_url && (
+                <div className={`border-b ${themeMode === 'light' ? 'bg-white border-gray-200' : 'bg-blue-600/5 border-white/5'}`}>
+                    <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${themeMode === 'light' ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/20 text-blue-400'}`}>
+                                <FileText className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-widest opacity-60">Syllabus del Curso</p>
+                                <p className="text-sm font-bold truncate max-w-[200px] md:max-w-md">Documento oficial disponible</p>
+                            </div>
+                        </div>
+                        <a
+                            href={getStorageUrl(grupo.syllabus_url, 'grupos')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${themeMode === 'light'
+                                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20'
+                                : 'bg-white text-black hover:bg-gray-200'
+                                }`}
+                        >
+                            Ver Syllabus
+                            <ExternalLink className="w-3 h-3" />
+                        </a>
+                    </div>
+                </div>
+            )}
+
             {/* Tabbed Navigation Minimalist */}
-            <div className="sticky top-0 z-40 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-white/5">
+            <div className={`sticky top-0 z-40 backdrop-blur-xl border-b ${themeMode === 'light' ? 'bg-white/80 border-gray-200' : 'bg-[#0a0a0a]/80 border-white/5'}`}>
                 <div className="max-w-7xl mx-auto px-4 md:px-8">
                     <div className="flex overflow-x-auto no-scrollbar gap-6 md:gap-12">
                         {[
@@ -261,7 +318,10 @@ export default function GrupoDetailContent({
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
-                                className={`py-4 md:py-6 text-xs md:text-sm font-black uppercase tracking-widest whitespace-nowrap transition-all border-b-2 ${activeTab === tab.id ? 'border-white text-white opacity-100' : 'border-transparent text-white/40 hover:text-white/70'}`}
+                                className={`py-4 md:py-6 text-xs md:text-sm font-black uppercase tracking-widest whitespace-nowrap transition-all border-b-2 ${activeTab === tab.id
+                                    ? (themeMode === 'light' ? 'border-blue-600 text-blue-600' : 'border-white text-white')
+                                    : (themeMode === 'light' ? 'border-transparent text-gray-400 hover:text-gray-600' : 'border-transparent text-white/40 hover:text-white/70')
+                                    }`}
                             >
                                 {tab.label}
                             </button>
@@ -280,16 +340,16 @@ export default function GrupoDetailContent({
                                     <span className="w-2 h-8 bg-blue-600 rounded-full" />
                                     SOBRE ESTE GRUPO
                                 </h2>
-                                <p className="text-base md:text-lg text-white/70 leading-relaxed font-medium whitespace-pre-wrap break-all md:break-words">
+                                <p className={`text-base md:text-lg leading-relaxed font-medium whitespace-pre-wrap break-all md:break-words ${themeMode === 'light' ? 'text-gray-600' : 'text-white/70'}`}>
                                     {grupo.descripcion || 'Sin descripción disponible.'}
                                 </p>
                             </section>
 
-                            <section className="bg-white/5 rounded-3xl p-8 border border-white/5">
+                            <section className={`${themeMode === 'light' ? 'bg-white border-gray-100' : 'bg-white/5 border-white/5'} rounded-3xl p-8 border`}>
                                 <h3 className="text-sm font-black text-blue-500 uppercase tracking-widest mb-6">Detalles Administrativos</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div>
-                                        <p className="text-[10px] uppercase font-black text-white/30 tracking-widest mb-1">Fecha de Creación</p>
+                                        <p className="text-[10px] uppercase font-black opacity-30 tracking-widest mb-1">Fecha de Creación</p>
                                         <p className="text-sm font-bold">
                                             {new Date(grupo.created_at).toLocaleDateString('es-ES', {
                                                 year: 'numeric', month: 'long', day: 'numeric',
@@ -297,7 +357,7 @@ export default function GrupoDetailContent({
                                         </p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] uppercase font-black text-white/30 tracking-widest mb-1">Categoría</p>
+                                        <p className="text-[10px] uppercase font-black opacity-30 tracking-widest mb-1">Categoría</p>
                                         <p className="text-sm font-bold uppercase">{grupo.tipo}</p>
                                     </div>
                                 </div>
@@ -305,7 +365,7 @@ export default function GrupoDetailContent({
                         </div>
 
                         <div className="space-y-8">
-                            <div className="bg-blue-600 rounded-3xl p-8 shadow-2xl shadow-blue-600/10">
+                            <div className="bg-blue-600 rounded-3xl p-8 shadow-2xl shadow-blue-600/10 text-white">
                                 <h3 className="text-xl font-black mb-4">¿Quieres unirte?</h3>
                                 <p className="text-sm font-medium mb-6 opacity-80">Conecta con tus compañeros y accede a contenido exclusivo para miembros.</p>
                                 {!isMember && (
@@ -339,13 +399,13 @@ export default function GrupoDetailContent({
                         </h2>
 
                         {!isMember ? (
-                            <div className="text-center py-20 bg-white/5 rounded-3xl border border-white/5">
-                                <Users className="w-16 h-16 text-white/20 mx-auto mb-6" />
+                            <div className={`text-center py-20 rounded-3xl border ${themeMode === 'light' ? 'bg-white border-gray-100 text-gray-900' : 'bg-white/5 border-white/5 text-white'}`}>
+                                <Users className="w-16 h-16 opacity-20 mx-auto mb-6" />
                                 <h3 className="text-xl font-bold mb-2">Contenido Exclusivo</h3>
-                                <p className="text-white/50 mb-8 max-w-md mx-auto">Únete al grupo para ver quiénes forman parte de esta comunidad y conectar con ellos.</p>
+                                <p className="opacity-50 mb-8 max-w-md mx-auto">Únete al grupo para ver quiénes forman parte de esta comunidad y conectar con ellos.</p>
                                 <button
                                     onClick={handleUnirse}
-                                    className="px-8 py-3 bg-white text-black rounded-xl font-black uppercase tracking-widest text-xs hover:bg-gray-200 transition-all"
+                                    className={`px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs transition-all ${themeMode === 'light' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-black hover:bg-gray-200'}`}
                                 >
                                     Unirse al Grupo
                                 </button>
@@ -353,12 +413,12 @@ export default function GrupoDetailContent({
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                                 {miembros.map((miembro) => {
-                                    const esAdmin = grupo.created_by === miembro.user_id;
                                     const p = miembro.profile;
+                                    const esCreador = grupo.created_by === miembro.user_id;
                                     return (
                                         <div
                                             key={miembro.user_id}
-                                            className="group bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden"
+                                            className={`group border rounded-2xl p-4 transition-all duration-300 relative overflow-hidden ${themeMode === 'light' ? 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-lg' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
                                             onMouseEnter={(e) => handleMiembroHover(e, miembro.user_id)}
                                             onMouseLeave={() => setHoveredMiembro(null)}
                                         >
@@ -370,16 +430,16 @@ export default function GrupoDetailContent({
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex items-center gap-2">
                                                         <p className="font-bold truncate">{p?.nombre || 'Usuario'}</p>
-                                                        {esAdmin && <span className="bg-blue-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-tighter shrink-0">Admin</span>}
+                                                        {esCreador && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-tighter shrink-0">Admin</span>}
                                                     </div>
-                                                    <p className="text-[10px] text-white/40 truncate uppercase font-bold tracking-widest">{p?.carrera || 'Estudiante'}</p>
+                                                    <p className="text-[10px] opacity-40 truncate uppercase font-bold tracking-widest">{p?.carrera || 'Estudiante'}</p>
                                                 </div>
                                             </div>
 
-                                            {/* Hover Detail Card Mobile Fallback / Style */}
+                                            {/* Hover Detail Card */}
                                             {hoveredMiembro === miembro.user_id && (
                                                 <div
-                                                    className="fixed bg-[#121212] border border-white/10 rounded-[2rem] shadow-[0_30px_100px_rgba(0,0,0,0.8)] z-[100] w-[300px] overflow-hidden animate-in fade-in zoom-in-95 duration-300 hidden md:block"
+                                                    className="fixed bg-[#121212] border border-white/10 rounded-[2rem] shadow-[0_30px_100px_rgba(0,0,0,0.8)] z-[100] w-[300px] overflow-hidden animate-in fade-in zoom-in-95 duration-300 hidden md:block text-white"
                                                     style={{ left: `${hoverPosition.x}px`, top: `${hoverPosition.y}px` }}
                                                 >
                                                     <div className="h-24 bg-cover bg-center" style={{ backgroundImage: p?.background_url ? `url('${p.background_url}')` : 'none', backgroundColor: colors?.primary + '20' }} />
@@ -409,10 +469,10 @@ export default function GrupoDetailContent({
             {/* Admin Delete Section (Solo visible en Pizarrra para Admin) */}
             {isAdmin && activeTab === 'pizarra' && (
                 <div className="max-w-7xl mx-auto px-4 md:px-8 pb-20">
-                    <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 gap-y-6">
+                    <div className={`pt-10 border-t flex flex-col md:flex-row justify-between items-center gap-8 gap-y-6 ${themeMode === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
                         <div className="text-center md:text-left">
                             <h4 className="text-lg font-black text-red-500 mb-1 uppercase tracking-tight">Zona de Riesgo</h4>
-                            <p className="text-xs text-white/30 font-medium">Como administrador, puedes eliminar este grupo de forma permanente.</p>
+                            <p className="text-xs opacity-30 font-medium">Como administrador, puedes eliminar este grupo de forma permanente.</p>
                         </div>
                         <button
                             onClick={handleDeleteGrupo}
@@ -426,7 +486,7 @@ export default function GrupoDetailContent({
 
             {showEditModal && (
                 <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-                    <div className="bg-[#121212] rounded-[2rem] w-full max-w-lg border border-white/10 shadow-3xl p-8 animate-in zoom-in-95 duration-300">
+                    <div className="bg-[#121212] rounded-[2rem] w-full max-w-lg border border-white/10 shadow-3xl p-8 animate-in zoom-in-95 duration-300 text-white">
                         <h2 className="text-2xl font-black mb-6 uppercase tracking-tighter">Ajustes del Grupo</h2>
 
                         <div className="space-y-4 mb-8">
@@ -470,11 +530,37 @@ export default function GrupoDetailContent({
                                     className="w-full px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500 transition-all text-sm"
                                 />
                             </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-2 px-1">Syllabus (PDF)</label>
+                                <div className="flex items-center gap-3">
+                                    <label className="flex-1 cursor-pointer">
+                                        <div className="w-full px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 transition-all text-sm flex items-center justify-between">
+                                            <span>{syllabusFile ? syllabusFile.name : 'Sube un archivo PDF...'}</span>
+                                            <Upload className="w-4 h-4" />
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept=".pdf"
+                                            onChange={(e) => setSyllabusFile(e.target.files?.[0] || null)}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                    {editData.syllabus_url && (
+                                        <div className="p-3 bg-green-500/20 text-green-400 rounded-xl">
+                                            <FileText className="w-5 h-5" />
+                                        </div>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-white/30 mt-2 px-1 uppercase font-bold italic">Integridad: Solo se permiten archivos PDF oficiales.</p>
+                            </div>
                         </div>
 
                         <div className="flex gap-3">
                             <button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-white/40 font-bold hover:text-white/70 transition-all text-sm">Cancelar</button>
-                            <button onClick={handleUpdateGrupo} className="flex-1 px-4 py-3 rounded-xl bg-white text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-white/10 hover:bg-gray-200 transition-all">Guardar</button>
+                            <button onClick={handleUpdateGrupo} disabled={uploadingSyllabus} className="flex-1 px-4 py-3 rounded-xl bg-white text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-white/10 hover:bg-gray-200 transition-all disabled:opacity-50">
+                                {uploadingSyllabus ? 'Subiendo...' : 'Guardar'}
+                            </button>
                         </div>
                     </div>
                 </div>

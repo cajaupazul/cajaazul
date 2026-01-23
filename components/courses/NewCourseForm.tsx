@@ -193,7 +193,7 @@ export default function NewCourseForm() {
                                     placeholder="EJ: CÁLCULO DIFERENCIAL"
                                     items={courseCatalog}
                                     value={formData.nombre}
-                                    onChange={(val) => setFormData({ ...formData, nombre: val.toUpperCase() })}
+                                    onChange={(val) => setFormData({ ...formData, nombre: val })}
                                 />
                             </div>
 

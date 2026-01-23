@@ -145,13 +145,7 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
-        // Don't force uppercase on email
-        if (id === 'email') {
-            setFormData(prev => ({ ...prev, [id]: value }));
-        } else {
-            // Auto-transform all other inputs to uppercase for aesthetic impact
-            setFormData(prev => ({ ...prev, [id]: value.toUpperCase() }));
-        }
+        setFormData(prev => ({ ...prev, [id]: value }));
     };
 
     const handleSelectSuggestion = (prof: Professor) => {
@@ -208,11 +202,11 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
         setLoading(true);
         try {
             const { data, error } = await supabase.from('professors').insert({
-                nombre: formData.nombre.trim(),
-                especialidad: formData.especialidad.trim(),
-                facultad: formData.facultad.trim() || null,
+                nombre: formData.nombre.trim().toUpperCase(),
+                especialidad: formData.especialidad.trim().toUpperCase(),
+                facultad: formData.facultad.trim().toUpperCase() || null,
                 email: formData.email.trim() || null,
-                otros_cursos: formData.otros_cursos.trim() || null,
+                otros_cursos: formData.otros_cursos.trim().toUpperCase() || null,
                 background_image_url: getRandomBackgroundImage(),
                 avatar_url: '/profes/tl.webp', // Default avatar
             }).select().single();
