@@ -11,7 +11,7 @@ import { Course, Professor, getStorageUrl } from '@/lib/supabase';
 import { PLACEHOLDERS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
 
-type TabType = 'todos' | 'presentaciones' | 'examenes' | 'otros';
+type TabType = 'todos' | 'silabo' | 'presentaciones' | 'examenes' | 'otros';
 
 interface CourseDetailContentProps {
     course: Course;
@@ -54,23 +54,35 @@ export default function CourseDetailContent({
         const nonSyllabusMaterials = (materials || []).filter(m => m.tipo !== 'syllabus');
 
         // Then, apply the professor filter
-        if (selectedProfessorId === 'all') {
-            return nonSyllabusMaterials;
+        let results = nonSyllabusMaterials;
+
+        if (activeTab === 'silabo') {
+            // Find the active syllabus (from course or materials)
+            const syllabusMaterial = materials?.find(m =>
+                m.tipo?.toLowerCase() === 'syllabus' ||
+                (m.titulo || '').toLowerCase().includes('silabo') ||
+                (m.titulo || '').toLowerCase().includes('sílabo')
+            );
+            return syllabusMaterial ? [syllabusMaterial] : [];
         }
-        return nonSyllabusMaterials.filter(m => m.professor_id === selectedProfessorId);
-    }, [materials, selectedProfessorId]);
+
+        if (selectedProfessorId !== 'all') {
+            results = results.filter(m => m.professor_id === selectedProfessorId);
+        }
+
+        return results;
+    }, [materials, selectedProfessorId, activeTab]);
 
     // Find if there is a syllabus in materials as a fallback (more robust search)
-    const fallbackSyllabusUrl = useMemo(() => {
-        const syllabus = materials?.find(m =>
+    const syllabusMaterialForHeader = useMemo(() => {
+        return materials?.find(m =>
             m.tipo?.toLowerCase() === 'syllabus' ||
             (m.titulo || '').toLowerCase().includes('silabo') ||
             (m.titulo || '').toLowerCase().includes('sílabo')
         );
-        return syllabus?.url_archivo;
     }, [materials]);
 
-    const effectiveSyllabusUrl = course.syllabus_url || fallbackSyllabusUrl;
+    const effectiveSyllabusUrl = course.syllabus_url || syllabusMaterialForHeader?.url_archivo;
 
     const presentaciones = filteredMaterials.filter(
         (m) => m.tipo?.toLowerCase().includes('ppt') || m.tipo?.toLowerCase().includes('presentacion')
@@ -86,7 +98,8 @@ export default function CourseDetailContent({
     );
 
     const tabs = [
-        { id: 'todos' as TabType, label: '📂 Todo', count: filteredMaterials.length },
+        { id: 'todos' as TabType, label: '📂 Todo', count: (materials || []).filter(m => m.tipo !== 'syllabus').length },
+        { id: 'silabo' as TabType, label: '📖 Sílabo', count: syllabusMaterialForHeader ? 1 : 0 },
         { id: 'presentaciones' as TabType, label: '📊 Presentaciones', count: presentaciones.length },
         { id: 'examenes' as TabType, label: '📝 Exámenes Pasados', count: examenes.length },
         { id: 'otros' as TabType, label: '📚 Otros Recursos', count: otros.length },
