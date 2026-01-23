@@ -5,9 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter } from 'lucide-react';
+import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Course, Professor, getStorageUrl } from '@/lib/supabase';
+import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import { PLACEHOLDERS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
 
@@ -18,13 +18,15 @@ interface CourseDetailContentProps {
     topProfessor: any;
     allProfessors: any[];
     initialMaterials: any[];
+    currentUser: any | null;
 }
 
 export default function CourseDetailContent({
     course,
     topProfessor,
     allProfessors,
-    initialMaterials
+    initialMaterials,
+    currentUser
 }: CourseDetailContentProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -47,6 +49,45 @@ export default function CourseDetailContent({
 
     const handleMaterialUploaded = () => {
         router.refresh();
+    };
+
+    const handleDeleteMaterial = async (materialId: string, materialUrl: string) => {
+        if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'superadmin')) {
+            alert('No tienes permisos para eliminar materiales');
+            return;
+        }
+
+        if (!confirm('¿Estás seguro de que deseas eliminar este material? Esta acción no se puede deshacer.')) {
+            return;
+        }
+
+        try {
+            // Delete from storage
+            const pathMatch = materialUrl.match(/course_materials\/(.+)$/);
+            if (pathMatch) {
+                const storagePath = pathMatch[1];
+                const { error: storageError } = await supabase.storage
+                    .from('course_materials')
+                    .remove([storagePath]);
+
+                if (storageError) console.error('Error deleting from storage:', storageError);
+            }
+
+            // Delete from database
+            const { error: dbError } = await supabase
+                .from('materials')
+                .delete()
+                .eq('id', materialId);
+
+            if (dbError) throw dbError;
+
+            // Refresh the page
+            router.refresh();
+            alert('Material eliminado exitosamente');
+        } catch (error: any) {
+            console.error('Error deleting material:', error);
+            alert('Error al eliminar el material: ' + error.message);
+        }
     };
 
     const filteredMaterials = useMemo(() => {
@@ -169,7 +210,19 @@ export default function CourseDetailContent({
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-4 px-2">
+                                <div className="flex items-center gap-2 px-2">
+                                    {currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteMaterial(material.id, material.url_archivo);
+                                            }}
+                                            className="p-2 rounded-lg hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all"
+                                            title="Eliminar material"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    )}
                                     <Button variant="ghost" size="sm" className="hidden sm:flex text-bb-text-secondary hover:text-white h-8 px-2 text-xs font-bold">
                                         Ver Documento
                                     </Button>
@@ -207,8 +260,20 @@ export default function CourseDetailContent({
                         <div
                             key={material.id}
                             onClick={() => setViewingFile({ path: material.url_archivo, name: material.titulo })}
-                            className={`p-3 md:p-4 ${bgColor} rounded-xl hover:bg-opacity-20 transition-all border ${borderColor} flex flex-col items-center gap-2 md:gap-3 group cursor-pointer active:scale-95`}
+                            className={`relative p-3 md:p-4 ${bgColor} rounded-xl hover:bg-opacity-20 transition-all border ${borderColor} flex flex-col items-center gap-2 md:gap-3 group cursor-pointer active:scale-95`}
                         >
+                            {currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteMaterial(material.id, material.url_archivo);
+                                    }}
+                                    className="absolute top-1.5 right-1.5 p-1 rounded-lg bg-bb-dark/90 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all opacity-0 group-hover:opacity-100 z-10"
+                                    title="Eliminar material"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                </button>
+                            )}
                             <div className={`${textColor} group-hover:scale-110 transition-transform`}>
                                 {icon}
                             </div>

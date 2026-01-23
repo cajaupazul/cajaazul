@@ -15,6 +15,7 @@ export default function CourseDetailPage({ params }: { params: any }) {
   const [topProfessor, setTopProfessor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [unwrappedParams, setUnwrappedParams] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     async function unwrap() {
@@ -46,6 +47,17 @@ export default function CourseDetailPage({ params }: { params: any }) {
         if (courseError || !courseData) {
           console.error('Course not found');
           return;
+        }
+
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          setCurrentUser(profile);
         }
 
         setCourse(courseData);
@@ -153,6 +165,7 @@ export default function CourseDetailPage({ params }: { params: any }) {
       topProfessor={topProfessor}
       allProfessors={allProfessors}
       initialMaterials={materials}
+      currentUser={currentUser}
     />
   );
 }
