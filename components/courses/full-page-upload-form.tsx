@@ -23,6 +23,7 @@ interface FullPageUploadFormProps {
 }
 
 const MATERIAL_TYPES = [
+    { value: 'syllabus', label: '📖 Sílabo Oficial', description: 'Documento oficial del curso' },
     { value: 'ppt', label: '📊 Presentación (PPT)', description: 'Diapositivas de clase' },
     { value: 'examen', label: '📝 Examen Pasado', description: 'Parciales, finales o prácticas' },
     { value: 'guia', label: '📚 Guía de Estudio', description: 'Resúmenes y apuntes' },
@@ -99,6 +100,16 @@ export default function FullPageUploadForm({
                 });
 
                 if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
+
+                // 5. Si es un sílabo, actualizar la tabla de cursos
+                if (materialType === 'syllabus') {
+                    const { error: updateCourseError } = await supabase
+                        .from('courses')
+                        .update({ syllabus_url: materialUrl })
+                        .eq('id', courseId);
+
+                    if (updateCourseError) console.error('Error updating course syllabus_url:', updateCourseError);
+                }
             }
 
             // Éxito

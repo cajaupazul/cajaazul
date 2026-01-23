@@ -211,22 +211,9 @@ export default function CourseDetailContent({
                         <div className="mb-10">
                             <div className="flex items-start justify-between mb-6 flex-wrap gap-6">
                                 <div className="space-y-2">
-                                    <div className="flex items-center gap-3">
-                                        <p className="text-xs md:text-sm font-black text-blue-400 uppercase tracking-[0.2em]">
-                                            {course.codigo}
-                                        </p>
-                                        {course.syllabus_url && (
-                                            <a
-                                                href={getStorageUrl(course.syllabus_url, 'course_materials')}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center gap-2 px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all group active:scale-95"
-                                            >
-                                                <FileText className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
-                                                Ver Sílabo
-                                            </a>
-                                        )}
-                                    </div>
+                                    <p className="text-xs md:text-sm font-black text-blue-400 uppercase tracking-[0.2em]">
+                                        {course.codigo}
+                                    </p>
                                     <h1 className="text-3xl md:text-5xl font-black text-white leading-tight tracking-tighter uppercase">{course.nombre}</h1>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -234,13 +221,45 @@ export default function CourseDetailContent({
                                 </div>
                             </div>
 
-                            <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs md:text-sm text-bb-text-secondary mb-6 font-medium">
+                            <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs md:text-sm text-bb-text-secondary mb-10 font-medium">
                                 <div><span className="text-bb-text/50">Facultad:</span> {course.facultad}</div>
                                 <div><span className="text-bb-text/50">Carrera:</span> {course.carrera}</div>
                                 <div><span className="text-bb-text/50">Ciclo:</span> {course.ciclo}</div>
                             </div>
 
-                            {course.descripcion && <p className="text-bb-text-secondary leading-relaxed text-sm md:text-base">{course.descripcion}</p>}
+                            {/* Elegant Central Syllabus Section */}
+                            {course.syllabus_url && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mb-12 relative group"
+                                >
+                                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-teal-600/20 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-duration-500" />
+                                    <div className="relative bg-[#121212]/40 backdrop-blur-md border border-white/5 rounded-[2rem] p-8 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden">
+                                        <div className="flex items-center gap-6">
+                                            <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center border border-blue-500/20 shrink-0">
+                                                <FileText className="w-8 h-8 text-blue-400" />
+                                            </div>
+                                            <div className="text-center md:text-left">
+                                                <h3 className="text-lg font-black text-white uppercase tracking-tight mb-1">Sílabo Oficial</h3>
+                                                <p className="text-xs text-bb-text-secondary font-medium italic opacity-70">Consulta el plan de estudios académico de este curso.</p>
+                                            </div>
+                                        </div>
+                                        <a
+                                            href={getStorageUrl(course.syllabus_url, 'course_materials')}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full md:w-auto px-10 py-4 bg-white text-black font-black uppercase tracking-widest text-xs rounded-xl shadow-2xl shadow-blue-500/20 hover:bg-gray-200 transition-all active:scale-95 text-center"
+                                        >
+                                            Visualizar Documento
+                                        </a>
+                                        {/* Minimalist Decoration */}
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {course.descripcion && <p className="text-bb-text-secondary leading-relaxed text-sm md:text-base mb-10">{course.descripcion}</p>}
                         </div>
 
                         <div className="mb-6">

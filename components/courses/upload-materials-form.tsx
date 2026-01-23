@@ -31,6 +31,7 @@ interface UploadMaterialsFormProps {
 }
 
 const MATERIAL_TYPES = [
+    { value: 'syllabus', label: '📖 Sílabo Oficial' },
     { value: 'ppt', label: '📊 Presentación (PPT)' },
     { value: 'examen', label: '📝 Examen Pasado' },
     { value: 'guia', label: '📚 Guía de Estudio' },
@@ -107,6 +108,14 @@ export default function UploadMaterialsForm({
                 });
 
                 if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
+
+                // Actualizar syllabus_url en courses si es tipo syllabus
+                if (materialType === 'syllabus') {
+                    await supabase
+                        .from('courses')
+                        .update({ syllabus_url: materialUrl })
+                        .eq('id', courseId);
+                }
             }
 
             alert('¡Materiales subidos exitosamente!');
