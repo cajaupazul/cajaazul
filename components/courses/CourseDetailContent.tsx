@@ -205,18 +205,33 @@ export default function CourseDetailContent({
                 </Button>
             </div>
 
-            <div className="w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 max-w-7xl mx-auto">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2">
-                        <div className="mb-8">
-                            <div className="flex items-start justify-between mb-4 flex-wrap gap-4">
-                                <div>
-                                    <p className="text-xs md:text-sm font-black text-blue-400 uppercase mb-1 tracking-widest">
-                                        {course.codigo}
-                                    </p>
-                                    <h1 className="text-2xl md:text-4xl font-black text-white leading-tight">{course.nombre}</h1>
+            <div className="w-full px-4 sm:px-6 lg:px-10 py-6 md:py-10 max-w-[1600px] mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+                    <div className="lg:col-span-3">
+                        <div className="mb-10">
+                            <div className="flex items-start justify-between mb-6 flex-wrap gap-6">
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-3">
+                                        <p className="text-xs md:text-sm font-black text-blue-400 uppercase tracking-[0.2em]">
+                                            {course.codigo}
+                                        </p>
+                                        {course.syllabus_url && (
+                                            <a
+                                                href={getStorageUrl(course.syllabus_url, 'course_materials')}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-2 px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all group active:scale-95"
+                                            >
+                                                <FileText className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
+                                                Ver Sílabo
+                                            </a>
+                                        )}
+                                    </div>
+                                    <h1 className="text-3xl md:text-5xl font-black text-white leading-tight tracking-tighter uppercase">{course.nombre}</h1>
                                 </div>
-                                <Badge className="bg-green-500/10 text-green-400 border border-green-500/20 font-bold">Abierto</Badge>
+                                <div className="flex items-center gap-3">
+                                    <Badge className="bg-green-500/10 text-green-400 border border-green-500/20 font-black px-4 py-1.5 uppercase tracking-widest text-[10px]">Abierto</Badge>
+                                </div>
                             </div>
 
                             <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs md:text-sm text-bb-text-secondary mb-6 font-medium">

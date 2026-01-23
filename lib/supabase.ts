@@ -103,6 +103,7 @@ export type Course = {
   ciclo: number | null;
   descripcion: string | null;
   imagen_url: string | null;
+  syllabus_url: string | null;
   created_at: string;
 };
 
