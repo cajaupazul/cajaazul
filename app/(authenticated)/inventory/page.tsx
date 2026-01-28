@@ -41,18 +41,14 @@ export default function InventoryPage() {
         setMessage(null);
 
         try {
-            const response = await fetch('/api/equip-frame', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ item_id: itemId })
+            const { data, error } = await supabase.functions.invoke('handle-shop-v2', {
+                body: { action: 'equip_frame', item_id: itemId }
             });
 
-            const data = await response.json();
-
-            if (response.ok && data.success) {
+            if (!error && data?.success) {
                 setMessage({ type: 'success', text: `¡${itemName} equipado con éxito!` });
                 await refreshProfile();
-                // Refresh inventory to update equipped status
+                // Refresh inventory
                 const { data: invData } = await supabase
                     .from('user_inventory')
                     .select('*, shop_items(*)')
@@ -60,7 +56,7 @@ export default function InventoryPage() {
                     .order('acquired_at', { ascending: false });
                 if (invData) setInventory(invData as any);
             } else {
-                setMessage({ type: 'error', text: data.error || 'Error al equipar marco' });
+                setMessage({ type: 'error', text: error?.message || data?.error || 'Error al equipar marco' });
             }
         } catch (error) {
             setMessage({ type: 'error', text: 'Error de conexión' });

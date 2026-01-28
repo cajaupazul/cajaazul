@@ -1,6 +1,5 @@
 'use client';
 
-export const runtime = 'edge';
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/lib/theme-context';
 import { useRouter, usePathname } from 'next/navigation';
@@ -52,13 +51,13 @@ export default function AuthenticatedLayout({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [equippedFrame, setEquippedFrame] = useState<ShopItem | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   const dataFetched = useRef(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // 1. Core Auth Guard
+  // 1. Core Auth Guard & Ready State
   useEffect(() => {
-    // If we're not loading the session/profile state anymore
     if (!profileLoading) {
       if (!session) {
         console.log('[AUTH_GUARD] No session. Redirecting...');
@@ -68,17 +67,20 @@ export default function AuthenticatedLayout({
         supabase.auth.signOut().then(() => {
           router.replace('/auth/login?error=profile_not_found');
         });
+      } else {
+        // Auth is confirmed and profile is loaded
+        setIsAuthReady(true);
       }
     }
   }, [profileLoading, session, profile, router]);
 
-  // 2. Data fetching
+  // 2. Data fetching - Only when Auth is Ready
   useEffect(() => {
-    if (session && profile && !dataFetched.current) {
+    if (isAuthReady && session && profile && !dataFetched.current) {
       refreshAll(profile.id);
       dataFetched.current = true;
     }
-  }, [session, profile, refreshAll]);
+  }, [isAuthReady, session, profile, refreshAll]);
 
   // 3. Mobile handling
   useEffect(() => {
@@ -92,10 +94,10 @@ export default function AuthenticatedLayout({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 4. Fetch equipped frame
+  // 4. Fetch equipped frame - Only when Auth is Ready
   useEffect(() => {
     const fetchEquippedFrame = async () => {
-      if (!profile?.active_frame_key) {
+      if (!isAuthReady || !profile?.active_frame_key) {
         setEquippedFrame(null);
         return;
       }
@@ -107,7 +109,7 @@ export default function AuthenticatedLayout({
       if (data) setEquippedFrame(data);
     };
     fetchEquippedFrame();
-  }, [profile?.active_frame_key]);
+  }, [isAuthReady, profile?.active_frame_key]);
 
   const handleLogoutClick = () => setShowLogoutConfirm(true);
 
@@ -136,16 +138,16 @@ export default function AuthenticatedLayout({
   ];
 
   // While checking initial session, show minimal splash
-  if (profileLoading && !session) {
+  if (!isAuthReady) {
     return (
       <div className="min-h-screen bg-bb-dark flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-white/10 border-t-blue-500 rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-white/10 border-t-blue-500 rounded-full animate-spin" />
+          <p className="text-bb-text-secondary animate-pulse text-sm">Verificando acceso...</p>
+        </div>
       </div>
     );
   }
-
-  // If no session after load, don't render children (redirect will happen)
-  if (!session) return null;
 
   const isInitialLoading = false;
 

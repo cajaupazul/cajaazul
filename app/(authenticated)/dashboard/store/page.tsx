@@ -124,15 +124,11 @@ export default function StorePage() {
         setPurchaseMessage(null);
 
         try {
-            const response = await fetch('/api/buy-item', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ item_id: item.id })
+            const { data, error } = await supabase.functions.invoke('handle-shop-v2', {
+                body: { action: 'buy_item', item_id: item.id }
             });
 
-            const data = await response.json();
-
-            if (response.ok && data.success) {
+            if (!error && data?.success) {
                 setPurchaseMessage({ type: 'success', text: `¡${item.name} comprado con éxito!` });
                 await refreshProfile();
                 // Refresh inventory
@@ -140,11 +136,11 @@ export default function StorePage() {
                     .from('user_inventory')
                     .select('item_id')
                     .eq('user_id', profile.id);
-                if (invData) setUserInventory(invData.map(item => item.item_id));
+                if (invData) setUserInventory(invData.map(i => i.item_id));
             } else {
                 setPurchaseMessage({
                     type: 'error',
-                    text: data.error || 'Error al comprar el artículo'
+                    text: error?.message || data?.error || 'Error al comprar el artículo'
                 });
             }
         } catch (error) {
@@ -159,21 +155,18 @@ export default function StorePage() {
         setItemsLoading(prev => ({ ...prev, [productId]: true }));
         setPreferenceId(null);
         try {
-            // SECURE: Enviar solo productId y userId
-            const response = await fetch('/api/checkout', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+            const { data, error } = await supabase.functions.invoke('handle-shop-v2', {
+                body: {
+                    action: 'checkout',
                     productId,
-                    userId: profile?.id
-                }),
+                    origin: window.location.origin
+                }
             });
 
-            const data = await response.json();
-            if (data.id) {
+            if (!error && data?.id) {
                 setPreferenceId(data.id);
+            } else {
+                console.error('Checkout error:', error || data?.error);
             }
         } catch (error) {
             console.error('Error creating preference:', error);
