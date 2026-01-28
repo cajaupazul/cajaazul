@@ -17,8 +17,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 import { useProfile } from '@/lib/profile-context';
+import { apiFetch } from '@/lib/api';
 import { useSearchParams } from 'next/navigation';
 import { supabase, ShopItem, ShopCategory } from '@/lib/supabase';
 
@@ -31,9 +31,7 @@ interface StoreProduct {
     active: boolean;
 }
 
-// Initialize Mercado Pago with the public key
-const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || 'TEST-bc969050-c4a6-4ff0-a0b9-3f926e9ee60f';
-initMercadoPago(MP_PUBLIC_KEY, { locale: 'es-PE' });
+// MercadoPago now handled via Cloudflare Worker API
 
 export default function StorePage() {
     return (
@@ -47,7 +45,6 @@ function StoreContent() {
     const { colors } = useTheme();
     const { profile, refreshProfile } = useProfile();
     const searchParams = useSearchParams();
-    const [preferenceId, setPreferenceId] = useState<string | null>(null);
     const [itemsLoading, setItemsLoading] = useState<Record<string, boolean>>({});
     const [shopItems, setShopItems] = useState<ShopItem[]>([]);
     const [userInventory, setUserInventory] = useState<string[]>([]); // Just store item IDs
@@ -161,23 +158,35 @@ function StoreContent() {
 
     const handlePurchase = async (productId: string) => {
         setItemsLoading(prev => ({ ...prev, [productId]: true }));
-        setPreferenceId(null);
         try {
-            const { data, error } = await supabase.functions.invoke('handle-shop-v2', {
-                body: {
-                    action: 'checkout',
-                    productId,
-                    origin: window.location.origin
-                }
+            // Find the selected package
+            const selectedPackage = coinPackages.find(p => p.id === productId) || vipProduct;
+            if (!selectedPackage) {
+                console.error('Product not found');
+                return;
+            }
+
+            // Call Worker API to create MercadoPago preference
+            const { init_point } = await apiFetch('/checkout', {
+                method: 'POST',
+                body: JSON.stringify({
+                    items: [
+                        {
+                            title: selectedPackage.name,
+                            quantity: 1,
+                            unit_price: selectedPackage.price,
+                        }
+                    ]
+                })
             });
 
-            if (!error && data?.id) {
-                setPreferenceId(data.id);
-            } else {
-                console.error('Checkout error:', error || data?.error);
+            // Redirect user to MercadoPago checkout
+            if (init_point) {
+                window.location.href = init_point;
             }
         } catch (error) {
-            console.error('Error creating preference:', error);
+            console.error('Error creating checkout:', error);
+            alert('Error al iniciar el pago. Por favor intenta de nuevo.');
         } finally {
             setItemsLoading(prev => ({ ...prev, [productId]: false }));
         }
@@ -647,32 +656,6 @@ function StoreContent() {
             }
 
             {/* Mercado Pago Modal/Button Placeholder */}
-            {
-                preferenceId && (
-                    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                        <div className="bg-bb-card border border-bb-border rounded-3xl p-8 max-w-sm w-full text-center space-y-6 shadow-2xl animate-in zoom-in-95">
-                            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
-                                <ShieldCheck className="text-green-500" size={40} />
-                            </div>
-                            <h3 className="text-2xl font-bold text-bb-text">¡Todo listo!</h3>
-                            <p className="text-bb-text-secondary">
-                                Serás redirigido a Mercado Pago para completar tu compra de forma segura.
-                            </p>
-                            <div id="wallet_container" className="w-full">
-                                <Wallet initialization={{ preferenceId }} />
-                            </div>
-                            <Button
-                                variant="ghost"
-                                className="text-bb-text-secondary hover:text-bb-text"
-                                onClick={() => setPreferenceId(null)}
-                            >
-                                Cancelar
-                            </Button>
-                        </div>
-                    </div>
-                )
-            }
-
             {/* Trust Badges */}
             <div className="pt-12 border-t border-bb-border flex flex-wrap justify-center gap-8 opacity-50 grayscale hover:grayscale-0 transition-all">
                 <div className="flex items-center gap-2">
