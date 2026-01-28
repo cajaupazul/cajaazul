@@ -24,6 +24,13 @@ Configure the build settings exactly as follows:
 | **Build Output Directory** | `out` | This is where Next.js places static files when `output: 'export'` is set. |
 | **Root Directory** | `apps/web` | The Next.js application lives in this subdirectory. |
 
+### 4. Verify `wrangler.toml` (CRITICAL)
+Ensure `apps/web/wrangler.toml` points to the correct output directory:
+```toml
+pages_build_output_dir = "out"
+```
+If it points to `.vercel/output/static`, the deployment **will fail**.
+
 ### Environment Variables
 Ensure the following environment variables are set in **Settings > Environment variables**:
 - `NEXT_PUBLIC_SUPABASE_URL`
