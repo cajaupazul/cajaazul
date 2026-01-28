@@ -13,16 +13,28 @@ type Bindings = {
 const app = new Hono<{ Bindings: Bindings }>()
 
 // Global CORS middleware
-app.use('/*', (c, next) => {
+// Robust CORS Middleware
+app.use('*', async (c, next) => {
     const corsMiddleware = cors({
-        origin: c.env.ALLOWED_ORIGIN || '*',
-        allowHeaders: ['Origin', 'Content-Type', 'Authorization'],
-        allowMethods: ['GET', 'POST', 'OPTIONS'],
-        exposeHeaders: ['Content-Length'],
+        origin: (origin) => {
+            const allowed = c.env.ALLOWED_ORIGIN;
+            // Allow requests with no origin (like mobile apps or curl) or matching origin
+            // For strict production: return allowed === origin ? origin : null;
+            // For now, we allow the configured origin.
+            return origin === allowed ? allowed : allowed;
+        },
+        allowHeaders: ['Origin', 'Content-Type', 'Authorization', 'X-Custom-Header', 'Upgrade-Insecure-Requests'],
+        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
         maxAge: 600,
         credentials: true,
     })
     return corsMiddleware(c, next)
+})
+
+// Explicit OPTIONS handling for preflight
+app.options('*', (c) => {
+    return c.body(null, 204)
 })
 
 app.get('/', (c) => {
