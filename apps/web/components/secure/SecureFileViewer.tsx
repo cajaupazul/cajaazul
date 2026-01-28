@@ -174,7 +174,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                 )}
 
                 <Document
-                    file={url}
+                    file={url || undefined}
                     onLoadSuccess={onDocumentLoadSuccess}
                     loading={null}
                     className="flex flex-col items-center gap-8 md:gap-12"
