@@ -18,7 +18,13 @@ export function getStorageUrl(path: string | null | undefined, bucket: string = 
   if (!path) return fallback || '';
 
   // If it's already a full URL, return it
-  if (path.startsWith('http')) return path;
+  if (path.startsWith('http')) {
+    // FIX: Handle placeholder URLs from migrations
+    if (path.includes('[tu-proyecto].supabase.co')) {
+      return path.replace('https://[tu-proyecto].supabase.co', supabaseUrl);
+    }
+    return path;
+  }
 
   // If it's a data URL, return it
   if (path.startsWith('data:')) return path;

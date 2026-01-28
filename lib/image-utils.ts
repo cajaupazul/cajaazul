@@ -1,7 +1,7 @@
 /**
- * Redimensiona una imagen a un tamaño cuadrado fijo (por defecto 512x512)
- * y devuelve un Blob optimizado.
- * Si skipResize es true, simplemente devuelve el archivo original como Blob.
+ * Resizes an image to a fixed square size (default 512x512)
+ * and returns an optimized Blob.
+ * If skipResize is true, it returns the original file as a Blob with its original type.
  */
 export async function resizeImage(
     file: File,
@@ -9,6 +9,7 @@ export async function resizeImage(
     skipResize: boolean = false
 ): Promise<Blob> {
     if (skipResize) {
+        // IMPORTANT: Returns the original File (which is a Blob) to preserve animation and original MIME type
         return file;
     }
 

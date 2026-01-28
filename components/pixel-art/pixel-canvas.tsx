@@ -451,7 +451,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile }: PixelCanv
         lastMouseRef.current = null;
     };
 
-    const handleWheel = (e: React.WheelEvent) => {
+    const handleWheel = useCallback((e: WheelEvent) => {
         e.preventDefault();
         const zoomIntensity = 0.1;
         const delta = -Math.sign(e.deltaY);
@@ -465,7 +465,18 @@ export default function PixelCanvas({ eventId, onClose, userProfile }: PixelCanv
         } else {
             setScale(s => Math.max(0.05, Math.min(100, s * factor)));
         }
-    };
+    }, [isEditingGuidance, guidanceImage]);
+
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        // Add non-passive wheel listener manually
+        container.addEventListener('wheel', handleWheel, { passive: false });
+        return () => {
+            container.removeEventListener('wheel', handleWheel);
+        };
+    }, [handleWheel]);
 
     const findNearestPaletteColor = (r: number, g: number, b: number) => {
         let minDistance = Infinity;
@@ -577,7 +588,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile }: PixelCanv
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
-                onWheel={handleWheel}
                 onContextMenu={(e) => e.preventDefault()}
             >
                 <canvas ref={displayCanvasRef} className="block w-full h-full" style={{ touchAction: 'none' }} />
