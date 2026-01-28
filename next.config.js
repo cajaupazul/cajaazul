@@ -15,15 +15,13 @@ const nextConfig = {
 if (process.env.NODE_ENV === 'development') {
   try {
     const { setupDevPlatform } = require('@cloudflare/next-on-pages/next-dev');
-    module.exports = setupDevPlatform(nextConfig);
+    setupDevPlatform();
   } catch (e) {
     console.warn(
       'Cloudflare Pages: Failed to load @cloudflare/next-on-pages/next-dev. Skipping setupDevPlatform.',
       e
     );
-    module.exports = nextConfig;
   }
-} else {
-  // En producción (Cloudflare Pages), no necesitamos setupDevPlatform
-  module.exports = nextConfig;
 }
+
+module.exports = nextConfig;
