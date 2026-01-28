@@ -1,9 +1,12 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 
 const WORKER_URL = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev'
 
 export async function getFileFromR2(bucket: string, path: string): Promise<Blob> {
-    const supabase = createClientComponentClient()
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
     const { data: { session } } = await supabase.auth.getSession()
 
     if (!session) throw new Error('No autenticado')
