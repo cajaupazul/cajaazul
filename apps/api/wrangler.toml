@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 # Variables de entorno no secretas (públicas)
 [vars]
-ALLOWED_ORIGIN = "https://campuslink.pages.dev"
+ALLOWED_ORIGIN = "https://cajaupazul.pages.dev"
 
 # Los secretos se configuran vía command line (wrangler secret put)
 # - SUPABASE_URL

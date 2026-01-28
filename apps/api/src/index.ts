@@ -17,11 +17,19 @@ const app = new Hono<{ Bindings: Bindings }>()
 app.use('*', async (c, next) => {
     const corsMiddleware = cors({
         origin: (origin) => {
-            const allowed = c.env.ALLOWED_ORIGIN;
-            // Allow requests with no origin (like mobile apps or curl) or matching origin
-            // For strict production: return allowed === origin ? origin : null;
-            // For now, we allow the configured origin.
-            return origin === allowed ? allowed : allowed;
+            const allowed = c.env.ALLOWED_ORIGIN; // Primary production origin
+
+            // 1. Allow production origin
+            if (origin === allowed) return origin;
+
+            // 2. Allow Cloudflare Pages Previews (any subdomain of .pages.dev for this project)
+            // Checks if it ends with .pages.dev and contains the project name to prevent abuse
+            if (origin && origin.endsWith('.pages.dev') && origin.includes('cajaupazul')) {
+                return origin;
+            }
+
+            // 3. Fallback: Return allowed origin (browser will block if mismatch)
+            return allowed;
         },
         allowHeaders: ['Origin', 'Content-Type', 'Authorization', 'X-Custom-Header', 'Upgrade-Insecure-Requests'],
         allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
