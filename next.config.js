@@ -3,10 +3,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Cloudflare Pages specific configuration
+  output: 'export', // Required for standard static site deployment on Pages
   images: {
-    unoptimized: true,
+    unoptimized: true, // Required because Pages doesn't support the Next.js Image Optimization API
   },
-  // Cloudflare Pages with Edge Runtime checks
 };
 
 // Configuración segura para Cloudflare Pages
