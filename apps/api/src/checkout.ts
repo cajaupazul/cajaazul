@@ -29,7 +29,7 @@ checkout.post('/', async (c) => {
         }
     )
 
-    const data = await response.json()
+    const data = await response.json() as any
 
     if (!response.ok) {
         return c.json({ error: data }, 500)

@@ -21,26 +21,29 @@ const app = new Hono<{ Bindings: Bindings }>()
 // Global CORS middleware
 // Robust CORS Middleware
 // CORS Configuration
-app.use('*', cors({
-    origin: (origin) => {
-        // Permitir localhost para desarrollo
-        if (origin.includes('localhost') || origin.includes('127.0.0.1')) return origin;
+app.use('*', async (c, next) => {
+    const corsMiddleware = cors({
+        origin: (origin) => {
+            // Permitir localhost para desarrollo
+            if (origin.includes('localhost') || origin.includes('127.0.0.1')) return origin;
 
-        // Permitir dominio de producción y previews de Cloudflare
-        if (origin.endsWith('.pages.dev') || origin === c.env.ALLOWED_ORIGIN) return origin;
+            // Permitir dominio de producción y previews de Cloudflare
+            if (origin.endsWith('.pages.dev') || origin === c.env.ALLOWED_ORIGIN) return origin;
 
-        return c.env.ALLOWED_ORIGIN;
-    },
-    allowHeaders: ['Origin', 'Content-Type', 'Authorization', 'X-Custom-Header', 'Upgrade-Insecure-Requests'],
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
-    maxAge: 600,
-    credentials: true,
-}))
+            return c.env.ALLOWED_ORIGIN;
+        },
+        allowHeaders: ['Origin', 'Content-Type', 'Authorization', 'X-Custom-Header', 'Upgrade-Insecure-Requests'],
+        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
+        maxAge: 600,
+        credentials: true,
+    })
+    return corsMiddleware(c, next)
+})
 
 // Explicit OPTIONS handling
 app.options('*', (c) => {
-    return c.text('', 204)
+    return c.body(null, 204)
 })
 
 app.get('/', (c) => {
