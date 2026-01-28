@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useSecurity } from '@/lib/hooks/use-security';
 import { pdfjs, Document, Page } from 'react-pdf';
+import { apiFetch } from '@/lib/api';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -71,24 +72,17 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             if (parts.length > 1) cleanPath = parts[1];
         }
 
-        fetch('/api/files/secure-url', {
-            method: 'POST',
-            body: JSON.stringify({ filePath: cleanPath }),
-        })
-            .then(async (res) => {
-                if (!res.ok) {
-                    const data = await res.json();
-                    throw new Error(data.error || 'Error al obtener URL segura');
-                }
-                return res.json();
-            })
+        apiFetch<{ signedUrl: string }>('/storage/secure-url?path=' + encodeURIComponent(cleanPath) + '&bucket=course-materials')
             .then(data => {
-                // We use the proxy route for the source to be double sure
-                setUrl(`/api/files/serve?path=${encodeURIComponent(cleanPath)}`);
+                if (data.signedUrl) {
+                    setUrl(data.signedUrl);
+                } else {
+                    throw new Error('No se recibió URL firmada');
+                }
             })
             .catch(err => {
-                console.error(err);
-                setError('No se pudo establecer conexión segura.');
+                console.error('SecureFileViewer Error:', err);
+                setError(err.message || 'No se pudo cargar el archivo seguro.');
                 setLoading(false);
             });
     }, [filePath]);

@@ -12,9 +12,10 @@ const storageRouter = new Hono<{ Bindings: Bindings }>()
 // Protect all storage routes
 storageRouter.use('/*', authMiddleware)
 
-storageRouter.get('/sign', async (c) => {
+storageRouter.get('/secure-url', async (c) => {
     const path = c.req.query('path')
-    const bucket = c.req.query('bucket') || 'profile-avatars'
+    // Default to 'course-materials' as requested, fallback to 'profile-avatars' if needed, but per object 'course-materials' seems correct for secure viewer
+    const bucket = c.req.query('bucket') || 'course-materials'
 
     if (!path) {
         return c.json({ error: 'Missing "path" query parameter' }, 400)
