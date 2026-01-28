@@ -7,7 +7,13 @@ type Bindings = {
     ALLOWED_ORIGIN: string
     SUPABASE_URL: string
     SUPABASE_SERVICE_ROLE_KEY: string
+    SUPABASE_ANON_KEY: string  // 👈 AGREGADO
     MP_ACCESS_TOKEN: string
+    COURSE_MATERIALS: R2Bucket
+    PROFILE_AVATARS: R2Bucket
+    PROFILE_FRAMES: R2Bucket
+    GRUPOS: R2Bucket
+    COURSE_IMAGES: R2Bucket
 }
 
 const app = new Hono<{ Bindings: Bindings }>()

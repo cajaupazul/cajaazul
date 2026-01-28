@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
+import { getPublicFileUrl } from '@/lib/r2-storage';
 import { Upload, X, GraduationCap, BookOpen, ArrowLeft, FileText, CheckCircle } from 'lucide-react';
 import {
     Select,

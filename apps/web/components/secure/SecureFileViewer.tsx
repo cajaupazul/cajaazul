@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useSecurity } from '@/lib/hooks/use-security';
 import { pdfjs, Document, Page } from 'react-pdf';
-import { apiFetch } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -37,7 +37,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
     // 1. Activate Security Deterrent Layer
     useSecurity(true);
 
-    const [url, setUrl] = useState<string | null>(null);
+    const [url, setUrl] = useState<string | object | null>(null);
     const [loading, setLoading] = useState(true);
     const [numPages, setNumPages] = useState<number>(0);
     const [scale, setScale] = useState(1.2);
@@ -60,31 +60,43 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
         return () => window.removeEventListener('resize', updateWidth);
     }, []);
 
-    // Fetch Signed URL
+    // Construct Proxy URL and Headers
     useEffect(() => {
         if (!filePath) return;
         setLoading(true);
         setError(null);
 
-        let cleanPath = filePath;
-        if (filePath.startsWith('http')) {
-            const parts = filePath.split('/course_materials/');
-            if (parts.length > 1) cleanPath = parts[1];
-        }
+        const fetchToken = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
 
-        apiFetch<{ signedUrl: string }>('/storage/secure-url?path=' + encodeURIComponent(cleanPath) + '&bucket=course-materials')
-            .then(data => {
-                if (data.signedUrl) {
-                    setUrl(data.signedUrl);
-                } else {
-                    throw new Error('No se recibió URL firmada');
-                }
-            })
-            .catch(err => {
-                console.error('SecureFileViewer Error:', err);
-                setError(err.message || 'No se pudo cargar el archivo seguro.');
+            if (!token) {
+                setError('No hay sesión activa');
                 setLoading(false);
-            });
+                return;
+            }
+
+            let cleanPath = filePath;
+            if (filePath.startsWith('http')) {
+                const parts = filePath.split('/course_materials/');
+                if (parts.length > 1) cleanPath = parts[1];
+            }
+
+            // The Worker Proxy URL
+            const proxyUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`;
+
+            // Prepare the file object for react-pdf
+            // This tells react-pdf to fetch using these headers
+            setUrl({
+                url: proxyUrl,
+                httpHeaders: {
+                    'Authorization': `Bearer ${token}`
+                },
+                withCredentials: true
+            } as any); // Cast to any because string | object type might need update in state definition
+        };
+
+        fetchToken();
     }, [filePath]);
 
     const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {

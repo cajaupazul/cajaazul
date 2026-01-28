@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr';
+import { getPublicFileUrl } from './r2-storage';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
@@ -23,6 +24,7 @@ export function getStorageUrl(path: string | null | undefined, bucket: string = 
     if (path.includes('[tu-proyecto].supabase.co')) {
       return path.replace('https://[tu-proyecto].supabase.co', supabaseUrl);
     }
+
     return path;
   }
 
@@ -38,8 +40,8 @@ export function getStorageUrl(path: string | null | undefined, bucket: string = 
     cleanPath = path.replace(`${bucket}/`, '');
   }
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(cleanPath);
-  return data.publicUrl || fallback || '';
+  // Use R2 Worker Proxy
+  return getPublicFileUrl(bucket, cleanPath);
 }
 
 export type Profile = {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/theme-context';
 import { useProfile } from '@/lib/profile-context';
 import { supabase, ShopCategory } from '@/lib/supabase';
+import { getPublicFileUrl } from '@/lib/r2-storage';
 import { resizeImage } from '@/lib/image-utils';
 import {
     Plus,
