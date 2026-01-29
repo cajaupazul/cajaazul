@@ -1,6 +1,6 @@
-'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import path from 'path';
 import {
     Loader2,
     Lock,
@@ -77,13 +77,20 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
 
         // Determine file type
         const lowerPath = filePath.toLowerCase();
+        let effectiveType = 'other';
+        let isOfficeDoc = false;
+
         if (lowerPath.endsWith('.pdf')) {
-            setFileType('pdf');
+            effectiveType = 'pdf';
         } else if (lowerPath.match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) {
-            setFileType('image');
-        } else {
-            setFileType('other');
+            effectiveType = 'image';
+        } else if (lowerPath.match(/\.(doc|docx|ppt|pptx|xls|xlsx)$/)) {
+            // For office docs, we will try to load the converted PDF
+            effectiveType = 'pdf';
+            isOfficeDoc = true;
         }
+
+        setFileType(effectiveType as any);
 
         const fetchToken = async () => {
             const { data: { session } } = await supabase.auth.getSession();
@@ -101,19 +108,34 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                 if (parts.length > 1) cleanPath = parts[1];
             }
 
-            // The Worker Proxy URL
-            // Ensure bucket is correct. Assuming course-materials for generic course files.
-            // If the path implies another bucket? Usually strictly course-materials here.
+            // If secure-url style
+            if (filePath.includes('secure-url')) {
+                const urlObj = new URL(filePath);
+                cleanPath = urlObj.searchParams.get('path') || cleanPath;
+            }
+            cleanPath = decodeURIComponent(cleanPath);
 
-            // NOTE: If using strict buckets, make sure the API accepts it.
-            // Currently API defaults to course-materials if not specified, or we pass it explicit.
-            const proxyUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`;
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+            let proxyUrl = `${baseUrl}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`;
+
+            if (isOfficeDoc) {
+                // Point to the converted file location
+                // Convention: converted/ORIGINAL_FILENAME.pdf
+                // The worker saves as: destinationKey = `converted/${r2Key.replace(originalExt, '.pdf')}`;
+                const originalExt = path.extname(cleanPath);
+                // Be careful with path inputs, ensure we strip existing "converted/" if passing around?
+                // Assuming cleanPath is relative like "folder/file.pptx"
+                const convertedPath = `converted/${cleanPath.replace(originalExt, '.pdf')}`;
+                proxyUrl = `${baseUrl}/storage/secure-url?path=${encodeURIComponent(convertedPath)}&bucket=course-materials`;
+
+                console.log('Requesting converted document:', convertedPath);
+            }
 
             // For download/image src, we might need a direct URL if we can't inject headers effortlessly in <img>?
             // Actually <img> doesn't support headers easily.
             // But we can use a token in query param IF the worker supported it (it doesn't, it uses Auth header).
             // WORKAROUND for images: fetch blob and create object URL.
-            if (lowerPath.match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) {
+            if (effectiveType === 'image') {
                 try {
                     const res = await fetch(proxyUrl, {
                         headers: { 'Authorization': `Bearer ${token}` }
@@ -130,8 +152,12 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                 return;
             }
 
-            // For others/PDF
-            setDownloadUrl(proxyUrl); // Base URL for download (needs fetch with headers to actually download, or we assume browser can handle... wait browser can't handle headers in <a href>)
+            // For others/PDF (including converted Office docs)
+            const downloadLink = isOfficeDoc
+                ? `${baseUrl}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials` // Original for download
+                : proxyUrl;
+
+            setDownloadUrl(downloadLink); // Base URL for download (needs fetch with headers to actually download, or we assume browser can handle... wait browser can't handle headers in <a href>)
             // Actually, for "other" types, dragging/downloading is hard if we require Headers.
             // We might need to implement a "download" handler that fetches blob and saves it.
 
@@ -144,7 +170,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                 withCredentials: true
             });
 
-            if (!lowerPath.endsWith('.pdf')) {
+            if (effectiveType !== 'pdf') { // Should catch types that are definitely not viewable
                 setLoading(false);
             }
         };

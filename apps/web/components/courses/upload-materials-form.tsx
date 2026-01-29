@@ -98,6 +98,15 @@ export default function UploadMaterialsForm({
 
                 if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
 
+                // Trigger conversion for Office files (non-blocking)
+                const officeExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'];
+                if (officeExtensions.includes(fileExt?.toLowerCase() || '')) {
+                    // Import dynamically to avoid SSR issues if any (though this is client component)
+                    const { triggerFileConversion } = await import('@/lib/converter');
+                    // Fire and forget - don't await completion, just scheduling
+                    triggerFileConversion(materialUrl.split('/course_materials/')[1] || materialUrl.replace(`${process.env.NEXT_PUBLIC_API_URL}/storage/secure-url?path=`, '').split('&')[0], 'course-materials').catch(console.error);
+                }
+
                 // Actualizar syllabus_url en courses si es tipo syllabus
                 if (materialType === 'syllabus') {
                     await supabase
