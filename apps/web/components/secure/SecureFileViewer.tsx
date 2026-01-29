@@ -22,6 +22,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
     const [fileType, setFileType] = useState<'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'other'>('other');
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [externalViewerUrl, setExternalViewerUrl] = useState<string | null>(null);
+    const [useExternalViewer, setUseExternalViewer] = useState(false);
     const [numPages, setNumPages] = useState<number | null>(null);
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
@@ -39,6 +40,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
         setError(null);
         setBlobUrl(null);
         setExternalViewerUrl(null);
+        setUseExternalViewer(false);
 
         try {
             const lowerPath = filePath.toLowerCase();
@@ -66,7 +68,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             cleanPath = decodeURIComponent(cleanPath);
 
             // 2. Strategy Selection
-            if (type === 'pptx') {
+            if (type === 'pptx' || useExternalViewer) {
                 const res = await fetch(`${baseUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -89,27 +91,37 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             const objUrl = URL.createObjectURL(blob);
             setBlobUrl(objUrl);
 
+            // Client-side rendering
             if (type === 'docx') {
-                // Wait for the next tick to ensure ref is available
                 setTimeout(async () => {
                     if (docxContainerRef.current) {
-                        await docx.renderAsync(blob, docxContainerRef.current, undefined, {
-                            className: 'docx-viewer',
-                            inWrapper: true,
-                            ignoreWidth: false,
-                            ignoreHeight: false
-                        });
+                        try {
+                            await docx.renderAsync(blob, docxContainerRef.current, undefined, {
+                                className: 'docx-viewer',
+                                inWrapper: true
+                            });
+                        } catch (e) {
+                            console.error("DOCX render failed, falling back to external");
+                            setUseExternalViewer(true);
+                            loadContent();
+                        }
                     }
                 }, 0);
             } else if (type === 'xlsx') {
                 setTimeout(async () => {
-                    const arrayBuffer = await blob.arrayBuffer();
-                    const workbook = XLSX.read(arrayBuffer);
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const html = XLSX.utils.sheet_to_html(worksheet);
-                    if (xlsxContainerRef.current) {
-                        xlsxContainerRef.current.innerHTML = html;
+                    try {
+                        const arrayBuffer = await blob.arrayBuffer();
+                        const workbook = XLSX.read(arrayBuffer);
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const html = XLSX.utils.sheet_to_html(worksheet);
+                        if (xlsxContainerRef.current) {
+                            xlsxContainerRef.current.innerHTML = html;
+                        }
+                    } catch (e) {
+                        console.error("XLSX render failed, falling back to external");
+                        setUseExternalViewer(true);
+                        loadContent();
                     }
                 }, 0);
             }
@@ -136,7 +148,17 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             <div className="flex flex-col items-center justify-center p-8 text-center bg-red-50 rounded-lg">
                 <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
                 <p className="text-red-700 font-medium">{error}</p>
-                <button onClick={loadContent} className="mt-4 text-sm text-blue-600 hover:underline">Reintentar</button>
+                <div className="flex gap-4">
+                    <button onClick={loadContent} className="mt-4 text-sm text-blue-600 hover:underline">Reintentar</button>
+                    {(fileType === 'docx' || fileType === 'xlsx') && !useExternalViewer && (
+                        <button
+                            onClick={() => { setUseExternalViewer(true); loadContent(); }}
+                            className="mt-4 text-sm text-orange-600 hover:underline"
+                        >
+                            Usar Visor Alternativo
+                        </button>
+                    )}
+                </div>
             </div>
         );
     }
@@ -154,6 +176,19 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
 
     return (
         <div className="w-full h-full flex flex-col bg-gray-50 min-h-[500px] overflow-hidden rounded-lg relative">
+            {/* Toolbar for switching viewers */}
+            {(fileType === 'docx' || fileType === 'xlsx') && (
+                <div className="bg-white border-b px-4 py-2 flex justify-between items-center text-xs">
+                    <span className="text-gray-500">Visualizando: {fileName}</span>
+                    <button
+                        onClick={() => { setUseExternalViewer(!useExternalViewer); loadContent(); }}
+                        className="text-blue-600 font-medium hover:text-blue-800"
+                    >
+                        {useExternalViewer ? "⚡ Cambiar a Vista Rápida" : "🌐 Cambiar a Visor Completo (MS Office)"}
+                    </button>
+                </div>
+            )}
+
             {/* Prevention Overlay (Anti-Copy) */}
             <div className="absolute inset-0 z-50 pointer-events-none mix-blend-multiply" />
 
@@ -189,14 +224,14 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                 )}
 
                 {/* 2. DOCX */}
-                {fileType === 'docx' && (
+                {fileType === 'docx' && !useExternalViewer && (
                     <div className="flex-1 overflow-auto bg-white p-4 scrollbar-thin">
                         <div ref={docxContainerRef} className="max-w-[800px] mx-auto docx-content shadow-sm" />
                     </div>
                 )}
 
                 {/* 3. XLSX */}
-                {fileType === 'xlsx' && (
+                {fileType === 'xlsx' && !useExternalViewer && (
                     <div className="flex-1 overflow-auto bg-white scrollbar-thin">
                         <div ref={xlsxContainerRef} className="p-4 overflow-x-auto excel-viewer" />
                     </div>
@@ -217,17 +252,20 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                     </div>
                 )}
 
-                {/* 5. PPTX / External */}
-                {externalViewerUrl && (
-                    <div className="flex-1 bg-gray-100 h-full">
+                {/* 5. PPTX / External Fallback */}
+                {(fileType === 'pptx' || (externalViewerUrl && useExternalViewer)) && (
+                    <div className="flex-1 bg-gray-100 h-full relative">
                         <iframe
-                            src={externalViewerUrl}
+                            src={externalViewerUrl || ''}
                             width="100%"
                             height="100%"
                             frameBorder="0"
                             title="Document Viewer"
-                            className="h-full border-none"
+                            className="h-full border-none w-full min-h-[600px]"
+                            allowFullScreen
                         />
+                        {/* Protective mask for the iframe (partial) */}
+                        <div className="absolute inset-x-0 top-0 h-10 bg-transparent pointer-events-none z-20" />
                     </div>
                 )}
 

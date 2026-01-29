@@ -136,8 +136,9 @@ storageRouter.get('/preview-url', async (c) => {
     const signature = await signToken(payload, secret)
     const token = `${btoa(payload)}.${signature}`
 
-    // 3. Construir URL pública para el stream
-    const publicUrl = `${c.env.ALLOWED_ORIGIN}/storage/public-stream?token=${token}`
+    // 3. Construir URL pública para el stream (Usar la URL de este worker)
+    const url = new URL(c.req.url)
+    const publicUrl = `${url.origin}/storage/public-stream?token=${token}`
 
     return c.json({
         url: publicUrl,
