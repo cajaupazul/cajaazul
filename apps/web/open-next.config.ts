@@ -1,4 +1,8 @@
 // Minimal valid configuration for @opennextjs/cloudflare
-// This file is REQUIRED by @opennextjs/cloudflare (not optional)
+// The 'default' property is REQUIRED (cannot be empty)
 
-export default {};
+const config = {
+    default: {},
+};
+
+export default config;
