@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "pages:build": "npx @opennextjs/cloudflare build --non-interactive && ( [ -d .vercel/output/static ] || ( mkdir -p .vercel/output/static && cp -r .open-next/assets/* .vercel/output/static/ 2>/dev/null || true && cp .open-next/worker.js .vercel/output/static/_worker.js 2>/dev/null || true ) )",
+    "pages:build": "npx @opennextjs/cloudflare build --non-interactive && ( [ -d .vercel/output/static ] || ( mkdir -p .vercel/output/static && cp -v -r .open-next/* .vercel/output/static/ && [ -f .vercel/output/static/worker.js ] && mv -v .vercel/output/static/worker.js .vercel/output/static/_worker.js && [ -d .open-next/assets ] && cp -v -r .open-next/assets/* .vercel/output/static/ || true ) )",
     "pages:deploy": "npm run pages:build && wrangler pages deploy",
     "pages:dev": "npx @opennextjs/cloudflare && wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
     "start": "next start",
