@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import multipart from '@fastify/multipart';
 import cors from '@fastify/cors';
 import { Queue } from 'bullmq';

@@ -47,7 +47,7 @@ export const authMiddleware = createMiddleware<{ Bindings: Bindings }>(async (c,
         }
 
         // Attach user specifically to context
-        c.set('user', user)
+        ; (c as any).set('user', user)
 
         await next()
     } catch (err: any) {
