@@ -28,6 +28,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [fileType, setFileType] = useState<'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'other'>('other');
+    const [fileBlob, setFileBlob] = useState<Blob | null>(null);
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [externalViewerUrl, setExternalViewerUrl] = useState<string | null>(null);
     const [useExternalViewer, setUseExternalViewer] = useState(false);
@@ -47,6 +48,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
         setLoading(true);
         setError(null);
         setBlobUrl(null);
+        setFileBlob(null);
         setExternalViewerUrl(null);
         setUseExternalViewer(false);
 
@@ -105,11 +107,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
 
             const blob = await blobRes.blob();
             console.log(`[SecureFileViewer] Blob received: ${blob.size} bytes, type: ${blob.type}`);
-
-            if (blob.size < 100) {
-                const text = await blob.text().catch(() => "");
-                console.warn('[SecureFileViewer] Blob is very small, content:', text);
-            }
+            setFileBlob(blob);
 
             const objUrl = URL.createObjectURL(blob);
             setBlobUrl(objUrl);
@@ -218,10 +216,10 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             {/* Content Renderers */}
             <div className="flex-1 flex flex-col overflow-hidden relative">
                 {/* 1. PDF */}
-                {fileType === 'pdf' && blobUrl && (
+                {fileType === 'pdf' && (fileBlob || blobUrl) && (
                     <div className="flex-1 overflow-auto bg-gray-100 flex justify-center p-4 scrollbar-thin">
                         <Document
-                            file={blobUrl}
+                            file={fileBlob || blobUrl}
                             onLoadSuccess={({ numPages }) => {
                                 console.log(`[SecureFileViewer] PDF loaded successfully: ${numPages} pages`);
                                 setNumPages(numPages);
