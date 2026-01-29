@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "pages:build": "npx @opennextjs/cloudflare build --non-interactive",
+    "pages:build": "npx @opennextjs/cloudflare build --non-interactive && ( [ -d .vercel/output/static ] || ( mkdir -p .vercel/output/static && cp -r .open-next/assets/* .vercel/output/static/ 2>/dev/null || true && cp .open-next/worker.js .vercel/output/static/_worker.js 2>/dev/null || true ) )",
     "pages:deploy": "npm run pages:build && wrangler pages deploy",
     "pages:dev": "npx @opennextjs/cloudflare && wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
     "start": "next start",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@mercadopago/sdk-react": "^1.0.7",
+    "@opennextjs/cloudflare": "^1.16.1",
     "@radix-ui/react-avatar": "^1.1.1",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.2",
@@ -28,6 +29,7 @@
     "framer-motion": "^12.0.0-alpha.0",
     "lucide-react": "^0.446.0",
     "next": "16.1.6",
+    "open-next": "^3.0.0",
     "pdfjs-dist": "^4.4.168",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -43,7 +45,5 @@
     "@types/react-dom": "^19.0.0",
     "@types/canvas-confetti": "^1.9.0"
   },
-  "devDependencies": {
-    "@opennextjs/cloudflare": "^1.16.1"
-  }
+  "devDependencies": {}
 }
