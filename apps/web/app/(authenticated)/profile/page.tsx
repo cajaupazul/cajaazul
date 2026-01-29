@@ -263,7 +263,7 @@ export default function ProfilePage() {
         <div
           className="absolute inset-0 h-64 md:h-96 bg-cover bg-center"
           style={{
-            backgroundImage: `url(${getStorageUrl(backgroundImage, 'profile-avatars', PLACEHOLDERS.BACKGROUND)})`,
+            backgroundImage: `url('${getStorageUrl(backgroundImage, 'profile-avatars', PLACEHOLDERS.BACKGROUND)}')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}

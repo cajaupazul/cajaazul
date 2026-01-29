@@ -154,7 +154,17 @@ storageRouter.get('/secure-url', async (c) => {
         headers.set('etag', object.httpEtag)
 
         // CORS headers
-        headers.set('Access-Control-Allow-Origin', c.env.ALLOWED_ORIGIN)
+        // CORS headers
+        const origin = c.req.header('Origin')
+        let allowedOrigin = c.env.ALLOWED_ORIGIN
+
+        if (origin) {
+            if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.endsWith('.pages.dev') || origin === c.env.ALLOWED_ORIGIN) {
+                allowedOrigin = origin
+            }
+        }
+
+        headers.set('Access-Control-Allow-Origin', allowedOrigin)
         headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
         headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
