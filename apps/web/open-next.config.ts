@@ -1,8 +1,10 @@
 // Minimal valid configuration for @opennextjs/cloudflare
-// The 'default' property is REQUIRED (cannot be empty)
+// The 'default.override' structure is required by the validator
 
 const config = {
-    default: {},
+    default: {
+        override: {},
+    },
 };
 
 export default config;
