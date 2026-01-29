@@ -112,23 +112,26 @@ export default function NewCourseForm() {
                 const fileExt = formData.imagen.name.split('.').pop();
                 const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-                const { error: uploadError } = await supabase.storage
-                    .from('course_images')
-                    .upload(fileName, formData.imagen, {
-                        cacheControl: '3600',
-                        upsert: false,
-                        contentType: formData.imagen.type
-                    });
+                // const { error: uploadError } = await supabase.storage
+                //     .from('course_images')
+                //     .upload(fileName, formData.imagen, {
+                //         cacheControl: '3600',
+                //         upsert: false,
+                //         contentType: formData.imagen.type
+                //     });
 
-                if (uploadError) {
-                    throw new Error(`Error al subir la imagen: ${uploadError.message}`);
-                }
+                // if (uploadError) {
+                //     throw new Error(`Error al subir la imagen: ${uploadError.message}`);
+                // }
 
-                const { data: publicUrlData } = supabase.storage
-                    .from('course_images')
-                    .getPublicUrl(fileName);
+                // const { data: publicUrlData } = supabase.storage
+                //     .from('course_images')
+                //     .getPublicUrl(fileName);
 
-                imagenUrl = publicUrlData.publicUrl;
+                // imagenUrl = publicUrlData.publicUrl;
+
+                const { uploadFileToR2 } = await import('@/lib/r2-storage');
+                imagenUrl = await uploadFileToR2('course-images', fileName, formData.imagen);
             }
 
             const { data, error } = await supabase

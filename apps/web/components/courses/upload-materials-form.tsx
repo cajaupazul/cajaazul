@@ -78,23 +78,11 @@ export default function UploadMaterialsForm({
                 const fileExt = file.name.split('.').pop();
                 const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-                // Subir archivo a storage
-                const { error: uploadError } = await supabase.storage
-                    .from('course_materials')
-                    .upload(storagePath, file, {
-                        cacheControl: '3600',
-                        upsert: false,
-                        contentType: file.type,
-                    });
+                // Subir archivo a R2 via Proxy
+                const { uploadFileToR2 } = await import('@/lib/r2-storage');
+                const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
 
-                if (uploadError) throw new Error(`Error al subir ${file.name}: ${uploadError.message}`);
-
-                // Obtener URL pública
-                const { data: publicUrlData } = supabase.storage
-                    .from('course_materials')
-                    .getPublicUrl(storagePath);
-
-                const materialUrl = publicUrlData.publicUrl;
+                // (Supabase Storage upload removed)
 
                 // Insertar registro en la tabla materials
                 const { error: insertError } = await supabase.from('materials').insert({

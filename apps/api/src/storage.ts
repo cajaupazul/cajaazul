@@ -29,6 +29,72 @@ const privateAuthMiddleware = async (c: any, next: any) => {
 
 storageRouter.use('/*', privateAuthMiddleware)
 
+
+// PUT /storage/upload?bucket=...&path=...
+// Sube un archivo a R2
+storageRouter.put('/upload', async (c) => {
+    const path = c.req.query('path')
+    const bucketName = c.req.query('bucket') || 'course-materials'
+    const contentType = c.req.header('Content-Type') || 'application/octet-stream'
+
+    console.log(`📤 Upload request: bucket=${bucketName}, path=${path}`)
+
+    if (!path) {
+        return c.json({ error: 'Falta el parámetro "path"' }, 400)
+    }
+
+    // Seleccionar el bucket correcto
+    let bucket: R2Bucket | undefined
+    const normalizedBucket = bucketName.replace(/_/g, '-')
+
+    switch (normalizedBucket) {
+        case 'course-materials':
+            bucket = c.env.COURSE_MATERIALS
+            break
+        case 'course-images':
+            bucket = c.env.COURSE_IMAGES
+            break
+        case 'profile-avatars':
+            bucket = c.env.PROFILE_AVATARS
+            break
+        case 'profile-frames':
+            bucket = c.env.PROFILE_FRAMES
+            break
+        case 'grupos':
+            bucket = c.env.GRUPOS
+            break
+        default:
+            return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
+    }
+
+    if (!bucket) {
+        return c.json({ error: 'Bucket no configurado' }, 500)
+    }
+
+    try {
+        const body = await c.req.arrayBuffer()
+
+        await bucket.put(path, body, {
+            httpMetadata: {
+                contentType: contentType,
+            }
+        })
+
+        console.log(`✅ Archivo subido exitosamente: ${path}`)
+
+        return c.json({
+            success: true,
+            path: path,
+            bucket: normalizedBucket,
+            url: `${c.env.ALLOWED_ORIGIN}/storage/secure-url?bucket=${normalizedBucket}&path=${encodeURIComponent(path)}`
+        })
+
+    } catch (e: any) {
+        console.error(`❌ Error subiendo archivo:`, e)
+        return c.json({ error: e.message }, 500)
+    }
+})
+
 // GET /storage/secure-url?bucket=...&path=...
 // Sirve el archivo directamente desde R2
 storageRouter.get('/secure-url', async (c) => {

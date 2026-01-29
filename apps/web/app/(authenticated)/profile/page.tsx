@@ -144,8 +144,12 @@ export default function ProfilePage() {
       const filePath = `backgrounds/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('profile-avatars')
-        .upload(filePath, file, { upsert: true });
+      //   .from('profile-avatars')
+      //   .upload(filePath, file, { upsert: true });
+
+      await import('@/lib/r2-storage').then(({ uploadFileToR2 }) =>
+        uploadFileToR2('profile-avatars', filePath, file)
+      );
 
       if (uploadError) throw uploadError;
 
@@ -170,9 +174,13 @@ export default function ProfilePage() {
       const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('profile-avatars')
-        .upload(filePath, file, { upsert: true });
+      // const { error: uploadError } = await supabase.storage
+      //   .from('profile-avatars')
+      //   .upload(filePath, file, { upsert: true });
+
+      await import('@/lib/r2-storage').then(({ uploadFileToR2 }) =>
+        uploadFileToR2('profile-avatars', filePath, file)
+      );
 
       if (uploadError) throw uploadError;
 

@@ -25,6 +25,34 @@ export async function getTemporaryFileUrl(bucket: string, path: string): Promise
     return URL.createObjectURL(blob)
 }
 
-export function getPublicFileUrl(bucket: string, path: string): string {
-    return `${WORKER_URL}/storage/secure-url?bucket=${bucket}&path=${encodeURIComponent(path)}`
+return `${WORKER_URL}/storage/secure-url?bucket=${bucket}&path=${encodeURIComponent(path)}`
+}
+
+export async function uploadFileToR2(bucket: string, path: string, file: File): Promise<string> {
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) throw new Error('No autenticado')
+
+    const response = await fetch(
+        `${WORKER_URL}/storage/upload?bucket=${bucket}&path=${encodeURIComponent(path)}`,
+        {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': file.type
+            },
+            body: file
+        }
+    )
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})) as any
+        throw new Error(`Error subiendo archivo: ${errorData.error || response.statusText}`)
+    }
+
+    return getPublicFileUrl(bucket, path)
 }
