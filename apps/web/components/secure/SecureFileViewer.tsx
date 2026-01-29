@@ -37,7 +37,14 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
     // 1. Activate Security Deterrent Layer
     useSecurity(true);
 
-    const [url, setUrl] = useState<string | object | null>(null);
+    // Define accepted types for react-pdf file prop
+    type PDFFile = string | File | {
+        url: string;
+        httpHeaders?: Record<string, string>;
+        withCredentials?: boolean;
+    };
+
+    const [url, setUrl] = useState<PDFFile | null>(null);
     const [loading, setLoading] = useState(true);
     const [numPages, setNumPages] = useState<number>(0);
     const [scale, setScale] = useState(1.2);
@@ -93,7 +100,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                     'Authorization': `Bearer ${token}`
                 },
                 withCredentials: true
-            } as any); // Cast to any because string | object type might need update in state definition
+            });
         };
 
         fetchToken();
