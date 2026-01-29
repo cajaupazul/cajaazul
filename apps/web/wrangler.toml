@@ -1,4 +1,10 @@
 name = "campuslink"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = "out"
+
+# OpenNext genera el output en .vercel/output/static
+pages_build_output_dir = ".vercel/output/static"
+
+# Variables de entorno (configurar también en Cloudflare Dashboard)
+[vars]
+NODE_ENV = "production"

@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "pages:build": "npx @opennextjs/cloudflare",
+    "pages:deploy": "npm run pages:build && wrangler pages deploy",
+    "pages:dev": "npx @opennextjs/cloudflare && wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
     "start": "next start",
     "lint": "next lint"
   },
@@ -33,7 +36,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@cloudflare/next-on-pages": "^1.0.0",
+    "@opennextjs/cloudflare": "^1.0.0",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20.10.0",
     "@types/react": "^19.0.0",

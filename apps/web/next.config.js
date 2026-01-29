@@ -3,25 +3,39 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Cloudflare Pages specific configuration
-  output: 'export', // Required for standard static site deployment on Pages
+
+  // IMPORTANTE: NO usar output: 'export' - OpenNext maneja SSR automáticamente
+  // output: 'export' elimina todas las capacidades de servidor
+
   images: {
-    unoptimized: true, // Required because Pages doesn't support the Next.js Image Optimization API
+    unoptimized: true, // Cloudflare Pages no soporta Next.js Image Optimization API
+  },
+
+  // Configuración experimental para Server Actions
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
+
+  // Headers de seguridad
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN'
+          },
+        ],
+      },
+    ];
   },
 };
-
-// Configuración segura para Cloudflare Pages
-// setupDevPlatform solo se debe ejecutar en desarrollo local
-if (process.env.NODE_ENV === 'development') {
-  try {
-    const { setupDevPlatform } = require('@cloudflare/next-on-pages/next-dev');
-    setupDevPlatform();
-  } catch (e) {
-    console.warn(
-      'Cloudflare Pages: Failed to load @cloudflare/next-on-pages/next-dev. Skipping setupDevPlatform.',
-      e
-    );
-  }
-}
 
 module.exports = nextConfig;
