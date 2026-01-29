@@ -12,6 +12,11 @@ import { Button } from '@/components/ui/button';
 if (typeof window !== 'undefined') {
     pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
     console.log('[SecureFileViewer] PDF Worker Source set to:', pdfjs.GlobalWorkerOptions.workerSrc);
+
+    // Verificar accesibilidad del worker
+    fetch(pdfjs.GlobalWorkerOptions.workerSrc, { method: 'HEAD' })
+        .then(res => console.log(`[SecureFileViewer] Worker accessibility check: ${res.status} ${res.ok ? 'OK' : 'FAIL'}`))
+        .catch(err => console.error('[SecureFileViewer] Worker accessibility check error:', err));
 }
 
 interface SecureFileViewerProps {
@@ -84,13 +89,28 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             }
 
             const secureUrl = `${baseUrl}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`;
+            console.log('[SecureFileViewer] Fetching secure file:', secureUrl);
             const blobRes = await fetch(secureUrl, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
-            if (!blobRes.ok) throw new Error("No se pudo descargar el archivo");
+            console.log(`[SecureFileViewer] Response: ${blobRes.status} ${blobRes.statusText}`);
+            console.log(`[SecureFileViewer] Content-Type: ${blobRes.headers.get('content-type')}`);
+
+            if (!blobRes.ok) {
+                const errorText = await blobRes.text().catch(() => "Unknown error");
+                console.error('[SecureFileViewer] Fetch failed:', errorText);
+                throw new Error(`Error ${blobRes.status}: ${errorText}`);
+            }
 
             const blob = await blobRes.blob();
+            console.log(`[SecureFileViewer] Blob received: ${blob.size} bytes, type: ${blob.type}`);
+
+            if (blob.size < 100) {
+                const text = await blob.text().catch(() => "");
+                console.warn('[SecureFileViewer] Blob is very small, content:', text);
+            }
+
             const objUrl = URL.createObjectURL(blob);
             setBlobUrl(objUrl);
 
@@ -202,7 +222,11 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                     <div className="flex-1 overflow-auto bg-gray-100 flex justify-center p-4 scrollbar-thin">
                         <Document
                             file={blobUrl}
-                            onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                            onLoadSuccess={({ numPages }) => {
+                                console.log(`[SecureFileViewer] PDF loaded successfully: ${numPages} pages`);
+                                setNumPages(numPages);
+                            }}
+                            onLoadError={(error) => console.error('[SecureFileViewer] PDF Load Error:', error)}
                             loading={<Loader2 className="animate-spin text-blue-500" />}
                             className="max-w-full"
                         >
