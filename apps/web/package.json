@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "pages:build": "npx @opennextjs/cloudflare build --non-interactive && (rm -rf dist || true) && mkdir dist && cp -r .open-next/* dist/ && mv dist/worker.js dist/_worker.js && ( [ -d .open-next/assets ] && cp -rv .open-next/assets/* dist/ || true )",
+    "pages:build": "npx @opennextjs/cloudflare build --non-interactive && (rm -rf out-pages || true) && mkdir out-pages && cp -r .open-next/. out-pages/ && ( [ -d .open-next/assets ] && cp -r .open-next/assets/. out-pages/ || true ) && mv out-pages/worker.js out-pages/_worker.js",
     "pages:deploy": "npm run pages:build && wrangler pages deploy",
-    "pages:dev": "npx @opennextjs/cloudflare && wrangler pages dev dist --compatibility-flag=nodejs_compat",
+    "pages:dev": "npx @opennextjs/cloudflare && wrangler pages dev out-pages --compatibility-flag=nodejs_compat",
     "start": "next start",
     "lint": "next lint"
   },
