@@ -102,7 +102,7 @@ export default function FullPageUploadForm({
             }
 
             // Éxito
-            router.push(`/dashboard/courses/${courseId}`);
+            router.push(`/dashboard/courses/view?id=${courseId}`);
             router.refresh();
         } catch (error: any) {
             console.error('Error:', error);

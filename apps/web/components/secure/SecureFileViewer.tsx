@@ -9,7 +9,10 @@ import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 
 // Worker local para evitar problemas de CORS con CDN
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+if (typeof window !== 'undefined') {
+    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+    console.log('[SecureFileViewer] PDF Worker Source set to:', pdfjs.GlobalWorkerOptions.workerSrc);
+}
 
 interface SecureFileViewerProps {
     filePath: string;
