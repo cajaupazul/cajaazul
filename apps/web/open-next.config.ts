@@ -1,9 +1,27 @@
-// Minimal valid configuration for @opennextjs/cloudflare
-// The 'default.override' structure is required by the validator
+// Complete configuration for @opennextjs/cloudflare
+// All properties are REQUIRED by the validator
 
 const config = {
     default: {
-        override: {},
+        override: {
+            wrapper: "cloudflare-node",
+            converter: "edge",
+            proxyExternalRequest: "fetch",
+            incrementalCache: "dummy",
+            tagCache: "dummy",
+            queue: "dummy",
+        },
+    },
+    middleware: {
+        external: true,
+        override: {
+            wrapper: "cloudflare-edge",
+            converter: "edge",
+            proxyExternalRequest: "fetch",
+            incrementalCache: "dummy",
+            tagCache: "dummy",
+            queue: "dummy",
+        },
     },
 };
 
