@@ -5,11 +5,20 @@ const WORKER_URL = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.ca
 /**
  * Generates a secure URL for accessing a file in R2 via the Cloudflare Worker proxy.
  * This URL expects the request to include a valid Authorization header if the bucket is private.
+ * For public-read buckets (like profile-avatars), this URL works directly.
  */
 export function getSecureFileUrl(bucket: string, path: string): string {
     if (!path) return '';
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
     return `${WORKER_URL}/storage/secure-url?bucket=${bucket}&path=${encodeURIComponent(cleanPath)}`
+}
+
+/**
+ * Alias for getSecureFileUrl to maintain compatibility with existing code.
+ * In the R2 architecture, "public" URLs are served via the secure proxy.
+ */
+export function getPublicFileUrl(bucket: string, path: string): string {
+    return getSecureFileUrl(bucket, path);
 }
 
 /**

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Plus, Image as ImageIcon, CheckCircle, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { getPublicFileUrl } from '@/lib/r2-storage';
+// import { getPublicFileUrl } from '@/lib/r2-storage';
 import {
     Select,
     SelectContent,
