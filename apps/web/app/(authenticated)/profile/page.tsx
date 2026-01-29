@@ -261,14 +261,21 @@ export default function ProfilePage() {
         )}
 
         {/* Background Image */}
-        <div
-          className="absolute inset-0 h-64 md:h-96 bg-cover bg-center transition-all duration-500"
-          style={{
-            backgroundImage: `url('${getStorageUrl(backgroundImage, 'profile-avatars', PLACEHOLDERS.BACKGROUND)}')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        >
+        <div className="absolute top-0 left-0 w-full h-64 md:h-96 overflow-hidden">
+          <img
+            key={backgroundImage} // Force re-render on URL change
+            src={getStorageUrl(backgroundImage, 'profile-avatars', PLACEHOLDERS.BACKGROUND)}
+            alt="Profile Background"
+            className="w-full h-full object-cover object-center transition-all duration-500"
+            onError={(e) => {
+              console.error('Error loading background image:', e.currentTarget.src);
+              // Fallback to placeholder if load fails
+              if (e.currentTarget.src !== PLACEHOLDERS.BACKGROUND) {
+                e.currentTarget.src = PLACEHOLDERS.BACKGROUND;
+              }
+            }}
+          />
+
           {/* Overlay gradient */}
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-bb-dark" />
 
@@ -276,7 +283,7 @@ export default function ProfilePage() {
           {uploadingBackground && (
             <div className="absolute inset-0 bg-black/60 z-40 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-300">
               <div className="flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white/80"></div>
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-faculty-primary"></div>
                 <p className="text-white/90 font-medium text-sm animate-pulse">Subiendo fondo...</p>
               </div>
             </div>
