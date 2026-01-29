@@ -32,7 +32,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(contextProfile || null);
   const [loading, setLoading] = useState(!contextProfile);
   const [editing, setEditing] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBackground, setUploadingBackground] = useState(false);
   const [formData, setFormData] = useState<Partial<Profile>>({});
   const [userEmail, setUserEmail] = useState('');
   const [backgroundImage, setBackgroundImage] = useState('');
@@ -137,7 +138,7 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
 
-    setUploading(true);
+    setUploadingBackground(true);
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `bg-${profile.id}-${Date.now()}.${fileExt}`;
@@ -154,7 +155,7 @@ export default function ProfilePage() {
       console.error('Error uploading background:', error);
       alert('Error al subir la imagen de fondo');
     } finally {
-      setUploading(false);
+      setUploadingBackground(false);
     }
   };
 
@@ -162,7 +163,7 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
 
-    setUploading(true);
+    setUploadingAvatar(true);
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
@@ -177,7 +178,7 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Error uploading file:', error);
     } finally {
-      setUploading(false);
+      setUploadingAvatar(false);
     }
   };
 
@@ -261,7 +262,7 @@ export default function ProfilePage() {
 
         {/* Background Image */}
         <div
-          className="absolute inset-0 h-64 md:h-96 bg-cover bg-center"
+          className="absolute inset-0 h-64 md:h-96 bg-cover bg-center transition-all duration-500"
           style={{
             backgroundImage: `url('${getStorageUrl(backgroundImage, 'profile-avatars', PLACEHOLDERS.BACKGROUND)}')`,
             backgroundSize: 'cover',
@@ -271,8 +272,18 @@ export default function ProfilePage() {
           {/* Overlay gradient */}
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-bb-dark" />
 
+          {/* Loading Overlay */}
+          {uploadingBackground && (
+            <div className="absolute inset-0 bg-black/60 z-40 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-300">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white/80"></div>
+                <p className="text-white/90 font-medium text-sm animate-pulse">Subiendo fondo...</p>
+              </div>
+            </div>
+          )}
+
           {/* Background edit button */}
-          {editing && (
+          {editing && !uploadingBackground && (
             <label
               className="absolute top-4 right-4 p-3 rounded-full backdrop-blur-md bg-bb-sidebar/50 hover:bg-bb-sidebar text-bb-text transition-all cursor-pointer hover:scale-110 active:scale-95 z-30 shadow-lg border border-bb-border"
               title="Cambiar fondo"
@@ -283,7 +294,7 @@ export default function ProfilePage() {
                 type="file"
                 accept="image/*"
                 onChange={handleBackgroundUpload}
-                disabled={uploading}
+                disabled={uploadingBackground}
                 className="hidden"
               />
             </label>
@@ -295,7 +306,7 @@ export default function ProfilePage() {
           {/* Profile Header */}
           <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 mb-8 md:mb-12 mt-12 md:mt-20">
             {/* Avatar */}
-            <div className="relative">
+            <div className="relative group">
               <AvatarWithFrame
                 size={140}
                 avatarUrl={getStorageUrl(formData.avatar_url || profile.avatar_url, 'profile-avatars', PLACEHOLDERS.AVATAR)}
@@ -304,11 +315,18 @@ export default function ProfilePage() {
                 offsetX={equippedFrame?.frame_settings?.profile?.x}
                 offsetY={equippedFrame?.frame_settings?.profile?.y}
                 name={profile.nombre}
-                className="shadow-2xl"
+                className="shadow-2xl transition-transform duration-300"
               />
 
+              {/* Avatar Loading Overlay */}
+              {uploadingAvatar && (
+                <div className="absolute inset-0 rounded-full bg-black/60 z-40 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-300">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/80"></div>
+                </div>
+              )}
+
               {/* Avatar Upload Button */}
-              {editing && (
+              {editing && !uploadingAvatar && (
                 <label className="absolute bottom-2 right-2 cursor-pointer z-30">
                   <div
                     className="p-3 rounded-full text-white shadow-lg hover:opacity-90 transition-all hover:scale-110 backdrop-blur-sm bg-opacity-80"
@@ -321,7 +339,7 @@ export default function ProfilePage() {
                     type="file"
                     accept="image/*"
                     onChange={handleFileUpload}
-                    disabled={uploading}
+                    disabled={uploadingAvatar}
                     className="hidden"
                   />
                 </label>
@@ -377,6 +395,7 @@ export default function ProfilePage() {
                   }}
                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all duration-200 text-white hover:scale-105 shadow-lg shadow-blue-500/10 text-sm md:text-base w-full sm:w-auto justify-center"
                   style={{ backgroundColor: colors?.primary }}
+                  disabled={uploadingAvatar || uploadingBackground}
                 >
                   {editing ? (
                     <>
@@ -393,6 +412,7 @@ export default function ProfilePage() {
                 {editing && (
                   <button
                     onClick={handleCancel}
+                    disabled={uploadingAvatar || uploadingBackground}
                     className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold bg-bb-card hover:bg-bb-hover text-bb-text transition-all backdrop-blur text-sm md:text-base w-full sm:w-auto justify-center border border-bb-border"
                   >
                     <X className="w-4 h-4" />
