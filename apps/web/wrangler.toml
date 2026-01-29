@@ -2,8 +2,8 @@ name = "campuslink"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-# OpenNext genera el output en .open-next
-pages_build_output_dir = ".open-next"
+# Carpeta de salida visible para Cloudflare Pages
+pages_build_output_dir = "dist"
 
 # Variables de entorno (configurar también en Cloudflare Dashboard)
 [vars]
