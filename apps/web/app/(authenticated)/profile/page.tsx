@@ -143,15 +143,9 @@ export default function ProfilePage() {
       const fileName = `bg-${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `backgrounds/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-      //   .from('profile-avatars')
-      //   .upload(filePath, file, { upsert: true });
-
       await import('@/lib/r2-storage').then(({ uploadFileToR2 }) =>
         uploadFileToR2('profile-avatars', filePath, file)
       );
-
-      if (uploadError) throw uploadError;
 
       setStagedBackgroundUrl(filePath);
       setBackgroundImage(filePath);
@@ -174,15 +168,9 @@ export default function ProfilePage() {
       const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      // const { error: uploadError } = await supabase.storage
-      //   .from('profile-avatars')
-      //   .upload(filePath, file, { upsert: true });
-
       await import('@/lib/r2-storage').then(({ uploadFileToR2 }) =>
         uploadFileToR2('profile-avatars', filePath, file)
       );
-
-      if (uploadError) throw uploadError;
 
       setStagedAvatarUrl(filePath);
       setFormData(prev => ({ ...prev, avatar_url: filePath }));
