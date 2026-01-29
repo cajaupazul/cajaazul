@@ -11,7 +11,7 @@ const nextConfig = {
     unoptimized: true, // Cloudflare Pages no soporta Next.js Image Optimization API
   },
 
-  // Configuración experimental para Server Actions
+  // Configuración experimental
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',
