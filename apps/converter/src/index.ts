@@ -41,7 +41,7 @@ const ALLOWED_MIME_TYPES = [
 ];
 
 // Routes
-fastify.post('/convert', async (req, reply) => {
+fastify.post('/convert', async (req: any, reply: any) => {
     const data = await req.file();
 
     if (!data) {
@@ -82,7 +82,34 @@ fastify.post('/convert', async (req, reply) => {
     };
 });
 
-fastify.get('/status/:id', async (req, reply) => {
+// New Endpoint: Trigger conversion for file already in R2
+fastify.post('/convert-stored', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { key, bucket } = req.body as { key: string; bucket: string };
+
+    if (!key || !bucket) {
+        return reply.code(400).send({ error: 'Missing key or bucket in request body' });
+    }
+
+    const jobId = uuidv4();
+
+    // Add to Queue
+    await conversionQueue.add('convert-stored-document', {
+        key,
+        bucket,
+        jobId
+    }, {
+        jobId // Use same ID for job
+    });
+
+    return {
+        startTime: Date.now(),
+        jobId,
+        status: 'processing',
+        message: 'File queued for conversion from R2'
+    };
+});
+
+fastify.get('/status/:id', async (req: any, reply: any) => {
     const { id } = req.params as { id: string };
     const job = await conversionQueue.getJob(id);
 
