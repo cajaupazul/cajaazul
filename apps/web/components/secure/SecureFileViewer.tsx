@@ -45,12 +45,14 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
     };
 
     const [url, setUrl] = useState<PDFFile | null>(null);
+    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [numPages, setNumPages] = useState<number>(0);
     const [scale, setScale] = useState(1.2);
     const [containerWidth, setContainerWidth] = useState<number>(0);
     const [error, setError] = useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [fileType, setFileType] = useState<'pdf' | 'image' | 'other'>('pdf');
 
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -73,6 +75,16 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
         setLoading(true);
         setError(null);
 
+        // Determine file type
+        const lowerPath = filePath.toLowerCase();
+        if (lowerPath.endsWith('.pdf')) {
+            setFileType('pdf');
+        } else if (lowerPath.match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) {
+            setFileType('image');
+        } else {
+            setFileType('other');
+        }
+
         const fetchToken = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
@@ -90,10 +102,40 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             }
 
             // The Worker Proxy URL
+            // Ensure bucket is correct. Assuming course-materials for generic course files.
+            // If the path implies another bucket? Usually strictly course-materials here.
+
+            // NOTE: If using strict buckets, make sure the API accepts it.
+            // Currently API defaults to course-materials if not specified, or we pass it explicit.
             const proxyUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`;
 
+            // For download/image src, we might need a direct URL if we can't inject headers effortlessly in <img>?
+            // Actually <img> doesn't support headers easily.
+            // But we can use a token in query param IF the worker supported it (it doesn't, it uses Auth header).
+            // WORKAROUND for images: fetch blob and create object URL.
+            if (lowerPath.match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) {
+                try {
+                    const res = await fetch(proxyUrl, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (!res.ok) throw new Error('Error cargando imagen');
+                    const blob = await res.blob();
+                    const objectUrl = URL.createObjectURL(blob);
+                    setDownloadUrl(objectUrl); // Use this for <img> src
+                } catch (err: any) {
+                    console.error(err);
+                    setError('Error cargando imagen');
+                }
+                setLoading(false);
+                return;
+            }
+
+            // For others/PDF
+            setDownloadUrl(proxyUrl); // Base URL for download (needs fetch with headers to actually download, or we assume browser can handle... wait browser can't handle headers in <a href>)
+            // Actually, for "other" types, dragging/downloading is hard if we require Headers.
+            // We might need to implement a "download" handler that fetches blob and saves it.
+
             // Prepare the file object for react-pdf
-            // This tells react-pdf to fetch using these headers
             setUrl({
                 url: proxyUrl,
                 httpHeaders: {
@@ -101,10 +143,38 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                 },
                 withCredentials: true
             });
+
+            if (!lowerPath.endsWith('.pdf')) {
+                setLoading(false);
+            }
         };
 
         fetchToken();
     }, [filePath]);
+
+    const handleDownload = async () => {
+        if (!downloadUrl) return;
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const res = await fetch(downloadUrl, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName; // Force download name
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (e) {
+            console.error("Download failed", e);
+            alert("Error al descargar el archivo");
+        }
+    }
 
     const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
         setNumPages(numPages);
@@ -156,11 +226,13 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                 </div>
 
                 <div className="flex items-center gap-2 md:gap-4">
-                    <div className="hidden sm:flex items-center bg-black/50 border border-white/5 rounded-xl px-2 py-1 gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-white" onClick={() => handleZoom(-0.2)}><ZoomOut className="h-4 w-4" /></Button>
-                        <span className="text-[10px] font-black text-zinc-400 min-w-[40px] text-center">{Math.round(scale * 100)}%</span>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-white" onClick={() => handleZoom(0.2)}><ZoomIn className="h-4 w-4" /></Button>
-                    </div>
+                    {fileType === 'pdf' && (
+                        <div className="hidden sm:flex items-center bg-black/50 border border-white/5 rounded-xl px-2 py-1 gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-white" onClick={() => handleZoom(-0.2)}><ZoomOut className="h-4 w-4" /></Button>
+                            <span className="text-[10px] font-black text-zinc-400 min-w-[40px] text-center">{Math.round(scale * 100)}%</span>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-white" onClick={() => handleZoom(0.2)}><ZoomIn className="h-4 w-4" /></Button>
+                        </div>
+                    )}
 
                     <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="h-9 w-9 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all">
                         {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
@@ -168,7 +240,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                 </div>
             </div>
 
-            {/* Continuous Scroll Content Area */}
+            {/* Content Area */}
             <div
                 ref={containerRef}
                 className="flex-1 relative w-full overflow-y-auto bg-[#1a1a1a] flex flex-col items-center p-4 md:p-12 scroll-smooth scrollbar-thin scrollbar-thumb-zinc-800"
@@ -180,33 +252,65 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                     </div>
                 )}
 
-                <Document
-                    file={url || undefined}
-                    onLoadSuccess={onDocumentLoadSuccess}
-                    loading={null}
-                    className="flex flex-col items-center gap-8 md:gap-12"
-                    onContextMenu={(e) => e.preventDefault()}
-                >
-                    {Array.from(new Array(numPages), (el, index) => (
-                        <div key={`page_${index + 1}`} className="relative shadow-[0_20px_60px_rgba(0,0,0,0.6)] rounded-sm overflow-hidden bg-white">
-                            <Page
-                                pageNumber={index + 1}
-                                scale={scale}
-                                width={containerWidth > 0 ? Math.min(containerWidth, 1200) : undefined}
-                                renderTextLayer={false}
-                                renderAnnotationLayer={false}
-                                className="max-w-full h-auto"
-                                loading={
-                                    <div className="w-full h-[600px] flex items-center justify-center bg-zinc-900/50">
-                                        <Loader2 className="w-6 h-6 text-zinc-700 animate-spin" />
-                                    </div>
-                                }
-                            />
-                            {/* Individual page protective overlay (blocks selection but allows events to bubble for scroll) */}
-                            <div className="absolute inset-0 z-10 bg-transparent pointer-events-none" />
+                {!loading && fileType === 'pdf' && (
+                    <Document
+                        file={url || undefined}
+                        onLoadSuccess={onDocumentLoadSuccess}
+                        loading={null}
+                        className="flex flex-col items-center gap-8 md:gap-12"
+                        onContextMenu={(e) => e.preventDefault()}
+                        error={
+                            <div className="flex flex-col items-center justify-center p-10 text-center">
+                                <AlertTriangle className="w-8 h-8 text-yellow-500 mb-3" />
+                                <p className="text-white text-sm">No se pudo cargar el PDF. Puede que e archivo esté dañado.</p>
+                            </div>
+                        }
+                    >
+                        {Array.from(new Array(numPages), (el, index) => (
+                            <div key={`page_${index + 1}`} className="relative shadow-[0_20px_60px_rgba(0,0,0,0.6)] rounded-sm overflow-hidden bg-white">
+                                <Page
+                                    pageNumber={index + 1}
+                                    scale={scale}
+                                    width={containerWidth > 0 ? Math.min(containerWidth, 1200) : undefined}
+                                    renderTextLayer={false}
+                                    renderAnnotationLayer={false}
+                                    className="max-w-full h-auto"
+                                    loading={
+                                        <div className="w-full h-[600px] flex items-center justify-center bg-zinc-900/50">
+                                            <Loader2 className="w-6 h-6 text-zinc-700 animate-spin" />
+                                        </div>
+                                    }
+                                />
+                                {/* Individual page protective overlay */}
+                                <div className="absolute inset-0 z-10 bg-transparent pointer-events-none" />
+                            </div>
+                        ))}
+                    </Document>
+                )}
+
+                {!loading && fileType === 'image' && downloadUrl && (
+                    <div className="relative shadow-2xl rounded-xl overflow-hidden">
+                        <img src={downloadUrl} alt={fileName} className="max-w-full h-auto" />
+                    </div>
+                )}
+
+                {!loading && fileType === 'other' && (
+                    <div className="flex flex-col items-center justify-center py-20 text-center max-w-md">
+                        <div className="w-20 h-20 bg-zinc-800 rounded-2xl flex items-center justify-center mb-6 border border-zinc-700">
+                            <Lock className="w-10 h-10 text-zinc-500" />
                         </div>
-                    ))}
-                </Document>
+                        <h3 className="text-white font-bold text-xl mb-2">Vista Previa No Disponible</h3>
+                        <p className="text-zinc-400 text-sm mb-8 leading-relaxed">
+                            Este tipo de archivo ({fileName.split('.').pop()?.toUpperCase()}) no puede visualizarse de forma segura en el navegador. Por favor descárgalo para verlo.
+                        </p>
+                        <Button
+                            onClick={handleDownload}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-6 rounded-xl hover:scale-105 transition-all shadow-lg shadow-blue-600/20"
+                        >
+                            Descargar Archivo Seguro
+                        </Button>
+                    </div>
+                )}
 
                 {/* Global Protection Overlay (Passive) */}
                 <div
