@@ -8,8 +8,8 @@ import * as docx from 'docx-preview';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 
-// Worker for PDF.js
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Worker local para evitar problemas de CORS con CDN
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 interface SecureFileViewerProps {
     filePath: string;
