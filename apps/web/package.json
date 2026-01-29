@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "pages:build": "npx @opennextjs/cloudflare build",
+    "pages:build": "npx @opennextjs/cloudflare build --non-interactive",
     "pages:deploy": "npm run pages:build && wrangler pages deploy",
     "pages:dev": "npx @opennextjs/cloudflare && wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
     "start": "next start",
