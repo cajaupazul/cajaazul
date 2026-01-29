@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "pages:build": "npx @opennextjs/cloudflare build --non-interactive && ( [ -f .open-next/worker.js ] && mv .open-next/worker.js .open-next/_worker.js || true ) && ( [ -d .open-next/assets ] && cp -r .open-next/assets/* .open-next/ || true )",
+    "pages:build": "npx @opennextjs/cloudflare build --non-interactive && ( [ -f .open-next/worker.js ] && mv .open-next/worker.js .open-next/_worker.js || true )",
     "pages:deploy": "npm run pages:build && wrangler pages deploy",
     "pages:dev": "npx @opennextjs/cloudflare && wrangler pages dev .open-next --compatibility-flag=nodejs_compat",
     "start": "next start",
