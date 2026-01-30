@@ -31,9 +31,9 @@ checkout.post('/', authMiddleware, async (c) => {
             body: JSON.stringify({
                 items: body.items,
                 back_urls: {
-                    success: `${apiBase}/checkout/success`,
+                    success: 'https://campuslink.pages.dev/payment/success',
                     failure: 'https://campuslink.pages.dev/dashboard/store?status=failure',
-                    pending: `${apiBase}/checkout/pending`,
+                    pending: 'https://campuslink.pages.dev/payment/success?status=pending',
                 },
                 auto_return: 'approved',
                 payment_methods: {
@@ -87,12 +87,24 @@ const getSuccessHTML = (status: string) => `
 </html>
 `;
 
-checkout.get('/success', (c) => {
-    return c.html(getSuccessHTML('success'))
-})
+// 2. Confirmation Endpoint for Client-Side calls
+checkout.get('/confirm', async (c) => {
+    const paymentId = c.req.query('id')
+    if (!paymentId) return c.json({ error: 'Missing payment ID' }, 400)
 
-checkout.get('/pending', (c) => {
-    return c.html(getSuccessHTML('pending'))
+    try {
+        const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+            headers: { Authorization: `Bearer ${c.env.MP_ACCESS_TOKEN}` }
+        })
+        const payment = await mpRes.json() as any
+        return c.json({
+            status: payment.status,
+            status_detail: payment.status_detail,
+            id: payment.id
+        })
+    } catch (err) {
+        return c.json({ error: 'Failed to verify' }, 500)
+    }
 })
 
 // 2. Webhook Handler (Public but validated by MP Token)
