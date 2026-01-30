@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle2, XCircle, AlertCircle, ArrowRight, LogIn, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import { supabase } from '@/lib/supabase';
  * - Shows manual buttons based on session state
  * - Compatible with Cloudflare Edge Runtime
  */
-export default function CheckoutResultPage() {
+function CheckoutResultContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [hasSession, setHasSession] = useState<boolean | null>(null);
@@ -177,5 +177,20 @@ export default function CheckoutResultPage() {
                 </p>
             </div>
         </div>
+    );
+}
+
+export default function CheckoutResultPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-bb-dark flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+                    <p className="text-bb-text-secondary text-sm">Cargando resultado...</p>
+                </div>
+            </div>
+        }>
+            <CheckoutResultContent />
+        </Suspense>
     );
 }
