@@ -28,8 +28,14 @@ checkout.post('/', async (c) => {
                 auto_return: 'approved',
                 payment_methods: {
                     installments: 1,
-                    default_installments: 1
+                    default_installments: 1,
+                    excluded_payment_types: [
+                        { id: "ticket" },
+                        { id: "atm" }
+                    ]
                 },
+                external_reference: `order-${Date.now()}`,
+                binary_mode: true,
             }),
         }
     )
