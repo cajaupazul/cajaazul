@@ -23,8 +23,13 @@ checkout.post('/', async (c) => {
                 back_urls: {
                     success: 'https://campuslink.pages.dev/success',
                     failure: 'https://campuslink.pages.dev/failure',
+                    pending: 'https://campuslink.pages.dev/success',
                 },
                 auto_return: 'approved',
+                payment_methods: {
+                    installments: 1,
+                    default_installments: 1
+                },
             }),
         }
     )
