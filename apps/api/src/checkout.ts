@@ -20,7 +20,6 @@ checkout.post('/', authMiddleware, async (c) => {
 
     if (!user) return c.json({ error: 'Unauthorized' }, 401)
 
-    // Enforce stricter installments and reference
     const response = await fetch(
         'https://api.mercadopago.com/checkout/preferences',
         {
@@ -32,7 +31,6 @@ checkout.post('/', authMiddleware, async (c) => {
             body: JSON.stringify({
                 items: body.items,
                 back_urls: {
-                    // WE REDIRECT TO API WORKER FIRST TO STRIP MP PARAMETERS AND AVOID 522
                     success: `${apiBase}/checkout/success`,
                     failure: 'https://campuslink.pages.dev/dashboard/store?status=failure',
                     pending: `${apiBase}/checkout/pending`,
@@ -40,13 +38,9 @@ checkout.post('/', authMiddleware, async (c) => {
                 auto_return: 'approved',
                 payment_methods: {
                     installments: 1,
-                    default_installments: 1,
-                    // REMOVED EXCLUSIONS TO RESTORE YAPE/PLIN/DEBIT
-                    excluded_payment_types: [
-                        { id: "ticket" } // Solo excluimos efectivo por agencia para rapidez
-                    ]
+                    default_installments: 1
+                    // REMOVED ALL EXCLUSIONS TO RESTORE YAPE/PLIN
                 },
-                // Crucial for Webhook: Pass User ID
                 external_reference: `user_id:${user.id}|timestamp:${Date.now()}`,
                 notification_url: `${apiBase}/checkout/webhook`,
                 binary_mode: true,
@@ -61,20 +55,44 @@ checkout.post('/', authMiddleware, async (c) => {
         return c.json({ error: data }, 500)
     }
 
-    c.header('Cache-Control', 'no-store')
     return c.json({
         init_point: data.init_point,
     })
 })
 
-// 2. Success/Pending Redirect Handlers (To avoid 522 on main domain)
+// 2. Stable HTML Landing Handlers (To avoid 522 on main domain during MP redirect)
+const getSuccessHTML = (status: string) => `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Pago Exitoso! - CampusLink</title>
+    <style>
+        body { font-family: sans-serif; background: #0b0e14; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+        .card { background: #151921; padding: 2.5rem; border-radius: 2rem; border: 1px solid #1e242e; box-shadow: 0 20px 50px rgba(0,0,0,0.5); max-width: 400px; width: 90%; }
+        h1 { color: #22c55e; margin: 0 0 1rem; font-size: 1.8rem; }
+        p { color: #94a3b8; font-size: 1.1rem; line-height: 1.5; margin-bottom: 2rem; }
+        .btn { background: #3b82f6; color: white; text-decoration: none; padding: 1rem 2rem; border-radius: 1rem; font-weight: bold; display: inline-block; transition: transform 0.2s; }
+        .btn:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>¡Pago ${status === 'success' ? 'Exitoso' : 'Pendiente'}!</h1>
+        <p>Tu transacción ha sido procesada. Ya puedes volver a la aplicación para ver tus beneficios.</p>
+        <a href="https://campuslink.pages.dev/dashboard/store?status=${status}" class="btn">Volver a CampusLink</a>
+    </div>
+</body>
+</html>
+`;
+
 checkout.get('/success', (c) => {
-    // This is ultra-lightweight and happens on the API worker
-    return c.redirect('https://campuslink.pages.dev/dashboard/store?status=success')
+    return c.html(getSuccessHTML('success'))
 })
 
 checkout.get('/pending', (c) => {
-    return c.redirect('https://campuslink.pages.dev/dashboard/store?status=pending')
+    return c.html(getSuccessHTML('pending'))
 })
 
 // 2. Webhook Handler (Public but validated by MP Token)
