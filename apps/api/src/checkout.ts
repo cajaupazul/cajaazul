@@ -31,10 +31,10 @@ checkout.post('/', authMiddleware, async (c) => {
             body: JSON.stringify({
                 items: body.items,
                 back_urls: {
-                    // Safe Landing: 100% Client-Side page to avoid SSR Timers/522
-                    success: 'https://campuslink.pages.dev/payment/success',
-                    failure: 'https://campuslink.pages.dev/dashboard/store?status=failure',
-                    pending: 'https://campuslink.pages.dev/payment/success?status=pending',
+                    // NEW: Safe public landing page (no auth guards, no SSR, no timeouts)
+                    success: 'https://campuslink.pages.dev/checkout/result?status=success',
+                    failure: 'https://campuslink.pages.dev/checkout/result?status=failure',
+                    pending: 'https://campuslink.pages.dev/checkout/result?status=pending',
                 },
                 auto_return: 'approved',
                 payment_methods: {
