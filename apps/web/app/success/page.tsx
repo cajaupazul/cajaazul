@@ -12,7 +12,7 @@ export default function SuccessPage() {
     useEffect(() => {
         // Auto redirect after 5 seconds
         const timer = setTimeout(() => {
-            router.push('/dashboard/store?status=success');
+            router.push('/payment/success');
         }, 5000);
 
         return () => clearTimeout(timer);
@@ -51,7 +51,7 @@ export default function SuccessPage() {
                     <p className="text-xs text-bb-text-secondary animate-pulse">
                         Redirigiendo automáticamente en 5 segundos...
                     </p>
-                    <Link href="/dashboard/store?status=success" className="block">
+                    <Link href="/payment/success" className="block">
                         <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl gap-2 shadow-lg transition-all active:scale-95">
                             Volver a la tienda
                             <ArrowRight size={18} />

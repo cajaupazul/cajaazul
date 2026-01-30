@@ -3,7 +3,7 @@ compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
 # Carpeta de salida definitiva para Cloudflare Pages
-pages_build_output_dir = ".open-next"
+pages_build_output_dir = "out-pages"
 
 # Variables de entorno (configurar también en Cloudflare Dashboard)
 [vars]
