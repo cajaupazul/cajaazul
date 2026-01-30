@@ -31,6 +31,7 @@ checkout.post('/', authMiddleware, async (c) => {
             body: JSON.stringify({
                 items: body.items,
                 back_urls: {
+                    // Safe Landing: 100% Client-Side page to avoid SSR Timers/522
                     success: 'https://campuslink.pages.dev/payment/success',
                     failure: 'https://campuslink.pages.dev/dashboard/store?status=failure',
                     pending: 'https://campuslink.pages.dev/payment/success?status=pending',
@@ -87,7 +88,7 @@ const getSuccessHTML = (status: string) => `
 </html>
 `;
 
-// 2. Confirmation Endpoint for Client-Side calls
+// 2. Client-Side Confirmation Endpoint (Asynchronous Verification)
 checkout.get('/confirm', async (c) => {
     const paymentId = c.req.query('id')
     if (!paymentId) return c.json({ error: 'Missing payment ID' }, 400)
@@ -96,14 +97,18 @@ checkout.get('/confirm', async (c) => {
         const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
             headers: { Authorization: `Bearer ${c.env.MP_ACCESS_TOKEN}` }
         })
+
+        if (!mpRes.ok) return c.json({ error: 'MP Verification Failed' }, mpRes.status)
+
         const payment = await mpRes.json() as any
         return c.json({
             status: payment.status,
             status_detail: payment.status_detail,
-            id: payment.id
+            id: payment.id,
+            external_reference: payment.external_reference
         })
     } catch (err) {
-        return c.json({ error: 'Failed to verify' }, 500)
+        return c.json({ error: 'Internal Verification Error' }, 500)
     }
 })
 
