@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "NEXT_TURBO=0 next build",
-    "pages:build": "NEXT_TURBO=0 npx @opennextjs/cloudflare build --non-interactive && (rm -rf out-pages || true) && mkdir out-pages && cp -rv .open-next/. out-pages/ && cp -rv .open-next/assets/. out-pages/ && ( [ -f out-pages/worker.js ] && mv out-pages/worker.js out-pages/_worker.js || true ) && echo '{\"version\":1,\"include\":[\"/*\"],\"exclude\":[\"/_next/static/*\",\"/favicon.ico\",\"/logo/*\",\"/carrusel/*\",\"/icons/*\",\"/profes/*\",\"/options/*\",\"/fonts/*\",\"/*.png\",\"/*.jpg\",\"/*.jpeg\",\"/*.svg\",\"/*.webp\",\"/*.mjs\",\"/pdf.worker.min.mjs\"]}' > out-pages/_routes.json && echo --- ESTRUCTURA FINAL --- && ls -R out-pages",
+    "pages:build": "NEXT_TURBO=0 npx @opennextjs/cloudflare build --non-interactive && (rm -rf out-pages || true) && mkdir out-pages && cp -rv .open-next/. out-pages/ && cp -rv .open-next/assets/. out-pages/ && ( [ -f out-pages/worker.js ] && mv out-pages/worker.js out-pages/_worker.js || true ) && echo --- ESTRUCTURA FINAL --- && ls -R out-pages",
     "pages:deploy": "npm run pages:build && wrangler pages deploy",
     "pages:dev": "npx @opennextjs/cloudflare && wrangler pages dev out-pages --compatibility-flag=nodejs_compat",
     "start": "next start",

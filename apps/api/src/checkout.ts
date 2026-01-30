@@ -40,8 +40,13 @@ checkout.post('/', async (c) => {
         return c.json({ error: data }, 500)
     }
 
+    c.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    c.header('Pragma', 'no-cache')
+    c.header('Expires', '0')
+
     return c.json({
         init_point: data.init_point,
+        v: "1.0.2-fixed-installments"
     })
 })
 

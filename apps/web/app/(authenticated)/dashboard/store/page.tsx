@@ -172,9 +172,10 @@ function StoreContent() {
                 body: JSON.stringify({
                     items: [
                         {
-                            title: selectedPackage.name,
+                            title: `${selectedPackage.name} (${new Date().toLocaleTimeString()})`,
                             quantity: 1,
                             unit_price: selectedPackage.price,
+                            id: `${selectedPackage.id}-${Date.now()}`
                         }
                     ]
                 })
