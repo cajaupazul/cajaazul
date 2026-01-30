@@ -1,51 +1,45 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, AlertCircle, ArrowRight, LogIn, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
 
 /**
- * PUBLIC CHECKOUT RESULT PAGE
+ * ULTRA LIGHTWEIGHT CHECKOUT RESULT PAGE
  * 
- * This page is 100% public and does NOT depend on authentication.
- * It serves as a landing page for Mercado Pago redirects.
- * 
- * Key Features:
- * - No SSR (client-side only with 'use client')
- * - No auth guards or middleware
- * - No automatic redirects
- * - Shows manual buttons based on session state
- * - Compatible with Cloudflare Edge Runtime
+ * DESIGNED FOR CLOUDFLARE PAGES EDGE RUNTIME:
+ * - 100% Client-side ('use client')
+ * - No Server Components / No SSR
+ * - Static export forced
+ * - No external providers or layouts
+ * - Query params read from window.location
  */
-function CheckoutResultContent() {
-    const searchParams = useSearchParams();
-    const router = useRouter();
-    const [hasSession, setHasSession] = useState<boolean | null>(null);
-    const [isCheckingSession, setIsCheckingSession] = useState(true);
 
-    const status = searchParams.get('status') || 'success';
-    const paymentId = searchParams.get('payment_id');
+export const runtime = 'edge';
+export const dynamic = 'force-static';
 
-    // Check for session AFTER page loads (client-side only)
+export default function CheckoutResultPage() {
+    const [status, setStatus] = useState<string | null>(null);
+    const [paymentId, setPaymentId] = useState<string | null>(null);
+    const [mounted, setMounted] = useState(false);
+
     useEffect(() => {
-        const checkSession = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                setHasSession(!!session);
-            } catch (error) {
-                console.error('Error checking session:', error);
-                setHasSession(false);
-            } finally {
-                setIsCheckingSession(false);
-            }
-        };
-
-        // Small delay to ensure page renders first
-        const timer = setTimeout(checkSession, 300);
-        return () => clearTimeout(timer);
+        setMounted(true);
+        // Direct read from window to bypass Next.js hook overhead in first byte
+        const params = new URLSearchParams(window.location.search);
+        setStatus(params.get('status') || 'success');
+        setPaymentId(params.get('payment_id'));
     }, []);
+
+    if (!mounted) {
+        return (
+            <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center font-sans">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+                    <p className="text-gray-400 text-sm font-medium animate-pulse">Iniciando...</p>
+                </div>
+            </div>
+        );
+    }
 
     const getStatusConfig = () => {
         switch (status) {
@@ -56,7 +50,7 @@ function CheckoutResultContent() {
                     bgColor: 'bg-green-500/10',
                     borderColor: 'border-green-500/20',
                     title: '¡Pago Exitoso!',
-                    message: 'Tu transacción ha sido procesada correctamente por Mercado Pago.',
+                    message: 'Tu transacción ha sido procesada correctamente.',
                     detail: 'Los beneficios se verán reflejados en tu cuenta en breve.',
                 };
             case 'failure':
@@ -67,7 +61,7 @@ function CheckoutResultContent() {
                     borderColor: 'border-red-500/20',
                     title: 'Pago Rechazado',
                     message: 'No pudimos procesar tu pago.',
-                    detail: 'Por favor, intenta de nuevo o contacta a soporte si el problema persiste.',
+                    detail: 'Por favor, intenta de nuevo o contacta a soporte.',
                 };
             case 'pending':
                 return {
@@ -76,7 +70,7 @@ function CheckoutResultContent() {
                     bgColor: 'bg-yellow-500/10',
                     borderColor: 'border-yellow-500/20',
                     title: 'Pago Pendiente',
-                    message: 'Tu pago está siendo procesado por Mercado Pago.',
+                    message: 'Tu pago está siendo procesado.',
                     detail: 'Te avisaremos cuando se complete la transacción.',
                 };
             default:
@@ -95,102 +89,69 @@ function CheckoutResultContent() {
     const config = getStatusConfig();
     const StatusIcon = config.icon;
 
-    const handleGoToDashboard = () => {
-        router.push('/dashboard/store?status=' + status);
-    };
-
-    const handleGoToLogin = () => {
-        router.push('/auth/login?redirect=/dashboard/store');
-    };
-
     return (
-        <div className="min-h-screen bg-bb-dark flex flex-col items-center justify-center p-4">
-            <div className={`max-w-md w-full bg-bb-card border ${config.borderColor} p-8 rounded-[2.5rem] shadow-2xl text-center space-y-6 animate-in fade-in zoom-in duration-500`}>
+        <div className="min-h-screen bg-[#0A0A0B] flex flex-col items-center justify-center p-4 font-sans selection:bg-blue-500/30">
+            <div className={`max-w-md w-full bg-[#141416] border ${config.borderColor} p-10 rounded-[2.5rem] shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] text-center space-y-8 animate-in fade-in zoom-in duration-700`}>
                 {/* Status Icon */}
                 <div className="flex justify-center">
-                    <div className="relative">
-                        <div className={`absolute inset-0 ${config.bgColor} blur-3xl opacity-20 animate-pulse`} />
-                        <StatusIcon className={`w-20 h-20 ${config.iconColor} relative z-10`} />
+                    <div className="relative group">
+                        <div className={`absolute inset-0 ${config.bgColor} blur-[40px] opacity-40 group-hover:opacity-60 transition-opacity duration-500 animate-pulse`} />
+                        <StatusIcon className={`w-24 h-24 ${config.iconColor} relative z-10 drop-shadow-2xl transition-transform duration-500 group-hover:scale-110`} />
                     </div>
                 </div>
 
                 {/* Status Message */}
-                <div className="space-y-2">
-                    <h1 className="text-3xl font-black text-bb-text tracking-tight uppercase italic">
+                <div className="space-y-4">
+                    <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic drop-shadow-sm">
                         {config.title}
                     </h1>
-                    <p className="text-bb-text-secondary text-lg">
-                        {config.message}
-                    </p>
-                    <p className="text-bb-text-secondary text-sm">
-                        {config.detail}
-                    </p>
+                    <div className="space-y-2 px-2">
+                        <p className="text-gray-300 text-lg leading-relaxed font-medium">
+                            {config.message}
+                        </p>
+                        <p className="text-gray-500 text-sm leading-relaxed">
+                            {config.detail}
+                        </p>
+                    </div>
                 </div>
 
-                {/* Payment ID (if available) */}
+                {/* ID Card (if available) */}
                 {paymentId && (
-                    <div className={`${config.bgColor} p-4 rounded-2xl border ${config.borderColor}`}>
-                        <p className="text-xs text-bb-text-secondary font-mono">
-                            ID: {paymentId}
+                    <div className={`${config.bgColor} py-3 px-5 rounded-2xl border ${config.borderColor} group cursor-default transition-all duration-300 hover:scale-[1.02]`}>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Referencia</p>
+                        <p className="text-xs text-white/90 font-mono tracking-wider">
+                            TXN-{paymentId}
                         </p>
                     </div>
                 )}
 
-                {/* Action Buttons - Manual Navigation Only */}
-                <div className="pt-4 space-y-3">
-                    {isCheckingSession ? (
-                        <div className="flex items-center justify-center gap-2 text-bb-text-secondary py-3">
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span className="text-sm">Verificando sesión...</span>
-                        </div>
-                    ) : hasSession ? (
-                        <Button
-                            onClick={handleGoToDashboard}
-                            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl gap-2 shadow-lg transition-all active:scale-95"
-                        >
-                            Ir al Dashboard
-                            <ArrowRight size={18} />
-                        </Button>
-                    ) : (
-                        <Button
-                            onClick={handleGoToLogin}
-                            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl gap-2 shadow-lg transition-all active:scale-95"
-                        >
-                            Iniciar Sesión
-                            <LogIn size={18} />
-                        </Button>
-                    )}
+                {/* Action Buttons */}
+                <div className="pt-4 space-y-4">
+                    <button
+                        onClick={() => window.location.href = '/dashboard/store?status=' + status}
+                        className="w-full py-4 bg-white text-black hover:bg-gray-200 font-black uppercase italic tracking-wider rounded-2xl flex items-center justify-center gap-3 shadow-[0_8px_20px_-8px_rgba(255,255,255,0.2)] transition-all duration-300 hover:shadow-[0_12px_25px_-8px_rgba(255,255,255,0.3)] active:scale-[0.98]"
+                    >
+                        Ir al Dashboard
+                        <ArrowRight size={20} strokeWidth={3} />
+                    </button>
 
-                    {/* Secondary Action */}
-                    {!hasSession && (
-                        <p className="text-xs text-bb-text-secondary">
-                            ¿Ya tienes cuenta? Inicia sesión para ver tus beneficios
-                        </p>
-                    )}
+                    <button
+                        onClick={() => window.location.href = '/auth/login?redirect=/dashboard/store'}
+                        className="w-full py-4 bg-transparent border-2 border-white/5 text-gray-400 hover:text-white hover:border-white/20 font-bold rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 group"
+                    >
+                        <LogIn size={18} className="group-hover:-translate-x-1 transition-transform" />
+                        Acceder a mi Cuenta
+                    </button>
                 </div>
             </div>
 
-            {/* Footer Branding */}
-            <div className="mt-8 opacity-30">
-                <p className="text-[10px] text-bb-text-secondary font-bold uppercase tracking-[0.2em]">
-                    CampusLink Secure Checkout
+            {/* Premium Footer */}
+            <div className="mt-12 text-center space-y-2 opacity-40 hover:opacity-100 transition-opacity duration-500">
+                <p className="text-[10px] text-white font-black uppercase tracking-[0.4em] italic">
+                    CampusLink <span className="text-blue-500">Secure</span>
                 </p>
+                <div className="h-[1px] w-8 bg-blue-500/50 mx-auto" />
             </div>
         </div>
-    );
-}
-
-export default function CheckoutResultPage() {
-    return (
-        <Suspense fallback={
-            <div className="min-h-screen bg-bb-dark flex items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-                    <p className="text-bb-text-secondary text-sm">Cargando resultado...</p>
-                </div>
-            </div>
-        }>
-            <CheckoutResultContent />
-        </Suspense>
     );
 }
