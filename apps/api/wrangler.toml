@@ -6,6 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 ALLOWED_ORIGIN = "https://campuslink.pages.dev"
 SUPABASE_URL = "https://mevfhlhwrrkbhppgeyaj.supabase.co"
+WEBHOOK_URL_BASE = "https://campuslink-api.cajaupazul.workers.dev"
 
 [[r2_buckets]]
 binding = "COURSE_MATERIALS"

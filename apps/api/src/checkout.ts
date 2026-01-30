@@ -16,6 +16,7 @@ export const checkout = new Hono<{ Bindings: Env }>()
 checkout.post('/', authMiddleware, async (c) => {
     const user = (c as any).get('user')
     const body = await c.req.json()
+    const apiBase = c.env.WEBHOOK_URL_BASE || 'https://campuslink-api.cajaupazul.workers.dev'
 
     if (!user) return c.json({ error: 'Unauthorized' }, 401)
 
@@ -31,23 +32,23 @@ checkout.post('/', authMiddleware, async (c) => {
             body: JSON.stringify({
                 items: body.items,
                 back_urls: {
-                    success: 'https://campuslink.pages.dev/pago-exitoso.html',
-                    failure: 'https://campuslink.pages.dev/failure',
-                    pending: 'https://campuslink.pages.dev/pago-exitoso.html',
+                    // WE REDIRECT TO API WORKER FIRST TO STRIP MP PARAMETERS AND AVOID 522
+                    success: `${apiBase}/checkout/success`,
+                    failure: 'https://campuslink.pages.dev/dashboard/store?status=failure',
+                    pending: `${apiBase}/checkout/pending`,
                 },
                 auto_return: 'approved',
                 payment_methods: {
                     installments: 1,
                     default_installments: 1,
+                    // REMOVED EXCLUSIONS TO RESTORE YAPE/PLIN/DEBIT
                     excluded_payment_types: [
-                        { id: "ticket" },
-                        { id: "atm" },
-                        { id: "debit_card" } // Opcional: restringir a crédito para asegurar 1 cuota si MP web falla
+                        { id: "ticket" } // Solo excluimos efectivo por agencia para rapidez
                     ]
                 },
                 // Crucial for Webhook: Pass User ID
                 external_reference: `user_id:${user.id}|timestamp:${Date.now()}`,
-                notification_url: `${c.env.WEBHOOK_URL_BASE || 'https://campuslink-api.cajaupazul.workers.dev'}/checkout/webhook`,
+                notification_url: `${apiBase}/checkout/webhook`,
                 binary_mode: true,
                 expires: false
             }),
@@ -64,6 +65,16 @@ checkout.post('/', authMiddleware, async (c) => {
     return c.json({
         init_point: data.init_point,
     })
+})
+
+// 2. Success/Pending Redirect Handlers (To avoid 522 on main domain)
+checkout.get('/success', (c) => {
+    // This is ultra-lightweight and happens on the API worker
+    return c.redirect('https://campuslink.pages.dev/dashboard/store?status=success')
+})
+
+checkout.get('/pending', (c) => {
+    return c.redirect('https://campuslink.pages.dev/dashboard/store?status=pending')
 })
 
 // 2. Webhook Handler (Public but validated by MP Token)
