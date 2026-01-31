@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -86,12 +86,15 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
         </div>
     );
 
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+
     return (
         <div
             className="w-full h-[600px] bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 relative group"
             onContextMenu={(e) => { e.preventDefault(); return false; }}
         >
             <iframe
+                ref={iframeRef}
                 src={iframeSrc || ''}
                 width="100%"
                 height="100%"
@@ -102,12 +105,23 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
                 allowFullScreen
             />
 
-            {/* Capa de protección invisible para evitar click-jackings o interacciones no deseadas fuera del slide */}
-            {/* Barra superior protectora (Bloquea menú de 'Guardar una copia' etc) */}
-            <div className="absolute top-0 w-full h-14 bg-transparent z-10" onContextMenu={(e) => { e.preventDefault(); return false; }} />
-
-            {/* Barra inferior protectora (Bloquea botones de navegación externos y logos de MS) */}
-            <div className="absolute bottom-0 w-full h-12 bg-transparent z-10" onContextMenu={(e) => { e.preventDefault(); return false; }} />
+            {/* ESCUDO INTEGRAL (Full Shield) */}
+            {/* Cubre TODO el iframe para interceptar el click derecho (Context Menu) */}
+            {/* Al hacer click izquierdo, intentamos pasar el foco al iframe para permitir navegación por teclado */}
+            <div
+                className="absolute inset-0 z-10 bg-transparent cursor-default"
+                onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }}
+                onClick={() => {
+                    // Intentar dar foco al iframe para que funcionen las flechas del teclado
+                    if (iframeRef.current) {
+                        iframeRef.current.focus();
+                    }
+                }}
+            />
 
             <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-[10px] px-2 py-1 rounded pointer-events-none">
                 Vista Segura R2
