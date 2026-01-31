@@ -492,7 +492,7 @@ function StoreContent() {
                                             )}
                                         </div>
 
-                                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                                             {categoryItems.map((item) => {
                                                 const isOwned = userInventory.includes(item.id);
 
@@ -581,7 +581,7 @@ function StoreContent() {
                                         </div>
                                         <h2 className="text-xl sm:text-3xl font-bold text-bb-text">Otros Artículos</h2>
                                     </div>
-                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                                         {shopItems.filter(item => !item.category_id).map((item) => {
                                             const isOwned = userInventory.includes(item.id);
 

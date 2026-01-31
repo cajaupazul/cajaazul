@@ -87,6 +87,7 @@ export type ShopItem = {
     profile: { scale: number; x: number; y: number };
     card: { scale: number; x: number; y: number };
     navbar: { scale: number; x: number; y: number };
+    preview: { scale: number; x: number; y: number };
   } | null;
   is_active: boolean;
   created_at: string;

@@ -89,7 +89,10 @@ export default function PreviewModal({
                                         avatarUrl={profile?.avatar_url}
                                         name={profile?.nombre}
                                         frameUrl={item.image_url}
-                                        // Assume default scale for preview, or use item settings if available in future
+                                        // Use specific preview settings if available, otherwise default
+                                        frameScale={item.frame_settings?.preview?.scale ?? 1.0}
+                                        offsetX={item.frame_settings?.preview?.x ?? 0}
+                                        offsetY={item.frame_settings?.preview?.y ?? 0}
                                         className="ring-4 ring-[#25262b] rounded-full bg-[#25262b]"
                                     />
                                     <div className="mb-2">
@@ -118,8 +121,8 @@ export default function PreviewModal({
                                 onClick={() => onBuy(item)}
                                 disabled={isOwned || loading || (!isOwned && !canAfford)}
                                 className={`w-full h-14 text-lg font-bold rounded-xl shadow-lg transition-all ${isOwned
-                                        ? 'bg-green-500/20 text-green-500 border border-green-500/50 hover:bg-green-500/30'
-                                        : 'bg-[#ffc400] hover:bg-[#ffb300] text-black'
+                                    ? 'bg-green-500/20 text-green-500 border border-green-500/50 hover:bg-green-500/30'
+                                    : 'bg-[#ffc400] hover:bg-[#ffb300] text-black'
                                     }`}
                             >
                                 {loading ? (

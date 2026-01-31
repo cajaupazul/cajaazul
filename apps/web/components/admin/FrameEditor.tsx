@@ -22,6 +22,7 @@ const CONTEXTS = [
     { key: 'profile', label: 'Perfil (Grande)', size: 140 as const },
     { key: 'card', label: 'Card (Mediano)', size: 96 as const },
     { key: 'navbar', label: 'Navbar (Pequeño)', size: 56 as const },
+    { key: 'preview', label: 'Preview (Modal)', size: 80 as const }, // Matches PreviewModal size
 ];
 
 const DEMO_AVATAR = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Demo';
@@ -32,6 +33,7 @@ export function FrameEditor({ frameImageUrl, onSave, initialSettings }: FrameEdi
             profile: { scale: 1.0, x: 0, y: 0 },
             card: { scale: 1.0, x: 0, y: 0 },
             navbar: { scale: 1.0, x: 0, y: 0 },
+            preview: { scale: 1.0, x: 0, y: 0 },
         }
     );
 
@@ -45,7 +47,7 @@ export function FrameEditor({ frameImageUrl, onSave, initialSettings }: FrameEdi
     return (
         <div className="space-y-8">
             {/* Live Previews */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
                 {CONTEXTS.map((ctx) => (
                     <div key={ctx.key} className="flex flex-col items-center gap-4 p-6 bg-bb-sidebar/30 rounded-2xl border border-bb-border">
                         <h3 className="text-sm font-bold text-bb-text uppercase tracking-wider">{ctx.label}</h3>
@@ -127,6 +129,7 @@ export function FrameEditor({ frameImageUrl, onSave, initialSettings }: FrameEdi
                             profile: { scale: 1.0, x: 0, y: 0 },
                             card: { scale: 1.0, x: 0, y: 0 },
                             navbar: { scale: 1.0, x: 0, y: 0 },
+                            preview: { scale: 1.0, x: 0, y: 0 },
                         });
                     }}
                 >
