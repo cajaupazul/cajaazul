@@ -87,7 +87,10 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
     );
 
     return (
-        <div className="w-full h-[600px] bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 relative group">
+        <div
+            className="w-full h-[600px] bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 relative group"
+            onContextMenu={(e) => { e.preventDefault(); return false; }}
+        >
             <iframe
                 src={iframeSrc || ''}
                 width="100%"
@@ -100,10 +103,11 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
             />
 
             {/* Capa de protección invisible para evitar click-jackings o interacciones no deseadas fuera del slide */}
-            {/* Barra superior protectora */}
-            <div className="absolute top-0 w-full h-10 bg-transparent z-10" />
-            {/* Barra inferior protectora (donde suelen estar los logos de MS) */}
-            <div className="absolute bottom-0 w-full h-6 bg-transparent z-10" />
+            {/* Barra superior protectora (Bloquea menú de 'Guardar una copia' etc) */}
+            <div className="absolute top-0 w-full h-14 bg-transparent z-10" onContextMenu={(e) => { e.preventDefault(); return false; }} />
+
+            {/* Barra inferior protectora (Bloquea botones de navegación externos y logos de MS) */}
+            <div className="absolute bottom-0 w-full h-12 bg-transparent z-10" onContextMenu={(e) => { e.preventDefault(); return false; }} />
 
             <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-[10px] px-2 py-1 rounded pointer-events-none">
                 Vista Segura R2
