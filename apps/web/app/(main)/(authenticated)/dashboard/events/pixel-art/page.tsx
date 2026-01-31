@@ -10,6 +10,8 @@ import {
   Minus,
   Share2,
 } from 'lucide-react';
+import { supabase, ShopItem, getStorageUrl } from '@/lib/supabase';
+import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 
 const GRID_SIZE = 32;
 const CELL_SIZE = 20;
@@ -24,6 +26,23 @@ export default function EventosPixelArtPage() {
   const { profile } = useProfile();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [grid, setGrid] = useState(Array(GRID_SIZE * GRID_SIZE).fill('#FFFFFF'));
+  const [equippedFrame, setEquippedFrame] = useState<ShopItem | null>(null);
+
+  useEffect(() => {
+    const fetchEquippedFrame = async () => {
+      if (!profile?.active_frame_key) {
+        setEquippedFrame(null);
+        return;
+      }
+      const { data } = await supabase
+        .from('shop_items')
+        .select('*')
+        .eq('frame_key', profile.active_frame_key)
+        .single();
+      if (data) setEquippedFrame(data);
+    };
+    fetchEquippedFrame();
+  }, [profile?.active_frame_key]);
   const [selectedColor, setSelectedColor] = useState('#000000');
   const [isDrawing, setIsDrawing] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -131,9 +150,30 @@ export default function EventosPixelArtPage() {
     <div className="min-h-screen bg-bb-dark p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Pixel Art Event</h1>
-          <p className="text-gray-400">¡Crea tu propia obra maestra de píxeles! Colabora con otros estudiantes en este evento interactivo.</p>
+        <div className="mb-8 flex flex-col md:flex-row justify-between items-start gap-4">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">Pixel Art Event</h1>
+            <p className="text-gray-400">¡Crea tu propia obra maestra de píxeles! Colabora con otros estudiantes en este evento interactivo.</p>
+          </div>
+
+          {/* User Avatar Badge */}
+          {profile && (
+            <div className="flex items-center gap-3 bg-bb-card border border-bb-border rounded-xl p-2 pr-4 shadow-lg shrink-0">
+              <AvatarWithFrame
+                size={48}
+                avatarUrl={getStorageUrl(profile?.avatar_url)}
+                frameUrl={equippedFrame?.image_url}
+                frameScale={equippedFrame?.frame_settings?.navbar?.scale || 1}
+                offsetX={equippedFrame?.frame_settings?.navbar?.x || 0}
+                offsetY={equippedFrame?.frame_settings?.navbar?.y || 0}
+                name={profile?.nombre}
+              />
+              <div className="flex flex-col">
+                <span className="font-bold text-white text-sm">{profile.nombre}</span>
+                <span className="text-xs text-gray-400">Creador</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">

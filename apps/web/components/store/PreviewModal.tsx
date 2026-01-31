@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ShopItem } from '@/lib/supabase';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
@@ -34,6 +34,8 @@ export default function PreviewModal({
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-4xl p-0 overflow-hidden bg-[#1a1b1e] border-[#2c2e33] text-white rounded-3xl shadow-2xl">
+                <DialogTitle className="sr-only">Vista Previa del Artículo</DialogTitle>
+                <DialogDescription className="sr-only">Detalles y vista previa del artículo seleccionado: {item.name}</DialogDescription>
                 <div className="flex flex-col md:flex-row h-full max-h-[85vh]">
 
                     {/* LEFT SIDE: Item Showcase */}
@@ -76,7 +78,7 @@ export default function PreviewModal({
 
                         {/* Preview Box */}
                         <div className="flex-1 flex flex-col items-center justify-center min-h-[200px] bg-[#141517] rounded-2xl border border-[#2c2e33] p-6 mb-8 relative group">
-                            <div className="absolute inset-0 bg-[url('/grid-pattern.png')] opacity-5 pointer-events-none" />
+                            <div className="absolute inset-0 opacity-5 pointer-events-none bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
 
                             {/* Profile Card Mockup */}
                             <div className="w-full max-w-[280px] bg-[#25262b] rounded-xl p-4 shadow-xl border border-[#2c2e33] relative overflow-hidden">
