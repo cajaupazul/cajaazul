@@ -1,11 +1,12 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getStorageUrl, ShopItem } from '@/lib/supabase';
 import { Palette, COLOR_PALETTE, COLOR_MAP } from './palette';
 import { NavigationControls } from './overlay-controls';
 import { Upload, X, Grid as GridIcon, Lock, Unlock, Image as ImageIcon, Trash2, Move, Eraser, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 
 
 const GRID_WIDTH = 1000;
@@ -41,9 +42,10 @@ interface PixelCanvasProps {
     eventId: string;
     onClose: () => void;
     userProfile?: any;
+    equippedFrame?: ShopItem | null;
 }
 
-export default function PixelCanvas({ eventId, onClose, userProfile }: PixelCanvasProps) {
+export default function PixelCanvas({ eventId, onClose, userProfile, equippedFrame }: PixelCanvasProps) {
     const displayCanvasRef = useRef<HTMLCanvasElement>(null);
     const dataCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -606,6 +608,26 @@ export default function PixelCanvas({ eventId, onClose, userProfile }: PixelCanv
                             <span className="font-bold text-[10px] md:text-sm text-slate-700">{onlineUsers} creando</span>
                         </div>
                     </div>
+                </div>
+
+                {/* Top Right User Panel */}
+                <div className="absolute top-2 md:top-4 right-2 md:right-4 z-10 pointer-events-auto flex items-center gap-2 md:gap-3">
+                    {userProfile && (
+                        <div className="hidden md:flex bg-white/90 backdrop-blur-md px-1.5 py-1.5 md:pl-2 md:pr-4 rounded-full shadow-xl border border-white/20 items-center gap-3">
+                            <div className="relative">
+                                <AvatarWithFrame
+                                    size={36}
+                                    avatarUrl={getStorageUrl(userProfile.avatar_url)}
+                                    frameUrl={equippedFrame?.image_url}
+                                    frameScale={equippedFrame?.frame_settings?.navbar?.scale || 1}
+                                    offsetX={equippedFrame?.frame_settings?.navbar?.x || 0}
+                                    offsetY={equippedFrame?.frame_settings?.navbar?.y || 0}
+                                    name={userProfile.nombre}
+                                />
+                            </div>
+                            <span className="text-sm font-semibold text-slate-800">{userProfile.nombre?.split(' ')[0]}</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Internal Avatar/Close Removed - Handled by Parent Page */}
