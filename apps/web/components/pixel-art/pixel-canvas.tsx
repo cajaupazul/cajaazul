@@ -380,8 +380,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
                 // Draw Pending Pixels (Real Content Preview)
                 // We need to draw the actual COLORED pixel here so the user sees what they are drafting
-                if (pendingPixels.size > 0) {
-                    pendingPixels.forEach((colorIndex, key) => {
+                if (pendingPixelsRef.current.size > 0) {
+                    pendingPixelsRef.current.forEach((colorIndex, key) => {
                         const [pxStr, pyStr] = key.split(',');
                         const x = parseInt(pxStr);
                         const y = parseInt(pyStr);
@@ -411,12 +411,12 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 }
 
                 // Draw Pending Pixels Highlights (The "Contour" User Requested)
-                if (pendingPixels.size > 0) {
+                if (pendingPixelsRef.current.size > 0) {
                     ctx.save();
                     ctx.lineWidth = 1.5 / scale;
                     ctx.lineCap = 'square';
 
-                    pendingPixels.forEach((colorIndex, key) => {
+                    pendingPixelsRef.current.forEach((colorIndex, key) => {
                         const [pxStr, pyStr] = key.split(',');
                         const x = parseInt(pxStr);
                         const y = parseInt(pyStr);
@@ -462,15 +462,17 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     const { x, y } = cursorGridPos;
                     if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
                         // Don't draw cursor reticle if we already have a pending pixel there (optional, but cleaner)
-                        if (!pendingPixels.has(`${x},${y}`)) {
+                        if (!pendingPixelsRef.current.has(`${x},${y}`)) {
                             ctx.save();
                             // ... existing reticle code ...
                             // Reticle Style (Corner Brackets)
                             const px = pixelStartX + x;
                             const py = pixelStartY + y;
 
-                            ctx.strokeStyle = 'rgba(0,0,0,0.5)'; // Lighter for cursor, darker for confirmed drafts
+                            ctx.strokeStyle = '#FFFFFF'; // High contrast white for cursor
                             ctx.lineWidth = 1.5 / scale;
+                            ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                            ctx.shadowBlur = 2;
                             ctx.lineCap = 'square';
 
                             const gap = 0.1;
@@ -494,6 +496,11 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                             ctx.lineTo(px + gap, py + 1 - len);
 
                             ctx.stroke();
+
+                            // Subtle fill
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                            ctx.fillRect(px, py, 1, 1);
+
                             ctx.restore();
                         }
                     }
@@ -681,36 +688,24 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         if (colorIndex === undefined) return;
 
         // Draft Logic: Update Pending Pixels Map
-        // Toggle: if same color exists, remove it? Or just overwrite.
-        // Let's overwrite for now, or toggle if clicking exactly same pixel/color? 
-        // User wants to click to "mark" it.
+        const newMap = new Map(pendingPixelsRef.current);
+        const key = `${x},${y}`;
 
-        setPendingPixels(prev => {
-            const newMap = new Map(prev);
-            const key = `${x},${y}`;
+        // If clicking the same pixel with same color, remove it (undo)
+        // If clicking with different color, update it
+        if (newMap.get(key) === colorIndex) {
+            newMap.delete(key);
+        } else {
+            newMap.set(key, colorIndex);
+            playPaintSound(); // Play POP sound
+        }
 
-            // If clicking the same pixel with same color, remove it (undo)
-            // If clicking with different color, update it
-            if (newMap.get(key) === colorIndex) {
-                newMap.delete(key);
-                // Also revert visual change in local canvas? 
-                // We actually need to re-render the underlying board pixel.
-                // For simplicity, we will just update the visual canvas 
-                // BUT wait, we need to know what the OLD pixel was to revert visually.
-                // The `render` loop draws `dataCanvas` then `pending pixels`. 
-                // So removing from `pendingPixels` automatically "reverts" visual to `dataCanvas`.
-            } else {
-                newMap.set(key, colorIndex);
-            }
-            return newMap;
-        });
+        // Sync State (for reference/reactivity) AND Ref (for instant render)
+        pendingPixelsRef.current = newMap;
+        setPendingPixels(newMap);
 
-        // We DON'T call updateLocalPixel yet. That happens on confirm.
-        // But we DO want to see the color.
-        // The render loop needs to draw the pending pixels ON TOP.
-        // Actually `updateLocalPixel` writes to `dataCanvas`. 
-        // If we want to see it, we should add drawing of pending pixels in `render`.
-        // I Added that in the previous chunk.
+        // Force immediate redraw in next loop
+        needsRedrawRef.current = true;
     };
 
     const confirmPaint = async () => {
