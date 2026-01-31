@@ -223,19 +223,6 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             className="w-full h-full flex flex-col bg-gray-50 min-h-[500px] overflow-hidden rounded-lg relative"
             onContextMenu={(e) => { e.preventDefault(); return false; }}
         >
-            {/* Toolbar for switching viewers */}
-            {(fileType === 'docx' || fileType === 'xlsx') && (
-                <div className="bg-white border-b px-4 py-2 flex justify-between items-center text-xs">
-                    <span className="text-gray-500">Visualizando: {fileName}</span>
-                    <button
-                        onClick={() => { setUseExternalViewer(!useExternalViewer); loadContent(); }}
-                        className="text-blue-600 font-medium hover:text-blue-800"
-                    >
-                        {useExternalViewer ? "⚡ Cambiar a Vista Rápida" : "🌐 Cambiar a Visor Completo (MS Office)"}
-                    </button>
-                </div>
-            )}
-
             {/* Prevention Overlay (Anti-Copy) */}
             <div className="absolute inset-0 z-50 pointer-events-none mix-blend-multiply" />
 
