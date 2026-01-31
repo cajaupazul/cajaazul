@@ -17,6 +17,12 @@ const storageRouter = new Hono<{ Bindings: Bindings }>()
 
 // Middleware de autenticación solo para buckets privados
 const privateAuthMiddleware = async (c: any, next: any) => {
+    // EXCEPTION: Public stream endpoint validates its own token
+    if (c.req.path.endsWith('/public-stream')) {
+        await next()
+        return
+    }
+
     const bucketName = c.req.query('bucket') || 'course-materials'
 
     // Solo aplicar auth a buckets privados
@@ -138,7 +144,7 @@ storageRouter.get('/preview-url', async (c) => {
 
     // 2. Construir URL pública apuntando a este mismo worker
     const url = new URL(c.req.url)
-    const publicStreamUrl = `${url.origin}/storage/public-stream?token=${token}`
+    const publicStreamUrl = `${url.origin}/storage/public-stream?token=${encodeURIComponent(token)}`
 
     return c.json({
         url: publicStreamUrl,
