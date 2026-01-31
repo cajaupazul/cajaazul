@@ -62,6 +62,13 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const [isPanning, setIsPanning] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState(1);
 
+    // Interaction Refs for Drag vs Click detection
+    const dragStartRef = useRef<{ x: number, y: number } | null>(null);
+    const isDraggingRef = useRef(false);
+
+    // Cursor Tracking for Highlight
+    const [cursorGridPos, setCursorGridPos] = useState<{ x: number, y: number } | null>(null);
+
     // Guidance State
     const [guidanceImage, setGuidanceImage] = useState<HTMLImageElement | null>(null);
     const [guidanceOpacity, setGuidanceOpacity] = useState(0.5);
@@ -405,46 +412,26 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             lastMouseRef.current = { x: e.clientX, y: e.clientY };
             return;
         }
-        const canPaint = selectedColor !== null || isSmartPicking;
-        if (e.button === 1 || e.button === 2 || !canPaint || e.ctrlKey || isPanning) {
-            setIsPanning(true);
-            lastMouseRef.current = { x: e.clientX, y: e.clientY };
-            return;
-        }
-        paintPixel(e.clientX, e.clientY);
+
+        // Start Drag Tracking
+        dragStartRef.current = { x: e.clientX, y: e.clientY };
+        isDraggingRef.current = false;
+        lastMouseRef.current = { x: e.clientX, y: e.clientY };
+
+        // Don't paint immediately on mouse down anymore
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
         const { x, y, worldX, worldY } = screenToWorld(e.clientX, e.clientY);
+        setCursorGridPos({ x, y });
 
-        if (guidanceImage && !isEditingGuidance && !isPanning && !e.buttons) {
-            const gWidth = guidanceImage.naturalWidth * guidanceState.scale;
-            const gHeight = guidanceImage.naturalHeight * guidanceState.scale;
-            const gLeft = guidanceState.x - gWidth / 2;
-            const gTop = guidanceState.y - gHeight / 2;
-            const relX = worldX - gLeft;
-            const relY = worldY - gTop;
-
-            if (relX >= 0 && relX <= gWidth && relY >= 0 && relY <= gHeight) {
-                const srcCanvas = getProcessedGuidanceCanvas();
-                if (srcCanvas instanceof HTMLCanvasElement) {
-                    const ctx = srcCanvas.getContext('2d', { willReadFrequently: true });
-                    if (ctx) {
-                        const imgX = Math.floor(relX / guidanceState.scale);
-                        const imgY = Math.floor(relY / guidanceState.scale);
-                        const pixel = ctx.getImageData(imgX, imgY, 1, 1).data;
-                        if (pixel[3] > 10) {
-                            setTooltipData({ x: e.clientX, y: e.clientY, color: `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})` });
-                        } else {
-                            setTooltipData(null);
-                        }
-                    }
-                }
-            } else {
-                setTooltipData(null);
+        // Determine if dragging
+        if (e.buttons === 1 && dragStartRef.current) {
+            const dist = Math.hypot(e.clientX - dragStartRef.current.x, e.clientY - dragStartRef.current.y);
+            if (dist > 5) {
+                isDraggingRef.current = true;
+                setIsPanning(true);
             }
-        } else if (tooltipData) {
-            setTooltipData(null);
         }
 
         if (isEditingGuidance && guidanceImage && e.buttons === 1 && lastMouseRef.current) {
@@ -455,12 +442,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             return;
         }
 
-        // Just update tooltipData for cursor tracking even without guidance
-        if (isPaintMode) {
-            setTooltipData({ x: e.clientX, y: e.clientY, color: selectedColor || '#000000' });
-        }
-
-        if (isPanning && lastMouseRef.current) {
+        // Pan Logic (Active whenever dragging, regardless of mode)
+        if (isDraggingRef.current && lastMouseRef.current) {
             const dx = e.clientX - lastMouseRef.current.x;
             const dy = e.clientY - lastMouseRef.current.y;
             setOffsetX(prev => prev + dx / scale);
@@ -469,14 +452,21 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             return;
         }
 
-        if (e.buttons === 1 && !isPanning && (selectedColor || isSmartPicking) && !isEditingGuidance) {
-            paintPixel(e.clientX, e.clientY);
-        }
+        // Just update tooltipData for colors if needed
+        if (tooltipData) setTooltipData(null);
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: React.MouseEvent) => {
         setIsPanning(false);
         lastMouseRef.current = null;
+
+        // If it was a CLICK (not a drag) AND we are in paint mode, then PAINT
+        if (!isDraggingRef.current && isPaintMode) {
+            paintPixel(e.clientX, e.clientY);
+        }
+
+        dragStartRef.current = null;
+        isDraggingRef.current = false;
     };
 
     const handleWheel = useCallback((e: WheelEvent) => {
