@@ -92,6 +92,10 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
     const lastMouseRef = useRef<{ x: number, y: number } | null>(null);
 
+    // Pending Pixels (Draft Mode)
+    // storing as a Map for easy add/remove/check: key="x,y", val=colorIndex
+    const [pendingPixels, setPendingPixels] = useState<Map<string, number>>(new Map());
+
     // Optimization Flags
     const needsRedrawRef = useRef(true);
     const isRunningRef = useRef(true);
@@ -343,6 +347,22 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     ctx.restore();
                 }
 
+                // Draw Pending Pixels (Real Content Preview)
+                // We need to draw the actual COLORED pixel here so the user sees what they are drafting
+                if (pendingPixels.size > 0) {
+                    pendingPixels.forEach((colorIndex, key) => {
+                        const [pxStr, pyStr] = key.split(',');
+                        const x = parseInt(pxStr);
+                        const y = parseInt(pyStr);
+
+                        const px = pixelStartX + x;
+                        const py = pixelStartY + y;
+
+                        ctx.fillStyle = colorIndex === ERASER_INDEX ? '#1a1a1a' : COLOR_PALETTE[colorIndex];
+                        ctx.fillRect(px, pxStr ? py : py, 1, 1);
+                    });
+                }
+
                 if (scale > 15) {
                     ctx.beginPath();
                     ctx.strokeStyle = 'rgba(255,255,255,0.05)';
@@ -359,21 +379,92 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     ctx.stroke();
                 }
 
-                // Draw Cursor Highlight (Quadrant)
-                if (tooltipData && isPaintMode) {
-                    const { x, y } = screenToWorld(tooltipData.x, tooltipData.y);
-                    if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
-                        ctx.save();
-                        ctx.strokeStyle = '#FFFFFF';
-                        ctx.lineWidth = 2 / scale;
-                        ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                        ctx.shadowBlur = 4;
-                        ctx.strokeRect(pixelStartX + x, pixelStartY + y, 1, 1);
+                // Draw Pending Pixels Highlights (The "Contour" User Requested)
+                if (pendingPixels.size > 0) {
+                    ctx.save();
+                    ctx.lineWidth = 1.5 / scale;
+                    ctx.lineCap = 'square';
 
-                        // Inner crosshair feel
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-                        ctx.fillRect(pixelStartX + x, pixelStartY + y, 1, 1);
-                        ctx.restore();
+                    pendingPixels.forEach((colorIndex, key) => {
+                        const [pxStr, pyStr] = key.split(',');
+                        const x = parseInt(pxStr);
+                        const y = parseInt(pyStr);
+
+                        const px = pixelStartX + x;
+                        const py = pixelStartY + y;
+
+                        // Draw the specific corner brackets for EACH pending pixel
+                        ctx.strokeStyle = '#000000'; // Black borders
+                        const gap = 0.1;
+                        const len = 0.3;
+
+                        ctx.beginPath();
+                        // Top Left
+                        ctx.moveTo(px + gap, py + len);
+                        ctx.lineTo(px + gap, py + gap);
+                        ctx.lineTo(px + len, py + gap);
+                        // Top Right
+                        ctx.moveTo(px + 1 - len, py + gap);
+                        ctx.lineTo(px + 1 - gap, py + gap);
+                        ctx.lineTo(px + 1 - gap, py + len);
+                        // Bottom Right
+                        ctx.moveTo(px + 1 - gap, py + 1 - len);
+                        ctx.lineTo(px + 1 - gap, py + 1 - gap);
+                        ctx.lineTo(px + 1 - len, py + 1 - gap);
+                        // Bottom Left
+                        ctx.moveTo(px + len, py + 1 - gap);
+                        ctx.lineTo(px + 1 - len, py + 1 - gap); // fix bottom line
+                        ctx.lineTo(px + gap, py + 1 - gap);
+                        ctx.lineTo(px + gap, py + 1 - len);
+                        ctx.stroke();
+
+                        // White inner contrast
+                        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                        ctx.fillRect(px, py, 1, 1);
+                    });
+                    ctx.restore();
+                }
+
+                // Draw Cursor Highlight (Quadrant) - Only if not hovering a pending pixel?
+                if (cursorGridPos && isPaintMode) {
+                    // ... existing cursor code ...
+                    const { x, y } = cursorGridPos;
+                    if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
+                        // Don't draw cursor reticle if we already have a pending pixel there (optional, but cleaner)
+                        if (!pendingPixels.has(`${x},${y}`)) {
+                            ctx.save();
+                            // ... existing reticle code ...
+                            // Reticle Style (Corner Brackets)
+                            const px = pixelStartX + x;
+                            const py = pixelStartY + y;
+
+                            ctx.strokeStyle = 'rgba(0,0,0,0.5)'; // Lighter for cursor, darker for confirmed drafts
+                            ctx.lineWidth = 1.5 / scale;
+                            ctx.lineCap = 'square';
+
+                            const gap = 0.1;
+                            const len = 0.3;
+
+                            ctx.beginPath();
+                            ctx.moveTo(px + gap, py + len);
+                            ctx.lineTo(px + gap, py + gap);
+                            ctx.lineTo(px + len, py + gap);
+
+                            ctx.moveTo(px + 1 - len, py + gap);
+                            ctx.lineTo(px + 1 - gap, py + gap);
+                            ctx.lineTo(px + 1 - gap, py + len);
+
+                            ctx.moveTo(px + 1 - gap, py + 1 - len);
+                            ctx.lineTo(px + 1 - gap, py + 1 - gap);
+                            ctx.lineTo(px + 1 - len, py + 1 - gap);
+
+                            ctx.moveTo(px + len, py + 1 - gap);
+                            ctx.lineTo(px + gap, py + 1 - gap);
+                            ctx.lineTo(px + gap, py + 1 - len);
+
+                            ctx.stroke();
+                            ctx.restore();
+                        }
                     }
                 }
 
@@ -525,7 +616,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
         let colorIndex: number | undefined;
 
+        // ... color selection logic ...
         if (isSmartPicking && guidanceImage) {
+            // ... (keep existing smart pick logic)
             const gWidth = guidanceImage.naturalWidth * guidanceState.scale;
             const gHeight = guidanceImage.naturalHeight * guidanceState.scale;
             const gLeft = guidanceState.x - gWidth / 2;
@@ -556,20 +649,69 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
         if (colorIndex === undefined) return;
 
-        const currentIndex = pixelDataRef.current[y * GRID_WIDTH + x];
-        if (colorIndex === currentIndex) return;
+        // Draft Logic: Update Pending Pixels Map
+        // Toggle: if same color exists, remove it? Or just overwrite.
+        // Let's overwrite for now, or toggle if clicking exactly same pixel/color? 
+        // User wants to click to "mark" it.
 
-        updateLocalPixel(x, y, colorIndex);
+        setPendingPixels(prev => {
+            const newMap = new Map(prev);
+            const key = `${x},${y}`;
 
-        try {
-            await supabase.from('pixel_history').insert({
+            // If clicking the same pixel with same color, remove it (undo)
+            // If clicking with different color, update it
+            if (newMap.get(key) === colorIndex) {
+                newMap.delete(key);
+                // Also revert visual change in local canvas? 
+                // We actually need to re-render the underlying board pixel.
+                // For simplicity, we will just update the visual canvas 
+                // BUT wait, we need to know what the OLD pixel was to revert visually.
+                // The `render` loop draws `dataCanvas` then `pending pixels`. 
+                // So removing from `pendingPixels` automatically "reverts" visual to `dataCanvas`.
+            } else {
+                newMap.set(key, colorIndex);
+            }
+            return newMap;
+        });
+
+        // We DON'T call updateLocalPixel yet. That happens on confirm.
+        // But we DO want to see the color.
+        // The render loop needs to draw the pending pixels ON TOP.
+        // Actually `updateLocalPixel` writes to `dataCanvas`. 
+        // If we want to see it, we should add drawing of pending pixels in `render`.
+        // I Added that in the previous chunk.
+    };
+
+    const confirmPaint = async () => {
+        if (pendingPixels.size === 0) return;
+
+        const pixelsToSave: { event_id: string, x: number, y: number, color_index: number }[] = [];
+
+        pendingPixels.forEach((colorIndex, key) => {
+            const [xStr, yStr] = key.split(',');
+            const x = parseInt(xStr);
+            const y = parseInt(yStr);
+
+            // Update local visually immediately (permanent)
+            updateLocalPixel(x, y, colorIndex);
+
+            pixelsToSave.push({
                 event_id: eventId,
                 x,
                 y,
                 color_index: colorIndex
             });
+        });
+
+        // Clear pending immediately for responsiveness
+        setPendingPixels(new Map());
+
+        try {
+            const { error } = await supabase.from('pixel_history').insert(pixelsToSave);
+            if (error) throw error;
         } catch (err) {
-            console.error("Error painting:", err);
+            console.error("Error saving batch pixels:", err);
+            // Ideally rollback local pixels here if failed, but for now keep it simple.
         }
     };
 
@@ -841,6 +983,18 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                         className="border-none bg-transparent shadow-none p-0"
                                     />
                                 </div>
+
+                                {/* Confirm Button (Only if pending pixels exist) */}
+                                {pendingPixels.size > 0 && (
+                                    <div className="absolute -top-16 left-1/2 -translate-x-1/2 animate-in zoom-in slide-in-from-bottom-4 duration-300">
+                                        <button
+                                            onClick={confirmPaint}
+                                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg px-6 py-2 rounded-full shadow-xl flex items-center gap-2 border-2 border-white/20 active:scale-95 transition-all"
+                                        >
+                                            ✏️ Pintar {pendingPixels.size}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </>
