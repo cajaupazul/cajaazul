@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import storageRouter from './storage'
 import { checkout } from './checkout'
+import shop from './shop'
 
 type Bindings = {
     ALLOWED_ORIGIN: string
@@ -52,5 +53,6 @@ app.get('/', (c) => {
 
 app.route('/storage', storageRouter)
 app.route('/checkout', checkout)
+app.route('/shop', shop)
 
 export default app
