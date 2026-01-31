@@ -21,15 +21,26 @@ checkout.post('/process', authMiddleware, async (c) => {
     const { token, issuer_id, payment_method_id, transaction_amount, installments, payer, product_id } = body;
 
     // Use product_id to verify price against DB for extra security
+    if (!c.env.SUPABASE_SERVICE_ROLE_KEY || !c.env.SUPABASE_URL) {
+        console.error('Missing Supabase Config in Worker');
+        return c.json({ error: 'Server Configuration Error: Missing DB Credentials' }, 500);
+    }
+
     const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY)
-    const { data: product } = await supabase
+
+    const { data: product, error: dbError } = await supabase
         .from('store_products')
-        .select('*') // Select all to get name/description if needed
+        .select('*')
         .eq('id', product_id)
         .single()
 
-    if (!product) {
-        return c.json({ error: 'Product not found' }, 404)
+    if (dbError || !product) {
+        console.error('DB Product Lookup Error:', dbError, 'Searched ID:', product_id);
+        return c.json({
+            error: 'Product not found',
+            details: dbError?.message || 'No data returned',
+            searched_id: product_id
+        }, 404)
     }
 
     // TRUST THE DB PRICE
