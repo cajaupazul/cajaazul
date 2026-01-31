@@ -219,7 +219,10 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
     };
 
     return (
-        <div className="w-full h-full flex flex-col bg-gray-50 min-h-[500px] overflow-hidden rounded-lg relative">
+        <div
+            className="w-full h-full flex flex-col bg-gray-50 min-h-[500px] overflow-hidden rounded-lg relative"
+            onContextMenu={(e) => { e.preventDefault(); return false; }}
+        >
             {/* Toolbar for switching viewers */}
             {(fileType === 'docx' || fileType === 'xlsx') && (
                 <div className="bg-white border-b px-4 py-2 flex justify-between items-center text-xs">

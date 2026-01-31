@@ -14,6 +14,7 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
     const [iframeSrc, setIframeSrc] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showFocusHint, setShowFocusHint] = useState(false);
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
     useEffect(() => {
@@ -70,6 +71,14 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
         if (filePath) generateSecureView();
     }, [filePath, bucket]);
 
+    // Ocultar el hint después de 2.5 segundos
+    useEffect(() => {
+        if (showFocusHint) {
+            const timer = setTimeout(() => setShowFocusHint(false), 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [showFocusHint]);
+
     if (loading) return (
         <div className="w-full h-[600px] bg-gray-50 flex flex-col items-center justify-center animate-pulse rounded-lg border border-gray-100">
             <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
@@ -105,22 +114,27 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
             />
 
             {/* ESCUDO INTEGRAL (Full Shield) */}
-            {/* Cubre TODO el iframe para interceptar el click derecho (Context Menu) */}
-            {/* Al hacer click izquierdo, intentamos pasar el foco al iframe para permitir navegación por teclado */}
             <div
                 className="absolute inset-0 z-10 bg-transparent cursor-default"
+                title="Haz click para habilitar navegación con teclado"
                 onContextMenu={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     return false;
                 }}
                 onClick={() => {
-                    // Intentar dar foco al iframe para que funcionen las flechas del teclado
                     if (iframeRef.current) {
                         iframeRef.current.focus();
+                        setShowFocusHint(true);
                     }
                 }}
             />
+
+            {/* Indicador de Foco / Guía Rápida */}
+            <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-4 py-3 rounded-lg pointer-events-none transition-opacity duration-300 z-30 flex flex-col items-center ${showFocusHint ? 'opacity-100' : 'opacity-0'}`}>
+                <span className="font-semibold text-sm mb-1">Navegación Activada</span>
+                <span className="text-xs text-gray-200">Usa las teclas ⬅️ y ➡️ para cambiar diapositivas</span>
+            </div>
 
             <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-[10px] px-2 py-1 rounded pointer-events-none">
                 Vista Segura R2
