@@ -24,17 +24,47 @@ checkout.post('/process', authMiddleware, async (c) => {
     const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY)
     const { data: product } = await supabase
         .from('store_products')
-        .select('price')
+        .select('*') // Select all to get name/description if needed
         .eq('id', product_id)
         .single()
 
-    if (!product || Math.abs(product.price - transaction_amount) > 0.01) {
-        return c.json({ error: 'Invalid transaction amount' }, 400)
+    if (!product) {
+        return c.json({ error: 'Product not found' }, 404)
     }
+
+    // TRUST THE DB PRICE
+    // We overwrite the transaction_amount with the one from the DB to ensure security.
+    const finalAmount = Number(product.price);
 
     const idempotencyKey = c.req.header('X-Idempotency-Key') || `pay_${user.id}_${Date.now()}`;
 
     try {
+        const payload = {
+            token,
+            issuer_id,
+            payment_method_id,
+            transaction_amount: finalAmount, // Use secure price
+            installments: Number(installments || 1),
+            description: `CampusLink: ${product.name}`,
+            payer: {
+                email: payer.email,
+                identification: payer.identification,
+            },
+            external_reference: `user_id:${user.id}|product_id:${product_id}|timestamp:${Date.now()}`,
+            notification_url: `${c.env.WEBHOOK_URL_BASE}/checkout/webhook`,
+            additional_info: {
+                items: [
+                    {
+                        id: product_id,
+                        title: product.name,
+                        description: product.description,
+                        quantity: 1,
+                        unit_price: finalAmount
+                    }
+                ]
+            }
+        };
+
         const response = await fetch('https://api.mercadopago.com/v1/payments', {
             method: 'POST',
             headers: {
@@ -42,20 +72,7 @@ checkout.post('/process', authMiddleware, async (c) => {
                 'Content-Type': 'application/json',
                 'X-Idempotency-Key': idempotencyKey
             },
-            body: JSON.stringify({
-                token,
-                issuer_id,
-                payment_method_id,
-                transaction_amount,
-                installments,
-                description: `CampusLink Purchase: ${product_id}`,
-                payer: {
-                    email: payer.email,
-                    identification: payer.identification,
-                },
-                external_reference: `user_id:${user.id}|product_id:${product_id}|timestamp:${Date.now()}`,
-                notification_url: `${c.env.WEBHOOK_URL_BASE}/checkout/webhook`,
-            }),
+            body: JSON.stringify(payload),
         });
 
         const result = await response.json() as any;
