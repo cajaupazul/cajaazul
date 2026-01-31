@@ -7,12 +7,77 @@ type Env = {
     MP_ACCESS_TOKEN: string
     SUPABASE_URL: string
     SUPABASE_SERVICE_ROLE_KEY: string
-    WEBHOOK_URL_BASE: string // Set this to https://campuslink-api.workers.dev
+    WEBHOOK_URL_BASE: string
 }
 
 export const checkout = new Hono<{ Bindings: Env }>()
 
-// 1. Create Preference (Authenticated)
+// 1. Process Payment (Payment Brick)
+checkout.post('/process', authMiddleware, async (c) => {
+    const user = (c as any).get('user')
+    if (!user) return c.json({ error: 'Unauthorized' }, 401)
+
+    const body = await c.req.json()
+    const { token, issuer_id, payment_method_id, transaction_amount, installments, payer, product_id } = body;
+
+    // Use product_id to verify price against DB for extra security
+    const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY)
+    const { data: product } = await supabase
+        .from('store_products')
+        .select('price')
+        .eq('id', product_id)
+        .single()
+
+    if (!product || Math.abs(product.price - transaction_amount) > 0.01) {
+        return c.json({ error: 'Invalid transaction amount' }, 400)
+    }
+
+    const idempotencyKey = c.req.header('X-Idempotency-Key') || `pay_${user.id}_${Date.now()}`;
+
+    try {
+        const response = await fetch('https://api.mercadopago.com/v1/payments', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${c.env.MP_ACCESS_TOKEN}`,
+                'Content-Type': 'application/json',
+                'X-Idempotency-Key': idempotencyKey
+            },
+            body: JSON.stringify({
+                token,
+                issuer_id,
+                payment_method_id,
+                transaction_amount,
+                installments,
+                description: `CampusLink Purchase: ${product_id}`,
+                payer: {
+                    email: payer.email,
+                    identification: payer.identification,
+                },
+                external_reference: `user_id:${user.id}|product_id:${product_id}|timestamp:${Date.now()}`,
+                notification_url: `${c.env.WEBHOOK_URL_BASE}/checkout/webhook`,
+            }),
+        });
+
+        const result = await response.json() as any;
+
+        if (!response.ok) {
+            console.error('MP Payment Error:', result);
+            return c.json({ error: result }, 500);
+        }
+
+        return c.json({
+            status: result.status,
+            status_detail: result.status_detail,
+            id: result.id,
+        });
+
+    } catch (error) {
+        console.error('Internal Processing Error:', error);
+        return c.json({ error: 'Internal Error' }, 500);
+    }
+});
+
+// 2. Legacy Preference Creator (Will be removed after migration)
 checkout.post('/', authMiddleware, async (c) => {
     const user = (c as any).get('user')
     const body = await c.req.json()
@@ -31,7 +96,6 @@ checkout.post('/', authMiddleware, async (c) => {
             body: JSON.stringify({
                 items: body.items,
                 back_urls: {
-                    // NEW: Safe public landing page (no auth guards, no SSR, no timeouts)
                     success: 'https://campuslink.pages.dev/checkout/result?status=success',
                     failure: 'https://campuslink.pages.dev/checkout/result?status=failure',
                     pending: 'https://campuslink.pages.dev/checkout/result?status=pending',
@@ -40,7 +104,6 @@ checkout.post('/', authMiddleware, async (c) => {
                 payment_methods: {
                     installments: 1,
                     default_installments: 1
-                    // REMOVED ALL EXCLUSIONS TO RESTORE YAPE/PLIN
                 },
                 external_reference: `user_id:${user.id}|timestamp:${Date.now()}`,
                 notification_url: `${apiBase}/checkout/webhook`,
@@ -51,82 +114,24 @@ checkout.post('/', authMiddleware, async (c) => {
     )
 
     const data = await response.json() as any
+    if (!response.ok) return c.json({ error: data }, 500)
 
-    if (!response.ok) {
-        return c.json({ error: data }, 500)
-    }
-
-    return c.json({
-        init_point: data.init_point,
-    })
+    return c.json({ init_point: data.init_point })
 })
 
-// 2. Stable HTML Landing Handlers (To avoid 522 on main domain during MP redirect)
-const getSuccessHTML = (status: string) => `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>¡Pago Exitoso! - CampusLink</title>
-    <style>
-        body { font-family: sans-serif; background: #0b0e14; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
-        .card { background: #151921; padding: 2.5rem; border-radius: 2rem; border: 1px solid #1e242e; box-shadow: 0 20px 50px rgba(0,0,0,0.5); max-width: 400px; width: 90%; }
-        h1 { color: #22c55e; margin: 0 0 1rem; font-size: 1.8rem; }
-        p { color: #94a3b8; font-size: 1.1rem; line-height: 1.5; margin-bottom: 2rem; }
-        .btn { background: #3b82f6; color: white; text-decoration: none; padding: 1rem 2rem; border-radius: 1rem; font-weight: bold; display: inline-block; transition: transform 0.2s; }
-        .btn:active { transform: scale(0.95); }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h1>¡Pago ${status === 'success' ? 'Exitoso' : 'Pendiente'}!</h1>
-        <p>Tu transacción ha sido procesada. Ya puedes volver a la aplicación para ver tus beneficios.</p>
-        <a href="https://campuslink.pages.dev/dashboard/store?status=${status}" class="btn">Volver a CampusLink</a>
-    </div>
-</body>
-</html>
-`;
-
-// 2. Client-Side Confirmation Endpoint (Asynchronous Verification)
-checkout.get('/confirm', async (c) => {
-    const paymentId = c.req.query('id')
-    if (!paymentId) return c.json({ error: 'Missing payment ID' }, 400)
-
-    try {
-        const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-            headers: { Authorization: `Bearer ${c.env.MP_ACCESS_TOKEN}` }
-        })
-
-        if (!mpRes.ok) return c.json({ error: 'MP Verification Failed' }, mpRes.status)
-
-        const payment = await mpRes.json() as any
-        return c.json({
-            status: payment.status,
-            status_detail: payment.status_detail,
-            id: payment.id,
-            external_reference: payment.external_reference
-        })
-    } catch (err) {
-        return c.json({ error: 'Internal Verification Error' }, 500)
-    }
-})
-
-// 2. Webhook Handler (Public but validated by MP Token)
+// 3. Webhook Handler
 checkout.post('/webhook', async (c) => {
     const body = await c.req.json()
     const { action, data, type } = body
 
-    // We only care about payment events
-    if (action !== 'payment.created' && type !== 'payment') {
+    if (action !== 'payment.created' && type !== 'payment' && action !== 'payment.updated') {
         return c.json({ received: true }, 200)
     }
 
-    const paymentId = data.id
+    const paymentId = data?.id || body.data?.id
     if (!paymentId) return c.json({ error: 'No ID' }, 400)
 
     try {
-        // Verify payment status with Mercado Pago
         const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
             headers: { Authorization: `Bearer ${c.env.MP_ACCESS_TOKEN}` }
         })
@@ -135,33 +140,44 @@ checkout.post('/webhook', async (c) => {
         if (payment.status === 'approved') {
             const externalRef = payment.external_reference
             if (externalRef && externalRef.startsWith('user_id:')) {
-                const userId = externalRef.split('|')[0].replace('user_id:', '')
+                const parts = externalRef.split('|')
+                const userId = parts[0].replace('user_id:', '')
+                const productId = parts[1]?.startsWith('product_id:') ? parts[1].replace('product_id:', '') : null
 
-                // Extract amount from items or total_paid_amount
-                // For now, let's look at the items to see what was bought
-                const firstItem = payment.additional_info?.items?.[0] || {}
-                const title = firstItem.title || ''
-
-                // Credit logic based on title or amount
                 const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY)
 
-                if (title.toLowerCase().includes('monedas')) {
-                    // Example: "Paquete 500 Monedas"
-                    const coins = parseInt(title.match(/\d+/)?.[0] || '0')
-                    if (coins > 0) {
+                // Get product details if we have productId, otherwise fallback to title
+                let productDetails = null
+                if (productId) {
+                    const { data } = await supabase.from('store_products').select('*').eq('id', productId).single()
+                    productDetails = data
+                }
+
+                const title = payment.description || payment.additional_info?.items?.[0]?.title || ''
+                const amount = payment.transaction_amount
+
+                if (productDetails) {
+                    if (productDetails.type === 'coins') {
                         const { data: profile } = await supabase.from('profiles').select('monedas').eq('id', userId).single()
-                        const newTotal = (profile?.monedas || 0) + coins
-                        await supabase.from('profiles').update({ monedas: newTotal }).eq('id', userId)
+                        await supabase.from('profiles').update({ monedas: (profile?.monedas || 0) + productDetails.amount }).eq('id', userId)
+                    } else if (productDetails.type === 'vip') {
+                        const expiresAt = new Date()
+                        expiresAt.setDate(expiresAt.getDate() + (productDetails.amount || 30))
+                        await supabase.from('profiles').update({ es_vip: true, vip_hasta: expiresAt.toISOString() }).eq('id', userId)
                     }
-                } else if (title.toLowerCase().includes('vip')) {
-                    // Example: "Suscripción VIP"
-                    const days = 30 // Hardcoded or extracted
-                    const expiresAt = new Date()
-                    expiresAt.setDate(expiresAt.getDate() + days)
-                    await supabase.from('profiles').update({
-                        es_vip: true,
-                        vip_hasta: expiresAt.toISOString()
-                    }).eq('id', userId)
+                } else {
+                    // Fallback logic for legacy or missing product_id
+                    if (title.toLowerCase().includes('monedas')) {
+                        const coins = parseInt(title.match(/\d+/)?.[0] || '0')
+                        if (coins > 0) {
+                            const { data: profile } = await supabase.from('profiles').select('monedas').eq('id', userId).single()
+                            await supabase.from('profiles').update({ monedas: (profile?.monedas || 0) + coins }).eq('id', userId)
+                        }
+                    } else if (title.toLowerCase().includes('vip')) {
+                        const expiresAt = new Date()
+                        expiresAt.setDate(expiresAt.getDate() + 30)
+                        await supabase.from('profiles').update({ es_vip: true, vip_hasta: expiresAt.toISOString() }).eq('id', userId)
+                    }
                 }
             }
         }

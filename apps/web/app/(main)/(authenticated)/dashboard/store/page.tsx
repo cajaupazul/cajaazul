@@ -21,6 +21,7 @@ import { useProfile } from '@/lib/profile-context';
 import { apiFetch } from '@/lib/api';
 import { useSearchParams } from 'next/navigation';
 import { supabase, ShopItem, ShopCategory } from '@/lib/supabase';
+import PaymentModal from '@/components/store/PaymentModal';
 
 interface StoreProduct {
     id: string;
@@ -96,8 +97,10 @@ function StoreContent() {
                 .eq('active', true);
 
             if (!prodError && prodData) {
-                setCoinPackages(prodData.filter(p => p.type === 'coins').sort((a, b) => a.price - b.price));
-                setVipProduct(prodData.find(p => p.type === 'vip') || null);
+                // Cast to StoreProduct[] to ensure types
+                const products = prodData as unknown as StoreProduct[];
+                setCoinPackages(products.filter(p => p.type === 'coins').sort((a, b) => a.price - b.price));
+                setVipProduct(products.find(p => p.type === 'vip') || null);
             }
         };
 
@@ -156,41 +159,39 @@ function StoreContent() {
         }
     };
 
-    const handlePurchase = async (productId: string) => {
-        setItemsLoading(prev => ({ ...prev, [productId]: true }));
-        try {
-            // Find the selected package
-            const selectedPackage = coinPackages.find(p => p.id === productId) || vipProduct;
-            if (!selectedPackage) {
-                console.error('Product not found');
-                return;
-            }
+    // Payment Modal State
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<{
+        id: string;
+        name: string;
+        price: number;
+        type: 'vip' | 'coins' | 'item';
+    } | null>(null);
 
-            // Call Worker API to create MercadoPago preference
-            const { init_point } = await apiFetch('/checkout', {
-                method: 'POST',
-                body: JSON.stringify({
-                    items: [
-                        {
-                            title: `${selectedPackage.name} (${new Date().toLocaleTimeString()})`,
-                            quantity: 1,
-                            unit_price: selectedPackage.price,
-                            id: `${selectedPackage.id}-${Date.now()}`
-                        }
-                    ]
-                })
-            });
+    const handlePurchase = (productId: string) => {
+        const selectedPackage = coinPackages.find(p => p.id === productId) || vipProduct;
+        if (!selectedPackage) return;
 
-            // Redirect user to MercadoPago checkout
-            if (init_point) {
-                window.location.href = init_point;
-            }
-        } catch (error) {
-            console.error('Error creating checkout:', error);
-            alert('Error al iniciar el pago. Por favor intenta de nuevo.');
-        } finally {
-            setItemsLoading(prev => ({ ...prev, [productId]: false }));
-        }
+        setSelectedProduct({
+            id: selectedPackage.id,
+            name: selectedPackage.name,
+            price: selectedPackage.price,
+            type: selectedPackage.type,
+        });
+        setIsPaymentModalOpen(true);
+    };
+
+    const handlePaymentSuccess = (result: any) => {
+        setIsPaymentModalOpen(false);
+        setPurchaseMessage({ type: 'success', text: '¡Pago procesado con éxito! Tus beneficios se han activado.' });
+        refreshProfile();
+    };
+
+    const handlePaymentError = (error: any) => {
+        console.error('Payment Error:', error);
+        // Do not close modal automatically on error, let user try again or see error in Brick
+        // But for generic API errors we might want to show a toast
+        setPurchaseMessage({ type: 'error', text: 'Error al procesar el pago. Intenta nuevamente.' });
     };
 
     return (
@@ -672,6 +673,14 @@ function StoreContent() {
                     <span className="text-sm font-medium">Activación Instantánea</span>
                 </div>
             </div>
-        </div >
+            {/* Payment Modal */}
+            <PaymentModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                product={selectedProduct}
+                onPaymentSuccess={handlePaymentSuccess}
+                onPaymentError={handlePaymentError}
+            />
+        </div>
     );
 }
