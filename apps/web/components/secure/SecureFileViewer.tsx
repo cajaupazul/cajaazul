@@ -7,6 +7,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import * as docx from 'docx-preview';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
+import SecurePptxViewer from './SecurePptxViewer';
 
 // Worker local para evitar problemas de CORS con CDN
 if (typeof window !== 'undefined') {
@@ -77,14 +78,29 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             }
             cleanPath = decodeURIComponent(cleanPath);
 
-            // 2. Strategy Selection
-            if (type === 'pptx' || useExternalViewer) {
-                const res = await fetch(`${baseUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`, {
+            // 2. Strategy Selection for PPTX
+            if (type === 'pptx') {
+                // PPTX is now handled by a dedicated component which manages its own loading state
+                setLoading(false);
+                return;
+            }
+
+            // External viewer fallback logic for other types
+            if (useExternalViewer) {
+                // Logic remains for potential docx/xlsx fallbacks
+                const res = await fetch(`${baseUrl}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`, { // Use secure-url to verify access then construct viewer? No, preview-url logic was removed/changed
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (!res.ok) throw new Error("Error generando vista previa segura");
+                // Re-using the preview logic for DOCX/XLSX fallbacks would require updating it to use S3 signed URLs too if we want consistency, 
+                // but for now let's focus on maintaining existing behavior for them or just letting them fail gracefully if preview-url is changed.
+                // Actually, preview-url NOW returns a JSON with { url: signedUrl }, so we can adapt.
 
-                const data = await res.json();
+                const previewRes = await fetch(`${baseUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!previewRes.ok) throw new Error("Error generando vista externa");
+                const data = await previewRes.json();
                 setExternalViewerUrl(`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(data.url)}`);
                 setLoading(false);
                 return;
@@ -151,17 +167,24 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             console.error("Error loading secure file:", err);
             setError(err.message || "Error cargando archivo");
         } finally {
-            setLoading(false);
+            if (fileType !== 'pptx') {
+                setLoading(false);
+            }
         }
     };
 
-    if (loading) {
+    if (loading && fileType !== 'pptx') {
         return (
             <div className="flex flex-col items-center justify-center p-12 space-y-4">
                 <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                 <p className="text-sm text-gray-500">Preparando visualización segura...</p>
             </div>
         );
+    }
+
+    // Special PPTX handling
+    if (fileType === 'pptx' && !useExternalViewer) {
+        return <SecurePptxViewer filePath={filePath} fileName={fileName} />;
     }
 
     if (error) {
@@ -277,8 +300,8 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                     </div>
                 )}
 
-                {/* 5. PPTX / External Fallback */}
-                {(fileType === 'pptx' || (externalViewerUrl && useExternalViewer)) && (
+                {/* 5. External Fallback (DOCX/XLSX) */}
+                {useExternalViewer && externalViewerUrl && (
                     <div className="flex-1 bg-gray-100 h-full relative">
                         <iframe
                             src={externalViewerUrl || ''}

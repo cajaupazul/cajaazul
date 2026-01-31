@@ -10,6 +10,7 @@ type Bindings = {
     PROFILE_FRAMES: R2Bucket
     GRUPOS: R2Bucket
     COURSE_IMAGES: R2Bucket
+    // NO R2_ACCESS_KEYS required (Native Bindings)
 }
 
 const storageRouter = new Hono<{ Bindings: Bindings }>()
@@ -28,6 +29,33 @@ const privateAuthMiddleware = async (c: any, next: any) => {
 }
 
 storageRouter.use('/*', privateAuthMiddleware)
+
+// Helper Crypto nativo para firmar tokens (HMAC-SHA256)
+async function signToken(data: string, secret: string) {
+    const encoder = new TextEncoder()
+    const key = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+    )
+    const signature = await crypto.subtle.sign(
+        'HMAC',
+        key,
+        encoder.encode(data)
+    )
+    // Convertir a base64url para URL safety
+    return btoa(String.fromCharCode(...new Uint8Array(signature)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '')
+}
+
+async function verifyToken(data: string, signature: string, secret: string) {
+    const expected = await signToken(data, secret)
+    return expected === signature
+}
 
 
 // PUT /storage/upload?bucket=...&path=...
@@ -48,21 +76,11 @@ storageRouter.put('/upload', async (c) => {
     const normalizedBucket = bucketName.replace(/_/g, '-')
 
     switch (normalizedBucket) {
-        case 'course-materials':
-            bucket = c.env.COURSE_MATERIALS
-            break
-        case 'course-images':
-            bucket = c.env.COURSE_IMAGES
-            break
-        case 'profile-avatars':
-            bucket = c.env.PROFILE_AVATARS
-            break
-        case 'profile-frames':
-            bucket = c.env.PROFILE_FRAMES
-            break
-        case 'grupos':
-            bucket = c.env.GRUPOS
-            break
+        case 'course-materials': bucket = c.env.COURSE_MATERIALS; break;
+        case 'course-images': bucket = c.env.COURSE_IMAGES; break;
+        case 'profile-avatars': bucket = c.env.PROFILE_AVATARS; break;
+        case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
+        case 'grupos': bucket = c.env.GRUPOS; break;
         default:
             return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
     }
@@ -95,60 +113,43 @@ storageRouter.put('/upload', async (c) => {
     }
 })
 
-// Helper para firmar tokens (Simple HMAC o similar)
-// En producción, usar una biblioteca JWT real o WebCrypto
-async function signToken(data: string, secret: string) {
-    const encoder = new TextEncoder()
-    const key = await crypto.subtle.importKey(
-        'raw',
-        encoder.encode(secret),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['sign']
-    )
-    const signature = await crypto.subtle.sign(
-        'HMAC',
-        key,
-        encoder.encode(data)
-    )
-    return btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
-
-async function verifyToken(data: string, signature: string, secret: string) {
-    const expected = await signToken(data, secret)
-    return expected === signature
-}
 
 // GET /storage/preview-url?bucket=...&path=...
-// Genera una URL temporal pública para visores externos (Google/MS)
+// Genera una URL Firmada (Tokenizada) que apunta al worker
+// Esta URL es pública (temporalmente) y compatible con Microsoft Viewer
 storageRouter.get('/preview-url', async (c) => {
-    // 1. Auth check (ya manejado por middleware para buckets privados)
     const path = c.req.query('path')
     const bucketName = c.req.query('bucket') || 'course-materials'
 
     if (!path) return c.json({ error: 'Falta path' }, 400)
 
-    // 2. Generar Token
-    // Payload: path + expiration
-    const expiration = Math.floor(Date.now() / 1000) + (5 * 60) // 5 minutos
+    // 1. Generar Token
+    // Payload minimalista: path + bucket + expiration
+    // Expiración: 15 minutos (900s)
+    const expiration = Math.floor(Date.now() / 1000) + (15 * 60)
     const payload = JSON.stringify({ p: path, b: bucketName, e: expiration })
-    const secret = c.env.SUPABASE_ANON_KEY // O un secreto dedicado en env
+
+    // Usar una clave secreta del entorno (Supabase Anon Key o una dedicada)
+    const secret = c.env.SUPABASE_ANON_KEY
     const signature = await signToken(payload, secret)
+
+    // El token incluye payload (base64) + firma
     const token = `${btoa(payload)}.${signature}`
 
-    // 3. Construir URL pública para el stream (Usar la URL de este worker)
+    // 2. Construir URL pública apuntando a este mismo worker
     const url = new URL(c.req.url)
-    const publicUrl = `${url.origin}/storage/public-stream?token=${token}`
+    const publicStreamUrl = `${url.origin}/storage/public-stream?token=${token}`
 
     return c.json({
-        url: publicUrl,
-        expires: expiration
+        url: publicStreamUrl,
+        expires_in: 900
     })
 })
 
+
 // GET /storage/public-stream?token=...
-// Endpoint "Público" pero protegido por token firmado
-// Usado por Google/MS Viewers
+// Endpoint PÚBLICO (sin auth header) pero protegido por TOKEN FIRMADO
+// Sirve el archivo desde R2 como un stream eficiente
 storageRouter.get('/public-stream', async (c) => {
     const token = c.req.query('token')
     if (!token) return c.json({ error: 'Token requerido' }, 401)
@@ -163,44 +164,57 @@ storageRouter.get('/public-stream', async (c) => {
         if (!isValid) return c.json({ error: 'Firma inválida' }, 403)
 
         // 2. Verificar Expiración
-        const payload = JSON.parse(atob(payloadB64))
+        const payload = JSON.parse(atob(payloadB64)) // { p: path, b: bucket, e: expiration }
         if (Date.now() / 1000 > payload.e) {
             return c.json({ error: 'URL expirada', expired: true }, 410)
         }
 
-        // 3. Servir Archivo
-        const bucket = payload.b === 'course-materials' ? c.env.COURSE_MATERIALS : c.env.COURSE_MATERIALS // Default por seguridad
-        // (Añadir lógica de seleccion de bucket si se requiere ampliar)
+        // 3. Obtener Bucket
+        let bucket: R2Bucket | undefined
+        const normalizedBucket = payload.b.replace(/_/g, '-')
+        switch (normalizedBucket) {
+            case 'course-materials': bucket = c.env.COURSE_MATERIALS; break;
+            case 'course-images': bucket = c.env.COURSE_IMAGES; break;
+            case 'profile-avatars': bucket = c.env.PROFILE_AVATARS; break;
+            case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
+            case 'grupos': bucket = c.env.GRUPOS; break;
+            default: return c.json({ error: 'Bucket inválido' }, 400);
+        }
 
+        if (!bucket) return c.json({ error: 'Bucket no encontrado' }, 500)
+
+        // 4. Stream desde R2 Native Binding
         const object = await bucket.get(payload.p)
+
         if (!object) return c.json({ error: 'Archivo no encontrado' }, 404)
 
         const headers = new Headers()
         object.writeHttpMetadata(headers)
         headers.set('etag', object.httpEtag)
 
-        // Cache corto para que el visor no falle si hace range requests
-        headers.set('Cache-Control', 'public, max-age=300')
-
-        // Headers de seguridad CRÍTICOS
-        headers.set('Content-Disposition', 'inline') // NUNCA attachment
-        headers.set('X-Content-Type-Options', 'nosniff')
-        headers.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox") // Sandbox estricto
+        // Headers críticos para Microsoft Viewer
+        // Microsoft necesita saber el tamaño y tipo para renderizar correctamente
+        // Cache corto para permitir range-requests eficientes
+        headers.set('Cache-Control', 'public, max-age=1800')
+        headers.set('Content-Disposition', `attachment; filename="${payload.p.split('/').pop()}"`)
+        headers.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox")
 
         return new Response(object.body, { headers })
 
-    } catch (e) {
-        return c.json({ error: 'Token inválido' }, 400)
+    } catch (e: any) {
+        console.error("Stream Error:", e)
+        return c.json({ error: 'Token inválido o expirado' }, 400)
     }
 })
 
+
 // GET /storage/secure-url?bucket=...&path=...
-// Sirve el archivo directamente desde R2 (Para el frontend autenticado)
+// Sirve el archivo directamente desde R2 (Para el frontend autenticado, imagenes pequeñas, etc.)
 storageRouter.get('/secure-url', async (c) => {
     const path = c.req.query('path')
     const bucketName = c.req.query('bucket') || 'course-materials'
 
-    console.log(`📂 Storage request: bucket=${bucketName}, path=${path}`)
+    // console.log(`📂 Storage request: bucket=${bucketName}, path=${path}`)
 
     if (!path) {
         return c.json({ error: 'Falta el parámetro "path"' }, 400)
@@ -213,23 +227,13 @@ storageRouter.get('/secure-url', async (c) => {
     const normalizedBucket = bucketName.replace(/_/g, '-')
 
     switch (normalizedBucket) {
-        case 'course-materials':
-            bucket = c.env.COURSE_MATERIALS
-            break
-        case 'course-images':
-            bucket = c.env.COURSE_IMAGES
-            break
-        case 'profile-avatars':
-            bucket = c.env.PROFILE_AVATARS
-            break
-        case 'profile-frames':
-            bucket = c.env.PROFILE_FRAMES
-            break
-        case 'grupos':
-            bucket = c.env.GRUPOS
-            break
+        case 'course-materials': bucket = c.env.COURSE_MATERIALS; break;
+        case 'course-images': bucket = c.env.COURSE_IMAGES; break;
+        case 'profile-avatars': bucket = c.env.PROFILE_AVATARS; break;
+        case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
+        case 'grupos': bucket = c.env.GRUPOS; break;
         default:
-            console.log(`❌ Bucket inválido: ${bucketName}`)
+            // console.log(`❌ Bucket inválido: ${bucketName}`)
             return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
     }
 
@@ -238,11 +242,9 @@ storageRouter.get('/secure-url', async (c) => {
     }
 
     try {
-        // console.log(`📥 Obteniendo archivo de R2: ${path}`) // Log spam
         const object = await bucket.get(path)
 
         if (object === null) {
-            console.log(`❌ Archivo no encontrado: ${path}`)
             return c.json({ error: 'Archivo no encontrado' }, 404)
         }
 
@@ -263,12 +265,9 @@ storageRouter.get('/secure-url', async (c) => {
         headers.set('Access-Control-Allow-Origin', allowedOrigin)
         headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
         headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        headers.set('Access-Control-Expose-Headers', 'Content-Length, Content-Type') // Importante para client-side viewers
+        headers.set('Access-Control-Expose-Headers', 'Content-Length, Content-Type')
 
-        // Para PDFs, forzar visualización inline
-        // if (path.toLowerCase().endsWith('.pdf')) {
         headers.set('Content-Disposition', 'inline')
-        // }
 
         return new Response(object.body, { headers })
 
