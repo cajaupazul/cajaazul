@@ -22,6 +22,7 @@ import { apiFetch } from '@/lib/api';
 import { useSearchParams } from 'next/navigation';
 import { supabase, ShopItem, ShopCategory } from '@/lib/supabase';
 import PaymentModal from '@/components/store/PaymentModal';
+import PreviewModal from '@/components/store/PreviewModal';
 
 interface StoreProduct {
     id: string;
@@ -48,6 +49,7 @@ function StoreContent() {
     const searchParams = useSearchParams();
     const [itemsLoading, setItemsLoading] = useState<Record<string, boolean>>({});
     const [shopItems, setShopItems] = useState<ShopItem[]>([]);
+    const [previewItem, setPreviewItem] = useState<ShopItem | null>(null);
     const [userInventory, setUserInventory] = useState<string[]>([]); // Just store item IDs
     const [purchaseMessage, setPurchaseMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [activeView, setActiveView] = useState<'items' | 'recharge'>('items');
@@ -493,79 +495,74 @@ function StoreContent() {
                                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                                             {categoryItems.map((item) => {
                                                 const isOwned = userInventory.includes(item.id);
-                                                const isLoading = itemsLoading[item.id];
 
                                                 return (
                                                     <div
                                                         key={item.id}
-                                                        className={`relative rounded-2xl border bg-bb-card p-3 sm:p-6 transition-all hover:shadow-lg group ${isOwned ? 'border-green-500/30' : 'border-bb-border hover:border-faculty-primary/30'
-                                                            }`}
-                                                        style={{ borderColor: isOwned ? undefined : colors?.primary + '20' }}
+                                                        className={`group relative rounded-3xl bg-[#1e1f22] border border-[#2b2d31] overflow-hidden hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl hover:shadow-black/50 ${isOwned ? 'opacity-80' : ''}`}
                                                     >
-                                                        {/* Owned Badge */}
-                                                        {isOwned && (
-                                                            <div className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-green-500 text-white px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[8px] sm:text-xs font-bold flex items-center gap-1 z-30 shadow-lg">
-                                                                <Check size={10} className="sm:w-3 sm:h-3" />
-                                                                <span>Adquirido</span>
-                                                            </div>
-                                                        )}
+                                                        {/* Gradient Bg */}
+                                                        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#2b2d31] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                                                        <div className="w-full aspect-square rounded-xl overflow-hidden bg-bb-sidebar flex items-center justify-center relative mb-3 sm:mb-4">
-                                                            {item.type === 'profile_frame' && (
-                                                                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-bb-dark flex items-center justify-center border border-bb-border overflow-hidden opacity-30">
-                                                                    <div className="w-full h-full bg-gradient-to-br from-bb-sidebar to-bb-dark" />
-                                                                </div>
-                                                            )}
+                                                        {/* Content Container */}
+                                                        <div className="p-6 flex flex-col h-full relative z-10">
 
-                                                            {item.image_url ? (
+                                                            {/* Item Preview */}
+                                                            <div
+                                                                className="relative w-full aspect-square mb-6 flex items-center justify-center cursor-pointer"
+                                                                onClick={() => setPreviewItem(item)}
+                                                            >
+                                                                {/* Sparkle effect on hover */}
+                                                                <div className="absolute inset-0 bg-blue-500/5 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+
                                                                 <img
                                                                     src={item.image_url}
                                                                     alt={item.name}
-                                                                    className="w-full h-full object-contain absolute inset-0 z-10 p-2"
-                                                                    loading="lazy"
+                                                                    className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110 drop-shadow-2xl"
                                                                 />
-                                                            ) : (
-                                                                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-2 sm:border-4 border-bb-border absolute inset-0 m-auto">
-                                                                    <div className="w-full h-full rounded-full bg-bb-text-secondary/20" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Item Info */}
-                                                        <div className="space-y-2 sm:space-y-3">
-                                                            <div>
-                                                                <h3 className="text-sm sm:text-xl font-bold text-bb-text truncate sm:whitespace-normal">{item.name}</h3>
-                                                                <p className="hidden sm:block text-sm text-bb-text-secondary line-clamp-2">{item.description}</p>
                                                             </div>
 
-                                                            {/* Price and Buy Button */}
-                                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                                                <div className="flex items-center gap-1.5 sm:gap-2">
-                                                                    <img src="/icons/moneda.png" alt="Coins" className="w-4 h-4 sm:w-6 sm:h-6 object-contain" />
-                                                                    <span className="text-base sm:text-2xl font-black text-bb-text">{item.price_coins}</span>
-                                                                </div>
-
-                                                                <Button
-                                                                    onClick={() => handleBuyItem(item)}
-                                                                    disabled={isOwned || isLoading || (profile?.monedas ?? 0) < item.price_coins}
-                                                                    size="sm"
-                                                                    className={`w-full sm:w-auto font-bold rounded-lg sm:rounded-xl shadow-md h-8 sm:h-10 text-[10px] sm:text-sm ${isOwned
-                                                                        ? 'bg-bb-hover text-bb-text-secondary cursor-not-allowed'
-                                                                        : 'text-white hover:opacity-90'
-                                                                        }`}
-                                                                    style={!isOwned && !isLoading ? { backgroundColor: colors?.primary } : undefined}
-                                                                >
-                                                                    {isLoading ? '...' : isOwned ? 'Listo' : 'Comprar'}
-                                                                </Button>
+                                                            {/* Category Label */}
+                                                            <div className="text-xs font-bold text-[#949ba4] uppercase tracking-wider mb-2">
+                                                                {item.type === 'profile_frame' ? 'Avatar Decoration' : 'Item'}
                                                             </div>
 
-                                                            {/* Insufficient Funds Warning */}
-                                                            {!isOwned && (profile?.monedas ?? 0) < item.price_coins && (
-                                                                <p className="text-xs text-red-400 flex items-center gap-1">
-                                                                    <Info size={12} />
-                                                                    Te faltan {item.price_coins - (profile?.monedas ?? 0)} mon.
-                                                                </p>
-                                                            )}
+                                                            {/* Title */}
+                                                            <h3 className="text-white font-bold text-lg leading-tight mb-2 truncate">
+                                                                {item.name}
+                                                            </h3>
+
+                                                            {/* Description */}
+                                                            <p className="text-[#949ba4] text-xs line-clamp-2 mb-4 leading-relaxed h-8">
+                                                                {item.description}
+                                                            </p>
+
+                                                            <div className="mt-auto pt-4 border-t border-[#2b2d31]/50 flex items-center justify-between gap-4">
+                                                                {/* Price */}
+                                                                {!isOwned && (
+                                                                    <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg">
+                                                                        <img src="/icons/moneda.png" alt="Coin" className="w-5 h-5 object-contain" />
+                                                                        <span className="text-[#f2f3f5] font-bold text-lg">{item.price_coins}</span>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Action Button */}
+                                                                {isOwned ? (
+                                                                    <Button
+                                                                        className="w-full bg-[#2b2d31] text-[#949ba4] hover:bg-[#313338] font-bold rounded-xl"
+                                                                        disabled
+                                                                    >
+                                                                        Adquirido
+                                                                    </Button>
+                                                                ) : (
+                                                                    <Button
+                                                                        onClick={() => setPreviewItem(item)}
+                                                                        className="w-full bg-[#4e5058] hover:bg-[#6d6f78] text-white font-bold rounded-xl transition-all"
+                                                                    >
+                                                                        Vista Previa
+                                                                    </Button>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 );
@@ -681,6 +678,21 @@ function StoreContent() {
                     <span className="text-sm font-medium">Activación Instantánea</span>
                 </div>
             </div>
+            {/* Preview Modal */}
+            <PreviewModal
+                isOpen={!!previewItem}
+                onClose={() => setPreviewItem(null)}
+                item={previewItem}
+                profile={profile}
+                onBuy={(item) => {
+                    handleBuyItem(item);
+                    setPreviewItem(null); // Optional: stay open or close? User asked to preview *before* buying, so buying usually closes it or shows success. handleBuyItem shows success message.
+                }}
+                isOwned={previewItem ? userInventory.includes(previewItem.id) : false}
+                loading={previewItem ? itemsLoading[previewItem.id] : false}
+                canAfford={previewItem ? (profile?.monedas ?? 0) >= previewItem.price_coins : false}
+            />
+
             {/* Payment Modal */}
             <PaymentModal
                 isOpen={isPaymentModalOpen}
