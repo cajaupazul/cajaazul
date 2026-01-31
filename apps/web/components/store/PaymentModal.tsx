@@ -29,9 +29,14 @@ export default function PaymentModal({
     onPaymentSuccess,
     onPaymentError
 }: PaymentModalProps) {
+    const [viewState, setViewState] = React.useState<'form' | 'success' | 'error'>('form');
+
     useEffect(() => {
-        initMercadoPago(MP_PUBLIC_KEY, { locale: 'es-PE' });
-    }, []);
+        if (isOpen) {
+            setViewState('form');
+            initMercadoPago(MP_PUBLIC_KEY, { locale: 'es-PE' });
+        }
+    }, [isOpen]);
 
     if (!isOpen || !product) return null;
 
@@ -63,11 +68,16 @@ export default function PaymentModal({
                 }),
             });
 
+            // Call the parent success handler immediately to start credit update
             onPaymentSuccess(result);
+            // Switch to success view
+            setViewState('success');
+
             return Promise.resolve();
 
         } catch (error: any) {
-            onPaymentError(error);
+            // onPaymentError(error); // Don't close or show error toast yet, let Brick handle or show custom error
+            console.error(error);
             return new Promise((resolve, reject) => {
                 reject({
                     cause: error.message || 'Error processing payment',
@@ -78,7 +88,7 @@ export default function PaymentModal({
 
     const onError = async (error: any) => {
         console.error('Payment Brick Error:', error);
-        onPaymentError(error);
+        // We can choose to stay in form view or switch to error view
     };
 
     const onReady = async () => {
@@ -87,14 +97,19 @@ export default function PaymentModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="relative w-full sm:max-w-2xl bg-[#141416] rounded-t-3xl sm:rounded-3xl shadow-2xl border-t sm:border border-white/10 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className={`relative w-full sm:max-w-2xl bg-[#141416] rounded-t-3xl sm:rounded-3xl shadow-2xl border-t sm:border border-white/10 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200 flex flex-col ${viewState === 'success' ? 'h-auto' : 'max-h-[90vh]'}`}>
+
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 bg-[#1A1D24] shrink-0 rounded-t-3xl">
                     <div>
-                        <h3 className="text-lg sm:text-xl font-bold text-white">Completar Pago</h3>
-                        <p className="text-sm text-gray-400">
-                            {product.name} - <span className="text-blue-400 font-mono">S/ {product.price.toFixed(2)}</span>
-                        </p>
+                        <h3 className="text-lg sm:text-xl font-bold text-white">
+                            {viewState === 'success' ? '¡Pago Exitoso!' : 'Completar Pago'}
+                        </h3>
+                        {viewState === 'form' && (
+                            <p className="text-sm text-gray-400">
+                                {product.name} - <span className="text-blue-400 font-mono">S/ {product.price.toFixed(2)}</span>
+                            </p>
+                        )}
                     </div>
                     <button
                         onClick={onClose}
@@ -104,19 +119,40 @@ export default function PaymentModal({
                     </button>
                 </div>
 
-                {/* Body - MP Brick - Scrollable */}
+                {/* Body */}
                 <div className="p-0 sm:p-6 bg-white overflow-y-auto">
-                    <div className="p-4 sm:p-0 min-h-[400px]">
-                        <Payment
-                            initialization={{
-                                amount: product.price,
-                            }}
-                            customization={customization}
-                            onSubmit={onSubmit}
-                            onReady={onReady}
-                            onError={onError}
-                        />
-                    </div>
+                    {viewState === 'form' ? (
+                        <div className="p-4 sm:p-0 min-h-[400px]">
+                            <Payment
+                                initialization={{
+                                    amount: product.price,
+                                }}
+                                customization={customization}
+                                onSubmit={onSubmit}
+                                onReady={onReady}
+                                onError={onError}
+                            />
+                        </div>
+                    ) : (
+                        <div className="p-8 flex flex-col items-center text-center space-y-6">
+                            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2 animate-bounce">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-900">¡Compra Realizada!</h2>
+                            <p className="text-gray-600 text-lg">
+                                Has adquirido <strong>{product.name}</strong> correctamente. <br />
+                                Tus beneficios han sido agregados a tu cuenta.
+                            </p>
+                            <button
+                                onClick={onClose}
+                                className="w-full sm:w-auto px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all transform active:scale-95"
+                            >
+                                Entendido, volver a la tienda
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
