@@ -114,7 +114,7 @@ export function FrameEditor({ frameImageUrl, onSave, initialSettings }: FrameEdi
                                 variant="outline"
                                 size="sm"
                                 className="w-full"
-                                onClick={() => setSettings({ ...settings, [ctx.key]: DEFAULT_SETTINGS[ctx.key] })}
+                                onClick={() => setSettings({ ...settings, [ctx.key]: DEFAULT_SETTINGS[ctx.key as keyof typeof DEFAULT_SETTINGS] })}
                             >
                                 Resetear
                             </Button>
