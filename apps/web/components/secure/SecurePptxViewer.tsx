@@ -14,6 +14,7 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
     const [iframeSrc, setIframeSrc] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
 
     useEffect(() => {
         const generateSecureView = async () => {
@@ -85,8 +86,6 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
             <p className="text-xs text-gray-500 mt-4">Verifica que tengas permisos y que las credenciales de R2 estén configuradas en el servidor.</p>
         </div>
     );
-
-    const iframeRef = useRef<HTMLIFrameElement>(null);
 
     return (
         <div
