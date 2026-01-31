@@ -143,6 +143,16 @@ function StoreContent() {
             // Refresh profile to update coins
             await refreshProfile();
 
+            // Refresh Inventory State to show "Adquirido" immediately
+            const { data: invData } = await supabase
+                .from('user_inventory')
+                .select('item_id')
+                .eq('user_id', profile!.id);
+
+            if (invData) {
+                setUserInventory(invData.map(i => i.item_id));
+            }
+
             // Show success message
             setPurchaseMessage({ type: 'success', text: `¡Has comprado ${item.name} éxitosamente!` });
 

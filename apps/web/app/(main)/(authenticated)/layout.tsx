@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { CoinCounter } from '@/components/ui/coin-counter';
 import {
   Dialog,
   DialogContent,
@@ -366,9 +367,7 @@ export default function AuthenticatedLayout({
                 {/* Coin Counter */}
                 <div className="flex items-center gap-2 bg-bb-card border border-bb-border px-3 py-1.5 rounded-xl shadow-sm">
                   <img src="/icons/moneda.png" alt="Coin" className="w-5 h-5 object-contain" />
-                  <span className="font-bold text-bb-text text-sm">
-                    {profile?.monedas || 0}
-                  </span>
+                  <CoinCounter value={profile?.monedas || 0} className="font-bold text-bb-text text-sm" />
                 </div>
 
                 <button className="relative p-2 text-bb-text-secondary hover:text-bb-text transition-colors">

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/lib/theme-context';
 import { useProfile } from '@/lib/profile-context';
 import { supabase, ShopItem, UserInventoryItem } from '@/lib/supabase';
+import { apiFetch } from '@/lib/api';
 import { Package, Check, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -41,25 +42,23 @@ export default function InventoryPage() {
         setMessage(null);
 
         try {
-            const { data, error } = await supabase.functions.invoke('handle-shop-v2', {
-                body: { action: 'equip_frame', item_id: itemId }
+            await apiFetch('/shop/equip', {
+                method: 'POST',
+                body: JSON.stringify({ item_id: itemId })
             });
 
-            if (!error && data?.success) {
-                setMessage({ type: 'success', text: `¡${itemName} equipado con éxito!` });
-                await refreshProfile();
-                // Refresh inventory
-                const { data: invData } = await supabase
-                    .from('user_inventory')
-                    .select('*, shop_items(*)')
-                    .eq('user_id', profile!.id)
-                    .order('acquired_at', { ascending: false });
-                if (invData) setInventory(invData as any);
-            } else {
-                setMessage({ type: 'error', text: error?.message || data?.error || 'Error al equipar marco' });
-            }
-        } catch (error) {
-            setMessage({ type: 'error', text: 'Error de conexión' });
+            setMessage({ type: 'success', text: `¡${itemName} equipado con éxito!` });
+            await refreshProfile();
+            // Refresh inventory
+            const { data: invData } = await supabase
+                .from('user_inventory')
+                .select('*, shop_items(*)')
+                .eq('user_id', profile!.id)
+                .order('acquired_at', { ascending: false });
+            if (invData) setInventory(invData as any);
+
+        } catch (error: any) {
+            setMessage({ type: 'error', text: error.message || 'Error al equipar marco' });
         } finally {
             setEquipLoading(null);
             setTimeout(() => setMessage(null), 5000);

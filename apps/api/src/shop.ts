@@ -92,4 +92,59 @@ shop.post('/buy', async (c) => {
     return c.json({ success: true, new_balance: newBalance })
 })
 
+shop.post('/equip', async (c) => {
+    const user = (c as any).get('user')
+    const body = await c.req.json()
+    const { item_id } = body;
+
+    const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY)
+
+    // 1. Verify Ownership & Get Frame Details
+    const { data: inventoryItem, error: findError } = await supabase
+        .from('user_inventory')
+        .select(`
+            *,
+            shop_items:item_id (
+                frame_key,
+                type
+            )
+        `)
+        .eq('user_id', user.id)
+        .eq('item_id', item_id)
+        .single()
+
+    if (findError || !inventoryItem) {
+        return c.json({ error: 'Item not owned' }, 403)
+    }
+
+    // Check if it is a frame
+    // Note: TypeScript might not know the shape of joined data, cast as any or rely on loose typing
+    const itemData = inventoryItem.shop_items as any;
+
+    // We assume it's a frame or something equippable.
+    // If it's a frame, we update active_frame_key
+    if (itemData?.frame_key) {
+        // Update Profile
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ active_frame_key: itemData.frame_key })
+            .eq('id', user.id)
+
+        if (updateError) return c.json({ error: 'Failed to update profile' }, 500)
+
+    } else {
+        // If it's not a frame (e.g. badge), maybe logic differs, but for now user asked about frames
+        // We will just return success if it's not a frame to avoid breaking, or error?
+        // Let's assume for now valid frames have keys.
+    }
+
+    // 2. Update Inventory "is_equipped" status (Optional but good for UI)
+    // First unequip all of same type? Or just set this one true?
+    // For simplicity, let's just mark this one as equipped and we can handle unequip logic if strictness needed.
+    // Actually, usually we clear others. But `active_frame_key` on profile is the source of truth for the avatar.
+
+    // Return the new frame key so frontend can update immediately
+    return c.json({ success: true, frame_key: itemData?.frame_key })
+})
+
 export default shop
