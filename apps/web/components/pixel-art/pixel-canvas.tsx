@@ -166,7 +166,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile }: PixelCanv
                 .from('pixel_board_state')
                 .select('pixels')
                 .eq('event_id', eventId)
-                .single();
+                .maybeSingle();
 
             if (data?.pixels) {
                 let bytes: Uint8Array;
@@ -568,21 +568,25 @@ export default function PixelCanvas({ eventId, onClose, userProfile }: PixelCanv
     useEffect(() => {
         const handleResize = () => {
             if (displayCanvasRef.current && containerRef.current) {
-                displayCanvasRef.current.width = window.innerWidth;
-                displayCanvasRef.current.height = window.innerHeight;
+                // Resize to container size instead of window
+                const rect = containerRef.current.getBoundingClientRect();
+                displayCanvasRef.current.width = rect.width;
+                displayCanvasRef.current.height = rect.height;
             }
         };
         window.addEventListener('resize', handleResize);
-        handleResize();
+        handleResize(); // Initial size
+        // Add a small delay to ensure container is rendered
+        setTimeout(handleResize, 100);
+
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     return (
-        <div className="fixed inset-0 z-50 bg-[#1a1a1a] overflow-hidden font-sans">
+        <div ref={containerRef} className="relative w-full h-full bg-[#1a1a1a] overflow-hidden font-sans rounded-xl shadow-2xl border border-white/10">
             <canvas ref={dataCanvasRef} width={GRID_WIDTH} height={GRID_HEIGHT} className="hidden" />
 
             <div
-                ref={containerRef}
                 className="w-full h-full relative cursor-crosshair"
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
@@ -604,30 +608,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile }: PixelCanv
                     </div>
                 </div>
 
-                <div className="absolute top-2 md:top-4 right-2 md:right-4 z-10 pointer-events-auto flex items-center gap-2 md:gap-3">
-                    {userProfile && (
-                        <div className="hidden md:flex bg-white/90 backdrop-blur-md pl-1 pr-4 py-1 rounded-full shadow-xl border border-white/20 items-center gap-3">
-                            <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white shadow-sm">
-                                {userProfile.avatar_url ? (
-                                    <img src={userProfile.avatar_url} alt="User" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white font-bold text-xs">
-                                        {userProfile.nombre?.[0] || 'U'}
-                                    </div>
-                                )}
-                            </div>
-                            <span className="text-sm font-semibold text-slate-800">{userProfile.nombre?.split(' ')[0]}</span>
-                        </div>
-                    )}
-
-                    <button
-                        onClick={onClose}
-                        className="bg-white/90 hover:bg-white text-slate-800 p-2 md:p-2.5 rounded-full shadow-xl transition-all hover:scale-110 active:scale-95 border border-white/20 group"
-                        title="Salir"
-                    >
-                        <X className="w-4 h-4 md:w-5 md:h-5 group-hover:rotate-90 transition-transform text-slate-600" />
-                    </button>
-                </div>
+                {/* Internal Avatar/Close Removed - Handled by Parent Page */}
 
                 {tooltipData && (
                     <div className="fixed z-50 pointer-events-none flex items-center gap-2 bg-black/80 text-white text-xs px-2 py-1 rounded border border-white/20 shadow-xl"
