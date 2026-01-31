@@ -4,11 +4,9 @@ import React, { useEffect } from 'react';
 import { Payment } from '@mercadopago/sdk-react';
 import { initMercadoPago } from '@mercadopago/sdk-react';
 import { X } from 'lucide-react';
-import { ShopItem } from '@/lib/supabase';
 import { apiFetch } from '@/lib/api';
 
 // Initialize with the Public Key provided by the user
-// In production, this should be in an environment variable
 const MP_PUBLIC_KEY = 'TEST-bc969050-c4a6-4ff0-a0b9-3f926e9ee60f';
 
 interface PaymentModalProps {
@@ -37,55 +35,42 @@ export default function PaymentModal({
 
     if (!isOpen || !product) return null;
 
-    const customization = {
-        paymentMethods: {
-            ticket: ['all'],
-            bankTransfer: ['all'],
-            creditCard: ['all'],
-            debitCard: ['all'],
+    const customization: any = {
+        visual: {
+            style: {
+                theme: 'default',
+            }
         },
+        paymentMethods: {
+            minInstallments: 1,
+            maxInstallments: 1,
+            ticket: 'all',
+            bankTransfer: 'all',
+            creditCard: 'all',
+            debitCard: 'all',
+        }
     };
 
     const onSubmit = async (param: any) => {
-        const { selectedPaymentMethod, formData } = param;
+        const { formData } = param;
 
         try {
-            const response = await fetch('https://campuslink-api.cajaupazul.workers.dev/checkout/process', {
+            const result = await apiFetch('/checkout/process', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 body: JSON.stringify({
                     ...formData,
                     product_id: product.id,
                 }),
             });
 
-            const result = await response.json();
-
-            if (!response.ok) {
-                onPaymentError(result);
-                // Return generic error to Brick
-                return new Promise((resolve, reject) => {
-                    reject({
-                        cause: result.error || 'Unknown error',
-                    });
-                });
-            }
-
             onPaymentSuccess(result);
-
-            // Return success to Brick to show success screen? 
-            // Or typically we verify and close. 
-            // The Brick Promise resolution behavior depends on configuration.
-            // But usually we just resolve void.
             return Promise.resolve();
 
-        } catch (error) {
+        } catch (error: any) {
             onPaymentError(error);
             return new Promise((resolve, reject) => {
                 reject({
-                    cause: 'Network error',
+                    cause: error.message || 'Error processing payment',
                 });
             });
         }
@@ -101,12 +86,12 @@ export default function PaymentModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="relative w-full max-w-2xl bg-[#141416] rounded-3xl shadow-2xl overflow-hidden border border-white/10 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="relative w-full sm:max-w-2xl bg-[#141416] rounded-t-3xl sm:rounded-3xl shadow-2xl border-t sm:border border-white/10 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-white/10 bg-[#1A1D24]">
+                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 bg-[#1A1D24] shrink-0 rounded-t-3xl">
                     <div>
-                        <h3 className="text-xl font-bold text-white">Completar Pago</h3>
+                        <h3 className="text-lg sm:text-xl font-bold text-white">Completar Pago</h3>
                         <p className="text-sm text-gray-400">
                             {product.name} - <span className="text-blue-400 font-mono">S/ {product.price.toFixed(2)}</span>
                         </p>
@@ -119,18 +104,19 @@ export default function PaymentModal({
                     </button>
                 </div>
 
-                {/* Body - MP Brick */}
-                <div className="p-2 sm:p-6 bg-white min-h-[400px]">
-                    <Payment
-                        initialization={{
-                            amount: product.price,
-                            /*  preferenceId: '<PREFERENCE_ID>',  <-- WE DO NOT USE THIS ANYMORE */
-                        }}
-                        customization={customization}
-                        onSubmit={onSubmit}
-                        onReady={onReady}
-                        onError={onError}
-                    />
+                {/* Body - MP Brick - Scrollable */}
+                <div className="p-0 sm:p-6 bg-white overflow-y-auto">
+                    <div className="p-4 sm:p-0 min-h-[400px]">
+                        <Payment
+                            initialization={{
+                                amount: product.price,
+                            }}
+                            customization={customization}
+                            onSubmit={onSubmit}
+                            onReady={onReady}
+                            onError={onError}
+                        />
+                    </div>
                 </div>
             </div>
         </div>
