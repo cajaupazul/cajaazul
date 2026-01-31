@@ -1,5 +1,6 @@
 'use client';
 
+
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { supabase, getStorageUrl, ShopItem } from '@/lib/supabase';
 import { Palette, COLOR_PALETTE, COLOR_MAP } from './palette';
@@ -7,6 +8,9 @@ import { NavigationControls } from './overlay-controls';
 import { Upload, X, Grid as GridIcon, Lock, Unlock, Image as ImageIcon, Trash2, Move, Eraser, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
+
+// Custom Black Crosshair Cursor
+const BLACK_CROSSHAIR_CURSOR = `url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V9M12 15V20M4 12H9M15 12H20" stroke="black" stroke-width="2" stroke-linecap="square"/><rect x="11" y="11" width="2" height="2" fill="white" fill-opacity="0.5"/></svg>') 12 12, crosshair`;
 
 
 const GRID_WIDTH = 1000;
@@ -678,7 +682,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30">
                         <button
                             onClick={() => setIsPaintMode(true)}
-                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg px-8 py-3 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.5)] active:scale-95 transition-all flex items-center gap-2 border-2 border-white/20 animate-bounce cursor-pointer"
+                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg px-8 py-3 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.5)] active:scale-95 transition-all flex items-center gap-2 border-2 border-white/20 cursor-pointer"
                         >
                             ✏️ PINTAR
                         </button>
