@@ -9,8 +9,8 @@ import { Upload, X, Grid as GridIcon, Lock, Unlock, Image as ImageIcon, Trash2, 
 import { cn } from '@/lib/utils';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 
-// Custom Black Crosshair Cursor
-const BLACK_CROSSHAIR_CURSOR = `url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V9M12 15V20M4 12H9M15 12H20" stroke="black" stroke-width="2" stroke-linecap="square"/><rect x="11" y="11" width="2" height="2" fill="white" fill-opacity="0.5"/></svg>') 12 12, crosshair`;
+// High Contrast Cursor (Black with White Border)
+const BLACK_CROSSHAIR_CURSOR = `url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V9M12 15V21M3 12H9M15 12H21" stroke="white" stroke-width="4" stroke-linecap="square"/><path d="M12 4V9M12 15V20M4 12H9M15 12H20" stroke="black" stroke-width="2" stroke-linecap="square"/><rect x="11" y="11" width="2" height="2" fill="transparent" stroke="white" stroke-width="1"/></svg>') 12 12, crosshair`;
 
 
 const GRID_WIDTH = 1000;
