@@ -93,8 +93,39 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const lastMouseRef = useRef<{ x: number, y: number } | null>(null);
 
     // Pending Pixels (Draft Mode)
-    // storing as a Map for easy add/remove/check: key="x,y", val=colorIndex
     const [pendingPixels, setPendingPixels] = useState<Map<string, number>>(new Map());
+    const pendingPixelsRef = useRef<Map<string, number>>(new Map()); // Ref for render loop access
+
+    // Web Audio Context for sound effects
+    const audioContextRef = useRef<AudioContext | null>(null);
+
+    const playPaintSound = () => {
+        try {
+            if (!audioContextRef.current) {
+                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            }
+            const ctx = audioContextRef.current;
+            if (ctx.state === 'suspended') ctx.resume();
+
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(600, ctx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            oscillator.start();
+            oscillator.stop(ctx.currentTime + 0.1);
+        } catch (e) {
+            // Ignore audio errors
+        }
+    };
 
     // Optimization Flags
     const needsRedrawRef = useRef(true);
