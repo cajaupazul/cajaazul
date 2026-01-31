@@ -27,15 +27,18 @@ const CONTEXTS = [
 
 const DEMO_AVATAR = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Demo';
 
+const DEFAULT_SETTINGS = {
+    profile: { scale: 1.0, x: 0, y: 0 },
+    card: { scale: 1.0, x: 0, y: 0 },
+    navbar: { scale: 1.0, x: 0, y: 0 },
+    preview: { scale: 1.0, x: 0, y: 0 },
+};
+
 export function FrameEditor({ frameImageUrl, onSave, initialSettings }: FrameEditorProps) {
-    const [settings, setSettings] = useState<Record<string, FrameSettings>>(
-        initialSettings || {
-            profile: { scale: 1.0, x: 0, y: 0 },
-            card: { scale: 1.0, x: 0, y: 0 },
-            navbar: { scale: 1.0, x: 0, y: 0 },
-            preview: { scale: 1.0, x: 0, y: 0 },
-        }
-    );
+    const [settings, setSettings] = useState<Record<string, FrameSettings>>({
+        ...DEFAULT_SETTINGS,
+        ...initialSettings
+    });
 
     const updateSetting = (context: string, field: keyof FrameSettings, value: number) => {
         setSettings({
@@ -111,7 +114,7 @@ export function FrameEditor({ frameImageUrl, onSave, initialSettings }: FrameEdi
                                 variant="outline"
                                 size="sm"
                                 className="w-full"
-                                onClick={() => setSettings({ ...settings, [ctx.key]: { scale: 1.0, x: 0, y: 0 } })}
+                                onClick={() => setSettings({ ...settings, [ctx.key]: DEFAULT_SETTINGS[ctx.key] })}
                             >
                                 Resetear
                             </Button>
@@ -125,12 +128,7 @@ export function FrameEditor({ frameImageUrl, onSave, initialSettings }: FrameEdi
                 <Button
                     variant="outline"
                     onClick={() => {
-                        setSettings({
-                            profile: { scale: 1.0, x: 0, y: 0 },
-                            card: { scale: 1.0, x: 0, y: 0 },
-                            navbar: { scale: 1.0, x: 0, y: 0 },
-                            preview: { scale: 1.0, x: 0, y: 0 },
-                        });
+                        setSettings(DEFAULT_SETTINGS);
                     }}
                 >
                     Resetear Todo
