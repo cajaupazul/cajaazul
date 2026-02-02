@@ -44,51 +44,7 @@ export default function ProfilePage() {
   const bgInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  const cleanupStorage = async (keepAvatarUrl?: string | null, keepBgUrl?: string | null) => {
-    if (!profile) return;
-
-    const folders = ['avatars', 'backgrounds', ''];
-    const keepAvatarFile = keepAvatarUrl?.split('/').pop();
-    const keepBgFile = keepBgUrl?.split('/').pop();
-
-    for (const folder of folders) {
-      try {
-        const { data: files, error } = await supabase.storage
-          .from('profile-avatars')
-          .list(folder, {
-            limit: 100,
-          });
-
-        if (error) {
-          console.error(`Error listing files in ${folder}:`, error);
-          continue;
-        }
-
-        if (!files || files.length === 0) continue;
-
-        const filesToDelete = files
-          .filter(file => {
-            // Check if file belongs to user (starts with profile.id or bg-profile.id)
-            const isUserFile = file.name.startsWith(profile.id) ||
-              file.name.startsWith(`bg-${profile.id}`);
-            if (!isUserFile) return false;
-
-            // Don't delete the ones we want to keep
-            if (file.name === keepAvatarFile || file.name === keepBgFile) return false;
-
-            return true;
-          })
-          .map(file => folder ? `${folder}/${file.name}` : file.name);
-
-        if (filesToDelete.length > 0) {
-          console.log(`Cleaning up ${filesToDelete.length} files in ${folder}:`, filesToDelete);
-          await supabase.storage.from('profile-avatars').remove(filesToDelete);
-        }
-      } catch (err) {
-        console.error(`Unexpected error cleaning ${folder}:`, err);
-      }
-    }
-  };
+  // Cleanup function removed in favor of direct file deletion
 
   useEffect(() => {
     const fetchUserEmail = async () => {
@@ -207,8 +163,19 @@ export default function ProfilePage() {
 
       if (error) throw error;
 
-      // Robust cleanup: list and delete ALL user files except the new ones
-      await cleanupStorage(dataToSave.avatar_url, dataToSave.background_url);
+      // Cleanup: Delete OLD files if they were replaced
+      // We check if the new URL is different from the original profile URL
+      if (profile.avatar_url && dataToSave.avatar_url && profile.avatar_url !== dataToSave.avatar_url) {
+        await import('@/lib/r2-storage').then(({ deleteFileFromR2 }) =>
+          deleteFileFromR2('profile-avatars', profile.avatar_url!)
+        );
+      }
+
+      if (profile.background_url && dataToSave.background_url && profile.background_url !== dataToSave.background_url) {
+        await import('@/lib/r2-storage').then(({ deleteFileFromR2 }) =>
+          deleteFileFromR2('profile-avatars', profile.background_url!)
+        );
+      }
 
       setProfile({ ...profile, ...dataToSave });
       updateProfile({ ...profile, ...dataToSave });
@@ -223,8 +190,17 @@ export default function ProfilePage() {
   const handleCancel = async () => {
     if (!profile) return;
 
-    // Robust cleanup: delete any new files, leaving ONLY the original ones
-    await cleanupStorage(profile.avatar_url || undefined, profile.background_url || undefined);
+    // Cleanup: Delete NEWly uploaded files if we cancel
+    // Use dynamic import to avoid circular dependencies or heavy initial load
+    const { deleteFileFromR2 } = await import('@/lib/r2-storage');
+
+    if (stagedAvatarUrl && stagedAvatarUrl !== profile.avatar_url) {
+      await deleteFileFromR2('profile-avatars', stagedAvatarUrl);
+    }
+
+    if (stagedBackgroundUrl && stagedBackgroundUrl !== profile.background_url) {
+      await deleteFileFromR2('profile-avatars', stagedBackgroundUrl);
+    }
 
     setEditing(false);
     setFormData(profile);

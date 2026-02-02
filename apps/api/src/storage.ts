@@ -120,6 +120,47 @@ storageRouter.put('/upload', async (c) => {
 })
 
 
+// DELETE /storage/delete?bucket=...&path=...
+// Elimina un archivo de R2
+storageRouter.delete('/delete', async (c) => {
+    const path = c.req.query('path')
+    const bucketName = c.req.query('bucket') || 'course-materials'
+
+    console.log(`🗑️ Delete request: bucket=${bucketName}, path=${path}`)
+
+    if (!path) {
+        return c.json({ error: 'Falta el parámetro "path"' }, 400)
+    }
+
+    // Seleccionar el bucket correcto
+    let bucket: R2Bucket | undefined
+    const normalizedBucket = bucketName.replace(/_/g, '-')
+
+    switch (normalizedBucket) {
+        case 'course-materials': bucket = c.env.COURSE_MATERIALS; break;
+        case 'course-images': bucket = c.env.COURSE_IMAGES; break;
+        case 'profile-avatars': bucket = c.env.PROFILE_AVATARS; break;
+        case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
+        case 'grupos': bucket = c.env.GRUPOS; break;
+        default:
+            return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
+    }
+
+    if (!bucket) {
+        return c.json({ error: 'Bucket no configurado' }, 500)
+    }
+
+    try {
+        await bucket.delete(path)
+        console.log(`✅ Archivo eliminado exitosamente: ${path}`)
+        return c.json({ success: true })
+    } catch (e: any) {
+        console.error(`❌ Error eliminando archivo:`, e)
+        return c.json({ error: e.message }, 500)
+    }
+})
+
+
 // GET /storage/preview-url?bucket=...&path=...
 // Genera una URL Firmada (Tokenizada) que apunta al worker
 // Esta URL es pública (temporalmente) y compatible con Microsoft Viewer

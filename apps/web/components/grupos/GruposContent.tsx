@@ -17,6 +17,7 @@ import {
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { uploadFileToR2, deleteFileFromR2 } from '@/lib/r2-storage';
 
 let confetti: any = () => { };
 if (typeof window !== 'undefined') {
@@ -103,6 +104,7 @@ export default function GruposContent({
         } catch (error) { console.error(error); }
     };
 
+
     const uploadFile = async (file: File) => {
         if (!file || !profile?.id) return null;
 
@@ -120,11 +122,12 @@ export default function GruposContent({
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
         const filePath = `${profile.id}/${fileName}`;
         try {
-            const { error } = await supabase.storage.from('grupos').upload(filePath, file);
-            if (error) throw error;
+            // USAR R2 STORAGE en lugar de Supabase Storage
+            await uploadFileToR2('grupos', filePath, file);
+            // Retornamos solo el path para guardarlo en la BD (la URL completa se genera al visualizar)
             return filePath;
         } catch (error) {
-            console.error('Error uploading file:', error);
+            console.error('Error uploading file to R2:', error);
             return null;
         }
     };
@@ -135,8 +138,25 @@ export default function GruposContent({
         try {
             let logoUrl = editingGrupo?.logo_url;
             let bannerUrl = editingGrupo?.banner_url;
-            if (logoFile) { setUploadingLogo(true); logoUrl = await uploadFile(logoFile); setUploadingLogo(false); }
-            if (bannerFile) { setUploadingBanner(true); bannerUrl = await uploadFile(bannerFile); setUploadingBanner(false); }
+
+            // Lógica de reemplazo de imágenes (Borrar anterior si existe nueva)
+            if (logoFile) {
+                if (editingGrupo?.logo_url) {
+                    await deleteFileFromR2('grupos', editingGrupo.logo_url);
+                }
+                setUploadingLogo(true);
+                logoUrl = await uploadFile(logoFile);
+                setUploadingLogo(false);
+            }
+
+            if (bannerFile) {
+                if (editingGrupo?.banner_url) {
+                    await deleteFileFromR2('grupos', editingGrupo.banner_url);
+                }
+                setUploadingBanner(true);
+                bannerUrl = await uploadFile(bannerFile);
+                setUploadingBanner(false);
+            }
 
             const groupData = { ...formData, logo_url: logoUrl, banner_url: bannerUrl };
             if (editingGrupo) {

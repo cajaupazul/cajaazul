@@ -83,3 +83,56 @@ export async function uploadFileToR2(bucket: string, path: string, file: File): 
 
     return getSecureFileUrl(bucket, path)
 }
+
+/**
+ * Deletes a file from R2 via the Cloudflare Worker proxy.
+ */
+export async function deleteFileFromR2(bucket: string, path: string): Promise<boolean> {
+    if (!path) return false;
+
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) {
+        console.warn('Usuario no autenticado, no se puede eliminar archivo.')
+        return false
+    }
+
+    // Si es una URL completa, extraer el path relativo
+    // Ejemplo: https://api.../secure-url?bucket=x&path=avatars/123.jpg
+    let cleanPath = path;
+    if (path.startsWith('http')) {
+        const urlObj = new URL(path);
+        const params = new URLSearchParams(urlObj.search);
+        cleanPath = params.get('path') || path;
+    }
+
+    // Si viene solo el nombre del archivo o un path relativo, está bien.
+    // Pero si viene con el bucket al inicio (ej: "grupos/file.jpg"), quitar el bucket si es necesario
+    // aunque generalmente guardamos "userId/file.jpg".
+
+    try {
+        const response = await fetch(
+            `${WORKER_URL}/storage/delete?bucket=${bucket}&path=${encodeURIComponent(cleanPath)}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            }
+        )
+
+        if (!response.ok) {
+            console.error('Error eliminando archivo:', response.statusText)
+            return false
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Excepción eliminando archivo:', error)
+        return false;
+    }
+}
