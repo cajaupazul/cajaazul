@@ -557,35 +557,59 @@ export default function ProfessorRatingsContent({
                         </div>
 
                         <div className="flex-1 space-y-2">
-                            <h1 className="text-3xl md:text-4xl font-black text-bb-text">{professor.nombre}</h1>
-                            <div className="flex flex-wrap gap-1 justify-center md:justify-start">
+                            <h1 className="text-3xl md:text-5xl font-black text-bb-text drop-shadow-md">{professor.nombre}</h1>
+                            <div className="flex flex-wrap gap-2 justify-center md:justify-start">
                                 {professor.especialidad && professorLinkMapping[professor.especialidad.toLowerCase()] ? (
                                     <Link
                                         href={`/dashboard/professors/view?id=${professorLinkMapping[professor.especialidad.toLowerCase()]}`}
-                                        className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-lg text-sm border border-blue-500/20 hover:bg-blue-500/20 transition-colors font-bold"
+                                        className="bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs border border-white/10 hover:bg-white/10 transition-colors font-bold uppercase tracking-wider"
                                     >
                                         {professor.especialidad}
                                     </Link>
                                 ) : (
                                     professor.especialidad && (
-                                        <span className="bg-bb-darker/50 text-bb-text/40 px-3 py-1 rounded-lg text-sm border border-bb-border/50 opacity-50 cursor-not-allowed">
+                                        <span className="bg-black/40 backdrop-blur-md text-white/50 px-3 py-1 rounded-full text-xs border border-white/5 uppercase tracking-wider">
                                             {professor.especialidad}
                                         </span>
                                     )
                                 )}
 
                                 {professor.facultad && (
-                                    <span className="bg-bb-card text-bb-text-secondary px-3 py-1 rounded-lg text-sm border border-bb-border">
+                                    <span className="bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 font-medium">
+                                        <Info className="w-3 h-3" />
                                         {professor.facultad}
                                     </span>
                                 )}
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-1 gap-3 w-full md:min-w-[160px]">
+                        {/* Actions moved out of here to clear space for stickers */}
+                    </div>
+
+                    {/* New Action Bar & Stats Combined */}
+                    <div className="bg-bb-card/50 backdrop-blur-md border-t border-bb-border grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-bb-border">
+                        {/* Stats Section */}
+                        <div className="grid grid-cols-3 divide-x divide-bb-border py-2">
+                            {[
+                                { label: 'Calificación', value: avgRating, icon: Star, color: 'text-yellow-400' },
+                                { label: 'Claridad', value: avgClaridad, icon: Sparkles, color: 'text-blue-400' },
+                                { label: 'Facilidad', value: avgFacilidad, icon: TrendingUp, color: 'text-green-400' },
+                            ].map((stat, i) => (
+                                <div key={i} className="p-3 flex flex-col items-center justify-center hover:bg-white/5 transition-colors">
+                                    <span className="text-xl md:text-2xl font-black text-bb-text mb-0.5">{stat.value}</span>
+                                    <div className="flex items-center gap-1 text-[10px] md:text-xs text-bb-text-secondary uppercase tracking-tight font-bold">
+                                        <stat.icon className={`w-3 h-3 md:w-3.5 md:h-3.5 ${stat.color}`} />
+                                        <span className="truncate">{stat.label}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Actions Section */}
+                        <div className="p-3 flex items-center justify-center gap-3">
                             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                                 <DialogTrigger asChild>
-                                    <Button className="w-full bg-blue-600 hover:bg-blue-500 font-bold h-11 shadow-lg shadow-blue-500/20 text-white active:scale-95 transition-transform">
+                                    <Button className="flex-1 bg-blue-600 hover:bg-blue-500 font-bold h-10 shadow-lg shadow-blue-500/20 text-white active:scale-95 transition-transform text-xs uppercase tracking-wide">
                                         <Star className="h-4 w-4 mr-2" />
                                         Calificar
                                     </Button>
@@ -632,8 +656,9 @@ export default function ProfessorRatingsContent({
                                     </form>
                                 </DialogContent>
                             </Dialog>
+
                             <Button
-                                className="w-full bg-bb-darker border border-bb-border hover:bg-bb-hover font-bold h-11 text-bb-text active:scale-95 transition-transform"
+                                className="flex-1 bg-bb-darker border border-bb-border hover:bg-bb-hover font-bold h-10 text-bb-text active:scale-95 transition-transform text-xs uppercase tracking-wide"
                                 onClick={() => {
                                     const primaryCourseId = professor.especialidad ? courseMapping[professor.especialidad.toLowerCase()] : null;
                                     const uploadUrl = `/dashboard/professors/upload?id=${professor.id}${primaryCourseId ? `&courseId=${primaryCourseId}` : ''}`;
@@ -643,27 +668,15 @@ export default function ProfessorRatingsContent({
                                 <Upload className="h-4 w-4 mr-2" />
                                 Subir
                             </Button>
-                            <Button variant="outline" className="w-full col-span-2 md:col-span-1 border-bb-border bg-bb-darker/50 text-bb-text-secondary hover:bg-bb-hover hover:text-bb-text h-11 active:scale-95 transition-transform">
-                                <Share2 className="h-4 w-4 mr-2" /> Compartir
+
+                            <Button variant="ghost" size="icon" className="h-10 w-10 text-bb-text-secondary hover:text-bb-text hover:bg-bb-hover border border-transparent hover:border-bb-border rounded-lg">
+                                <Share2 className="h-5 w-5" />
                             </Button>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 divide-x divide-bb-border border-t border-bb-border bg-bb-darker/30">
-                        {[
-                            { label: 'Calificación', value: avgRating, icon: Star, color: 'text-yellow-400' },
-                            { label: 'Claridad', value: avgClaridad, icon: Sparkles, color: 'text-blue-400' },
-                            { label: 'Facilidad', value: avgFacilidad, icon: TrendingUp, color: 'text-green-400' },
-                        ].map((stat, i) => (
-                            <div key={i} className="p-3 md:p-4 flex flex-col items-center justify-center hover:bg-bb-card/50 transition-colors">
-                                <span className="text-xl md:text-2xl font-black text-bb-text mb-0.5">{stat.value}</span>
-                                <div className="flex items-center gap-1 text-[10px] md:text-xs text-bb-text-secondary uppercase tracking-tight font-bold">
-                                    <stat.icon className={`w-3 h-3 md:w-3.5 md:h-3.5 ${stat.color}`} />
-                                    <span className="truncate">{stat.label}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+
+
                 </motion.div>
 
                 <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
