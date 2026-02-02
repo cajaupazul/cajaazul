@@ -216,7 +216,7 @@ export default function EditGroupPage() {
                             <label className="cursor-pointer bg-black/50 hover:bg-black/70 text-white px-6 py-3 rounded-full font-bold backdrop-blur-sm border border-white/20 flex items-center gap-2 transition-transform hover:scale-105">
                                 <Camera className="w-4 h-4" />
                                 <span>Cambiar Portada</span>
-                                <input type="file" accept="image/*" onChange={handleBannerSelect} className="hidden" />
+                                <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif" onChange={handleBannerSelect} className="hidden" />
                             </label>
                         </div>
                     </div>
@@ -238,7 +238,7 @@ export default function EditGroupPage() {
                             </div>
                             <label className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 cursor-pointer flex items-center justify-center text-white transition-opacity">
                                 <Upload className="w-6 h-6" />
-                                <input type="file" accept="image/*" onChange={handleLogoSelect} className="hidden" />
+                                <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif" onChange={handleLogoSelect} className="hidden" />
                             </label>
                         </div>
                     </div>

@@ -108,13 +108,9 @@ export default function GruposContent({
     const uploadFile = async (file: File) => {
         if (!file || !profile?.id) return null;
 
-        // Validar que sea imagen y NO sea GIF
+        // Validar que sea imagen
         if (!file.type.startsWith('image/')) {
             alert('Por favor, sube solo archivos de imagen.');
-            return null;
-        }
-        if (file.type === 'image/gif') {
-            alert('Los archivos GIF no están permitidos para optimizar el rendimiento. Por favor usa PNG, JPG o WEBP.');
             return null;
         }
 
@@ -290,13 +286,8 @@ export default function GruposContent({
                                         <label className="cursor-pointer flex flex-col items-center gap-2">
                                             <Upload className="w-6 h-6 text-gray-400 group-hover:text-blue-400 transition-colors" />
                                             <span className="text-sm font-bold text-gray-400 group-hover:text-bb-text transition-colors">Subir Logo</span>
-                                            <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" className="hidden" onChange={e => {
+                                            <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif" className="hidden" onChange={e => {
                                                 const file = e.target.files?.[0];
-                                                if (file && file.type === 'image/gif') {
-                                                    alert('No se permiten GIFs para el logo.');
-                                                    e.target.value = '';
-                                                    return;
-                                                }
                                                 setLogoFile(file || null);
                                             }} />
                                             {logoFile && <span className="text-[10px] text-blue-400 font-bold uppercase tracking-tight">{logoFile.name}</span>}
@@ -306,13 +297,8 @@ export default function GruposContent({
                                         <label className="cursor-pointer flex flex-col items-center gap-2">
                                             <Upload className="w-6 h-6 text-gray-400 group-hover:text-blue-400 transition-colors" />
                                             <span className="text-sm font-bold text-gray-400 group-hover:text-bb-text transition-colors">Subir Banner</span>
-                                            <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" className="hidden" onChange={e => {
+                                            <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif" className="hidden" onChange={e => {
                                                 const file = e.target.files?.[0];
-                                                if (file && file.type === 'image/gif') {
-                                                    alert('No se permiten GIFs para el banner.');
-                                                    e.target.value = '';
-                                                    return;
-                                                }
                                                 setBannerFile(file || null);
                                             }} />
                                             {bannerFile && <span className="text-[10px] text-blue-400 font-bold uppercase tracking-tight">{bannerFile.name}</span>}
