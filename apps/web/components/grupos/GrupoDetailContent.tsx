@@ -140,7 +140,7 @@ export default function GrupoDetailContent({
                 <div
                     className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
                     style={{
-                        backgroundImage: grupo.banner_url ? `url(${getStorageUrl(grupo.banner_url, 'grupos')})` : undefined,
+                        backgroundImage: grupo.banner_url ? `url('${getStorageUrl(grupo.banner_url, 'grupos')}')` : undefined,
                         backgroundColor: colors?.primary + '20',
                     }}
                 >
@@ -169,14 +169,21 @@ export default function GrupoDetailContent({
                     <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8">
                         {/* Logo Fluid */}
                         <div
-                            className="w-24 h-24 md:w-40 md:h-40 rounded-2xl md:rounded-3xl border-4 border-[#0a0a0a] shadow-2xl flex-shrink-0 bg-cover bg-center flex items-center justify-center text-3xl md:text-5xl font-black transition-all overflow-hidden"
+                            className="w-24 h-24 md:w-40 md:h-40 rounded-2xl md:rounded-3xl border-4 border-[#0a0a0a] shadow-2xl flex-shrink-0 flex items-center justify-center text-3xl md:text-5xl font-black transition-all overflow-hidden relative"
                             style={{
-                                backgroundImage: grupo.logo_url ? `url(${getStorageUrl(grupo.logo_url, 'grupos')})` : undefined,
                                 backgroundColor: colors?.primary,
                                 boxShadow: `0 20px 50px ${colors?.primary}40`
                             }}
                         >
-                            {!grupo.logo_url && grupo.nombre.charAt(0).toUpperCase()}
+                            {grupo.logo_url ? (
+                                <img
+                                    src={getStorageUrl(grupo.logo_url, 'grupos')}
+                                    alt={grupo.nombre}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                grupo.nombre.charAt(0).toUpperCase()
+                            )}
                         </div>
 
                         <div className="text-center md:text-left flex-1 min-w-0">
