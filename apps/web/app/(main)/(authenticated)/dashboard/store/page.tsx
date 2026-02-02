@@ -45,7 +45,7 @@ export default function StorePage() {
 
 function StoreContent() {
     const { colors } = useTheme();
-    const { profile, refreshProfile } = useProfile();
+    const { profile, refreshProfile, updateProfile } = useProfile();
     const searchParams = useSearchParams();
     const [itemsLoading, setItemsLoading] = useState<Record<string, boolean>>({});
     const [shopItems, setShopItems] = useState<ShopItem[]>([]);
@@ -174,6 +174,7 @@ function StoreContent() {
         name: string;
         price: number;
         type: 'vip' | 'coins' | 'item';
+        amount?: number;
     } | null>(null);
 
     const handlePurchase = (productId: string) => {
@@ -185,16 +186,33 @@ function StoreContent() {
             name: selectedPackage.name,
             price: selectedPackage.price,
             type: selectedPackage.type,
+            amount: selectedPackage.amount
         });
         setIsPaymentModalOpen(true);
     };
 
     const handlePaymentSuccess = async (result: any) => {
         // The modal now handles the "Success View" and will be closed by the user.
-        // We ensure data is refreshed immediately.
-        console.log('Payment successful, refreshing profile...');
-        await refreshProfile();
-        // Option: show a detailed toast if needed, but the modal has a big success screen now.
+        console.log('Payment successful, performing optimistic update...');
+
+        // OPTIMISTIC UPDATE: Update profile immediately
+        if (profile && selectedProduct) {
+
+            if (selectedProduct.type === 'coins' && selectedProduct.amount) {
+                console.log(`Optimistically adding ${selectedProduct.amount} coins`);
+                const newCoins = (profile.monedas || 0) + selectedProduct.amount;
+
+                // Update local context immediately for instant feedback
+                updateProfile({ ...profile, monedas: newCoins });
+            } else if (selectedProduct.type === 'vip') {
+                // For VIP we mark it true immediately, though full date calculation is better left to server/refresh
+                updateProfile({ ...profile, es_vip: true });
+            }
+        }
+
+        // We still call refresh to ensure we eventually sync with server truth (idempotent-ish)
+        // Background refresh without blocking UI feedback
+        refreshProfile();
     };
 
     const handlePaymentError = (error: any) => {

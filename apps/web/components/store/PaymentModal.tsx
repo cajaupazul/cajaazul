@@ -17,6 +17,7 @@ interface PaymentModalProps {
         name: string;
         price: number;
         type: 'vip' | 'coins' | 'item';
+        amount?: number;
     } | null;
     onPaymentSuccess: (result: any) => void;
     onPaymentError: (error: any) => void;
