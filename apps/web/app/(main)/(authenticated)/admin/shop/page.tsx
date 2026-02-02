@@ -70,17 +70,55 @@ export default function AdminShopPage() {
 
     const deleteItem = async (id: string) => {
         setIsDeleting(true);
-        const { error } = await supabase
-            .from('shop_items')
-            .delete()
-            .eq('id', id);
+        try {
+            // 1. Get detailed item info first to check for frame_key
+            const { data: itemToDelete, error: fetchError } = await supabase
+                .from('shop_items')
+                .select('*')
+                .eq('id', id)
+                .single();
 
-        setIsDeleting(false);
-        if (!error) {
+            if (fetchError || !itemToDelete) throw new Error('Item no encontrado');
+
+            console.log('[DELETE] Iniciando borrado nuclear de:', itemToDelete.name);
+
+            // 2. Si es un MARCO (tiene frame_key), desequiparlo de TODOS los usuarios
+            if (itemToDelete.frame_key) {
+                console.log('[DELETE] Desequipando marco:', itemToDelete.frame_key);
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .update({ active_frame_key: null })
+                    .eq('active_frame_key', itemToDelete.frame_key);
+
+                if (profileError) console.error('Error desequipando marcos:', profileError);
+            }
+
+            // 3. Eliminar inventarios de usuarios (Cascade manual por seguridad)
+            console.log('[DELETE] Eliminando inventarios...');
+            const { error: invError } = await supabase
+                .from('user_inventory')
+                .delete()
+                .eq('item_id', id);
+
+            if (invError) console.error('Error limpiando inventarios:', invError);
+
+            // 4. Eliminar el item de la tienda
+            console.log('[DELETE] Eliminando item de tienda...');
+            const { error } = await supabase
+                .from('shop_items')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
             setDeletingItem(null);
             fetchItems();
-        } else {
-            alert(`Error al eliminar: ${error.message}`);
+            alert('Elemento eliminado correctamente y retirado de todos los usuarios.');
+        } catch (error: any) {
+            console.error('Error eliminando:', error);
+            alert(`Error crítico al eliminar: ${error.message}`);
+        } finally {
+            setIsDeleting(false);
         }
     };
 
