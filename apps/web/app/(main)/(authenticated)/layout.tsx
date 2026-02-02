@@ -25,8 +25,11 @@ import {
   ShoppingBag,
   Package,
   ShieldCheck,
+  ChevronDown,
+  LayoutDashboard
 } from 'lucide-react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CoinCounter } from '@/components/ui/coin-counter';
 import {
@@ -53,6 +56,11 @@ export default function AuthenticatedLayout({
   const [equippedFrame, setEquippedFrame] = useState<ShopItem | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
+
+  // State for collapsible menus
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
+    'Administración Tienda': true
+  });
 
   const dataFetched = useRef(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -128,8 +136,14 @@ export default function AuthenticatedLayout({
     { label: 'Tienda', href: '/dashboard/store', icon: ShoppingBag },
     ...(profile?.role === 'admin' || profile?.role === 'superadmin'
       ? [
-        { label: 'Administrar Tienda', href: '/admin/shop', icon: ShieldCheck },
-        { label: 'Configurar Precios', href: '/admin/store-config', icon: Settings }
+        {
+          label: 'Administración Tienda',
+          icon: ShieldCheck,
+          children: [
+            { label: 'Panel Tienda', href: '/admin/shop', icon: LayoutDashboard },
+            { label: 'Configurar Precios', href: '/admin/store-config', icon: Settings }
+          ]
+        }
       ]
       : []),
     { label: 'Inventario', href: '/inventory', icon: Package },
@@ -262,41 +276,104 @@ export default function AuthenticatedLayout({
 
           {/* Navigation */}
           <nav className="flex-1 px-0 py-6 overflow-y-auto">
-            {navItems.map((item) => {
+            {navItems.map((item: any) => {
+              // 1. Render Normal Item
+              if (!item.children) {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => {
+                      if (window.innerWidth < 768) setSidebarOpen(false);
+                    }}
+                    className="block w-full group relative transition-all duration-200"
+                    style={{
+                      backgroundColor: active ? colors?.primary + '08' : 'transparent',
+                      paddingLeft: '1.5rem',
+                      paddingRight: '1.5rem',
+                      paddingTop: '1rem',
+                      paddingBottom: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      color: active ? colors?.primary : 'var(--bb-text-secondary)',
+                      textDecoration: 'none',
+                      fontSize: '0.875rem',
+                      borderRadius: '0.75rem',
+                      margin: '0 0.5rem',
+                    }}
+                  >
+                    <div
+                      className="absolute left-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                      style={{ backgroundColor: colors?.primary }}
+                    />
+                    <Icon style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
+                    <span style={{ fontWeight: active ? '600' : '500' }}>{item.label}</span>
+                  </Link>
+                );
+              }
+
+              // 2. Render Collapsible Group (Admin)
+              const isOpen = expandedMenus[item.label] !== false; // Default Open or Controlled
               const Icon = item.icon;
-              const active = isActive(item.href);
+              const hasActiveChild = item.children.some((child: any) => isActive(child.href));
+
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => {
-                    // Close sidebar on mobile when navigating
-                    if (window.innerWidth < 768) setSidebarOpen(false);
-                  }}
-                  className="block w-full group relative transition-all duration-200"
-                  style={{
-                    backgroundColor: active ? colors?.primary + '08' : 'transparent',
-                    paddingLeft: '1.5rem',
-                    paddingRight: '1.5rem',
-                    paddingTop: '1rem',
-                    paddingBottom: '1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    color: active ? colors?.primary : 'var(--bb-text-secondary)',
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    borderRadius: '0.75rem',
-                    margin: '0 0.5rem',
-                  }}
-                >
-                  <div
-                    className="absolute left-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    style={{ backgroundColor: colors?.primary }}
-                  />
-                  <Icon style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
-                  <span style={{ fontWeight: active ? '600' : '500' }}>{item.label}</span>
-                </Link>
+                <div key={item.label} className="mb-2">
+                  <button
+                    onClick={() => setExpandedMenus(prev => ({ ...prev, [item.label]: !isOpen }))}
+                    className="w-full flex items-center justify-between px-6 py-3 text-bb-text-secondary hover:text-bb-text transition-colors group relative"
+                    style={{ margin: '0 0.5rem', width: 'auto', borderRadius: '0.75rem' }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0, color: hasActiveChild ? colors?.primary : undefined }} />
+                      <span className={`font-semibold text-sm ${hasActiveChild ? 'text-white' : ''}`}>{item.label}</span>
+                    </div>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                      style={{ color: hasActiveChild ? colors?.primary : undefined }}
+                    />
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex flex-col gap-1 pb-2">
+                          {item.children.map((child: any) => {
+                            const ChildIcon = child.icon;
+                            const active = isActive(child.href);
+                            return (
+                              <Link
+                                key={child.href}
+                                href={child.href}
+                                onClick={() => {
+                                  if (window.innerWidth < 768) setSidebarOpen(false);
+                                }}
+                                className="flex items-center gap-3 pl-12 pr-6 py-2.5 text-sm transition-all relative"
+                                style={{
+                                  color: active ? colors?.primary : 'var(--bb-text-secondary)',
+                                  backgroundColor: active ? colors?.primary + '10' : 'transparent',
+                                  borderRight: active ? `3px solid ${colors?.primary}` : '3px solid transparent'
+                                }}
+                              >
+                                <ChildIcon className="w-4 h-4" />
+                                <span className={active ? 'font-bold' : 'font-medium'}>{child.label}</span>
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               );
             })}
           </nav>
