@@ -217,31 +217,71 @@ export default function GruposContent({
                                 const isAdmin = grupo.created_by === profile?.id;
                                 return (
                                     <motion.div key={grupo.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                                        <Link href={`/dashboard/grupos/view?id=${grupo.id}`} className="group block h-full rounded-2xl overflow-hidden bg-bb-card border border-bb-border hover:border-blue-500/30 transition-all shadow-xl relative">
-                                            <div className="h-28 md:h-40 relative overflow-hidden">
-                                                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: grupo.banner_url ? `url(${getStorageUrl(grupo.banner_url, 'grupos')})` : undefined, backgroundColor: '#1e293b' }} />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-bb-card to-transparent" />
+                                        <Link href={`/dashboard/grupos/view?id=${grupo.id}`} className="group block h-full rounded-2xl overflow-hidden bg-bb-card border border-bb-border hover:border-blue-500/30 transition-all shadow-xl relative flex flex-col">
+                                            {/* Header Banner - Fixed Height */}
+                                            <div className="h-32 md:h-40 relative overflow-hidden bg-[#1e293b]">
+                                                {grupo.banner_url && (
+                                                    <img
+                                                        src={getStorageUrl(grupo.banner_url, 'grupos')}
+                                                        alt="Banner"
+                                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                                    />
+                                                )}
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+
                                                 {(grupo.created_by === profile?.id || profile?.role === 'admin' || profile?.role === 'superadmin') && (
-                                                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingGrupo(grupo); setFormData({ nombre: grupo.nombre, descripcion: grupo.descripcion || '', tipo: grupo.tipo, link_whatsapp: grupo.link_whatsapp || '' }); setShowModal(true); }} className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingGrupo(grupo); setFormData({ nombre: grupo.nombre, descripcion: grupo.descripcion || '', tipo: grupo.tipo, link_whatsapp: grupo.link_whatsapp || '' }); setShowModal(true); }} className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-black/80">
                                                         <Settings className="w-4 h-4" />
                                                     </button>
                                                 )}
-                                                <span className="absolute bottom-4 left-4 px-3 py-1 rounded-full text-xs font-bold bg-black/60 text-white border border-white/10">{grupo.tipo}</span>
+                                                <span className="absolute top-3 left-3 px-3 py-1 rounded-full text-[10px] font-bold bg-black/60 text-white border border-white/10 backdrop-blur-sm z-20 uppercase tracking-wider">{grupo.tipo}</span>
                                             </div>
-                                            <div className="p-3 md:p-6 pt-8 md:pt-12 relative text-white flex-1 flex flex-col">
-                                                <div className="absolute -top-7 md:-top-10 left-3 md:left-6 w-14 h-14 md:w-20 md:h-20 rounded-xl md:rounded-2xl border-4 border-bb-card bg-blue-600 flex items-center justify-center text-xl md:text-2xl font-bold overflow-hidden">
-                                                    {grupo.logo_url ? <img src={getStorageUrl(grupo.logo_url, 'grupos')} className="w-full h-full object-cover" /> : grupo.nombre.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div className="flex justify-between items-start mb-1 md:mb-2 pl-16 md:pl-24 text-[10px] md:text-xs text-gray-400">
-                                                    <div className="flex items-center gap-1.5"><Users className="w-3 md:w-3.5 h-3 md:h-3.5" /> {miembrosCuenta[grupo.id] || 0}</div>
-                                                </div>
-                                                <h3 className="text-sm md:text-xl font-bold mb-1 md:mb-2 group-hover:text-blue-400 transition-colors truncate">{grupo.nombre}</h3>
-                                                <p className="text-[10px] md:text-sm text-gray-400 line-clamp-2 mb-4 md:mb-6 h-8 md:h-10">{grupo.descripcion || 'Sin descripción.'}</p>
-                                                <div className="flex gap-2 md:gap-3 mt-auto">
-                                                    {isUserMember ? (
-                                                        <button onClick={(e) => handleAbandonar(e, grupo.id)} className="flex-1 px-3 py-2 md:px-4 md:py-2.5 rounded-lg md:rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 text-[10px] md:text-sm font-semibold">Abandonar</button>
+
+                                            {/* Content Body */}
+                                            <div className="p-4 md:p-6 relative flex-1 flex flex-col pt-12">
+                                                {/* Logo Badge - Floating */}
+                                                <div className="absolute -top-10 left-4 md:left-6 w-20 h-20 rounded-2xl border-4 border-bb-card bg-bb-card shadow-lg flex items-center justify-center overflow-hidden z-10">
+                                                    {grupo.logo_url ? (
+                                                        <img src={getStorageUrl(grupo.logo_url, 'grupos')} className="w-full h-full object-cover bg-bb-dark" />
                                                     ) : (
-                                                        <button onClick={(e) => handleUnirse(e, grupo.id)} className="flex-1 px-3 py-2 md:px-4 md:py-2.5 rounded-lg md:rounded-xl bg-blue-600 text-white font-bold text-[10px] md:text-sm flex items-center justify-center gap-1 md:gap-2">Unirse <ArrowRight className="w-3 h-3 md:w-4 md:h-4" /></button>
+                                                        <div className="w-full h-full bg-blue-600 flex items-center justify-center text-2xl font-bold text-white">
+                                                            {grupo.nombre.charAt(0).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Stats Row */}
+                                                <div className="flex justify-end items-center mb-3">
+                                                    <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 bg-white/5 px-2 py-1 rounded-lg">
+                                                        <Users className="w-3.5 h-3.5" />
+                                                        {miembrosCuenta[grupo.id] || 0}
+                                                        <span className="hidden md:inline ml-1">Miembros</span>
+                                                    </div>
+                                                </div>
+
+                                                <h3 className="text-lg md:text-xl font-bold mb-2 text-white group-hover:text-blue-400 transition-colors line-clamp-1" title={grupo.nombre}>
+                                                    {grupo.nombre}
+                                                </h3>
+
+                                                <p className="text-xs md:text-sm text-gray-400 line-clamp-2 mb-6 min-h-[2.5rem] leading-relaxed">
+                                                    {grupo.descripcion || 'Sin descripción disponible para este grupo.'}
+                                                </p>
+
+                                                <div className="mt-auto pt-4 border-t border-white/5">
+                                                    {isUserMember ? (
+                                                        <button
+                                                            onClick={(e) => handleAbandonar(e, grupo.id)}
+                                                            className="w-full py-2.5 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 text-xs font-bold uppercase tracking-wide hover:bg-red-500 hover:text-white transition-all"
+                                                        >
+                                                            Abandonar
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={(e) => handleUnirse(e, grupo.id)}
+                                                            className="w-full py-2.5 rounded-xl bg-white text-black font-bold text-xs uppercase tracking-wide hover:bg-gray-200 transition-all shadow-lg flex items-center justify-center gap-2"
+                                                        >
+                                                            Unirse al Grupo <ArrowRight className="w-3.5 h-3.5" />
+                                                        </button>
                                                     )}
                                                 </div>
                                             </div>
