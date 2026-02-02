@@ -436,7 +436,17 @@ export default function AuthenticatedLayout({
                   <Menu className="h-6 w-6" />
                 </button>
                 <h1 className="text-xl sm:text-2xl font-bold text-bb-text truncate transition-colors">
-                  {navItems.find((item) => isActive(item.href))?.label || 'Dashboard'}
+                  {(() => {
+                    // Helper to find active label recursively
+                    for (const item of navItems) {
+                      if (item.href && isActive(item.href)) return item.label;
+                      if (item.children) {
+                        const child = item.children.find((c: any) => isActive(c.href));
+                        if (child) return child.label;
+                      }
+                    }
+                    return 'Dashboard';
+                  })()}
                 </h1>
               </div>
 
