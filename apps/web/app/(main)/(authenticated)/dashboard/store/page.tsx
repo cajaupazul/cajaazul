@@ -193,26 +193,36 @@ function StoreContent() {
 
     const handlePaymentSuccess = async (result: any) => {
         // The modal now handles the "Success View" and will be closed by the user.
-        console.log('Payment successful, performing optimistic update...');
+        console.log('[StorePage] Payment successful. Product:', selectedProduct);
 
         // OPTIMISTIC UPDATE: Update profile immediately
         if (profile && selectedProduct) {
 
             if (selectedProduct.type === 'coins' && selectedProduct.amount) {
-                console.log(`Optimistically adding ${selectedProduct.amount} coins`);
-                const newCoins = (profile.monedas || 0) + selectedProduct.amount;
+                // Force number type just in case
+                const amountToAdd = Number(selectedProduct.amount);
+                console.log(`[StorePage] Optimistically adding ${amountToAdd} coins to current: ${profile.monedas}`);
+
+                const newCoins = (profile.monedas || 0) + amountToAdd;
 
                 // Update local context immediately for instant feedback
                 updateProfile({ ...profile, monedas: newCoins });
             } else if (selectedProduct.type === 'vip') {
-                // For VIP we mark it true immediately, though full date calculation is better left to server/refresh
+                console.log('[StorePage] Optimistically setting VIP status');
+                // For VIP we mark it true immediately
                 updateProfile({ ...profile, es_vip: true });
             }
         }
 
-        // We still call refresh to ensure we eventually sync with server truth (idempotent-ish)
-        // Background refresh without blocking UI feedback
+        // TRIGGER BACKGROUND REFRESH
+        // 1. Immediate (in case webhook was super fast or simple revalidation)
         refreshProfile();
+
+        // 2. Delayed check (wait for webhook) to ensure DB consistency
+        setTimeout(() => {
+            console.log('[StorePage] Delayed DB refresh to sync final state');
+            refreshProfile();
+        }, 3000);
     };
 
     const handlePaymentError = (error: any) => {
