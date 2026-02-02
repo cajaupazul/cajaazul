@@ -114,7 +114,7 @@ export default function EditGroupPage() {
                     await deleteFileFromR2('grupos', grupo.logo_url);
                 }
 
-                const fileExt = logoFile.name.split('.').pop();
+                const fileExt = logoFile.name.split('.').pop()?.toLowerCase() || 'jpg';
                 const fileName = `${profile.id}/logo-${Date.now()}.${fileExt}`;
                 await uploadFileToR2('grupos', fileName, logoFile);
                 finalLogoUrl = fileName;
@@ -129,7 +129,7 @@ export default function EditGroupPage() {
                     await deleteFileFromR2('grupos', grupo.banner_url);
                 }
 
-                const fileExt = bannerFile.name.split('.').pop();
+                const fileExt = bannerFile.name.split('.').pop()?.toLowerCase() || 'jpg';
                 const fileName = `${profile.id}/banner-${Date.now()}.${fileExt}`;
                 await uploadFileToR2('grupos', fileName, bannerFile);
                 finalBannerUrl = fileName;

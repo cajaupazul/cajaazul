@@ -137,14 +137,18 @@ export default function GrupoDetailContent({
         <div className={`min-h-screen ${themeMode === 'light' ? 'bg-gray-50 text-gray-900' : 'bg-[#0a0a0a] text-white'}`}>
             {/* Minimalist Header / Banner */}
             <div className="relative h-[30vh] md:h-[45vh] overflow-hidden">
-                <div
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
-                    style={{
-                        backgroundImage: grupo.banner_url ? `url('${getStorageUrl(grupo.banner_url, 'grupos')}')` : undefined,
-                        backgroundColor: colors?.primary + '20',
-                    }}
-                >
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/40 to-transparent" />
+                <div className="absolute inset-0 transition-transform duration-700 hover:scale-105">
+                    {grupo.banner_url && (
+                        <img
+                            src={getStorageUrl(grupo.banner_url, 'grupos')}
+                            alt="Banner"
+                            className="w-full h-full object-cover"
+                        />
+                    )}
+                    <div
+                        className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/40 to-transparent"
+                        style={{ backgroundColor: !grupo.banner_url ? (colors?.primary + '20') : undefined }}
+                    />
                 </div>
 
                 <div className="absolute top-0 left-0 right-0 p-4 md:p-8 flex justify-between items-center z-30">
