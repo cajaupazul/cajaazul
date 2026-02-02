@@ -46,29 +46,12 @@ export default function GrupoDetailContent({
     const [activeTab, setActiveTab] = useState<'pizarra' | 'miembros' | 'galeria' | 'recursos'>('pizarra');
     const [miembros, setMiembros] = useState<Miembro[]>(initialMiembros);
     const [isMember, setIsMember] = useState(initialIsMember);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [editData, setEditData] = useState({
-        nombre: grupo.nombre || '',
-        descripcion: grupo.descripcion || '',
-        tipo: grupo.tipo || '',
-        link_whatsapp: grupo.link_whatsapp || '',
-        syllabus_url: grupo.syllabus_url || ''
-    });
-    const [syllabusFile, setSyllabusFile] = useState<File | null>(null);
-    const [uploadingSyllabus, setUploadingSyllabus] = useState(false);
     const [hoveredMiembro, setHoveredMiembro] = useState<string | null>(null);
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
 
     useEffect(() => {
         setMiembros(initialMiembros);
         setIsMember(initialIsMember);
-        setEditData({
-            nombre: grupo.nombre || '',
-            descripcion: grupo.descripcion || '',
-            tipo: grupo.tipo || '',
-            link_whatsapp: grupo.link_whatsapp || '',
-            syllabus_url: grupo.syllabus_url || ''
-        });
     }, [initialMiembros, initialIsMember, grupo]);
 
     const handleMiembroHover = (e: React.MouseEvent<HTMLElement>, userId: string) => {
@@ -121,46 +104,6 @@ export default function GrupoDetailContent({
         }
     };
 
-    const handleUpdateGrupo = async () => {
-        try {
-            let finalSyllabusUrl = editData.syllabus_url;
-
-            if (syllabusFile) {
-                setUploadingSyllabus(true);
-                const fileExt = syllabusFile.name.split('.').pop();
-                const fileName = `${Date.now()}-syllabus.${fileExt}`;
-                const filePath = `${profile?.id}/${fileName}`;
-
-                const { error: uploadError } = await supabase.storage
-                    .from('grupos')
-                    .upload(filePath, syllabusFile);
-
-                if (uploadError) throw uploadError;
-                finalSyllabusUrl = filePath;
-            }
-
-            const { error } = await supabase
-                .from('grupos')
-                .update({
-                    nombre: editData.nombre,
-                    descripcion: editData.descripcion,
-                    tipo: editData.tipo,
-                    link_whatsapp: editData.link_whatsapp,
-                    syllabus_url: finalSyllabusUrl
-                })
-                .eq('id', grupo.id);
-
-            if (error) throw error;
-            setShowEditModal(false);
-            setSyllabusFile(null);
-            router.refresh();
-        } catch (error) {
-            console.error('Error actualizando:', error);
-            alert('Error al actualizar el grupo.');
-        } finally {
-            setUploadingSyllabus(false);
-        }
-    };
 
     const handleDeleteGrupo = async () => {
         if (!window.confirm('¿Estás seguro de que deseas eliminar este grupo? Esta acción borrará permanentemente todos los datos e imágenes asociados.')) return;
@@ -213,12 +156,12 @@ export default function GrupoDetailContent({
                     </Link>
 
                     {isAdmin && (
-                        <button
-                            onClick={() => setShowEditModal(true)}
-                            className="p-2 md:p-3 rounded-full bg-black/40 hover:bg-black/80 transition-all border border-white/5 backdrop-blur-sm"
+                        <Link
+                            href={`/dashboard/grupos/edit?id=${grupo.id}`}
+                            className="p-2 md:p-3 rounded-full bg-black/40 hover:bg-black/80 transition-all border border-white/5 backdrop-blur-sm text-white"
                         >
                             <Settings className="w-5 h-5 md:w-6 md:h-6" />
-                        </button>
+                        </Link>
                     )}
                 </div>
 
@@ -268,44 +211,15 @@ export default function GrupoDetailContent({
                                     href={grupo.link_whatsapp}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="p-3 rounded-xl bg-green-500 hover:bg-green-600 transition-all shadow-lg"
+                                    className="p-3 rounded-xl bg-green-500 hover:bg-green-600 transition-all shadow-lg text-white"
                                 >
-                                    <MessageCircle className="w-6 h-6 text-white" />
+                                    <MessageCircle className="w-6 h-6" />
                                 </a>
                             )}
                         </div>
                     </div>
                 </div>
             </div>
-
-            {/* Syllabus Section - Quick Access */}
-            {grupo.syllabus_url && (
-                <div className={`border-b ${themeMode === 'light' ? 'bg-white border-gray-200' : 'bg-blue-600/5 border-white/5'}`}>
-                    <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${themeMode === 'light' ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/20 text-blue-400'}`}>
-                                <FileText className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <p className="text-xs font-black uppercase tracking-widest opacity-60">Syllabus del Curso</p>
-                                <p className="text-sm font-bold truncate max-w-[200px] md:max-w-md">Documento oficial disponible</p>
-                            </div>
-                        </div>
-                        <a
-                            href={getStorageUrl(grupo.syllabus_url, 'grupos')}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${themeMode === 'light'
-                                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20'
-                                : 'bg-white text-black hover:bg-gray-200'
-                                }`}
-                        >
-                            Ver Syllabus
-                            <ExternalLink className="w-3 h-3" />
-                        </a>
-                    </div>
-                </div>
-            )}
 
             {/* Tabbed Navigation Minimalist */}
             <div className={`sticky top-0 z-40 backdrop-blur-xl border-b ${themeMode === 'light' ? 'bg-white/80 border-gray-200' : 'bg-[#0a0a0a]/80 border-white/5'}`}>
@@ -480,88 +394,6 @@ export default function GrupoDetailContent({
                         >
                             Eliminar Grupo
                         </button>
-                    </div>
-                </div>
-            )}
-
-            {showEditModal && (
-                <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-                    <div className="bg-[#121212] rounded-[2rem] w-full max-w-lg border border-white/10 shadow-3xl p-8 animate-in zoom-in-95 duration-300 text-white">
-                        <h2 className="text-2xl font-black mb-6 uppercase tracking-tighter">Ajustes del Grupo</h2>
-
-                        <div className="space-y-4 mb-8">
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-2 px-1">Nombre</label>
-                                <input
-                                    type="text"
-                                    value={editData.nombre}
-                                    onChange={(e) => setEditData({ ...editData, nombre: e.target.value })}
-                                    className="w-full px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500 transition-all text-sm"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-2 px-1">Categoría</label>
-                                <input
-                                    type="text"
-                                    value={editData.tipo}
-                                    onChange={(e) => setEditData({ ...editData, tipo: e.target.value })}
-                                    className="w-full px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500 transition-all text-sm"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-2 px-1">Descripción</label>
-                                <textarea
-                                    value={editData.descripcion}
-                                    onChange={(e) => setEditData({ ...editData, descripcion: e.target.value })}
-                                    rows={4}
-                                    className="w-full px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500 transition-all text-sm resize-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-2 px-1">Enlace de WhatsApp</label>
-                                <input
-                                    type="url"
-                                    value={editData.link_whatsapp}
-                                    onChange={(e) => setEditData({ ...editData, link_whatsapp: e.target.value })}
-                                    placeholder="https://chat.whatsapp.com/..."
-                                    className="w-full px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500 transition-all text-sm"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-2 px-1">Syllabus (PDF)</label>
-                                <div className="flex items-center gap-3">
-                                    <label className="flex-1 cursor-pointer">
-                                        <div className="w-full px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 transition-all text-sm flex items-center justify-between">
-                                            <span>{syllabusFile ? syllabusFile.name : 'Sube un archivo PDF...'}</span>
-                                            <Upload className="w-4 h-4" />
-                                        </div>
-                                        <input
-                                            type="file"
-                                            accept=".pdf"
-                                            onChange={(e) => setSyllabusFile(e.target.files?.[0] || null)}
-                                            className="hidden"
-                                        />
-                                    </label>
-                                    {editData.syllabus_url && (
-                                        <div className="p-3 bg-green-500/20 text-green-400 rounded-xl">
-                                            <FileText className="w-5 h-5" />
-                                        </div>
-                                    )}
-                                </div>
-                                <p className="text-[10px] text-white/30 mt-2 px-1 uppercase font-bold italic">Integridad: Solo se permiten archivos PDF oficiales.</p>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-white/40 font-bold hover:text-white/70 transition-all text-sm">Cancelar</button>
-                            <button onClick={handleUpdateGrupo} disabled={uploadingSyllabus} className="flex-1 px-4 py-3 rounded-xl bg-white text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-white/10 hover:bg-gray-200 transition-all disabled:opacity-50">
-                                {uploadingSyllabus ? 'Subiendo...' : 'Guardar'}
-                            </button>
-                        </div>
                     </div>
                 </div>
             )}
