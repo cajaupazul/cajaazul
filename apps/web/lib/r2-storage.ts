@@ -126,7 +126,11 @@ export async function deleteFileFromR2(bucket: string, path: string): Promise<bo
         )
 
         if (!response.ok) {
-            console.error('Error eliminando archivo:', response.statusText)
+            // Si es 404, el archivo ya no existe, por lo que la eliminación fue "exitosa" en la práctica.
+            if (response.status === 404) {
+                return true;
+            }
+            console.warn(`Advertencia eliminando archivo (${response.status}):`, response.statusText)
             return false
         }
 
