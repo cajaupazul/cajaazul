@@ -173,7 +173,7 @@ export default function GrupoDetailContent({
                     <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8">
                         {/* Logo Fluid */}
                         <div
-                            className="w-24 h-24 md:w-40 md:h-40 rounded-2xl md:rounded-3xl border-4 border-[#0a0a0a] shadow-2xl flex-shrink-0 flex items-center justify-center text-3xl md:text-5xl font-black transition-all overflow-hidden relative"
+                            className="w-24 h-24 md:w-32 md:h-32 rounded-2xl md:rounded-3xl border-4 border-[#0a0a0a] shadow-2xl flex-shrink-0 flex items-center justify-center text-3xl md:text-5xl font-black transition-all overflow-hidden relative bg-bb-dark"
                             style={{
                                 backgroundColor: colors?.primary,
                                 boxShadow: `0 20px 50px ${colors?.primary}40`
@@ -190,60 +190,33 @@ export default function GrupoDetailContent({
                             )}
                         </div>
 
-                        <div className="text-center md:text-left flex-1 min-w-0">
-                            <h1 className="text-3xl md:text-6xl font-black mb-2 tracking-tight truncate w-full">
+                        <div className="text-center md:text-left flex-1 min-w-0 pb-2">
+                            <h1 className="text-3xl md:text-5xl font-black mb-2 tracking-tight truncate w-full shadow-black drop-shadow-lg">
                                 {grupo.nombre}
                             </h1>
-                            <div className="flex items-center justify-center md:justify-start gap-3 opacity-70">
-                                <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em]">{grupo.tipo}</span>
-                                <span className="w-1 h-1 bg-white rounded-full" />
-                                <span className="text-xs md:text-sm font-bold">{miembros.length} Miembros</span>
+                            <div className="flex items-center justify-center md:justify-start gap-3 opacity-90">
+                                <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">{grupo.tipo}</span>
+                                <span className="text-[10px] md:text-xs font-bold bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-1">
+                                    <Users className="w-3 h-3" /> {miembros.length} Miembros
+                                </span>
                             </div>
-                        </div>
-
-                        <div className="flex gap-3 w-full md:w-auto mt-4 md:mt-0">
-                            {isMember ? (
-                                <button
-                                    onClick={handleAbandonar}
-                                    className="flex-1 md:flex-initial px-8 py-3 rounded-xl border border-white/10 hover:bg-white/5 font-bold transition-all text-sm md:text-base whitespace-nowrap"
-                                >
-                                    Abandonar
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={handleUnirse}
-                                    className="flex-1 md:flex-initial px-10 py-3 rounded-xl font-bold bg-white text-black hover:bg-gray-200 transition-all text-sm md:text-base shadow-xl"
-                                >
-                                    Unirse
-                                </button>
-                            )}
-                            {isMember && grupo.link_whatsapp && (
-                                <a
-                                    href={grupo.link_whatsapp}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-3 rounded-xl bg-green-500 hover:bg-green-600 transition-all shadow-lg text-white"
-                                >
-                                    <MessageCircle className="w-6 h-6" />
-                                </a>
-                            )}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Tabbed Navigation Minimalist */}
-            <div className={`sticky top-0 z-40 backdrop-blur-xl border-b ${themeMode === 'light' ? 'bg-white/80 border-gray-200' : 'bg-[#0a0a0a]/80 border-white/5'}`}>
-                <div className="max-w-7xl mx-auto px-4 md:px-8">
-                    <div className="flex overflow-x-auto no-scrollbar gap-6 md:gap-12">
+            {/* Tabbed Navigation Minimalist & Sticky Actions */}
+            <div className={`sticky top-0 z-40 backdrop-blur-xl border-b transition-colors duration-300 ${themeMode === 'light' ? 'bg-white/80 border-gray-200' : 'bg-[#0a0a0a]/80 border-white/5'}`}>
+                <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between gap-4">
+                    <div className="flex overflow-x-auto no-scrollbar gap-6 md:gap-8">
                         {[
-                            { id: 'pizarra', label: 'Pizarra', icon: Users },
-                            { id: 'miembros', label: 'Miembros', icon: Users },
+                            { id: 'pizarra', label: 'Pizarra' },
+                            { id: 'miembros', label: 'Miembros' },
                         ].map((tab) => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
-                                className={`py-4 md:py-6 text-xs md:text-sm font-black uppercase tracking-widest whitespace-nowrap transition-all border-b-2 ${activeTab === tab.id
+                                className={`py-4 md:py-5 text-xs md:text-sm font-black uppercase tracking-widest whitespace-nowrap transition-all border-b-2 ${activeTab === tab.id
                                     ? (themeMode === 'light' ? 'border-blue-600 text-blue-600' : 'border-white text-white')
                                     : (themeMode === 'light' ? 'border-transparent text-gray-400 hover:text-gray-600' : 'border-transparent text-white/40 hover:text-white/70')
                                     }`}
@@ -251,6 +224,37 @@ export default function GrupoDetailContent({
                                 {tab.label}
                             </button>
                         ))}
+                    </div>
+
+                    {/* Actions moved here */}
+                    <div className="flex items-center gap-2 md:gap-3 py-2">
+                        {isMember && grupo.link_whatsapp && (
+                            <a
+                                href={grupo.link_whatsapp}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 md:p-2.5 rounded-xl bg-green-500 text-white hover:bg-green-600 transition-all shadow-lg hover:shadow-green-500/20"
+                                title="WhatsApp Group"
+                            >
+                                <MessageCircle className="w-4 h-4 md:w-5 md:h-5" />
+                            </a>
+                        )}
+
+                        {isMember ? (
+                            <button
+                                onClick={handleAbandonar}
+                                className="px-4 md:px-6 py-2 md:py-2.5 rounded-xl border border-red-500/20 text-red-500 bg-red-500/5 hover:bg-red-500 hover:text-white font-bold transition-all text-xs uppercase tracking-wide"
+                            >
+                                Abandonar
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleUnirse}
+                                className={`px-5 md:px-8 py-2 md:py-2.5 rounded-xl font-bold transition-all text-xs uppercase tracking-wide shadow-lg ${themeMode === 'light' ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-600/30' : 'bg-white text-black hover:bg-gray-200 hover:shadow-white/20'}`}
+                            >
+                                Unirse
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
