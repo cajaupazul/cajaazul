@@ -23,16 +23,16 @@ export function Palette({ selectedColor, onSelectColor, className }: PaletteProp
         <div className={cn("bg-white/95 backdrop-blur shadow-2xl border-t border-gray-200 px-2 md:px-4 py-2 md:py-3 flex items-center justify-center gap-2 md:gap-4 transition-all", className)}>
 
             {/* Color Strip */}
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar max-w-[80vw] p-1">
+            <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto no-scrollbar max-w-full p-1">
                 {COLOR_PALETTE.map((color) => (
                     <button
                         key={color}
                         onClick={() => onSelectColor(color)}
                         className={cn(
-                            "w-8 h-8 md:w-10 md:h-10 rounded-lg flex-shrink-0 transition-all transform hover:scale-110 active:scale-95 border-2",
+                            "w-8 h-8 md:w-9 md:h-9 rounded-full flex-shrink-0 transition-all transform hover:scale-110 active:scale-95 border-2",
                             selectedColor === color
-                                ? "border-black shadow-lg scale-110 md:scale-115 ring-2 ring-white z-10"
-                                : "border-transparent opacity-90 hover:opacity-100 hover:border-gray-300"
+                                ? "border-blue-500 shadow-lg scale-110 ring-2 ring-blue-100 z-10"
+                                : "border-gray-100 opacity-90 hover:opacity-100 hover:border-gray-300"
                         )}
                         style={{ backgroundColor: color }}
                         title={color}

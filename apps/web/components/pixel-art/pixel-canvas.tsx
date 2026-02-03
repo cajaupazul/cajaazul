@@ -5,7 +5,31 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { supabase, getStorageUrl, ShopItem } from '@/lib/supabase';
 import { Palette, COLOR_PALETTE, COLOR_MAP } from './palette';
 import { NavigationControls } from './overlay-controls';
-import { Upload, X, Grid as GridIcon, Lock, Unlock, Image as ImageIcon, Trash2, Move, Eraser, Sparkles } from 'lucide-react';
+import {
+    Download,
+    Share2,
+    Undo,
+    Redo,
+    ZoomIn,
+    ZoomOut,
+    Move,
+    Grid,
+    Maximize,
+    MousePointer2,
+    Trash2,
+    Upload,
+    ImageIcon,
+    X,
+    Sparkles,
+    Eraser,
+    Lock,
+    Unlock,
+    Info,
+    Check,
+    Pencil,
+    Plus,
+    Minus
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 
@@ -543,6 +567,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
+        // Only respond to LEFT CLICK for starting interactions
+        if (e.button !== 0) return;
+
         if (isEditingGuidance && guidanceImage) {
             lastMouseRef.current = { x: e.clientX, y: e.clientY };
             return;
@@ -592,6 +619,12 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     };
 
     const handleMouseUp = (e: React.MouseEvent) => {
+        // Only respond to LEFT CLICK for ending interactions
+        if (e.button !== 0) {
+            setIsPanning(false);
+            return;
+        }
+
         setIsPanning(false);
         lastMouseRef.current = null;
 
@@ -808,54 +841,13 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 onMouseEnter={handleMouseEnter}
                 onContextMenu={(e) => e.preventDefault()}
             >
-                <canvas ref={displayCanvasRef} className="block w-full h-full" style={{ touchAction: 'none' }} />
+                <canvas
+                    ref={displayCanvasRef}
+                    className="block w-full h-full"
+                    style={{ touchAction: 'none' }}
+                    onContextMenu={(e) => e.preventDefault()}
+                />
 
-                <div className="absolute top-2 md:top-4 left-2 md:left-4 z-10 pointer-events-none fade-in slide-in-from-top-4 duration-300">
-                    <div className="bg-white/90 backdrop-blur-md text-slate-900 px-3 md:px-4 py-1.5 md:py-2 rounded-xl md:rounded-2xl shadow-xl border border-white/20 flex items-center gap-2 md:gap-3">
-                        <div className="flex items-center gap-1.5 md:gap-2">
-                            <span className="relative flex h-2 md:h-3 w-2 md:w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 md:h-3 w-2 md:w-3 bg-green-500"></span>
-                            </span>
-                            <span className="font-bold text-[10px] md:text-sm text-slate-700">{onlineUsers} creando</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Top Right User Panel */}
-                <div className="absolute top-2 md:top-4 right-2 md:right-4 z-10 pointer-events-auto flex flex-col items-end gap-2">
-                    {userProfile && (
-                        <>
-                            <div className="hidden md:flex bg-white/90 backdrop-blur-md px-1.5 py-1.5 md:pl-2 md:pr-4 rounded-full shadow-xl border border-white/20 items-center gap-3">
-                                <div className="relative">
-                                    <AvatarWithFrame
-                                        size={36}
-                                        avatarUrl={getStorageUrl(userProfile.avatar_url)}
-                                        frameUrl={equippedFrame?.image_url}
-                                        frameScale={equippedFrame?.frame_settings?.navbar?.scale || 1}
-                                        offsetX={equippedFrame?.frame_settings?.navbar?.x || 0}
-                                        offsetY={equippedFrame?.frame_settings?.navbar?.y || 0}
-                                        name={userProfile.nombre}
-                                    />
-                                </div>
-                                <span className="text-sm font-semibold text-slate-800">{userProfile.nombre?.split(' ')[0]}</span>
-                            </div>
-
-                            {/* Extra Buttons: Tienda, Alianza, Clasificación */}
-                            <div className="flex flex-col gap-2 items-end animate-in fade-in slide-in-from-right-4 duration-500 delay-100">
-                                <button className="flex items-center gap-2 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/10 transition-all hover:scale-105">
-                                    <span>🏪</span> Tienda
-                                </button>
-                                <button className="flex items-center gap-2 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/10 transition-all hover:scale-105">
-                                    <span>🛡️</span> Alianza
-                                </button>
-                                <button className="flex items-center gap-2 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/10 transition-all hover:scale-105">
-                                    <span>🏆</span> Clasificación
-                                </button>
-                            </div>
-                        </>
-                    )}
-                </div>
 
                 {/* Internal Avatar/Close Removed - Handled by Parent Page */}
 
@@ -877,116 +869,120 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         </button>
                     </div>
                 ) : (
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 w-full max-w-5xl px-4 pointer-events-none">
-                        <div className="pointer-events-auto bg-white rounded-3xl shadow-2xl p-4 flex flex-col gap-4 animate-in slide-in-from-bottom-10 duration-300">
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-6xl pointer-events-none" onContextMenu={(e) => e.preventDefault()}>
+                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-[2rem] shadow-2xl p-2 md:p-3 border border-slate-200 flex flex-col gap-3 animate-in slide-in-from-bottom-6 duration-300">
 
-                            {/* Top Row: Title & Actions */}
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-slate-100 p-2 rounded-lg">
-                                        <span className="text-xl">🎨</span>
+                            {/* Inner Header/Bar */}
+                            <div className="flex items-center justify-between px-2">
+                                <div className="flex items-center gap-4">
+                                    {/* Action Group (Left) */}
+                                    <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-2xl border border-slate-100">
+                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Maximize className="w-4 h-4" /></button>
+                                        <div className="h-4 w-[1px] bg-slate-200 mx-1" />
+                                        <span className="text-xs font-bold text-slate-700 px-2 whitespace-nowrap">Pintar píxel ({pendingPixels.size})</span>
+                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Pencil className="w-4 h-4" /></button>
+                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" onClick={() => setShowGuidancePanel(!showGuidancePanel)}><Grid className="w-4 h-4" /></button>
+                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" onClick={() => {/* TODO: Undo */ }}><Undo className="w-4 h-4" /></button>
+                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" onClick={() => {/* TODO: Redo */ }}><Redo className="w-4 h-4" /></button>
                                     </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-800 text-lg">Pintar Píxel</h3>
-                                        <p className="text-xs text-slate-500 font-medium">
-                                            {pendingPixels.size > 0
-                                                ? `${pendingPixels.size} píxeles seleccionados`
-                                                : "Selecciona píxeles en el lienzo"}
-                                        </p>
-                                    </div>
+
+                                    {/* Profile Group (Integrated as requested) */}
+                                    {userProfile && (
+                                        <div className="hidden lg:flex items-center gap-2 pr-4 border-r border-slate-100">
+                                            <AvatarWithFrame
+                                                size={32}
+                                                avatarUrl={getStorageUrl(userProfile.avatar_url)}
+                                                frameUrl={equippedFrame?.image_url}
+                                                frameScale={equippedFrame?.frame_settings?.navbar?.scale || 1}
+                                                offsetX={equippedFrame?.frame_settings?.navbar?.x || 0}
+                                                offsetY={equippedFrame?.frame_settings?.navbar?.y || 0}
+                                                name={userProfile.nombre}
+                                            />
+                                            <span className="text-xs font-bold text-slate-800">{userProfile.nombre?.split(' ')[0]}</span>
+                                        </div>
+                                    )}
                                 </div>
 
+                                {/* Tools / Close */}
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setIsPaintMode(false)}
+                                        className="p-2.5 rounded-full hover:bg-slate-100 text-slate-400 transition-all"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Palette Area */}
+                            <div className="px-2">
+                                <Palette
+                                    selectedColor={isPanning || isEditingGuidance || isEraser || isSmartPicking ? null : selectedColor}
+                                    onSelectColor={(c) => {
+                                        if (isEditingGuidance) setIsEditingGuidance(false);
+                                        setSelectedColor(c);
+                                        setIsPanning(false);
+                                        setIsSmartPicking(false);
+                                    }}
+                                    className="border-none bg-transparent shadow-none p-0"
+                                />
+                            </div>
+
+                            {/* Central Confirm Button */}
+                            <div className="flex justify-center -mt-1 pb-1">
                                 <button
                                     onClick={confirmPaint}
                                     disabled={pendingPixels.size === 0}
                                     className={cn(
-                                        "px-6 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg",
+                                        "px-10 py-3 rounded-2xl font-black transition-all flex items-center gap-3 shadow-xl transform active:scale-95 group relative overflow-hidden",
                                         pendingPixels.size > 0
-                                            ? "bg-blue-600 hover:bg-blue-500 text-white hover:scale-105 active:scale-95 shadow-blue-200"
+                                            ? "bg-blue-600 text-white hover:bg-blue-500 hover:scale-[1.02] shadow-blue-200"
                                             : "bg-slate-100 text-slate-400 cursor-not-allowed"
                                     )}
                                 >
-                                    {pendingPixels.size > 0 ? '✅ Confirmar y Pintar' : 'Selecciona para pintar'}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                                    <Sparkles className={cn("w-5 h-5", pendingPixels.size > 0 ? "animate-pulse" : "")} />
+                                    <span className="tracking-tight text-lg">Pintar {pendingPixels.size > 0 ? pendingPixels.size : ''}</span>
+                                    <div className="h-5 w-[1px] bg-white/20 mx-1" />
+                                    <span className="text-sm opacity-80">{userProfile?.monedas || 0}</span>
                                 </button>
                             </div>
 
-                            {/* Bottom Row: Tools & Palette */}
-                            <div className="flex items-center gap-4">
-                                {/* Tools Group */}
-                                <div className="flex items-center gap-2 pr-4 border-r border-slate-100">
-                                    {/* Eraser */}
-                                    <button
-                                        onClick={() => {
-                                            if (isEditingGuidance) setIsEditingGuidance(false);
-                                            setSelectedColor('eraser');
-                                            setIsPanning(false);
-                                            setIsSmartPicking(false);
-                                        }}
-                                        className={cn(
-                                            "p-3 rounded-xl transition-all flex flex-col items-center justify-center gap-1 w-16 h-16",
-                                            isEraser ? "bg-rose-100 text-rose-600 ring-2 ring-rose-500" : "hover:bg-slate-50 text-slate-500"
-                                        )}
-                                        title="Borrador"
-                                    >
-                                        <Eraser className="w-6 h-6" />
-                                        <span className="text-[10px] font-bold uppercase">Borrar</span>
-                                    </button>
-
-                                    {/* Guide Button */}
-                                    <button
-                                        onClick={() => setShowGuidancePanel(!showGuidancePanel)}
-                                        className={cn(
-                                            "p-3 rounded-xl transition-all flex flex-col items-center justify-center gap-1 w-16 h-16 relative",
-                                            showGuidancePanel ? "bg-blue-100 text-blue-600 ring-2 ring-blue-500" : "hover:bg-slate-50 text-slate-500"
-                                        )}
-                                        title="Guía / Plantilla"
-                                    >
-                                        <ImageIcon className="w-6 h-6" />
-                                        <span className="text-[10px] font-bold uppercase">Guía</span>
-                                    </button>
-
-                                    {guidanceImage && (
-                                        <button
-                                            onClick={() => {
-                                                if (isEditingGuidance) setIsEditingGuidance(false);
-                                                setIsSmartPicking(!isSmartPicking);
-                                                if (!isSmartPicking) {
-                                                    setSelectedColor(null);
-                                                    setIsPanning(false);
-                                                }
-                                            }}
-                                            className={cn(
-                                                "p-3 rounded-xl transition-all flex flex-col items-center justify-center gap-1 w-16 h-16 relative",
-                                                isSmartPicking ? "bg-amber-100 text-amber-600 ring-2 ring-amber-500" : "hover:bg-slate-50 text-slate-500"
-                                            )}
-                                        >
-                                            <Sparkles className="w-6 h-6" />
-                                            <span className="text-[10px] font-bold uppercase">Magia</span>
-                                        </button>
+                            {/* Floating Tools (Eraser / Magia) as absolute buttons near the bar? 
+                                Reference shows eraser at the far right of palette row. 
+                            */}
+                            <div className="absolute right-6 bottom-24 flex flex-col gap-2 pointer-events-auto">
+                                <button
+                                    onClick={() => setSelectedColor('eraser')}
+                                    className={cn(
+                                        "p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 border border-slate-100",
+                                        isEraser ? "bg-rose-500 text-white" : "bg-white text-slate-400"
                                     )}
-                                </div>
-
-                                {/* Palette Group */}
-                                <div className="flex-1 overflow-x-auto pb-1">
-                                    <Palette
-                                        selectedColor={isPanning || isEditingGuidance || isEraser || isSmartPicking ? null : selectedColor}
-                                        onSelectColor={(c) => {
-                                            if (isEditingGuidance) setIsEditingGuidance(false);
-                                            setSelectedColor(c);
-                                            setIsPanning(false);
-                                            setIsSmartPicking(false);
-                                        }}
-                                        className="border-none bg-transparent shadow-none p-0"
-                                    />
-                                </div>
+                                    title="Borrador"
+                                >
+                                    <Eraser className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (isEditingGuidance) setIsEditingGuidance(false);
+                                        setIsSmartPicking(!isSmartPicking);
+                                    }}
+                                    className={cn(
+                                        "p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 border border-slate-100",
+                                        isSmartPicking ? "bg-amber-500 text-white" : "bg-white text-slate-400"
+                                    )}
+                                    title="Selector Mágico"
+                                >
+                                    <Sparkles className="w-5 h-5" />
+                                </button>
                             </div>
 
-                            {/* Guidance Settings Panel (Floating above Guide Button region) */}
+                            {/* Guidance Settings Panel */}
                             {showGuidancePanel && (
-                                <div className="absolute bottom-full left-4 mb-4 bg-white rounded-2xl shadow-2xl p-4 border border-slate-100 w-80 animate-in slide-in-from-bottom-2 z-50">
-                                    <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
-                                        <h4 className="font-bold text-slate-800 text-sm uppercase">Configurar Guía</h4>
-                                        <button onClick={() => setShowGuidancePanel(false)} className="text-slate-400 hover:text-slate-600">
+                                <div className="absolute bottom-full left-4 mb-6 bg-white rounded-3xl shadow-2xl p-5 border border-slate-100 w-80 animate-in slide-in-from-bottom-4 z-50 pointer-events-auto">
+                                    <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                                        <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Configurar Guía</h4>
+                                        <button onClick={() => setShowGuidancePanel(false)} className="bg-slate-50 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
                                             <X className="w-4 h-4" />
                                         </button>
                                     </div>
@@ -994,54 +990,56 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                     {!guidanceImage ? (
                                         <button
                                             onClick={() => document.getElementById('guidance-upload')?.click()}
-                                            className="w-full h-32 flex flex-col items-center justify-center gap-2 rounded-xl bg-slate-50 hover:bg-slate-100 border-2 border-dashed border-slate-200 transition-colors"
+                                            className="w-full h-36 flex flex-col items-center justify-center gap-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border-2 border-dashed border-slate-200 transition-all group"
                                         >
-                                            <Upload className="w-6 h-6 text-slate-400" />
-                                            <span className="text-xs font-medium text-slate-500">Subir Imagen</span>
+                                            <div className="bg-white p-3 rounded-full shadow-sm group-hover:scale-110 transition-transform">
+                                                <Upload className="w-6 h-6 text-blue-500" />
+                                            </div>
+                                            <span className="text-[11px] font-bold text-slate-500 uppercase">Subir Imagen Guía</span>
                                         </button>
                                     ) : (
-                                        <div className="space-y-4">
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between text-xs text-slate-500"><span>Opacidad</span><span>{Math.round(guidanceOpacity * 100)}%</span></div>
+                                        <div className="space-y-5">
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase"><span>Opacidad</span><span className="text-blue-600">{Math.round(guidanceOpacity * 100)}%</span></div>
                                                 <input
                                                     type="range" min="0" max="1" step="0.05"
                                                     value={guidanceOpacity}
                                                     onChange={(e) => setGuidanceOpacity(parseFloat(e.target.value))}
-                                                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                                    className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
                                                 />
                                             </div>
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between text-xs text-slate-500"><span>Pixelado</span><span>{guidancePixelation}x</span></div>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase"><span>Pixelado</span><span className="text-purple-600">{guidancePixelation}x</span></div>
                                                 <input
                                                     type="range" min="1" max="20" step="1"
                                                     value={guidancePixelation}
                                                     onChange={(e) => setGuidancePixelation(parseInt(e.target.value))}
-                                                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                                                    className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-purple-600"
                                                 />
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <div className="grid grid-cols-2 gap-3 pt-2">
                                                 <button
                                                     onClick={() => {
                                                         setIsEditingGuidance(!isEditingGuidance);
                                                         if (isEditingGuidance) setShowGuidancePanel(false);
                                                     }}
                                                     className={cn(
-                                                        "p-2 rounded-lg text-xs font-bold border flex items-center justify-center gap-1",
+                                                        "py-3 rounded-xl text-[11px] font-black uppercase tracking-wider border transition-all flex items-center justify-center gap-2",
                                                         isEditingGuidance
-                                                            ? "bg-amber-50 text-amber-600 border-amber-200"
+                                                            ? "bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-200"
                                                             : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                                                     )}
                                                 >
-                                                    {isEditingGuidance ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                                                    {isEditingGuidance ? "Mover" : "Fijar"}
+                                                    {isEditingGuidance ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                                                    {isEditingGuidance ? "Moviendo" : "Mover"}
                                                 </button>
                                                 <button
                                                     onClick={() => { setGuidanceImage(null); setIsEditingGuidance(false); }}
-                                                    className="p-2 rounded-lg text-xs font-bold border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center gap-1"
+                                                    className="py-3 rounded-xl text-[11px] font-black uppercase tracking-wider border border-rose-100 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all flex items-center justify-center gap-2"
                                                 >
-                                                    <Trash2 className="w-3 h-3" />
-                                                    Eliminar
+                                                    <Trash2 className="w-4 h-4" />
+                                                    Limpiar
                                                 </button>
                                             </div>
                                         </div>
@@ -1056,15 +1054,29 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     </div>
                 )}
 
-                <div className="absolute bottom-20 md:bottom-8 right-3 md:right-6 z-20 pointer-events-auto scale-75 md:scale-100 origin-bottom-right">
-                    <NavigationControls
-                        scale={scale}
-                        onZoomIn={() => setScale(s => Math.min(50, s * 1.2))}
-                        onZoomOut={() => setScale(s => Math.max(0.1, s * 0.8))}
-                        onReset={() => { setScale(1); setOffsetX(0); setOffsetY(0); }}
-                        isPanning={isPanning}
-                        onTogglePan={() => { setIsPanning(!isPanning); if (!isPanning) { setSelectedColor(null); setIsSmartPicking(false); } }}
-                    />
+                <div className="absolute top-4 left-4 z-40 flex flex-col gap-2 pointer-events-auto">
+                    <button
+                        onClick={() => setScale(s => Math.min(50, s * 1.2))}
+                        className="w-10 h-10 bg-white rounded-full shadow-xl border border-slate-100 flex items-center justify-center text-blue-600 hover:scale-110 active:scale-95 transition-all"
+                    >
+                        <Plus className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={() => setScale(s => Math.max(0.1, s * 0.8))}
+                        className="w-10 h-10 bg-white rounded-full shadow-xl border border-slate-100 flex items-center justify-center text-blue-600 hover:scale-110 active:scale-95 transition-all"
+                    >
+                        <Minus className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div className="absolute top-4 left-16 z-10 pointer-events-none fade-in slide-in-from-top-4 duration-300">
+                    <div className="bg-white/80 backdrop-blur-md text-slate-900 px-3 py-1.5 rounded-full shadow-lg border border-white/20 flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <span className="font-bold text-[10px] text-slate-700 uppercase tracking-tight">{onlineUsers} ONLINE</span>
+                    </div>
                 </div>
 
                 {isEditingGuidance && (
