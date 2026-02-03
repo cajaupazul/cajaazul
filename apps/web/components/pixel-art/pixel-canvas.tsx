@@ -593,13 +593,31 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         setIsPanning(false);
         lastMouseRef.current = null;
 
-        // If it was a CLICK (not a drag) AND we are in paint mode, then PAINT
-        if (!isDraggingRef.current && isPaintMode) {
+        // If it was a CLICK (started on canvas, and didn't drag far enough) AND we are in paint mode, then PAINT
+        // Checking dragStartRef.current is CRITICAL to ensure the click started on the canvas.
+        if (dragStartRef.current && !isDraggingRef.current && isPaintMode) {
             paintPixel(e.clientX, e.clientY);
         }
 
         dragStartRef.current = null;
         isDraggingRef.current = false;
+    };
+
+    const handleMouseLeave = () => {
+        setIsPanning(false);
+        lastMouseRef.current = null;
+        dragStartRef.current = null;
+        isDraggingRef.current = false;
+        setCursorGridPos(null);
+    };
+
+    const handleMouseEnter = (e: React.MouseEvent) => {
+        // Clear any stale drag state if the mouse was released outside the window
+        // or just to be safe upon re-entry.
+        if (e.buttons !== 1) {
+            dragStartRef.current = null;
+            isDraggingRef.current = false;
+        }
     };
 
     const handleWheel = useCallback((e: WheelEvent) => {
@@ -784,7 +802,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
+                onMouseLeave={handleMouseLeave}
+                onMouseEnter={handleMouseEnter}
                 onContextMenu={(e) => e.preventDefault()}
             >
                 <canvas ref={displayCanvasRef} className="block w-full h-full" style={{ touchAction: 'none' }} />
