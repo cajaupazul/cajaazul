@@ -764,33 +764,53 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const confirmPaint = async () => {
         if (pendingPixels.size === 0) return;
 
-        const pixelsToSave: { event_id: string, x: number, y: number, color_index: number }[] = [];
+        console.log(`[PIXEL_SAVE] Starting batch save of ${pendingPixels.size} pixels for event ${eventId}...`);
 
+        const pixelsToSave: { event_id: string, x: number, y: number, color_index: number, user_id: string }[] = [];
+        const currentUserId = userProfile?.id;
+
+        if (!currentUserId) {
+            console.error("[PIXEL_SAVE] ERROR: No user profile found. Cannot save pixels.");
+            return;
+        }
+
+        // 1. Instant local update (Optimistic)
         pendingPixels.forEach((colorIndex, key) => {
             const [xStr, yStr] = key.split(',');
             const x = parseInt(xStr);
             const y = parseInt(yStr);
 
-            // Update local visually immediately (permanent)
             updateLocalPixel(x, y, colorIndex);
 
             pixelsToSave.push({
                 event_id: eventId,
                 x,
                 y,
-                color_index: colorIndex
+                color_index: colorIndex,
+                user_id: currentUserId
             });
         });
 
-        // Clear pending immediately for responsiveness
+        // 2. Clear pending state immediately for responsiveness
+        const pixelCount = pendingPixels.size;
         setPendingPixels(new Map());
+        pendingPixelsRef.current = new Map();
 
+        // 3. Background sync with Supabase
         try {
-            const { error } = await supabase.from('pixel_history').insert(pixelsToSave);
-            if (error) throw error;
+            console.log("[PIXEL_SAVE] Inserting into pixel_history:", pixelsToSave);
+            const { data, error } = await supabase.from('pixel_history').insert(pixelsToSave).select();
+
+            if (error) {
+                console.error("[PIXEL_SAVE] SUPABASE ERROR:", error.message, error.details, error.hint);
+                throw error;
+            }
+
+            console.log(`[PIXEL_SAVE] SUCCESS: ${pixelCount} pixels saved correctly.`, data);
         } catch (err) {
-            console.error("Error saving batch pixels:", err);
-            // Ideally rollback local pixels here if failed, but for now keep it simple.
+            console.error("[PIXEL_SAVE] FAILED to save batch pixels:", err);
+            // Optional: Show a toast to the user or rollback? 
+            // For now, let's keep it simple as requested: "instant" feeling.
         }
     };
 
@@ -869,8 +889,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         </button>
                     </div>
                 ) : (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 w-[98%] max-w-7xl pointer-events-none" onContextMenu={(e) => e.preventDefault()}>
-                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-[2.5rem] shadow-2xl p-2 md:p-4 border border-slate-200 flex flex-col gap-3 animate-in slide-in-from-bottom-8 duration-500">
+                    <div className="absolute bottom-0 left-0 z-30 w-full pointer-events-none" onContextMenu={(e) => e.preventDefault()}>
+                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-t-[1.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-4 md:px-8 md:py-5 border-t border-slate-200/60 flex flex-col gap-4 animate-in slide-in-from-bottom-full duration-500">
 
                             {/* Inner Header/Bar */}
                             <div className="flex items-center justify-between px-2">
