@@ -869,8 +869,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         </button>
                     </div>
                 ) : (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-6xl pointer-events-none" onContextMenu={(e) => e.preventDefault()}>
-                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-[2rem] shadow-2xl p-2 md:p-3 border border-slate-200 flex flex-col gap-3 animate-in slide-in-from-bottom-6 duration-300">
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 w-[98%] max-w-7xl pointer-events-none" onContextMenu={(e) => e.preventDefault()}>
+                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-[2.5rem] shadow-2xl p-2 md:p-4 border border-slate-200 flex flex-col gap-3 animate-in slide-in-from-bottom-8 duration-500">
 
                             {/* Inner Header/Bar */}
                             <div className="flex items-center justify-between px-2">
