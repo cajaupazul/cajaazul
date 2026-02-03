@@ -90,12 +90,49 @@ export default function CourseDetailContent({
         }
     };
 
-    const filteredMaterials = useMemo(() => {
+    // Base materials list filtered ONLY by professor (for counts)
+    const materialsForCounts = useMemo(() => {
         let results = materials || [];
+        if (selectedProfessorId !== 'all') {
+            results = results.filter(m => m.professor_id === selectedProfessorId);
+        }
+        return results;
+    }, [materials, selectedProfessorId]);
+
+    // Derived lists for COUNTS (stable across tabs)
+    const syllabusCount = useMemo(() => {
+        return materialsForCounts.filter(m =>
+            m.tipo?.toLowerCase() === 'syllabus' ||
+            (m.titulo || '').toLowerCase().includes('silabo') ||
+            (m.titulo || '').toLowerCase().includes('sílabo')
+        ).length;
+    }, [materialsForCounts]);
+
+    const presentacionesCount = useMemo(() => {
+        return materialsForCounts.filter(m =>
+            m.tipo?.toLowerCase().includes('ppt') || m.tipo?.toLowerCase().includes('presentacion')
+        ).length;
+    }, [materialsForCounts]);
+
+    const examenesCount = useMemo(() => {
+        return materialsForCounts.filter(m => m.tipo?.toLowerCase().includes('examen')).length;
+    }, [materialsForCounts]);
+
+    const otrosCount = useMemo(() => {
+        return materialsForCounts.filter(m =>
+            !m.tipo?.toLowerCase().includes('ppt') &&
+            !m.tipo?.toLowerCase().includes('presentacion') &&
+            !m.tipo?.toLowerCase().includes('examen') &&
+            m.tipo !== 'syllabus'
+        ).length;
+    }, [materialsForCounts]);
+
+    // Filtered lists for DISPLAY (depends on active tab)
+    const filteredMaterials = useMemo(() => {
+        const base = materialsForCounts; // Already filtered by professor
 
         if (activeTab === 'silabo') {
-            // Show only syllabus materials
-            return results.filter(m =>
+            return base.filter(m =>
                 m.tipo?.toLowerCase() === 'syllabus' ||
                 (m.titulo || '').toLowerCase().includes('silabo') ||
                 (m.titulo || '').toLowerCase().includes('sílabo')
@@ -103,22 +140,31 @@ export default function CourseDetailContent({
         }
 
         if (activeTab === 'todos') {
-            // Show ALL materials including syllabus
-            if (selectedProfessorId !== 'all') {
-                results = results.filter(m => m.professor_id === selectedProfessorId);
-            }
-            return results;
+            // 'todos' tab logic: usually everything? 
+            // Logic in original code was: 'todos' -> everything.
+            // But let's check original lines 105-110. It returned everything.
+            return base;
         }
 
-        // For other tabs, exclude syllabus
-        results = results.filter(m => m.tipo !== 'syllabus');
-
-        if (selectedProfessorId !== 'all') {
-            results = results.filter(m => m.professor_id === selectedProfessorId);
+        if (activeTab === 'presentaciones') {
+            return base.filter(m => m.tipo?.toLowerCase().includes('ppt') || m.tipo?.toLowerCase().includes('presentacion'));
         }
 
-        return results;
-    }, [materials, selectedProfessorId, activeTab]);
+        if (activeTab === 'examenes') {
+            return base.filter(m => m.tipo?.toLowerCase().includes('examen'));
+        }
+
+        if (activeTab === 'otros') {
+            return base.filter(m =>
+                !m.tipo?.toLowerCase().includes('ppt') &&
+                !m.tipo?.toLowerCase().includes('presentacion') &&
+                !m.tipo?.toLowerCase().includes('examen') &&
+                m.tipo !== 'syllabus'
+            );
+        }
+
+        return base;
+    }, [materialsForCounts, activeTab]);
 
     // Find if there is a syllabus in materials as a fallback (more robust search)
     const syllabusMaterialForHeader = useMemo(() => {
@@ -131,25 +177,13 @@ export default function CourseDetailContent({
 
     const effectiveSyllabusUrl = course.syllabus_url || syllabusMaterialForHeader?.url_archivo;
 
-    const presentaciones = filteredMaterials.filter(
-        (m) => m.tipo?.toLowerCase().includes('ppt') || m.tipo?.toLowerCase().includes('presentacion')
-    );
-
-    const examenes = filteredMaterials.filter((m) => m.tipo?.toLowerCase().includes('examen'));
-
-    const otros = filteredMaterials.filter(
-        (m) =>
-            !m.tipo?.toLowerCase().includes('ppt') &&
-            !m.tipo?.toLowerCase().includes('presentacion') &&
-            !m.tipo?.toLowerCase().includes('examen')
-    );
 
     const tabs = [
-        { id: 'todos' as TabType, label: '📂 Todo', count: (materials || []).length },
-        { id: 'silabo' as TabType, label: '📖 Sílabo', count: syllabusMaterialForHeader ? 1 : 0 },
-        { id: 'presentaciones' as TabType, label: '📊 Presentaciones', count: presentaciones.length },
-        { id: 'examenes' as TabType, label: '📝 Exámenes Pasados', count: examenes.length },
-        { id: 'otros' as TabType, label: '📚 Otros Recursos', count: otros.length },
+        { id: 'todos' as TabType, label: '📂 Todo', count: materialsForCounts.length },
+        { id: 'silabo' as TabType, label: '📖 Sílabo', count: syllabusCount },
+        { id: 'presentaciones' as TabType, label: '📊 Presentaciones', count: presentacionesCount },
+        { id: 'examenes' as TabType, label: '📝 Exámenes Pasados', count: examenesCount },
+        { id: 'otros' as TabType, label: '📚 Otros Recursos', count: otrosCount },
     ];
 
     const renderMaterialGrid = (mats: any[]) => {
@@ -419,11 +453,7 @@ export default function CourseDetailContent({
                             </div>
 
                             <div className="bg-bb-card p-4 md:p-6 rounded-2xl border border-bb-border shadow-2xl shadow-black/40">
-                                {activeTab === 'todos' && renderMaterialGrid(filteredMaterials)}
-                                {activeTab === 'silabo' && renderMaterialGrid(filteredMaterials)}
-                                {activeTab === 'presentaciones' && renderMaterialGrid(presentaciones)}
-                                {activeTab === 'examenes' && renderMaterialGrid(examenes)}
-                                {activeTab === 'otros' && renderMaterialGrid(otros)}
+                                {renderMaterialGrid(filteredMaterials)}
                             </div>
                         </div>
                     </div>
