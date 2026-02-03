@@ -424,10 +424,15 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         const px = pixelStartX + x;
                         const py = pixelStartY + y;
 
-                        // Draw the specific corner brackets for EACH pending pixel
-                        ctx.strokeStyle = '#000000'; // Black borders
-                        const gap = 0.1;
-                        const len = 0.3;
+                        // Draw the specific corner brackets for EACH pending pixel (The "Marco")
+                        ctx.strokeStyle = '#FFFFFF'; // White borders for contrast and "vivid" feel
+                        ctx.lineWidth = 1.5 / scale;
+                        ctx.lineCap = 'square';
+                        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                        ctx.shadowBlur = 1;
+
+                        const gap = 0.05;
+                        const len = 0.35;
 
                         ctx.beginPath();
                         // Top Left
@@ -444,14 +449,11 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         ctx.lineTo(px + 1 - len, py + 1 - gap);
                         // Bottom Left
                         ctx.moveTo(px + len, py + 1 - gap);
-                        ctx.lineTo(px + 1 - len, py + 1 - gap); // fix bottom line
                         ctx.lineTo(px + gap, py + 1 - gap);
                         ctx.lineTo(px + gap, py + 1 - len);
                         ctx.stroke();
 
-                        // White inner contrast
-                        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                        ctx.fillRect(px, py, 1, 1);
+                        // NO FILL HERE anymore - keeping the internal color "vivid" as requested
                     });
                     ctx.restore();
                 }
