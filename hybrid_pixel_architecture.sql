@@ -2,9 +2,11 @@
 -- HIBRID ARCHITECTURE: PIXEL ART ROW-BASED
 -- ==========================================
 
--- 1. Crear tabla de estado actual (Optimizado para lecturas y Realtime)
--- Nota: Incluimos event_id para soportar múltiples murales en la misma app.
-CREATE TABLE IF NOT EXISTS public.pixel_board_state (
+-- 1. Reinicio total de la tabla de estado (Migración de Blob -> Filas)
+-- Usamos CASCADE para limpiar triggers y políticas antiguas asociadas.
+DROP TABLE IF EXISTS public.pixel_board_state CASCADE;
+
+CREATE TABLE public.pixel_board_state (
     event_id TEXT NOT NULL,
     x INTEGER NOT NULL,
     y INTEGER NOT NULL,
@@ -47,6 +49,7 @@ CREATE OR REPLACE FUNCTION get_pixel_board_blob(p_event_id TEXT, p_width INTEGER
 RETURNS BYTEA AS $$
 DECLARE
     v_result BYTEA;
+    r RECORD;
 BEGIN
     -- Inicializar un buffer vacío (lleno de ceros/blanco) del tamaño correcto
     v_result := decode(repeat('00', p_width * p_height), 'hex');
