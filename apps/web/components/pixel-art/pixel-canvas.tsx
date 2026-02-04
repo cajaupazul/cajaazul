@@ -66,6 +66,13 @@ const computeUint32Colors = (palette: string[]) => {
 
 const UINT32_PALETTE = computeUint32Colors(COLOR_PALETTE);
 
+interface GuidanceHistoryItem {
+    image: string;
+    opacity: number;
+    pixelation: number;
+    state: { x: number, y: number, scale: number };
+}
+
 interface PixelCanvasProps {
     eventId: string;
     onClose: () => void;
@@ -113,6 +120,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const [guidanceState, setGuidanceState] = useState({ x: 0, y: 0, scale: 1 });
     const [showGuidancePanel, setShowGuidancePanel] = useState(false);
     const [isSmartPicking, setIsSmartPicking] = useState(false);
+    const [guidanceHistory, setGuidanceHistory] = useState<GuidanceHistoryItem[]>([]);
 
     const [tooltipData, setTooltipData] = useState<{ x: number, y: number, color: string } | null>(null);
 
@@ -175,6 +183,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 setGuidanceOpacity(data.opacity ?? 0.5);
                 setGuidancePixelation(data.pixelation ?? 1);
                 setGuidanceState(data.state ?? { x: 0, y: 0, scale: 1 });
+                setGuidanceHistory(data.history ?? []);
 
                 if (data.image) {
                     const img = new Image();
@@ -195,12 +204,13 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             opacity: guidanceOpacity,
             pixelation: guidancePixelation,
             state: guidanceState,
-            image: guidanceImage?.src || null
+            image: guidanceImage?.src || null,
+            history: guidanceHistory
         };
 
         // Saving high-res base64 can be slow, but it's acceptable for this UX
         localStorage.setItem(storageKey, JSON.stringify(dataToSave));
-    }, [eventId, userProfile?.id, guidanceOpacity, guidancePixelation, guidanceState, guidanceImage]);
+    }, [eventId, userProfile?.id, guidanceOpacity, guidancePixelation, guidanceState, guidanceImage, guidanceHistory]);
 
     // --- Data Fetching & Subscription ---
 
@@ -854,11 +864,39 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         }
     };
 
+    const restoreGuidance = (item: GuidanceHistoryItem) => {
+        const img = new Image();
+        img.onload = () => {
+            setGuidanceImage(img);
+            setGuidanceOpacity(item.opacity);
+            setGuidancePixelation(item.pixelation);
+            setGuidanceState(item.state);
+            setIsEditingGuidance(true);
+        };
+        img.src = item.image;
+    };
+
     const handleUploadGuidance = (file: File) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
+                // Save current guidance to history before replacing
+                if (guidanceImage) {
+                    const currentItem: GuidanceHistoryItem = {
+                        image: guidanceImage.src,
+                        opacity: guidanceOpacity,
+                        pixelation: guidancePixelation,
+                        state: guidanceState
+                    };
+
+                    setGuidanceHistory(prev => {
+                        // Avoid duplicates if same image
+                        const filtered = prev.filter(h => h.image !== currentItem.image);
+                        return [currentItem, ...filtered].slice(0, 3);
+                    });
+                }
+
                 setGuidanceImage(img);
 
                 // Calculate current view center in world coordinates
@@ -955,6 +993,26 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                         <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Undo className="w-4 h-4" /></button>
                                         <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Redo className="w-4 h-4" /></button>
                                     </div>
+
+                                    {guidanceHistory.length > 0 && (
+                                        <div className="hidden sm:flex items-center gap-1.5 bg-slate-50 p-1 rounded-2xl border border-slate-100 group animate-in slide-in-from-left duration-300">
+                                            <div className="px-2 border-r border-slate-200">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Continuar</span>
+                                            </div>
+                                            <div className="flex items-center gap-1 px-1">
+                                                {guidanceHistory.map((item, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => restoreGuidance(item)}
+                                                        className="w-8 h-8 rounded-lg overflow-hidden border border-slate-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-100 transition-all hover:scale-110 active:scale-90 shadow-sm bg-white"
+                                                        title="Continuar con esta plantilla"
+                                                    >
+                                                        <img src={item.image} className="w-full h-full object-cover opacity-60 hover:opacity-100 transition-opacity" />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {userProfile && (
                                         <div className="hidden lg:flex items-center gap-2 pr-4 border-r border-slate-100">
