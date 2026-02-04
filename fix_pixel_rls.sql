@@ -25,36 +25,15 @@ CREATE POLICY "Allow public select state"
 ON public.pixel_board_state FOR SELECT 
 USING (true);
 
--- 5. Actualizar la función del trigger para que sea SECURITY DEFINER
--- Esto es CRÍTICO: permite que la función actualice el tablero con privilegios de sistema,
--- incluso si el usuario no tiene permisos directos de UPDATE en pixel_board_state.
+-- 3. Crear un trigger OPTIMIZADO que no consume memoria excesiva
+-- Evitamos cargar el buffer de 1MB en una variable por cada fila insertada.
 CREATE OR REPLACE FUNCTION public.update_pixel_board_state()
 RETURNS TRIGGER 
 AS $$
-DECLARE
-    v_width INTEGER;
-    v_pixels BYTEA;
 BEGIN
-    -- Obtener el estado actual
-    SELECT pixels, width INTO v_pixels, v_width 
-    FROM public.pixel_board_state 
-    WHERE event_id = NEW.event_id;
-    
-    -- Inicialización de emergencia si es NULL
-    IF v_pixels IS NULL THEN
-        v_width := 1000;
-        INSERT INTO public.pixel_board_state (event_id, pixels, width, height)
-        VALUES (NEW.event_id, decode(repeat('00', 1000000), 'hex'), v_width, 1000)
-        ON CONFLICT (event_id) DO UPDATE SET 
-            pixels = decode(repeat('00', 1000000), 'hex'),
-            width = 1000,
-            height = 1000
-        RETURNING pixels INTO v_pixels;
-    END IF;
-    
-    -- Actualizar el byte del píxel
+    -- Actualizar el byte del píxel directamente en la tabla
     UPDATE public.pixel_board_state
-    SET pixels = set_byte(pixels, (NEW.y * v_width + NEW.x), NEW.color_index)
+    SET pixels = set_byte(pixels, (NEW.y * width + NEW.x), NEW.color_index)
     WHERE event_id = NEW.event_id;
     
     RETURN NEW;

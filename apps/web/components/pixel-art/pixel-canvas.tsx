@@ -865,13 +865,22 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         needsRedrawRef.current = true;
 
         try {
-            console.log("[PIXEL_SAVE] Inserting into pixel_history:", pixelsToSave);
-            const { data, error } = await supabase.from('pixel_history').insert(pixelsToSave).select();
-            if (error) {
-                console.error("[PIXEL_SAVE] SUPABASE ERROR:", error.message, error.details, error.hint);
-                throw error;
+            console.log(`[PIXEL_SAVE] Inserting ${pixelsToSave.length} pixels into pixel_history in chunks...`);
+
+            // Chunk size of 100 to avoid database timeouts (statement_timeout)
+            const CHUNK_SIZE = 100;
+            for (let i = 0; i < pixelsToSave.length; i += CHUNK_SIZE) {
+                const chunk = pixelsToSave.slice(i, i + CHUNK_SIZE);
+                console.log(`[PIXEL_SAVE] Saving chunk ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(pixelsToSave.length / CHUNK_SIZE)}...`);
+
+                const { error } = await supabase.from('pixel_history').insert(chunk);
+                if (error) {
+                    console.error("[PIXEL_SAVE] SUPABASE ERROR in chunk:", error.message);
+                    throw error;
+                }
             }
-            console.log(`[PIXEL_SAVE] SUCCESS: ${pixelCount} pixels saved correctly.`, data);
+
+            console.log(`[PIXEL_SAVE] SUCCESS: ${pixelCount} pixels saved correctly across all chunks.`);
 
             // AUTO-SAVE CURRENT TEMPLATE TO HISTORY ON SUCCESSFUL PAINT
             if (guidanceImage) {
@@ -889,6 +898,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             }
         } catch (err) {
             console.error("[PIXEL_SAVE] FAILED to save batch pixels:", err);
+            // On failure, notify the user or provide a retry mechanism?
+            // For now, we just log the error as it likely means the server reached a hard limit
         }
     };
 
