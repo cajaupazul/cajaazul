@@ -213,49 +213,37 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
     const fetchGridData = async () => {
         try {
-            const { data, error } = await supabase
-                .from('pixel_board_state')
-                .select('pixels, width, height')
-                .eq('event_id', eventId)
-                .maybeSingle();
+            // ARCHITECTURE CHANGE: Fetch state as a single blob via RPC to maintain performance
+            const { data, error } = await supabase.rpc('get_pixel_board_blob', {
+                p_event_id: eventId,
+                p_width: gridWidth,
+                p_height: gridHeight
+            });
 
             if (data) {
-                if (data.width && data.height) {
-                    setGridWidth(data.width);
-                    setGridHeight(data.height);
-                }
-
-                if (data.pixels) {
-                    let bytes: Uint8Array;
-                    if (typeof data.pixels === 'string') {
-                        // Handle potential hex string from Postgres (some clients return \x prefix)
-                        const hex = data.pixels.startsWith('\\x') ? data.pixels.slice(2) : data.pixels;
-                        const len = hex.length / 2;
-                        bytes = new Uint8Array(len);
-                        for (let i = 0; i < len; i++) {
-                            bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
-                        }
-                    } else if (data.pixels instanceof ArrayBuffer || ArrayBuffer.isView(data.pixels)) {
-                        // Handle direct binary responses
-                        bytes = new Uint8Array(data.pixels as any);
-                    } else {
-                        bytes = new Uint8Array(data.pixels);
+                let bytes: Uint8Array;
+                if (typeof data === 'string') {
+                    const hex = data.startsWith('\\x') ? data.slice(2) : data;
+                    const len = hex.length / 2;
+                    bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) {
+                        bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
                     }
-
-                    const expectedSize = (data.width || gridWidth) * (data.height || gridHeight);
-                    if (bytes.length === expectedSize) {
-                        pixelDataRef.current = bytes;
-                    } else {
-                        // If size mismatch, create a fresh buffer but preserve what we can or start clean
-                        const newBytes = new Uint8Array(expectedSize).fill(ERASER_INDEX);
-                        newBytes.set(bytes.slice(0, Math.min(bytes.length, expectedSize)));
-                        pixelDataRef.current = newBytes;
-                    }
+                } else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
+                    bytes = new Uint8Array(data as any);
                 } else {
-                    // If no pixels found, initialize a clean white board
-                    const expectedSize = (data.width || gridWidth) * (data.height || gridHeight);
-                    pixelDataRef.current = new Uint8Array(expectedSize).fill(ERASER_INDEX);
+                    bytes = new Uint8Array(data as any);
                 }
+
+                const expectedSize = gridWidth * gridHeight;
+                if (bytes.length === expectedSize) {
+                    pixelDataRef.current = bytes;
+                } else {
+                    const newBytes = new Uint8Array(expectedSize).fill(ERASER_INDEX);
+                    newBytes.set(bytes.slice(0, Math.min(bytes.length, expectedSize)));
+                    pixelDataRef.current = newBytes;
+                }
+
                 updateDataCanvasFull();
                 needsRedrawRef.current = true;
             }
@@ -282,48 +270,30 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         }
     };
 
-    // 1. Initial Fetch and Real-time Board State (Clear/Resize)
+    // 1. Initial Fetch and Real-time Board State (Single Source of Truth)
     useEffect(() => {
         let boardChannel: any;
 
         const setupBoardSync = async () => {
+            // Initial load using optimized RPC blob
             await fetchGridData();
 
+            // Realtime subscription to the row-based state
             boardChannel = supabase
                 .channel(`board-state-${eventId}`)
                 .on(
                     'postgres_changes',
                     {
-                        event: 'UPDATE',
+                        event: '*', // Sync any change to the board (INSERT or UPDATE)
                         schema: 'public',
                         table: 'pixel_board_state',
                         filter: `event_id=eq.${eventId}`
                     },
                     (payload) => {
-                        console.log("[PIXEL_BOARD] Admin update detected:", payload);
                         const newData = payload.new as any;
-
-                        setGridWidth(newData.width);
-                        setGridHeight(newData.height);
-
-                        if (newData.pixels) {
-                            let bytes: Uint8Array;
-                            if (typeof newData.pixels === 'string') {
-                                const hex = newData.pixels.startsWith('\\x') ? newData.pixels.slice(2) : newData.pixels;
-                                const len = hex.length / 2;
-                                bytes = new Uint8Array(len);
-                                for (let i = 0; i < len; i++) {
-                                    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
-                                }
-                            } else {
-                                bytes = new Uint8Array(newData.pixels);
-                            }
-
-                            if (bytes.length === newData.width * newData.height) {
-                                pixelDataRef.current = bytes;
-                                updateDataCanvasFull();
-                                needsRedrawRef.current = true;
-                            }
+                        if (newData && typeof newData.x === 'number' && typeof newData.y === 'number') {
+                            // Update local canvas immediately with the row change
+                            updateLocalPixel(newData.x, newData.y, newData.color_index);
                         }
                     }
                 )
@@ -343,15 +313,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
         const initPaint = async () => {
             paintChannel
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'pixel_history',
-                    filter: `event_id=eq.${eventId}`,
-                }, (payload) => {
-                    const { x, y, color_index } = payload.new;
-                    updateLocalPixel(x, y, color_index);
-                })
                 .on('presence', { event: 'sync' }, () => {
                     const state = paintChannel.presenceState();
                     setOnlineUsers(Object.keys(state).length || 1);
