@@ -928,17 +928,21 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 setGuidanceImage(img);
 
                 // Calculate current view center in world coordinates
-                // Since screen center (cx, cy) maps to world center via (-offsetX, -offsetY)
-                const worldCenterX = -offsetX;
-                const worldCenterY = -offsetY;
+                // Since screen center maps to world center via (-offsetX / scale, -offsetY / scale)
+                const viewportWidth = displayCanvasRef.current?.width || 800;
+                const viewportHeight = displayCanvasRef.current?.height || 600;
 
-                // Calculate "normal" scale (e.g., 40% of the current viewport width)
-                const viewportWidthWorld = (displayCanvasRef.current?.width || 800) / scale;
-                const initialScale = (viewportWidthWorld * 0.4) / Math.max(1, img.naturalWidth);
+                // Screen center to world
+                const centerX = (viewportWidth / 2 - offsetX) / scale;
+                const centerY = (viewportHeight / 2 - offsetY) / scale;
+
+                // Set a visible initial scale (approx 30% of screenspace)
+                const worldViewportWidth = viewportWidth / scale;
+                const initialScale = (worldViewportWidth * 0.3) / Math.max(1, img.naturalWidth);
 
                 setGuidanceState({
-                    x: worldCenterX,
-                    y: worldCenterY,
+                    x: centerX,
+                    y: centerY,
                     scale: initialScale
                 });
 
@@ -1008,7 +1012,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     </div>
                 ) : (
                     <div className="absolute bottom-0 left-0 z-30 w-full pointer-events-none" onContextMenu={(e) => e.preventDefault()}>
-                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-t-[1.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-4 md:px-8 md:py-5 border-t border-slate-200/60 flex flex-col gap-4 animate-in slide-in-from-bottom-full duration-500">
+                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-t-[1.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-4 md:px-8 md:py-5 border-t border-slate-200/60 flex flex-col gap-4 animate-in slide-in-from-bottom-full duration-500" onMouseDown={e => e.stopPropagation()}>
 
                             <div className="flex items-center justify-between px-2">
                                 <div className="flex items-center gap-4">
@@ -1143,7 +1147,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                             </div>
 
                             {showGuidancePanel && (
-                                <div className="absolute bottom-full left-4 mb-6 bg-white rounded-3xl shadow-2xl p-5 border border-slate-100 w-80 animate-in slide-in-from-bottom-4 z-50 pointer-events-auto">
+                                <div className="absolute bottom-full left-4 mb-6 bg-white rounded-3xl shadow-2xl p-5 border border-slate-100 w-80 animate-in slide-in-from-bottom-4 z-50 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                                         <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Configurar Guía</h4>
                                         <button onClick={() => setShowGuidancePanel(false)} className="bg-slate-50 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
@@ -1234,7 +1238,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     </div>
                 )}
 
-                <div className="absolute top-4 left-4 z-40 flex flex-col gap-2 pointer-events-auto">
+                <div className="absolute top-4 left-4 z-40 flex flex-col gap-2 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
                     <button
                         onClick={() => setScale(s => Math.min(50, s * 1.2))}
                         className="w-10 h-10 bg-white rounded-full shadow-xl border border-slate-100 flex items-center justify-center text-blue-600 hover:scale-110 active:scale-95 transition-all"
