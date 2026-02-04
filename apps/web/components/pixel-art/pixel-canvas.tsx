@@ -769,20 +769,22 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 if (srcCanvas instanceof HTMLCanvasElement) {
                     const ctx = srcCanvas.getContext('2d', { willReadFrequently: true });
                     if (ctx) {
-                        // SNAPPING: Find the color of the grid-locked block containing worldX, worldY
+                        // Map world coordinates to the tiny buffer indices
                         const step = guidanceGridStep;
-                        const blockX = Math.floor(worldX / step) * step + step / 2;
-                        const blockY = Math.floor(worldY / step) * step + step / 2;
+                        const gWidth = guidanceImage.naturalWidth * guidanceState.scale;
+                        const gHeight = guidanceImage.naturalHeight * guidanceState.scale;
+                        const gLeft = guidanceState.x - gWidth / 2;
+                        const gTop = guidanceState.y - gHeight / 2;
 
-                        // Map back to image pixels
-                        const relX = blockX - (guidanceState.x - gWidth / 2);
-                        const relY = blockY - (guidanceState.y - gHeight / 2);
+                        const relX = worldX - gLeft;
+                        const relY = worldY - gTop;
 
-                        const imgX = (relX / (guidanceImage.naturalWidth * guidanceState.scale)) * guidanceImage.naturalWidth;
-                        const imgY = (relY / (guidanceImage.naturalHeight * guidanceState.scale)) * guidanceImage.naturalHeight;
+                        // bufX/Y should be the coordinate in the processed offscreen canvas
+                        const bufX = Math.floor(relX / step);
+                        const bufY = Math.floor(relY / step);
 
-                        if (imgX >= 0 && imgX < guidanceImage.naturalWidth && imgY >= 0 && imgY < guidanceImage.naturalHeight) {
-                            const pixel = ctx.getImageData(Math.floor(imgX), Math.floor(imgY), 1, 1).data;
+                        if (bufX >= 0 && bufX < srcCanvas.width && bufY >= 0 && bufY < srcCanvas.height) {
+                            const pixel = ctx.getImageData(bufX, bufY, 1, 1).data;
                             if (pixel[3] > 10) {
                                 const hex = findNearestPaletteColor(pixel[0], pixel[1], pixel[2]);
                                 colorIndex = COLOR_MAP[hex];
@@ -938,9 +940,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 const centerX = (viewportWidth / 2 - offsetX) / scale;
                 const centerY = (viewportHeight / 2 - offsetY) / scale;
 
-                // Set a visible initial scale (approx 40% of screenspace)
+                // Set a visible initial scale (auto-fit to 40% of viewport width)
                 const worldViewportWidth = viewportWidth / scale;
-                const initialScale = Math.max(0.1, (worldViewportWidth * 0.4) / Math.max(1, img.naturalWidth));
+                const initialScale = (worldViewportWidth * 0.4) / Math.max(1, img.naturalWidth);
 
                 setGuidanceState({
                     x: centerX,
@@ -1122,7 +1124,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                 </button>
                             </div>
 
-                            <div className="absolute right-6 bottom-24 flex flex-col gap-2 pointer-events-auto">
+                            <div className="absolute right-6 bottom-24 flex flex-col gap-2 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
                                 <button
                                     onClick={() => setSelectedColor('eraser')}
                                     className={cn(
