@@ -124,6 +124,10 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
     const [tooltipData, setTooltipData] = useState<{ x: number, y: number, color: string } | null>(null);
 
+    // Profile Stats Panel
+    const [showProfilePanel, setShowProfilePanel] = useState(false);
+    const [pixelsPainted, setPixelsPainted] = useState(0);
+
     // Use a Ref for pixel data to avoid re-renders on every pixel change
     const pixelDataRef = useRef<Uint8Array>(new Uint8Array(DEFAULT_gridWidth * DEFAULT_gridHeight).fill(ERASER_INDEX));
 
@@ -332,6 +336,25 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             cancelAnimationFrame(frameIdRef.current);
         };
     }, [eventId, userProfile]);
+
+    // Fetch user's pixels painted count
+    useEffect(() => {
+        const fetchPixelsPainted = async () => {
+            if (!userProfile?.id || !eventId) return;
+            const { count, error } = await supabase
+                .from('pixel_history')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', userProfile.id)
+                .eq('event_id', eventId);
+
+            if (error) {
+                console.error('[STATS] Error fetching pixels painted:', error);
+            } else {
+                setPixelsPainted(count || 0);
+            }
+        };
+        fetchPixelsPainted();
+    }, [userProfile?.id, eventId]);
 
     // --- Image Processing (Mathematically Grid-Linked) ---
     const getProcessedGuidanceCanvas = useCallback(() => {
@@ -931,12 +954,12 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
                 setGuidanceImage(img);
 
-                // Calculate current view center in world coordinates
-                // Since screen center maps to world center via (-offsetX / scale, -offsetY / scale)
+                // Calculate the exact center of the VISIBLE viewport in world coordinates
                 const viewportWidth = displayCanvasRef.current?.width || 800;
                 const viewportHeight = displayCanvasRef.current?.height || 600;
 
-                // Screen center to world
+                // The center of the visible viewport in screen space is simply (width/2, height/2)
+                // To convert to world space: worldX = (screenX - offsetX) / scale
                 const centerX = (viewportWidth / 2 - offsetX) / scale;
                 const centerY = (viewportHeight / 2 - offsetY) / scale;
 
@@ -1265,6 +1288,81 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         </span>
                         <span className="font-bold text-[10px] text-slate-700 uppercase tracking-tight">{onlineUsers} ONLINE</span>
                     </div>
+                </div>
+
+                {/* Profile Stats Panel - Top Right */}
+                <div className="absolute top-4 right-4 z-40 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
+                    {!showProfilePanel ? (
+                        <button
+                            onClick={() => setShowProfilePanel(true)}
+                            className="w-12 h-12 bg-white rounded-full shadow-xl border-2 border-slate-100 overflow-hidden hover:scale-110 active:scale-95 transition-all flex items-center justify-center"
+                            title="Ver Estadísticas"
+                        >
+                            {userProfile && (
+                                <AvatarWithFrame
+                                    size={44}
+                                    avatarUrl={getStorageUrl(userProfile.avatar_url)}
+                                    frameUrl={equippedFrame?.image_url}
+                                    frameScale={equippedFrame?.frame_settings?.navbar?.scale || 1}
+                                    offsetX={equippedFrame?.frame_settings?.navbar?.x || 0}
+                                    offsetY={equippedFrame?.frame_settings?.navbar?.y || 0}
+                                    name={userProfile.nombre}
+                                />
+                            )}
+                        </button>
+                    ) : (
+                        <div className="bg-white rounded-3xl shadow-2xl p-5 border border-slate-100 w-72 animate-in slide-in-from-top-4">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-full overflow-hidden shadow-md">
+                                        {userProfile && (
+                                            <AvatarWithFrame
+                                                size={48}
+                                                avatarUrl={getStorageUrl(userProfile.avatar_url)}
+                                                frameUrl={equippedFrame?.image_url}
+                                                frameScale={equippedFrame?.frame_settings?.navbar?.scale || 1}
+                                                offsetX={equippedFrame?.frame_settings?.navbar?.x || 0}
+                                                offsetY={equippedFrame?.frame_settings?.navbar?.y || 0}
+                                                name={userProfile.nombre}
+                                            />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <h5 className="font-bold text-slate-800 text-sm">{userProfile?.nombre || 'Usuario'}</h5>
+                                        <p className="text-[10px] text-slate-400 uppercase tracking-wide">Nivel {userProfile?.es_vip ? 'VIP' : '3'}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowProfilePanel(false)}
+                                    className="bg-slate-50 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-3 border-t border-slate-100 pt-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                                            <Pencil className="w-4 h-4 text-blue-600" />
+                                        </div>
+                                        <span className="text-xs font-medium text-slate-600">Píxeles Pintados</span>
+                                    </div>
+                                    <span className="font-bold text-blue-600 text-sm">{pixelsPainted.toLocaleString()}</span>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center">
+                                            <span className="text-amber-600 font-bold text-xs">💰</span>
+                                        </div>
+                                        <span className="text-xs font-medium text-slate-600">Monedas</span>
+                                    </div>
+                                    <span className="font-bold text-amber-600 text-sm">{userProfile?.monedas?.toLocaleString() || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {isEditingGuidance && (
