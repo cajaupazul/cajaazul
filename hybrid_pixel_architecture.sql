@@ -3,11 +3,12 @@
 -- ==========================================
 
 -- 1. LIMPIEZA TOTAL: Eliminar triggers y tablas antiguas
--- CRITICAL: Eliminamos el trigger viejo que intentaba usar la columna 'pixels'
+-- CRITICAL: Eliminamos TODOS los triggers viejos que causan conflictos
 DROP TRIGGER IF EXISTS tr_update_pixel_board ON public.pixel_history;
-DROP FUNCTION IF EXISTS public.update_pixel_board_state();
+DROP TRIGGER IF EXISTS on_pixel_paint ON public.pixel_history;
+DROP FUNCTION IF EXISTS public.update_pixel_board_state() CASCADE;
 
--- Usamos CASCADE para limpiar la tabla de estado y sus dependencias (políticas, etc.)
+-- Usamos CASCADE para limpiar la tabla de estado y sus dependencias
 DROP TABLE IF EXISTS public.pixel_board_state CASCADE;
 
 CREATE TABLE public.pixel_board_state (
