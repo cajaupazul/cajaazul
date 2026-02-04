@@ -833,7 +833,22 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             const img = new Image();
             img.onload = () => {
                 setGuidanceImage(img);
-                setGuidanceState({ x: 0, y: 0, scale: 1 });
+
+                // Calculate current view center in world coordinates
+                // Since screen center (cx, cy) maps to world center via (-offsetX, -offsetY)
+                const worldCenterX = -offsetX;
+                const worldCenterY = -offsetY;
+
+                // Calculate "normal" scale (e.g., 40% of the current viewport width)
+                const viewportWidthWorld = (displayCanvasRef.current?.width || 800) / scale;
+                const initialScale = (viewportWidthWorld * 0.4) / Math.max(1, img.naturalWidth);
+
+                setGuidanceState({
+                    x: worldCenterX,
+                    y: worldCenterY,
+                    scale: initialScale
+                });
+
                 setIsEditingGuidance(true);
             };
             img.src = e.target?.result as string;
