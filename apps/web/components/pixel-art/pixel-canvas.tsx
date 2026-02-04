@@ -69,7 +69,7 @@ const UINT32_PALETTE = computeUint32Colors(COLOR_PALETTE);
 interface GuidanceHistoryItem {
     image: string;
     opacity: number;
-    pixelation: number;
+    gridStep: number;
     state: { x: number, y: number, scale: number };
 }
 
@@ -115,7 +115,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     // Guidance State
     const [guidanceImage, setGuidanceImage] = useState<HTMLImageElement | null>(null);
     const [guidanceOpacity, setGuidanceOpacity] = useState(0.5);
-    const [guidancePixelation, setGuidancePixelation] = useState(1);
+    const [guidanceGridStep, setGuidanceGridStep] = useState(1); // N pixels per block
     const [isEditingGuidance, setIsEditingGuidance] = useState(false);
     const [guidanceState, setGuidanceState] = useState({ x: 0, y: 0, scale: 1 });
     const [showGuidancePanel, setShowGuidancePanel] = useState(false);
@@ -181,7 +181,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             try {
                 const data = JSON.parse(saved);
                 setGuidanceOpacity(data.opacity ?? 0.5);
-                setGuidancePixelation(data.pixelation ?? 1);
+                setGuidanceGridStep(data.gridStep ?? 1);
                 setGuidanceState(data.state ?? { x: 0, y: 0, scale: 1 });
                 setGuidanceHistory(data.history ?? []);
 
@@ -199,7 +199,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
         const dataToSave = {
             opacity: guidanceOpacity,
-            pixelation: guidancePixelation,
+            gridStep: guidanceGridStep,
             state: guidanceState,
             image: guidanceImage?.src || null,
             history: guidanceHistory
@@ -207,7 +207,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
         // Saving high-res base64 can be slow, but it's acceptable for this UX
         localStorage.setItem(storageKey, JSON.stringify(dataToSave));
-    }, [eventId, userProfile?.id, guidanceOpacity, guidancePixelation, guidanceState, guidanceImage, guidanceHistory]);
+    }, [eventId, userProfile?.id, guidanceOpacity, guidanceGridStep, guidanceState, guidanceImage, guidanceHistory]);
 
     // --- Data Fetching & Subscription ---
 
@@ -333,16 +333,18 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         };
     }, [eventId, userProfile]);
 
-    // --- Image Processing (Memoized) ---
+    // --- Image Processing (Mathematically Grid-Linked) ---
     const getProcessedGuidanceCanvas = useCallback(() => {
         if (!guidanceImage) return null;
         if (!guidanceCanvasRef.current) {
             guidanceCanvasRef.current = document.createElement('canvas');
         }
+
         const canvas = guidanceCanvasRef.current;
         const w = guidanceImage.naturalWidth;
         const h = guidanceImage.naturalHeight;
 
+        // Force integer dimensions for the processing buffer
         canvas.width = w;
         canvas.height = h;
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -351,27 +353,37 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         ctx.imageSmoothingEnabled = false;
         ctx.clearRect(0, 0, w, h);
 
-        if (guidancePixelation <= 1) {
+        // gridStep is the number of grid cells per 1 guidance pixel.
+        // We use Math.max(1, floor) to ensure we always have an integer stepping.
+        const step = Math.max(1, Math.floor(guidanceGridStep));
+
+        if (step <= 1) {
             ctx.drawImage(guidanceImage, 0, 0);
             return canvas;
         }
 
-        const tinyW = Math.max(1, Math.floor(w / guidancePixelation));
-        const tinyH = Math.max(1, Math.floor(h / guidancePixelation));
+        // Downsampling strategy: 
+        // 1. Calculate how many "blocks" we have in the source image
+        const blocksX = Math.max(1, Math.floor(w / step));
+        const blocksY = Math.max(1, Math.floor(h / step));
 
         const tinyCanvas = document.createElement('canvas');
-        tinyCanvas.width = tinyW;
-        tinyCanvas.height = tinyH;
+        tinyCanvas.width = blocksX;
+        tinyCanvas.height = blocksY;
         const tinyCtx = tinyCanvas.getContext('2d');
         if (!tinyCtx) return canvas;
 
+        // Draw original scaled down to the number of blocks
         tinyCtx.imageSmoothingEnabled = false;
-        tinyCtx.drawImage(guidanceImage, 0, 0, tinyW, tinyH);
+        tinyCtx.drawImage(guidanceImage, 0, 0, blocksX, blocksY);
 
-        ctx.drawImage(tinyCanvas, 0, 0, tinyW, tinyH, 0, 0, w, h);
+        // Upscale back using fixed blocks (no smoothing)
+        // This ensures each source pixel maps exactly to a step*step area.
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(tinyCanvas, 0, 0, blocksX, blocksY, 0, 0, blocksX * step, blocksY * step);
 
         return canvas;
-    }, [guidanceImage, guidancePixelation]);
+    }, [guidanceImage, guidanceGridStep]);
 
 
     // --- Rendering Optimization ---
@@ -426,13 +438,18 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     ctx.save();
                     ctx.globalAlpha = guidanceOpacity;
 
-                    const gWidth = guidanceImage.naturalWidth * guidanceState.scale;
-                    const gHeight = guidanceImage.naturalHeight * guidanceState.scale;
+                    // SNAPPING: Ensure we draw exactly on grid boundaries
+                    const snappedX = Math.round(guidanceState.x);
+                    const snappedY = Math.round(guidanceState.y);
+                    const snappedScale = Math.max(0.1, guidanceState.scale);
+
+                    const gWidth = guidanceImage.naturalWidth * snappedScale;
+                    const gHeight = guidanceImage.naturalHeight * snappedScale;
 
                     ctx.drawImage(
                         drawableGuidance,
-                        guidanceState.x - gWidth / 2,
-                        guidanceState.y - gHeight / 2,
+                        snappedX - gWidth / 2,
+                        snappedY - gHeight / 2,
                         gWidth,
                         gHeight
                     );
@@ -441,8 +458,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         ctx.strokeStyle = '#f59e0b';
                         ctx.lineWidth = 2 / scale;
                         ctx.strokeRect(
-                            guidanceState.x - gWidth / 2,
-                            guidanceState.y - gHeight / 2,
+                            snappedX - gWidth / 2,
+                            snappedY - gHeight / 2,
                             gWidth,
                             gHeight
                         );
@@ -751,6 +768,13 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 if (srcCanvas instanceof HTMLCanvasElement) {
                     const ctx = srcCanvas.getContext('2d', { willReadFrequently: true });
                     if (ctx) {
+                        // SNAPPING: Find the exact grid-aligned pixel in the source
+                        const snappedGuidanceX = Math.round(guidanceState.x);
+                        const snappedGuidanceY = Math.round(guidanceState.y);
+
+                        const relX = worldX - (snappedGuidanceX - gWidth / 2);
+                        const relY = worldY - (snappedGuidanceY - gHeight / 2);
+
                         const imgX = Math.floor(relX / guidanceState.scale);
                         const imgY = Math.floor(relY / guidanceState.scale);
                         const pixel = ctx.getImageData(imgX, imgY, 1, 1).data;
@@ -848,7 +872,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 const currentItem: GuidanceHistoryItem = {
                     image: guidanceImage.src,
                     opacity: guidanceOpacity,
-                    pixelation: guidancePixelation,
+                    gridStep: guidanceGridStep,
                     state: guidanceState
                 };
 
@@ -869,7 +893,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         img.onload = () => {
             setGuidanceImage(img);
             setGuidanceOpacity(item.opacity);
-            setGuidancePixelation(item.pixelation);
+            setGuidanceGridStep(item.gridStep);
             setGuidanceState(item.state);
             setIsEditingGuidance(true);
         };
@@ -886,7 +910,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     const currentItem: GuidanceHistoryItem = {
                         image: guidanceImage.src,
                         opacity: guidanceOpacity,
-                        pixelation: guidancePixelation,
+                        gridStep: guidanceGridStep,
                         state: guidanceState
                     };
 
@@ -1145,13 +1169,14 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase"><span>Pixelado</span><span className="text-purple-600">{guidancePixelation}x</span></div>
+                                                <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase"><span>Grid Step</span><span className="text-purple-600">{guidanceGridStep}x{guidanceGridStep}</span></div>
                                                 <input
                                                     type="range" min="1" max="20" step="1"
-                                                    value={guidancePixelation}
-                                                    onChange={(e) => setGuidancePixelation(parseInt(e.target.value))}
+                                                    value={guidanceGridStep}
+                                                    onChange={(e) => setGuidanceGridStep(parseInt(e.target.value))}
                                                     className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-purple-600"
                                                 />
+                                                <p className="text-[10px] text-slate-400 italic">1 píxel guía = {guidanceGridStep} píxeles del grid</p>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-3 pt-2">
