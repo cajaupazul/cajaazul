@@ -341,6 +341,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         const w = guidanceImage.naturalWidth;
         const h = guidanceImage.naturalHeight;
 
+        if (!guidanceCanvasRef.current) {
+            guidanceCanvasRef.current = document.createElement('canvas');
+        }
         const canvas = guidanceCanvasRef.current;
         if (!canvas) return null;
 
@@ -439,9 +442,25 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     );
 
                     if (isEditingGuidance) {
-                        ctx.strokeStyle = '#f59e0b';
-                        ctx.lineWidth = 2 / scale;
+                        // Pulsating orange highlight to find the image
+                        const pulse = (Math.sin(Date.now() / 200) + 1) / 2;
+                        ctx.strokeStyle = `rgba(245, 158, 11, ${0.4 + pulse * 0.6})`;
+                        ctx.lineWidth = 4 / scale;
+                        ctx.setLineDash([15 / scale, 10 / scale]);
                         ctx.strokeRect(startX, startY, gWidth, gHeight);
+                        ctx.setLineDash([]);
+
+                        // Corners for clarity
+                        const cornerSize = 30 / scale;
+                        ctx.fillStyle = '#f59e0b';
+                        // Top Left
+                        ctx.fillRect(startX, startY, cornerSize, 4 / scale);
+                        ctx.fillRect(startX, startY, 4 / scale, cornerSize);
+                        // Bottom Right
+                        ctx.fillRect(startX + gWidth - cornerSize, startY + gHeight - 4 / scale, cornerSize, 4 / scale);
+                        ctx.fillRect(startX + gWidth - 4 / scale, startY + gHeight - cornerSize, 4 / scale, cornerSize);
+
+                        needsRedrawRef.current = true; // Keep animating the pulse
                     }
                     ctx.restore();
                 }
@@ -919,9 +938,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 const centerX = (viewportWidth / 2 - offsetX) / scale;
                 const centerY = (viewportHeight / 2 - offsetY) / scale;
 
-                // Set a visible initial scale (approx 30% of screenspace)
+                // Set a visible initial scale (approx 40% of screenspace)
                 const worldViewportWidth = viewportWidth / scale;
-                const initialScale = (worldViewportWidth * 0.3) / Math.max(1, img.naturalWidth);
+                const initialScale = Math.max(0.1, (worldViewportWidth * 0.4) / Math.max(1, img.naturalWidth));
 
                 setGuidanceState({
                     x: centerX,
