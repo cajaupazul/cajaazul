@@ -337,29 +337,33 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const getProcessedGuidanceCanvas = useCallback(() => {
         if (!guidanceImage) return null;
 
-        // We calculate the required tiny canvas size to cover the image's world area 
-        // with grid-aligned blocks of size 'guidanceGridStep'
         const step = guidanceGridStep;
         const w = guidanceImage.naturalWidth;
         const h = guidanceImage.naturalHeight;
 
-        // We use an offscreen canvas for the pixelated version
         const canvas = guidanceCanvasRef.current;
         if (!canvas) return null;
 
         const ctx = canvas.getContext('2d', { alpha: true });
         if (!ctx) return null;
 
-        // The processed canvas should be high-res enough for color picking
-        // but we'll use a special drawing strategy in the render loop for pixelation
-        canvas.width = w;
-        canvas.height = h;
+        // Visual position and size in world units
+        const gWidthWorld = w * guidanceState.scale;
+        const gHeightWorld = h * guidanceState.scale;
 
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(guidanceImage, 0, 0);
+        // DIMENSION GUARD: Ensure we don't try to create a 0-size canvas
+        const bufferWidth = Math.max(1, Math.ceil(gWidthWorld / step));
+        const bufferHeight = Math.max(1, Math.ceil(gHeightWorld / step));
+
+        // We use the offscreen canvas as a buffer
+        canvas.width = bufferWidth;
+        canvas.height = bufferHeight;
+
+        ctx.imageSmoothingEnabled = true; // Smooth downscale
+        ctx.drawImage(guidanceImage, 0, 0, bufferWidth, bufferHeight);
 
         return canvas;
-    }, [guidanceImage, guidanceGridStep]);
+    }, [guidanceImage, guidanceGridStep, guidanceState.scale]);
 
 
     // --- Rendering Optimization ---
@@ -414,46 +418,25 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     ctx.save();
                     ctx.globalAlpha = guidanceOpacity;
 
-                    // CONGRUENCE ARCHITECTURE: 
-                    // We render the image pixelated but locked to the GLOBAL grid.
-                    // 1 Block = guidanceGridStep units.
                     const step = guidanceGridStep;
-
-                    // Visual position and size in world units
                     const gWidth = guidanceImage.naturalWidth * guidanceState.scale;
                     const gHeight = guidanceImage.naturalHeight * guidanceState.scale;
                     const startX = guidanceState.x - gWidth / 2;
                     const startY = guidanceState.y - gHeight / 2;
 
-                    // Optimization: Use a temp canvas to perform the grid-locked pixelation
-                    // We draw the image into a buffer where 1px = step world units
-                    const bufferWidth = Math.ceil(gWidth / step);
-                    const bufferHeight = Math.ceil(gHeight / step);
+                    // SNAPPING: Find the top-left of the first grid block that covers the image
+                    const snappedStartX = Math.floor(startX / step) * step;
+                    const snappedStartY = Math.floor(startY / step) * step;
 
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = bufferWidth;
-                    tempCanvas.height = bufferHeight;
-                    const tCtx = tempCanvas.getContext('2d');
-
-                    if (tCtx) {
-                        tCtx.imageSmoothingEnabled = true; // Use smoothing for the downsample
-                        tCtx.drawImage(guidanceImage, 0, 0, bufferWidth, bufferHeight);
-
-                        // Draw back to main ctx with NO smoothing, effectively creating grid-locked blocks
-                        ctx.imageSmoothingEnabled = false;
-
-                        // SNAPPING: Find the top-left of the first grid block that covers the image
-                        const snappedStartX = Math.floor(startX / step) * step;
-                        const snappedStartY = Math.floor(startY / step) * step;
-
-                        ctx.drawImage(
-                            tempCanvas,
-                            snappedStartX,
-                            snappedStartY,
-                            bufferWidth * step,
-                            bufferHeight * step
-                        );
-                    }
+                    // Draw the pre-processed tiny buffer back as huge grid blocks
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(
+                        drawableGuidance,
+                        snappedStartX,
+                        snappedStartY,
+                        drawableGuidance.width * step,
+                        drawableGuidance.height * step
+                    );
 
                     if (isEditingGuidance) {
                         ctx.strokeStyle = '#f59e0b';
