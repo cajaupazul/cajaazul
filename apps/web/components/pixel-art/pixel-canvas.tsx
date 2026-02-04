@@ -185,11 +185,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 setGuidanceState(data.state ?? { x: 0, y: 0, scale: 1 });
                 setGuidanceHistory(data.history ?? []);
 
-                if (data.image) {
-                    const img = new Image();
-                    img.onload = () => setGuidanceImage(img);
-                    img.src = data.image;
-                }
+                // NOTE: We DO NOT auto-load the image anymore as per user request.
+                // It stays in history to be manually restored.
             } catch (e) {
                 console.error("Error loading guidance persistence:", e);
             }
@@ -846,7 +843,10 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             const [xStr, yStr] = key.split(',');
             const x = parseInt(xStr);
             const y = parseInt(yStr);
+
+            // Persist immediately to the local main buffer
             updateLocalPixel(x, y, colorIndex);
+
             pixelsToSave.push({
                 event_id: eventId,
                 x,
@@ -859,6 +859,10 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         const pixelCount = pendingPixels.size;
         setPendingPixels(new Map());
         pendingPixelsRef.current = new Map();
+
+        // Final visual sync for the whole buffer
+        updateDataCanvasFull();
+        needsRedrawRef.current = true;
 
         try {
             console.log("[PIXEL_SAVE] Inserting into pixel_history:", pixelsToSave);
