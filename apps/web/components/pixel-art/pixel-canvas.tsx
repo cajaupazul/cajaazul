@@ -483,7 +483,11 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         const px = pixelStartX + x;
                         const py = pixelStartY + y;
 
-                        ctx.fillStyle = colorIndex === ERASER_INDEX ? '#1a1a1a' : COLOR_PALETTE[colorIndex];
+                        if (colorIndex === ERASER_INDEX) {
+                            ctx.fillStyle = '#ffffff';
+                        } else {
+                            ctx.fillStyle = COLOR_PALETTE[colorIndex] || 'rgba(0,0,0,0)';
+                        }
                         ctx.fillRect(px, py, 1, 1);
                     });
                 }
@@ -719,11 +723,30 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const findNearestPaletteColor = (r: number, g: number, b: number) => {
         let minDistance = Infinity;
         let closestColor = COLOR_PALETTE[0];
+
+        // Convert to saturation for vividness preference
+        const getSaturation = (r: number, g: number, b: number) => {
+            const max = Math.max(r, g, b) / 255;
+            const min = Math.min(r, g, b) / 255;
+            return max === 0 ? 0 : (max - min) / max;
+        };
+
         for (const hex of COLOR_PALETTE) {
             const pr = parseInt(hex.slice(1, 3), 16);
             const pg = parseInt(hex.slice(3, 5), 16);
             const pb = parseInt(hex.slice(5, 7), 16);
-            const distance = Math.pow(r - pr, 2) + Math.pow(g - pg, 2) + Math.pow(b - pb, 2);
+
+            // Weighted RGB distance (Human perception weights: R:0.299, G:0.587, B:0.114)
+            // But for 'vivid' matching, we use a balanced approach
+            const dr = (r - pr) * 0.3;
+            const dg = (g - pg) * 0.59;
+            const db = (b - pb) * 0.11;
+            let distance = dr * dr + dg * dg + db * db;
+
+            // Vividness preference: slight bonus for more saturated palette colors
+            const sat = getSaturation(pr, pg, pb);
+            distance -= sat * 50; // Adjust score by saturation
+
             if (distance < minDistance) {
                 minDistance = distance;
                 closestColor = hex;
@@ -772,7 +795,11 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         const newMap = new Map(pendingPixelsRef.current);
         const key = `${x},${y}`;
 
-        if (newMap.get(key) === colorIndex) {
+        // If eraser, don't toggle back. If same color, toggle back (undo).
+        if (colorIndex === ERASER_INDEX) {
+            newMap.set(key, colorIndex);
+            playPaintSound();
+        } else if (newMap.get(key) === colorIndex) {
             newMap.delete(key);
         } else {
             newMap.set(key, colorIndex);
