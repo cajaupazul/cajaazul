@@ -2,8 +2,12 @@
 -- HIBRID ARCHITECTURE: PIXEL ART ROW-BASED
 -- ==========================================
 
--- 1. Reinicio total de la tabla de estado (Migración de Blob -> Filas)
--- Usamos CASCADE para limpiar triggers y políticas antiguas asociadas.
+-- 1. LIMPIEZA TOTAL: Eliminar triggers y tablas antiguas
+-- CRITICAL: Eliminamos el trigger viejo que intentaba usar la columna 'pixels'
+DROP TRIGGER IF EXISTS tr_update_pixel_board ON public.pixel_history;
+DROP FUNCTION IF EXISTS public.update_pixel_board_state();
+
+-- Usamos CASCADE para limpiar la tabla de estado y sus dependencias (políticas, etc.)
 DROP TABLE IF EXISTS public.pixel_board_state CASCADE;
 
 CREATE TABLE public.pixel_board_state (
