@@ -3,6 +3,8 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { supabase, getStorageUrl, ShopItem } from '@/lib/supabase';
+import { cn } from '@/lib/utils';
+import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 import { Palette, COLOR_PALETTE, COLOR_MAP } from './palette';
 import { NavigationControls } from './overlay-controls';
 import {
@@ -30,15 +32,13 @@ import {
     Plus,
     Minus
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 
 // High Contrast Cursor (Black with White Border)
 const BLACK_CROSSHAIR_CURSOR = `url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V21M3 12H21" stroke="white" stroke-width="3" stroke-linecap="square"/><path d="M12 4V20M4 12H20" stroke="black" stroke-width="1.5" stroke-linecap="square"/></svg>') 12 12, crosshair`;
 
-
-const GRID_WIDTH = 1000;
-const GRID_HEIGHT = 1000;
+// Default dimensions (can be overridden by database)
+const DEFAULT_gridWidth = 1000;
+const DEFAULT_gridHeight = 1000;
 
 // Special index for Eraser (Transparent)
 const ERASER_INDEX = 255;
@@ -87,6 +87,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     // Helper to track if we are in 'mode' eraser
     const isEraser = selectedColor === 'eraser';
 
+    const [gridWidth, setGridWidth] = useState(DEFAULT_gridWidth);
+    const [gridHeight, setGridHeight] = useState(DEFAULT_gridHeight);
+
     const [isPanning, setIsPanning] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState(1);
 
@@ -94,8 +97,13 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const dragStartRef = useRef<{ x: number, y: number } | null>(null);
     const isDraggingRef = useRef(false);
 
-    // Cursor Tracking for Highlight
+    // UI State
+    const [isPaintMode, setIsPaintMode] = useState(false);
+    const isPaintModeRef = useRef(false);
+
+    // Cursor Tracking
     const [cursorGridPos, setCursorGridPos] = useState<{ x: number, y: number } | null>(null);
+    const cursorGridPosRef = useRef<{ x: number, y: number } | null>(null);
 
     // Guidance State
     const [guidanceImage, setGuidanceImage] = useState<HTMLImageElement | null>(null);
@@ -106,13 +114,10 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const [showGuidancePanel, setShowGuidancePanel] = useState(false);
     const [isSmartPicking, setIsSmartPicking] = useState(false);
 
-    // UI State
-    const [isPaintMode, setIsPaintMode] = useState(false);
-
     const [tooltipData, setTooltipData] = useState<{ x: number, y: number, color: string } | null>(null);
 
     // Use a Ref for pixel data to avoid re-renders on every pixel change
-    const pixelDataRef = useRef<Uint8Array>(new Uint8Array(GRID_WIDTH * GRID_HEIGHT).fill(ERASER_INDEX));
+    const pixelDataRef = useRef<Uint8Array>(new Uint8Array(DEFAULT_gridWidth * DEFAULT_gridHeight).fill(ERASER_INDEX));
 
     const lastMouseRef = useRef<{ x: number, y: number } | null>(null);
 
@@ -199,67 +204,43 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
     // --- Data Fetching & Subscription ---
 
-    useEffect(() => {
-        let channel = supabase.channel(`pixel-art-${eventId}`);
-
-        const init = async () => {
-            await fetchGridData();
-
-            channel
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'pixel_history',
-                    filter: `event_id=eq.${eventId}`,
-                }, (payload) => {
-                    const { x, y, color_index } = payload.new;
-                    updateLocalPixel(x, y, color_index);
-                })
-                .on('presence', { event: 'sync' }, () => {
-                    const state = channel.presenceState();
-                    setOnlineUsers(Object.keys(state).length || 1);
-                })
-                .subscribe(async (status) => {
-                    if (status === 'SUBSCRIBED') {
-                        await channel.track({ online_at: new Date().toISOString(), user_id: userProfile?.id });
-                    }
-                });
-        };
-
-        if (eventId) init();
-
-        return () => {
-            supabase.removeChannel(channel);
-            isRunningRef.current = false;
-            cancelAnimationFrame(frameIdRef.current);
-        };
-    }, [eventId, userProfile]);
-
     const fetchGridData = async () => {
         try {
             const { data, error } = await supabase
                 .from('pixel_board_state')
-                .select('pixels')
+                .select('pixels, width, height')
                 .eq('event_id', eventId)
                 .maybeSingle();
 
-            if (data?.pixels) {
-                let bytes: Uint8Array;
-                if (typeof data.pixels === 'string') {
-                    const hex = data.pixels.startsWith('\\x') ? data.pixels.slice(2) : data.pixels;
-                    const len = hex.length / 2;
-                    bytes = new Uint8Array(len);
-                    for (let i = 0; i < len; i++) {
-                        bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
-                    }
-                } else {
-                    bytes = new Uint8Array(data.pixels);
+            if (data) {
+                if (data.width && data.height) {
+                    setGridWidth(data.width);
+                    setGridHeight(data.height);
                 }
 
-                if (bytes.length === GRID_WIDTH * GRID_HEIGHT) {
-                    pixelDataRef.current = bytes;
-                    updateDataCanvasFull();
-                    needsRedrawRef.current = true;
+                if (data.pixels) {
+                    let bytes: Uint8Array;
+                    if (typeof data.pixels === 'string') {
+                        const hex = data.pixels.startsWith('\\x') ? data.pixels.slice(2) : data.pixels;
+                        const len = hex.length / 2;
+                        bytes = new Uint8Array(len);
+                        for (let i = 0; i < len; i++) {
+                            bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+                        }
+                    } else {
+                        bytes = new Uint8Array(data.pixels);
+                    }
+
+                    const expectedSize = (data.width || gridWidth) * (data.height || gridHeight);
+                    if (bytes.length === expectedSize) {
+                        pixelDataRef.current = bytes;
+                        updateDataCanvasFull();
+                        needsRedrawRef.current = true;
+                    } else {
+                        pixelDataRef.current = new Uint8Array(expectedSize).fill(ERASER_INDEX);
+                        updateDataCanvasFull();
+                        needsRedrawRef.current = true;
+                    }
                 }
             }
         } catch (e) {
@@ -268,8 +249,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     };
 
     const updateLocalPixel = (x: number, y: number, colorIndex: number) => {
-        if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
-            const idx = y * GRID_WIDTH + x;
+        if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
+            const idx = y * gridWidth + x;
             pixelDataRef.current[idx] = colorIndex;
 
             const ctx = dataCanvasRef.current?.getContext('2d');
@@ -284,6 +265,96 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             needsRedrawRef.current = true;
         }
     };
+
+    // 1. Initial Fetch and Real-time Board State (Clear/Resize)
+    useEffect(() => {
+        let boardChannel: any;
+
+        const setupBoardSync = async () => {
+            await fetchGridData();
+
+            boardChannel = supabase
+                .channel(`board-state-${eventId}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'pixel_board_state',
+                        filter: `event_id=eq.${eventId}`
+                    },
+                    (payload) => {
+                        console.log("[PIXEL_BOARD] Admin update detected:", payload);
+                        const newData = payload.new as any;
+
+                        setGridWidth(newData.width);
+                        setGridHeight(newData.height);
+
+                        if (newData.pixels) {
+                            let bytes: Uint8Array;
+                            if (typeof newData.pixels === 'string') {
+                                const hex = newData.pixels.startsWith('\\x') ? newData.pixels.slice(2) : newData.pixels;
+                                const len = hex.length / 2;
+                                bytes = new Uint8Array(len);
+                                for (let i = 0; i < len; i++) {
+                                    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+                                }
+                            } else {
+                                bytes = new Uint8Array(newData.pixels);
+                            }
+
+                            if (bytes.length === newData.width * newData.height) {
+                                pixelDataRef.current = bytes;
+                                updateDataCanvasFull();
+                                needsRedrawRef.current = true;
+                            }
+                        }
+                    }
+                )
+                .subscribe();
+        };
+
+        setupBoardSync();
+
+        return () => {
+            if (boardChannel) supabase.removeChannel(boardChannel);
+        };
+    }, [eventId]);
+
+    // 2. Real-time Painting (Presence and Individual Pixels)
+    useEffect(() => {
+        const paintChannel = supabase.channel(`pixel-art-${eventId}`);
+
+        const initPaint = async () => {
+            paintChannel
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'pixel_history',
+                    filter: `event_id=eq.${eventId}`,
+                }, (payload) => {
+                    const { x, y, color_index } = payload.new;
+                    updateLocalPixel(x, y, color_index);
+                })
+                .on('presence', { event: 'sync' }, () => {
+                    const state = paintChannel.presenceState();
+                    setOnlineUsers(Object.keys(state).length || 1);
+                })
+                .subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED') {
+                        await paintChannel.track({ online_at: new Date().toISOString(), user_id: userProfile?.id });
+                    }
+                });
+        };
+
+        if (eventId) initPaint();
+
+        return () => {
+            supabase.removeChannel(paintChannel);
+            isRunningRef.current = false;
+            cancelAnimationFrame(frameIdRef.current);
+        };
+    }, [eventId, userProfile]);
 
     // --- Image Processing (Memoized) ---
     const getProcessedGuidanceCanvas = useCallback(() => {
@@ -334,7 +405,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) return;
 
-        const imageData = ctx.createImageData(GRID_WIDTH, GRID_HEIGHT);
+        const imageData = ctx.createImageData(gridWidth, gridHeight);
         const data32 = new Uint32Array(imageData.data.buffer);
         const pixels = pixelDataRef.current;
         const len = pixels.length;
@@ -345,7 +416,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         }
 
         ctx.putImageData(imageData, 0, 0);
-    }, []);
+    }, [gridWidth, gridHeight]);
 
     const render = useCallback(() => {
         if (!isRunningRef.current) return;
@@ -364,11 +435,11 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 ctx.scale(scale, scale);
                 ctx.translate(offsetX, offsetY);
 
-                const pixelStartX = -GRID_WIDTH / 2;
-                const pixelStartY = -GRID_HEIGHT / 2;
+                const pixelStartX = -gridWidth / 2;
+                const pixelStartY = -gridHeight / 2;
 
                 ctx.fillStyle = '#ffffff';
-                ctx.fillRect(pixelStartX, pixelStartY, GRID_WIDTH, GRID_HEIGHT);
+                ctx.fillRect(pixelStartX, pixelStartY, gridWidth, gridHeight);
 
                 ctx.imageSmoothingEnabled = false;
                 ctx.drawImage(dataCanvas, pixelStartX, pixelStartY);
@@ -403,7 +474,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 }
 
                 // Draw Pending Pixels (Real Content Preview)
-                // We need to draw the actual COLORED pixel here so the user sees what they are drafting
                 if (pendingPixelsRef.current.size > 0) {
                     pendingPixelsRef.current.forEach((colorIndex, key) => {
                         const [pxStr, pyStr] = key.split(',');
@@ -414,7 +484,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         const py = pixelStartY + y;
 
                         ctx.fillStyle = colorIndex === ERASER_INDEX ? '#1a1a1a' : COLOR_PALETTE[colorIndex];
-                        ctx.fillRect(px, pxStr ? py : py, 1, 1);
+                        ctx.fillRect(px, py, 1, 1);
                     });
                 }
 
@@ -423,18 +493,18 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     ctx.strokeStyle = 'rgba(255,255,255,0.05)';
                     ctx.lineWidth = 0.5 / scale;
 
-                    for (let i = 0; i <= GRID_WIDTH; i++) {
+                    for (let i = 0; i <= gridWidth; i++) {
                         ctx.moveTo(pixelStartX + i, pixelStartY);
-                        ctx.lineTo(pixelStartX + i, pixelStartY + GRID_HEIGHT);
+                        ctx.lineTo(pixelStartX + i, pixelStartY + gridHeight);
                     }
-                    for (let i = 0; i <= GRID_HEIGHT; i++) {
+                    for (let i = 0; i <= gridHeight; i++) {
                         ctx.moveTo(pixelStartX, pixelStartY + i);
-                        ctx.lineTo(pixelStartX + GRID_WIDTH, pixelStartY + i);
+                        ctx.lineTo(pixelStartX + gridWidth, pixelStartY + i);
                     }
                     ctx.stroke();
                 }
 
-                // Draw Pending Pixels Highlights (The "Contour" User Requested)
+                // Draw Pending Pixels Highlights
                 if (pendingPixelsRef.current.size > 0) {
                     ctx.save();
                     ctx.lineWidth = 1.5 / scale;
@@ -448,10 +518,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         const px = pixelStartX + x;
                         const py = pixelStartY + y;
 
-                        // Draw the specific corner brackets for EACH pending pixel (The "Marco")
-                        ctx.strokeStyle = '#FFFFFF'; // White borders for contrast and "vivid" feel
-                        ctx.lineWidth = 1.5 / scale;
-                        ctx.lineCap = 'square';
+                        ctx.strokeStyle = '#FFFFFF';
                         ctx.shadowColor = 'rgba(0,0,0,0.5)';
                         ctx.shadowBlur = 1;
 
@@ -459,43 +526,34 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         const len = 0.35;
 
                         ctx.beginPath();
-                        // Top Left
                         ctx.moveTo(px + gap, py + len);
                         ctx.lineTo(px + gap, py + gap);
                         ctx.lineTo(px + len, py + gap);
-                        // Top Right
                         ctx.moveTo(px + 1 - len, py + gap);
                         ctx.lineTo(px + 1 - gap, py + gap);
                         ctx.lineTo(px + 1 - gap, py + len);
-                        // Bottom Right
                         ctx.moveTo(px + 1 - gap, py + 1 - len);
                         ctx.lineTo(px + 1 - gap, py + 1 - gap);
                         ctx.lineTo(px + 1 - len, py + 1 - gap);
-                        // Bottom Left
                         ctx.moveTo(px + len, py + 1 - gap);
                         ctx.lineTo(px + gap, py + 1 - gap);
                         ctx.lineTo(px + gap, py + 1 - len);
                         ctx.stroke();
-
-                        // NO FILL HERE anymore - keeping the internal color "vivid" as requested
                     });
                     ctx.restore();
                 }
 
-                // Draw Cursor Highlight (Quadrant) - Only if not hovering a pending pixel?
-                if (cursorGridPos) {
-                    // ... existing cursor code ...
-                    const { x, y } = cursorGridPos;
-                    if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
-                        // Don't draw cursor reticle if we already have a pending pixel there (optional, but cleaner)
+                // Draw Cursor Highlight
+                const currentCursor = cursorGridPosRef.current;
+                if (currentCursor && isPaintModeRef.current) {
+                    const { x, y } = currentCursor;
+                    if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
                         if (!pendingPixelsRef.current.has(`${x},${y}`)) {
                             ctx.save();
-                            // ... existing reticle code ...
-                            // Reticle Style (Corner Brackets)
                             const px = pixelStartX + x;
                             const py = pixelStartY + y;
 
-                            ctx.strokeStyle = '#000000'; // High contrast black for cursor reticle
+                            ctx.strokeStyle = '#000000';
                             ctx.lineWidth = 1.5 / scale;
                             ctx.shadowColor = 'rgba(255,255,255,0.8)';
                             ctx.shadowBlur = 1;
@@ -508,25 +566,19 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                             ctx.moveTo(px + gap, py + len);
                             ctx.lineTo(px + gap, py + gap);
                             ctx.lineTo(px + len, py + gap);
-
                             ctx.moveTo(px + 1 - len, py + gap);
                             ctx.lineTo(px + 1 - gap, py + gap);
                             ctx.lineTo(px + 1 - gap, py + len);
-
                             ctx.moveTo(px + 1 - gap, py + 1 - len);
                             ctx.lineTo(px + 1 - gap, py + 1 - gap);
                             ctx.lineTo(px + 1 - len, py + 1 - gap);
-
                             ctx.moveTo(px + len, py + 1 - gap);
                             ctx.lineTo(px + gap, py + 1 - gap);
                             ctx.lineTo(px + gap, py + 1 - len);
-
                             ctx.stroke();
 
-                            // Subtle fill
                             ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
                             ctx.fillRect(px, py, 1, 1);
-
                             ctx.restore();
                         }
                     }
@@ -537,7 +589,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         }
 
         frameIdRef.current = requestAnimationFrame(render);
-    }, [scale, offsetX, offsetY, guidanceImage, guidanceOpacity, guidanceState, isEditingGuidance, getProcessedGuidanceCanvas]);
+    }, [scale, offsetX, offsetY, gridWidth, gridHeight, guidanceImage, guidanceOpacity, guidanceState, isEditingGuidance, getProcessedGuidanceCanvas]);
 
     useEffect(() => {
         isRunningRef.current = true;
@@ -560,34 +612,29 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         const worldX = (sx - cx) / scale - offsetX;
         const worldY = (sy - cy) / scale - offsetY;
 
-        const pixelX = Math.floor(worldX + GRID_WIDTH / 2);
-        const pixelY = Math.floor(worldY + GRID_HEIGHT / 2);
+        const pixelX = Math.floor(worldX + gridWidth / 2);
+        const pixelY = Math.floor(worldY + gridHeight / 2);
 
         return { x: pixelX, y: pixelY, worldX, worldY };
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
-        // Only respond to LEFT CLICK for starting interactions
         if (e.button !== 0) return;
-
         if (isEditingGuidance && guidanceImage) {
             lastMouseRef.current = { x: e.clientX, y: e.clientY };
             return;
         }
-
-        // Start Drag Tracking
         dragStartRef.current = { x: e.clientX, y: e.clientY };
         isDraggingRef.current = false;
         lastMouseRef.current = { x: e.clientX, y: e.clientY };
-
-        // Don't paint immediately on mouse down anymore
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
-        const { x, y, worldX, worldY } = screenToWorld(e.clientX, e.clientY);
+        const { x, y } = screenToWorld(e.clientX, e.clientY);
         setCursorGridPos({ x, y });
+        cursorGridPosRef.current = { x, y };
+        needsRedrawRef.current = true;
 
-        // Determine if dragging
         if (e.buttons === 1 && dragStartRef.current) {
             const dist = Math.hypot(e.clientX - dragStartRef.current.x, e.clientY - dragStartRef.current.y);
             if (dist > 5) {
@@ -604,7 +651,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             return;
         }
 
-        // Pan Logic (Active whenever dragging, regardless of mode)
         if (isDraggingRef.current && lastMouseRef.current) {
             const dx = e.clientX - lastMouseRef.current.x;
             const dy = e.clientY - lastMouseRef.current.y;
@@ -613,27 +659,20 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             lastMouseRef.current = { x: e.clientX, y: e.clientY };
             return;
         }
-
-        // Just update tooltipData for colors if needed
         if (tooltipData) setTooltipData(null);
     };
 
     const handleMouseUp = (e: React.MouseEvent) => {
-        // Only respond to LEFT CLICK for ending interactions
         if (e.button !== 0) {
             setIsPanning(false);
             return;
         }
-
         setIsPanning(false);
         lastMouseRef.current = null;
 
-        // If it was a CLICK (started on canvas, and didn't drag far enough) AND we are in paint mode, then PAINT
-        // Checking dragStartRef.current is CRITICAL to ensure the click started on the canvas.
         if (dragStartRef.current && !isDraggingRef.current && isPaintMode) {
             paintPixel(e.clientX, e.clientY);
         }
-
         dragStartRef.current = null;
         isDraggingRef.current = false;
     };
@@ -644,11 +683,10 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         dragStartRef.current = null;
         isDraggingRef.current = false;
         setCursorGridPos(null);
+        cursorGridPosRef.current = null;
     };
 
     const handleMouseEnter = (e: React.MouseEvent) => {
-        // Clear any stale drag state if the mouse was released outside the window
-        // or just to be safe upon re-entry.
         if (e.buttons !== 1) {
             dragStartRef.current = null;
             isDraggingRef.current = false;
@@ -674,42 +712,33 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
-
-        // Add non-passive wheel listener manually
         container.addEventListener('wheel', handleWheel, { passive: false });
-        return () => {
-            container.removeEventListener('wheel', handleWheel);
-        };
+        return () => container.removeEventListener('wheel', handleWheel);
     }, [handleWheel]);
 
     const findNearestPaletteColor = (r: number, g: number, b: number) => {
         let minDistance = Infinity;
         let closestColor = COLOR_PALETTE[0];
-
         for (const hex of COLOR_PALETTE) {
             const pr = parseInt(hex.slice(1, 3), 16);
             const pg = parseInt(hex.slice(3, 5), 16);
             const pb = parseInt(hex.slice(5, 7), 16);
-
             const distance = Math.pow(r - pr, 2) + Math.pow(g - pg, 2) + Math.pow(b - pb, 2);
             if (distance < minDistance) {
                 minDistance = distance;
                 closestColor = hex;
             }
         }
-
         return closestColor;
     };
 
     const paintPixel = async (clientX: number, clientY: number) => {
         const { x, y, worldX, worldY } = screenToWorld(clientX, clientY);
-        if (x < 0 || x >= GRID_WIDTH || y < 0 || y >= GRID_HEIGHT) return;
+        if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return;
 
         let colorIndex: number | undefined;
 
-        // ... color selection logic ...
         if (isSmartPicking && guidanceImage) {
-            // ... (keep existing smart pick logic)
             const gWidth = guidanceImage.naturalWidth * guidanceState.scale;
             const gHeight = guidanceImage.naturalHeight * guidanceState.scale;
             const gLeft = guidanceState.x - gWidth / 2;
@@ -740,24 +769,18 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
         if (colorIndex === undefined) return;
 
-        // Draft Logic: Update Pending Pixels Map
         const newMap = new Map(pendingPixelsRef.current);
         const key = `${x},${y}`;
 
-        // If clicking the same pixel with same color, remove it (undo)
-        // If clicking with different color, update it
         if (newMap.get(key) === colorIndex) {
             newMap.delete(key);
         } else {
             newMap.set(key, colorIndex);
-            playPaintSound(); // Play POP sound
+            playPaintSound();
         }
 
-        // Sync State (for reference/reactivity) AND Ref (for instant render)
         pendingPixelsRef.current = newMap;
         setPendingPixels(newMap);
-
-        // Force immediate redraw in next loop
         needsRedrawRef.current = true;
     };
 
@@ -765,7 +788,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         if (pendingPixels.size === 0) return;
 
         console.log(`[PIXEL_SAVE] Starting batch save of ${pendingPixels.size} pixels for event ${eventId}...`);
-
         const pixelsToSave: { event_id: string, x: number, y: number, color_index: number, user_id: string }[] = [];
         const currentUserId = userProfile?.id;
 
@@ -774,14 +796,11 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             return;
         }
 
-        // 1. Instant local update (Optimistic)
         pendingPixels.forEach((colorIndex, key) => {
             const [xStr, yStr] = key.split(',');
             const x = parseInt(xStr);
             const y = parseInt(yStr);
-
             updateLocalPixel(x, y, colorIndex);
-
             pixelsToSave.push({
                 event_id: eventId,
                 x,
@@ -791,26 +810,20 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             });
         });
 
-        // 2. Clear pending state immediately for responsiveness
         const pixelCount = pendingPixels.size;
         setPendingPixels(new Map());
         pendingPixelsRef.current = new Map();
 
-        // 3. Background sync with Supabase
         try {
             console.log("[PIXEL_SAVE] Inserting into pixel_history:", pixelsToSave);
             const { data, error } = await supabase.from('pixel_history').insert(pixelsToSave).select();
-
             if (error) {
                 console.error("[PIXEL_SAVE] SUPABASE ERROR:", error.message, error.details, error.hint);
                 throw error;
             }
-
             console.log(`[PIXEL_SAVE] SUCCESS: ${pixelCount} pixels saved correctly.`, data);
         } catch (err) {
             console.error("[PIXEL_SAVE] FAILED to save batch pixels:", err);
-            // Optional: Show a toast to the user or rollback? 
-            // For now, let's keep it simple as requested: "instant" feeling.
         }
     };
 
@@ -831,23 +844,20 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     useEffect(() => {
         const handleResize = () => {
             if (displayCanvasRef.current && containerRef.current) {
-                // Resize to container size instead of window
                 const rect = containerRef.current.getBoundingClientRect();
                 displayCanvasRef.current.width = rect.width;
                 displayCanvasRef.current.height = rect.height;
             }
         };
         window.addEventListener('resize', handleResize);
-        handleResize(); // Initial size
-        // Add a small delay to ensure container is rendered
+        handleResize();
         setTimeout(handleResize, 100);
-
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     return (
         <div ref={containerRef} className="relative w-full h-full bg-[#1a1a1a] overflow-hidden font-sans rounded-xl shadow-2xl border border-white/10">
-            <canvas ref={dataCanvasRef} width={GRID_WIDTH} height={GRID_HEIGHT} className="hidden" />
+            <canvas ref={dataCanvasRef} width={gridWidth} height={gridHeight} className="hidden" />
 
             <div
                 className="w-full h-full relative"
@@ -868,9 +878,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     onContextMenu={(e) => e.preventDefault()}
                 />
 
-
-                {/* Internal Avatar/Close Removed - Handled by Parent Page */}
-
                 {tooltipData && (
                     <div className="fixed z-50 pointer-events-none flex items-center gap-2 bg-black/80 text-white text-xs px-2 py-1 rounded border border-white/20 shadow-xl"
                         style={{ left: tooltipData.x + 15, top: tooltipData.y + 15 }}>
@@ -882,7 +889,10 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 {!isPaintMode ? (
                     <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30">
                         <button
-                            onClick={() => setIsPaintMode(true)}
+                            onClick={() => {
+                                setIsPaintMode(true);
+                                isPaintModeRef.current = true;
+                            }}
                             className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg px-8 py-3 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.5)] active:scale-95 transition-all flex items-center gap-2 border-2 border-white/20 cursor-pointer"
                         >
                             ✏️ PINTAR
@@ -892,21 +902,18 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     <div className="absolute bottom-0 left-0 z-30 w-full pointer-events-none" onContextMenu={(e) => e.preventDefault()}>
                         <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-t-[1.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-4 md:px-8 md:py-5 border-t border-slate-200/60 flex flex-col gap-4 animate-in slide-in-from-bottom-full duration-500">
 
-                            {/* Inner Header/Bar */}
                             <div className="flex items-center justify-between px-2">
                                 <div className="flex items-center gap-4">
-                                    {/* Action Group (Left) */}
                                     <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-2xl border border-slate-100">
                                         <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Maximize className="w-4 h-4" /></button>
                                         <div className="h-4 w-[1px] bg-slate-200 mx-1" />
                                         <span className="text-xs font-bold text-slate-700 px-2 whitespace-nowrap">Pintar píxel ({pendingPixels.size})</span>
                                         <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Pencil className="w-4 h-4" /></button>
                                         <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" onClick={() => setShowGuidancePanel(!showGuidancePanel)}><Grid className="w-4 h-4" /></button>
-                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" onClick={() => {/* TODO: Undo */ }}><Undo className="w-4 h-4" /></button>
-                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" onClick={() => {/* TODO: Redo */ }}><Redo className="w-4 h-4" /></button>
+                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Undo className="w-4 h-4" /></button>
+                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Redo className="w-4 h-4" /></button>
                                     </div>
 
-                                    {/* Profile Group (Integrated as requested) */}
                                     {userProfile && (
                                         <div className="hidden lg:flex items-center gap-2 pr-4 border-r border-slate-100">
                                             <AvatarWithFrame
@@ -923,10 +930,12 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                     )}
                                 </div>
 
-                                {/* Tools / Close */}
                                 <div className="flex items-center gap-2">
                                     <button
-                                        onClick={() => setIsPaintMode(false)}
+                                        onClick={() => {
+                                            setIsPaintMode(false);
+                                            isPaintModeRef.current = false;
+                                        }}
                                         className="p-2.5 rounded-full hover:bg-slate-100 text-slate-400 transition-all"
                                     >
                                         <X className="w-5 h-5" />
@@ -934,7 +943,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                 </div>
                             </div>
 
-                            {/* Palette Area */}
                             <div className="px-2">
                                 <Palette
                                     selectedColor={isPanning || isEditingGuidance || isEraser || isSmartPicking ? null : selectedColor}
@@ -948,7 +956,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                 />
                             </div>
 
-                            {/* Central Confirm Button */}
                             <div className="flex justify-center -mt-1 pb-1">
                                 <button
                                     onClick={confirmPaint}
@@ -968,9 +975,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                 </button>
                             </div>
 
-                            {/* Floating Tools (Eraser / Magia) as absolute buttons near the bar? 
-                                Reference shows eraser at the far right of palette row. 
-                            */}
                             <div className="absolute right-6 bottom-24 flex flex-col gap-2 pointer-events-auto">
                                 <button
                                     onClick={() => setSelectedColor('eraser')}
@@ -997,7 +1001,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                 </button>
                             </div>
 
-                            {/* Guidance Settings Panel */}
                             {showGuidancePanel && (
                                 <div className="absolute bottom-full left-4 mb-6 bg-white rounded-3xl shadow-2xl p-5 border border-slate-100 w-80 animate-in slide-in-from-bottom-4 z-50 pointer-events-auto">
                                     <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">

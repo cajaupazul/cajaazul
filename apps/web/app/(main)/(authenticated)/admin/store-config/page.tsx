@@ -13,7 +13,10 @@ import {
     Info,
     RefreshCw,
     ToggleLeft,
-    ToggleRight
+    ToggleRight,
+    Maximize,
+    Download,
+    ShieldCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -221,6 +224,240 @@ export default function StoreConfigPage() {
                 ))}
             </div>
 
+            {/* Pixel Art Admin Controls */}
+            <hr className="border-bb-border" />
+
+            <div className="space-y-6">
+                <div>
+                    <h2 className="text-2xl font-bold text-bb-text">Control de Pixel Art</h2>
+                    <p className="text-bb-text-secondary mt-1">Gestiona el lienzo global, limpia el progreso o cambia las dimensiones.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Clear Canvas Card */}
+                    <Card className="bg-bb-card border-bb-border shadow-sm">
+                        <CardHeader className="py-4">
+                            <CardTitle className="text-sm font-bold uppercase tracking-wider text-bb-text-secondary flex items-center gap-2">
+                                <Trash2 className="w-4 h-4 text-rose-500" />
+                                Reiniciar Lienzo
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <p className="text-xs text-bb-text-secondary">
+                                Esta acción eliminará permanentemente todos los píxeles del tablero.
+                                No se puede deshacer.
+                            </p>
+                            <Button
+                                variant="destructive"
+                                className="w-full font-bold"
+                                onClick={async () => {
+                                    if (!confirm("¿Estás seguro de que quieres borrar TODO el mural de Pixel Art?")) return;
+                                    setSaving('clear-pixels');
+                                    const eventId = 'main-event'; // Default for now
+
+                                    // 1. Get current dimensions to create a blank board
+                                    const { data: board } = await supabase
+                                        .from('pixel_board_state')
+                                        .select('width, height')
+                                        .eq('event_id', eventId)
+                                        .maybeSingle();
+
+                                    const w = board?.width || 1000;
+                                    const h = board?.height || 1000;
+                                    const emptyPixels = new Uint8Array(w * h).fill(255); // 255 is eraser/empty
+
+                                    const { error } = await supabase
+                                        .from('pixel_board_state')
+                                        .update({
+                                            pixels: Buffer.from(emptyPixels).toString('hex'), // Convert to hex if helpful
+                                            updated_at: new Date().toISOString()
+                                        })
+                                        .eq('event_id', eventId);
+
+                                    if (error) {
+                                        setError("Error al limpiar lienzo: " + error.message);
+                                    } else {
+                                        setSuccess("¡Lienzo limpiado con éxito!");
+                                        setTimeout(() => setSuccess(null), 3000);
+                                    }
+                                    setSaving(null);
+                                }}
+                                disabled={saving === 'clear-pixels'}
+                            >
+                                {saving === 'clear-pixels' ? <RefreshCw className="animate-spin w-4 h-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                                BORRAR TODO
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* Resize Grid Card */}
+                    <Card className="bg-bb-card border-bb-border shadow-sm col-span-1 md:col-span-2">
+                        <CardHeader className="py-4">
+                            <CardTitle className="text-sm font-bold uppercase tracking-wider text-bb-text-secondary flex items-center gap-2">
+                                <Maximize className="w-4 h-4 text-blue-500" />
+                                Redimensionar Cuadrícula
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-bb-text-secondary uppercase">Ancho (Píxeles)</label>
+                                    <Input
+                                        type="number"
+                                        placeholder="1000"
+                                        id="pixel-width"
+                                        defaultValue={1000}
+                                        className="bg-bb-sidebar border-bb-border text-bb-text"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-bb-text-secondary uppercase">Alto (Píxeles)</label>
+                                    <Input
+                                        type="number"
+                                        placeholder="1000"
+                                        id="pixel-height"
+                                        defaultValue={1000}
+                                        className="bg-bb-sidebar border-bb-border text-bb-text"
+                                    />
+                                </div>
+                            </div>
+                            <Button
+                                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                                onClick={async () => {
+                                    const width = parseInt((document.getElementById('pixel-width') as HTMLInputElement).value);
+                                    const height = parseInt((document.getElementById('pixel-height') as HTMLInputElement).value);
+
+                                    if (isNaN(width) || isNaN(height) || width < 1 || height < 1) {
+                                        setError("Dimensiones inválidas");
+                                        return;
+                                    }
+
+                                    if (!confirm(`¿Redimensionar a ${width}x${height}? Esto reiniciará el tablero visual.`)) return;
+
+                                    setSaving('resize-pixels');
+                                    const eventId = 'main-event';
+
+                                    const emptyPixels = new Uint8Array(width * height).fill(255);
+
+                                    const { error } = await supabase
+                                        .from('pixel_board_state')
+                                        .update({
+                                            width,
+                                            height,
+                                            pixels: Buffer.from(emptyPixels).toString('hex'),
+                                            updated_at: new Date().toISOString()
+                                        })
+                                        .eq('event_id', eventId);
+
+                                    if (error) {
+                                        setError("Error al redimensionar: " + error.message);
+                                    } else {
+                                        setSuccess(`Tablero redimensionado a ${width}x${height}`);
+                                        setTimeout(() => setSuccess(null), 3000);
+                                    }
+                                    setSaving(null);
+                                }}
+                                disabled={saving === 'resize-pixels'}
+                            >
+                                {saving === 'resize-pixels' ? <RefreshCw className="animate-spin w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                                APLICAR NUEVO TAMAÑO
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* Download Image Card */}
+                    <Card className="bg-bb-card border-bb-border shadow-sm">
+                        <CardHeader className="py-4">
+                            <CardTitle className="text-sm font-bold uppercase tracking-wider text-bb-text-secondary flex items-center gap-2">
+                                <Download className="w-4 h-4 text-emerald-500" />
+                                Exportar Imagen
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <p className="text-xs text-bb-text-secondary">
+                                Descarga el estado actual del mural como un archivo PNG transparente.
+                            </p>
+                            <Button
+                                variant="outline"
+                                className="w-full border-bb-border hover:bg-bb-hover"
+                                onClick={async () => {
+                                    setSaving('download-pixels');
+                                    const eventId = 'main-event';
+
+                                    const { data: board } = await supabase
+                                        .from('pixel_board_state')
+                                        .select('width, height, pixels')
+                                        .eq('event_id', eventId)
+                                        .maybeSingle();
+
+                                    if (!board || !board.pixels) {
+                                        setError("No se pudo obtener el tablero");
+                                        setSaving(null);
+                                        return;
+                                    }
+
+                                    const w = board.width;
+                                    const h = board.height;
+
+                                    // Parse pixels
+                                    let bytes: Uint8Array;
+                                    if (typeof board.pixels === 'string') {
+                                        const hex = board.pixels.startsWith('\\x') ? board.pixels.slice(2) : board.pixels;
+                                        const len = hex.length / 2;
+                                        bytes = new Uint8Array(len);
+                                        for (let i = 0; i < len; i++) {
+                                            bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+                                        }
+                                    } else {
+                                        bytes = new Uint8Array(board.pixels);
+                                    }
+
+                                    // Render to offscreen canvas
+                                    const canvas = document.createElement('canvas');
+                                    canvas.width = w;
+                                    canvas.height = h;
+                                    const ctx = canvas.getContext('2d');
+                                    if (ctx) {
+                                        const imageData = ctx.createImageData(w, h);
+                                        const { COLOR_PALETTE } = await import('@/components/pixel-art/palette');
+
+                                        for (let i = 0; i < bytes.length; i++) {
+                                            const colorIdx = bytes[i];
+                                            if (colorIdx === 255) continue; // Skip transparency
+
+                                            const hex = COLOR_PALETTE[colorIdx];
+                                            const r = parseInt(hex.slice(1, 3), 16);
+                                            const g = parseInt(hex.slice(3, 5), 16);
+                                            const b = parseInt(hex.slice(5, 7), 16);
+
+                                            const offset = i * 4;
+                                            imageData.data[offset] = r;
+                                            imageData.data[offset + 1] = g;
+                                            imageData.data[offset + 2] = b;
+                                            imageData.data[offset + 3] = 255;
+                                        }
+                                        ctx.putImageData(imageData, 0, 0);
+
+                                        // Trigger download
+                                        const link = document.createElement('a');
+                                        link.download = `pixel-art-export-${new Date().toISOString().split('T')[0]}.png`;
+                                        link.href = canvas.toDataURL();
+                                        link.click();
+                                        setSuccess("¡Imagen exportada con éxito!");
+                                        setTimeout(() => setSuccess(null), 3000);
+                                    }
+                                    setSaving(null);
+                                }}
+                                disabled={saving === 'download-pixels'}
+                            >
+                                {saving === 'download-pixels' ? <RefreshCw className="animate-spin w-4 h-4 mr-2" /> : <Download className="w-4 h-4 mr-2" />}
+                                DESCARGAR PNG
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+
             <div className="bg-bb-card border border-bb-border/50 rounded-2xl p-6 flex items-start gap-4">
                 <div className="p-3 bg-blue-500/10 rounded-xl text-blue-500">
                     <ShieldCheck className="w-6 h-6" />
@@ -238,5 +475,3 @@ export default function StoreConfigPage() {
     );
 }
 
-// Para usar ShieldCheck necesitamos importarlo también si no estaba
-import { ShieldCheck } from 'lucide-react';
