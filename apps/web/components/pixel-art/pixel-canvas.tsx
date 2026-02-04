@@ -231,12 +231,16 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 if (data.pixels) {
                     let bytes: Uint8Array;
                     if (typeof data.pixels === 'string') {
+                        // Handle potential hex string from Postgres (some clients return \x prefix)
                         const hex = data.pixels.startsWith('\\x') ? data.pixels.slice(2) : data.pixels;
                         const len = hex.length / 2;
                         bytes = new Uint8Array(len);
                         for (let i = 0; i < len; i++) {
                             bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
                         }
+                    } else if (data.pixels instanceof ArrayBuffer || ArrayBuffer.isView(data.pixels)) {
+                        // Handle direct binary responses
+                        bytes = new Uint8Array(data.pixels as any);
                     } else {
                         bytes = new Uint8Array(data.pixels);
                     }
@@ -244,14 +248,19 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     const expectedSize = (data.width || gridWidth) * (data.height || gridHeight);
                     if (bytes.length === expectedSize) {
                         pixelDataRef.current = bytes;
-                        updateDataCanvasFull();
-                        needsRedrawRef.current = true;
                     } else {
-                        pixelDataRef.current = new Uint8Array(expectedSize).fill(ERASER_INDEX);
-                        updateDataCanvasFull();
-                        needsRedrawRef.current = true;
+                        // If size mismatch, create a fresh buffer but preserve what we can or start clean
+                        const newBytes = new Uint8Array(expectedSize).fill(ERASER_INDEX);
+                        newBytes.set(bytes.slice(0, Math.min(bytes.length, expectedSize)));
+                        pixelDataRef.current = newBytes;
                     }
+                } else {
+                    // If no pixels found, initialize a clean white board
+                    const expectedSize = (data.width || gridWidth) * (data.height || gridHeight);
+                    pixelDataRef.current = new Uint8Array(expectedSize).fill(ERASER_INDEX);
                 }
+                updateDataCanvasFull();
+                needsRedrawRef.current = true;
             }
         } catch (e) {
             console.error("Error fetching board:", e);
