@@ -872,6 +872,21 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 throw error;
             }
             console.log(`[PIXEL_SAVE] SUCCESS: ${pixelCount} pixels saved correctly.`, data);
+
+            // AUTO-SAVE CURRENT TEMPLATE TO HISTORY ON SUCCESSFUL PAINT
+            if (guidanceImage) {
+                const currentItem: GuidanceHistoryItem = {
+                    image: guidanceImage.src,
+                    opacity: guidanceOpacity,
+                    pixelation: guidancePixelation,
+                    state: guidanceState
+                };
+
+                setGuidanceHistory(prev => {
+                    const filtered = prev.filter(h => h.image !== currentItem.image);
+                    return [currentItem, ...filtered].slice(0, 3);
+                });
+            }
         } catch (err) {
             console.error("[PIXEL_SAVE] FAILED to save batch pixels:", err);
         }
@@ -1007,25 +1022,38 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                         <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Redo className="w-4 h-4" /></button>
                                     </div>
 
-                                    {guidanceHistory.length > 0 && (
-                                        <div className="hidden sm:flex items-center gap-1.5 bg-slate-50 p-1 rounded-2xl border border-slate-100 group animate-in slide-in-from-left duration-300">
-                                            <div className="px-2 border-r border-slate-200">
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Continuar</span>
-                                            </div>
-                                            <div className="flex items-center gap-1 px-1">
-                                                {guidanceHistory.map((item, idx) => (
+                                    <div className="hidden sm:flex items-center gap-1.5 bg-slate-50 p-1 rounded-2xl border border-slate-100 group animate-in slide-in-from-left duration-300">
+                                        <div className="px-2 border-r border-slate-200">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Continuar</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 px-1">
+                                            {[0, 1, 2].map((idx) => {
+                                                const item = guidanceHistory[idx];
+                                                if (item) {
+                                                    return (
+                                                        <button
+                                                            key={idx}
+                                                            onClick={() => restoreGuidance(item)}
+                                                            className="w-10 h-10 rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-100 transition-all hover:scale-110 active:scale-90 shadow-sm bg-white group/slot"
+                                                            title="Continuar con esta plantilla"
+                                                        >
+                                                            <img src={item.image} className="w-full h-full object-cover opacity-60 group-hover:slot:opacity-100 transition-opacity" />
+                                                        </button>
+                                                    );
+                                                }
+                                                return (
                                                     <button
                                                         key={idx}
-                                                        onClick={() => restoreGuidance(item)}
-                                                        className="w-8 h-8 rounded-lg overflow-hidden border border-slate-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-100 transition-all hover:scale-110 active:scale-90 shadow-sm bg-white"
-                                                        title="Continuar con esta plantilla"
+                                                        onClick={() => document.getElementById('guidance-upload')?.click()}
+                                                        className="w-10 h-10 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300 hover:text-blue-400 hover:border-blue-200 hover:bg-white transition-all hover:scale-105"
+                                                        title="Nuevo espacio de guardado"
                                                     >
-                                                        <img src={item.image} className="w-full h-full object-cover opacity-60 hover:opacity-100 transition-opacity" />
+                                                        <Plus className="w-4 h-4" />
                                                     </button>
-                                                ))}
-                                            </div>
+                                                );
+                                            })}
                                         </div>
-                                    )}
+                                    </div>
 
                                     {userProfile && (
                                         <div className="hidden lg:flex items-center gap-2 pr-4 border-r border-slate-100">
