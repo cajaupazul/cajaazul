@@ -742,28 +742,23 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         let minDistance = Infinity;
         let closestColor = COLOR_PALETTE[0];
 
-        // Convert to saturation for vividness preference
-        const getSaturation = (r: number, g: number, b: number) => {
-            const max = Math.max(r, g, b) / 255;
-            const min = Math.min(r, g, b) / 255;
-            return max === 0 ? 0 : (max - min) / max;
-        };
-
         for (const hex of COLOR_PALETTE) {
             const pr = parseInt(hex.slice(1, 3), 16);
             const pg = parseInt(hex.slice(3, 5), 16);
             const pb = parseInt(hex.slice(5, 7), 16);
 
-            // Weighted RGB distance (Human perception weights: R:0.299, G:0.587, B:0.114)
-            // But for 'vivid' matching, we use a balanced approach
-            const dr = (r - pr) * 0.3;
-            const dg = (g - pg) * 0.59;
-            const db = (b - pb) * 0.11;
-            let distance = dr * dr + dg * dg + db * db;
+            // Weighted RGB distance (Compensates for human eye's non-linear perception)
+            // Formula: dist = (2 + r_avg/256)*dr^2 + 4*dg^2 + (2 + (255-r_avg)/256)*db^2
+            const r_avg = (r + pr) / 2;
+            const dr = r - pr;
+            const dg = g - pg;
+            const db = b - pb;
 
-            // Vividness preference: slight bonus for more saturated palette colors
-            const sat = getSaturation(pr, pg, pb);
-            distance -= sat * 50; // Adjust score by saturation
+            const weightR = 2 + r_avg / 256;
+            const weightG = 4;
+            const weightB = 2 + (255 - r_avg) / 256;
+
+            const distance = weightR * dr * dr + weightG * dg * dg + weightB * db * db;
 
             if (distance < minDistance) {
                 minDistance = distance;
