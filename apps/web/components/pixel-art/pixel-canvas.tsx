@@ -24,15 +24,22 @@ import {
     Upload,
     ImageIcon,
     X,
+    CheckCircle,
+    Copy,
+    Save,
+    Eye,
+    EyeOff,
+    History,
+    Home,
+    Plus,
+    Minus,
     Sparkles,
     Eraser,
     Lock,
     Unlock,
     Info,
     Check,
-    Pencil,
-    Plus,
-    Minus
+    Pencil
 } from 'lucide-react';
 
 // High Contrast Cursor (Black with White Border)
@@ -254,8 +261,24 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     needsRedrawRef.current = true;
                 }
 
-                // NOTE: We DO NOT auto-load the image anymore as per user request.
-                // It stays in history to be manually restored.
+                // Auto-restore the image if it exists
+                if (data.image) {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Capture raw data for picking
+                        const off = document.createElement('canvas');
+                        off.width = img.naturalWidth;
+                        off.height = img.naturalHeight;
+                        const ctx = off.getContext('2d', { willReadFrequently: true });
+                        if (ctx) {
+                            ctx.drawImage(img, 0, 0);
+                            guidanceRawDataRef.current = ctx.getImageData(0, 0, off.width, off.height);
+                        }
+                        setGuidanceImage(img);
+                        setIsEditingGuidance(true);
+                    };
+                    img.src = data.image;
+                }
             } catch (e) {
                 console.error("Error loading guidance persistence:", e);
             }
@@ -922,12 +945,19 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const confirmPaint = async () => {
         if (pendingPixels.size === 0) return;
 
-        const pixelsToSave: { event_id: string, x: number, y: number, color_index: number, color_hex: string | null, user_id: string }[] = [];
         const currentUserId = userProfile?.id;
-
         if (!currentUserId) return;
 
-        pendingPixels.forEach((drawValue, key) => {
+        const oldMap = new Map(pendingPixelsRef.current);
+        const pixelCount = pendingPixels.size;
+        setPendingPixels(new Map());
+        pendingPixelsRef.current = new Map();
+        updateDataCanvasFull();
+        needsRedrawRef.current = true;
+
+        const pixelsToSave: any[] = [];
+
+        oldMap.forEach((drawValue, key) => {
             const [xStr, yStr] = key.split(',');
             const x = parseInt(xStr);
             const y = parseInt(yStr);
@@ -945,22 +975,29 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             });
         });
 
-        const pixelCount = pendingPixels.size;
-        setPendingPixels(new Map());
-        pendingPixelsRef.current = new Map();
-        updateDataCanvasFull();
-        needsRedrawRef.current = true;
-
         try {
             const CHUNK_SIZE = 100;
             for (let i = 0; i < pixelsToSave.length; i += CHUNK_SIZE) {
                 const chunk = pixelsToSave.slice(i, i + CHUNK_SIZE);
                 const { error } = await supabase.from('pixel_history').insert(chunk);
-                if (error) throw error;
+                if (error) {
+                    // Fallback: If color_hex is missing in DB, try saving as index if possible
+                    if (error.message?.includes('color_hex')) {
+                        console.warn("[PIXEL_SAVE] Missing color_hex column. Saving indices only.");
+                        const fallbackChunk = chunk.map(p => ({ ...p, color_hex: null }));
+                        const { error: fError } = await supabase.from('pixel_history').insert(fallbackChunk);
+                        if (fError) throw fError;
+                    } else {
+                        throw error;
+                    }
+                }
             }
             incrementLocalCount();
         } catch (err) {
             console.error("[PIXEL_SAVE] FAILED:", err);
+            // Put pixels back so user doesn't lose them on failed save
+            setPendingPixels(oldMap);
+            pendingPixelsRef.current = oldMap;
         }
     };
 
@@ -1343,6 +1380,13 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 )}
 
                 <div className="absolute top-4 left-4 z-40 flex flex-col gap-2 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
+                    <button
+                        onClick={onClose}
+                        className="w-10 h-10 bg-white rounded-full shadow-xl border border-slate-100 flex items-center justify-center text-red-500 hover:scale-110 active:scale-95 transition-all mb-2"
+                        title="Salir"
+                    >
+                        <Home className="w-5 h-5" />
+                    </button>
                     <button
                         onClick={() => setScale(s => Math.min(50, s * 1.2))}
                         className="w-10 h-10 bg-white rounded-full shadow-xl border border-slate-100 flex items-center justify-center text-blue-600 hover:scale-110 active:scale-95 transition-all"
