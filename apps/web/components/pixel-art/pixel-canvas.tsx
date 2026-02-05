@@ -66,6 +66,47 @@ const computeUint32Colors = (palette: string[]) => {
 
 const UINT32_PALETTE = computeUint32Colors(COLOR_PALETTE);
 
+// --- Professional Color Math (OKLab & Linear) ---
+
+interface Lab {
+    l: number;
+    a: number;
+    b: number;
+}
+
+// sRGB to Linear (Gamma Corection)
+const srgbToLinear = (c: number): number => {
+    const v = c / 255;
+    return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+};
+
+// Linear RGB to OKLab
+const linearToOKLab = (r: number, g: number, b: number): Lab => {
+    const l_ = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+    const m_ = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+    const s_ = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+
+    const l = Math.cbrt(l_);
+    const m = Math.cbrt(m_);
+    const s = Math.cbrt(s_);
+
+    return {
+        l: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+        a: 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+        b: 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+    };
+};
+
+const hexToOKLab = (hex: string): Lab => {
+    const r = srgbToLinear(parseInt(hex.slice(1, 3), 16));
+    const g = srgbToLinear(parseInt(hex.slice(3, 5), 16));
+    const b = srgbToLinear(parseInt(hex.slice(5, 7), 16));
+    return linearToOKLab(r, g, b);
+};
+
+// --- Pre-processed Palette Data ---
+const PALETTE_OKLAB = COLOR_PALETTE.map(hexToOKLab);
+
 interface GuidanceHistoryItem {
     image: string;
     opacity: number;
@@ -136,6 +177,10 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     // Pending Pixels (Draft Mode)
     const [pendingPixels, setPendingPixels] = useState<Map<string, number>>(new Map());
     const pendingPixelsRef = useRef<Map<string, number>>(new Map()); // Ref for render loop access
+
+    // --- Analytical Sampling Buffers ---
+    const guidanceRawDataRef = useRef<ImageData | null>(null);
+    const colorMatchCacheRef = useRef<Map<number, number>>(new Map()); // uint32 RGBA -> palette index
 
     // Web Audio Context for sound effects
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -393,7 +438,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         canvas.width = bufferWidth;
         canvas.height = bufferHeight;
 
-        ctx.imageSmoothingEnabled = true; // Smooth downscale
+        // Visual Smoothing: For the hint, we can keep it as is or disable it
+        // The user specifically requested real pixels, so let's disable smoothing for the hint too
+        ctx.imageSmoothingEnabled = false;
         ctx.drawImage(guidanceImage, 0, 0, bufferWidth, bufferHeight);
 
         return canvas;
@@ -747,33 +794,36 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     }, [handleWheel]);
 
     const findNearestPaletteColor = (r: number, g: number, b: number) => {
+        // Packing as uint32 for cache lookup: ABGR or RGBA doesn't matter as long as consistent
+        // We use 0xFF for alpha because we are sampling target opaque pixels
+        const key = (r | (g << 8) | (b << 16) | (255 << 24)) >>> 0;
+
+        if (colorMatchCacheRef.current.has(key)) {
+            return COLOR_PALETTE[colorMatchCacheRef.current.get(key)!];
+        }
+
+        // 1. Convert sample to OKLab (Perceptual Linear)
+        const sampleLab = linearToOKLab(srgbToLinear(r), srgbToLinear(g), srgbToLinear(b));
+
         let minDistance = Infinity;
-        let closestColor = COLOR_PALETTE[0];
+        let closestIndex = 0;
 
-        for (const hex of COLOR_PALETTE) {
-            const pr = parseInt(hex.slice(1, 3), 16);
-            const pg = parseInt(hex.slice(3, 5), 16);
-            const pb = parseInt(hex.slice(5, 7), 16);
+        // 2. Euclidean distance in OKLab space
+        for (let i = 0; i < PALETTE_OKLAB.length; i++) {
+            const pLab = PALETTE_OKLAB[i];
+            const dl = sampleLab.l - pLab.l;
+            const da = sampleLab.a - pLab.a;
+            const db = sampleLab.b - pLab.b;
+            const dist = dl * dl + da * da + db * db;
 
-            // Weighted RGB distance (Compensates for human eye's non-linear perception)
-            // Formula: dist = (2 + r_avg/256)*dr^2 + 4*dg^2 + (2 + (255-r_avg)/256)*db^2
-            const r_avg = (r + pr) / 2;
-            const dr = r - pr;
-            const dg = g - pg;
-            const db = b - pb;
-
-            const weightR = 2 + r_avg / 256;
-            const weightG = 4;
-            const weightB = 2 + (255 - r_avg) / 256;
-
-            const distance = weightR * dr * dr + weightG * dg * dg + weightB * db * db;
-
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestColor = hex;
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestIndex = i;
             }
         }
-        return closestColor;
+
+        colorMatchCacheRef.current.set(key, closestIndex);
+        return COLOR_PALETTE[closestIndex];
     };
 
     const paintPixel = async (clientX: number, clientY: number) => {
@@ -782,40 +832,36 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
         let colorIndex: number | undefined;
 
-        if (isSmartPicking && guidanceImage) {
-            const gWidth = guidanceImage.naturalWidth * guidanceState.scale;
-            const gHeight = guidanceImage.naturalHeight * guidanceState.scale;
-            const gLeft = guidanceState.x - gWidth / 2;
-            const gTop = guidanceState.y - gHeight / 2;
+        if (isSmartPicking && guidanceImage && guidanceRawDataRef.current) {
+            const imageData = guidanceRawDataRef.current;
+            const imgW = guidanceImage.naturalWidth;
+            const imgH = guidanceImage.naturalHeight;
+
+            const gWidthWorld = imgW * guidanceState.scale;
+            const gHeightWorld = imgH * guidanceState.scale;
+            const gLeft = guidanceState.x - gWidthWorld / 2;
+            const gTop = guidanceState.y - gHeightWorld / 2;
+
             const relX = worldX - gLeft;
             const relY = worldY - gTop;
 
-            if (relX >= 0 && relX <= gWidth && relY >= 0 && relY <= gHeight) {
-                const srcCanvas = getProcessedGuidanceCanvas();
-                if (srcCanvas instanceof HTMLCanvasElement) {
-                    const ctx = srcCanvas.getContext('2d', { willReadFrequently: true });
-                    if (ctx) {
-                        // Map world coordinates to the tiny buffer indices
-                        const step = guidanceGridStep;
-                        const gWidth = guidanceImage.naturalWidth * guidanceState.scale;
-                        const gHeight = guidanceImage.naturalHeight * guidanceState.scale;
-                        const gLeft = guidanceState.x - gWidth / 2;
-                        const gTop = guidanceState.y - gHeight / 2;
+            if (relX >= 0 && relX < gWidthWorld && relY >= 0 && relY < gHeightWorld) {
+                // Map world to raw image pixels (analytical)
+                // Use floor for nearest neighbor
+                const srcX = Math.floor((relX / gWidthWorld) * imgW);
+                const srcY = Math.floor((relY / gHeightWorld) * imgH);
 
-                        const relX = worldX - gLeft;
-                        const relY = worldY - gTop;
+                if (srcX >= 0 && srcX < imgW && srcY >= 0 && srcY < imgH) {
+                    const pixels = imageData.data;
+                    const baseIdx = (srcY * imgW + srcX) * 4;
+                    const r = pixels[baseIdx];
+                    const g = pixels[baseIdx + 1];
+                    const b = pixels[baseIdx + 2];
+                    const a = pixels[baseIdx + 3];
 
-                        // bufX/Y should be the coordinate in the processed offscreen canvas
-                        const bufX = Math.floor(relX / step);
-                        const bufY = Math.floor(relY / step);
-
-                        if (bufX >= 0 && bufX < srcCanvas.width && bufY >= 0 && bufY < srcCanvas.height) {
-                            const pixel = ctx.getImageData(bufX, bufY, 1, 1).data;
-                            if (pixel[3] > 10) {
-                                const hex = findNearestPaletteColor(pixel[0], pixel[1], pixel[2]);
-                                colorIndex = COLOR_MAP[hex];
-                            }
-                        }
+                    if (a > 10) {
+                        const nearestHex = findNearestPaletteColor(r, g, b);
+                        colorIndex = COLOR_MAP[nearestHex];
                     }
                 }
             }
@@ -925,6 +971,17 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const restoreGuidance = (item: GuidanceHistoryItem) => {
         const img = new Image();
         img.onload = () => {
+            // Capture raw image data for picking
+            const off = document.createElement('canvas');
+            off.width = img.naturalWidth;
+            off.height = img.naturalHeight;
+            const ctx = off.getContext('2d', { willReadFrequently: true });
+            if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                guidanceRawDataRef.current = ctx.getImageData(0, 0, off.width, off.height);
+            }
+            colorMatchCacheRef.current.clear(); // Clear cache for new image context
+
             setGuidanceImage(img);
             setGuidanceOpacity(item.opacity);
             setGuidanceGridStep(item.gridStep);
@@ -944,6 +1001,17 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
+                // Capture raw image data for picking
+                const off = document.createElement('canvas');
+                off.width = img.naturalWidth;
+                off.height = img.naturalHeight;
+                const ctx = off.getContext('2d', { willReadFrequently: true });
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0);
+                    guidanceRawDataRef.current = ctx.getImageData(0, 0, off.width, off.height);
+                }
+                colorMatchCacheRef.current.clear(); // Clear cache for new image
+
                 // Save current guidance to history before replacing
                 if (guidanceImage) {
                     const currentItem: GuidanceHistoryItem = {
