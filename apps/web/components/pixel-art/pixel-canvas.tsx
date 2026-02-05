@@ -809,12 +809,16 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         let closestIndex = 0;
 
         // 2. Euclidean distance in OKLab space
+        // We add a weighting factor to 'a' and 'b' (chroma) to prioritize hue preservation
+        // over slight lightness differences, which helps with vibrant colors like blue.
         for (let i = 0; i < PALETTE_OKLAB.length; i++) {
             const pLab = PALETTE_OKLAB[i];
             const dl = sampleLab.l - pLab.l;
             const da = sampleLab.a - pLab.a;
             const db = sampleLab.b - pLab.b;
-            const dist = dl * dl + da * da + db * db;
+
+            // Perceptual distance with chroma emphasis
+            const dist = dl * dl + (da * da + db * db) * 1.5;
 
             if (dist < minDistance) {
                 minDistance = dist;
@@ -846,10 +850,17 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             const relY = worldY - gTop;
 
             if (relX >= 0 && relX < gWidthWorld && relY >= 0 && relY < gHeightWorld) {
-                // Map world to raw image pixels (analytical)
-                // Use floor for nearest neighbor
-                const srcX = Math.floor((relX / gWidthWorld) * imgW);
-                const srcY = Math.floor((relY / gHeightWorld) * imgH);
+                // DETERMINISTIC SAMPLING: Use the GEOMETRIC CENTER of the target pixel cell
+                // to avoid edge-bleeding artifacts from the mouse position.
+                const cellCenterXWorld = x - gridWidth / 2 + 0.5;
+                const cellCenterYWorld = y - gridHeight / 2 + 0.5;
+
+                // Map world center back to original image pixel coordinates
+                const relCenterX = cellCenterXWorld - gLeft;
+                const relCenterY = cellCenterYWorld - gTop;
+
+                const srcX = Math.floor((relCenterX / gWidthWorld) * imgW);
+                const srcY = Math.floor((relCenterY / gHeightWorld) * imgH);
 
                 if (srcX >= 0 && srcX < imgW && srcY >= 0 && srcY < imgH) {
                     const pixels = imageData.data;
