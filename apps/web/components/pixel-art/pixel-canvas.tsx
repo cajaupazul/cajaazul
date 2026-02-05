@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 import { Palette, COLOR_PALETTE, COLOR_MAP } from './palette';
 import { NavigationControls } from './overlay-controls';
+import { ProfileStatsPanel } from './profile-stats-panel';
+import { usePixelStats } from './use-pixel-stats';
 import {
     Download,
     Share2,
@@ -65,6 +67,17 @@ const computeUint32Colors = (palette: string[]) => {
 };
 
 const UINT32_PALETTE = computeUint32Colors(COLOR_PALETTE);
+
+const hexToUint32 = (hex: string) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return (255 << 24) | (b << 16) | (g << 8) | r;
+};
+
+const rgbToHex = (r: number, g: number, b: number) => {
+    return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1).toUpperCase()}`;
+};
 
 // --- Professional Color Math (OKLab & Linear) ---
 
@@ -149,6 +162,10 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const [isPaintMode, setIsPaintMode] = useState(false);
     const isPaintModeRef = useRef(false);
 
+    // Stats & Profile logic decoupled
+    const { pixelsPainted, incrementLocalCount } = usePixelStats(userProfile?.id, eventId);
+    const [showProfilePanel, setShowProfilePanel] = useState(false);
+
     // Cursor Tracking
     const [cursorGridPos, setCursorGridPos] = useState<{ x: number, y: number } | null>(null);
     const cursorGridPosRef = useRef<{ x: number, y: number } | null>(null);
@@ -165,18 +182,14 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
     const [tooltipData, setTooltipData] = useState<{ x: number, y: number, color: string } | null>(null);
 
-    // Profile Stats Panel
-    const [showProfilePanel, setShowProfilePanel] = useState(false);
-    const [pixelsPainted, setPixelsPainted] = useState(0);
-
-    // Use a Ref for pixel data to avoid re-renders on every pixel change
-    const pixelDataRef = useRef<Uint8Array>(new Uint8Array(DEFAULT_gridWidth * DEFAULT_gridHeight).fill(ERASER_INDEX));
+    // Use a Ref for pixel data: Now 32-bit for True Color support
+    const pixelDataRef = useRef<Uint32Array>(new Uint32Array(DEFAULT_gridWidth * DEFAULT_gridHeight).fill(0)); // 0 = Transparent/Eraser
 
     const lastMouseRef = useRef<{ x: number, y: number } | null>(null);
 
-    // Pending Pixels (Draft Mode)
-    const [pendingPixels, setPendingPixels] = useState<Map<string, number>>(new Map());
-    const pendingPixelsRef = useRef<Map<string, number>>(new Map()); // Ref for render loop access
+    // Pending Pixels: Coordinate -> HEX string OR Palette Index (number)
+    const [pendingPixels, setPendingPixels] = useState<Map<string, string | number>>(new Map());
+    const pendingPixelsRef = useRef<Map<string, string | number>>(new Map());
 
     // --- Analytical Sampling Buffers ---
     const guidanceRawDataRef = useRef<ImageData | null>(null);
@@ -235,7 +248,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 setGuidanceHistory(data.history ?? []);
 
                 if (data.pending) {
-                    const pendingMap = new Map<string, number>(data.pending);
+                    const pendingMap = new Map<string, string | number>(data.pending);
                     setPendingPixels(pendingMap);
                     pendingPixelsRef.current = pendingMap;
                     needsRedrawRef.current = true;
@@ -300,13 +313,20 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     bytes = new Uint8Array(data as any);
                 }
 
-                const expectedSize = gridWidth * gridHeight;
-                if (bytes.length === expectedSize) {
-                    pixelDataRef.current = bytes;
+                const expectedSizeIndex = gridWidth * gridHeight;
+                const expectedSizeTrueColor = gridWidth * gridHeight * 4;
+
+                if (bytes.length === expectedSizeTrueColor) {
+                    // True Color 32-bit buffer
+                    pixelDataRef.current = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
                 } else {
-                    const newBytes = new Uint8Array(expectedSize).fill(ERASER_INDEX);
-                    newBytes.set(bytes.slice(0, Math.min(bytes.length, expectedSize)));
-                    pixelDataRef.current = newBytes;
+                    // Legacy 8-bit index buffer
+                    const uint32buf = new Uint32Array(gridWidth * gridHeight);
+                    for (let i = 0; i < bytes.length; i++) {
+                        const idx = bytes[i];
+                        uint32buf[i] = idx === ERASER_INDEX ? 0 : UINT32_PALETTE[idx];
+                    }
+                    pixelDataRef.current = uint32buf;
                 }
 
                 updateDataCanvasFull();
@@ -317,17 +337,21 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         }
     };
 
-    const updateLocalPixel = (x: number, y: number, colorIndex: number) => {
+    const updateLocalPixel = (x: number, y: number, color: number | string) => {
         if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
             const idx = y * gridWidth + x;
-            pixelDataRef.current[idx] = colorIndex;
+            const uint32 = typeof color === 'string' ? hexToUint32(color) : (color === ERASER_INDEX ? 0 : UINT32_PALETTE[color]);
+            pixelDataRef.current[idx] = uint32;
 
             const ctx = dataCanvasRef.current?.getContext('2d');
             if (ctx) {
-                if (colorIndex === ERASER_INDEX) {
+                if (uint32 === 0) {
                     ctx.clearRect(x, y, 1, 1);
                 } else {
-                    ctx.fillStyle = COLOR_PALETTE[colorIndex];
+                    const r = uint32 & 0xFF;
+                    const g = (uint32 >> 8) & 0xFF;
+                    const b = (uint32 >> 16) & 0xFF;
+                    ctx.fillStyle = `rgb(${r},${g},${b})`;
                     ctx.fillRect(x, y, 1, 1);
                 }
             }
@@ -355,11 +379,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         filter: `event_id=eq.${eventId}`
                     },
                     (payload) => {
-                        const newData = payload.new as any;
-                        if (newData && typeof newData.x === 'number' && typeof newData.y === 'number') {
-                            // Update local canvas immediately with the row change
-                            updateLocalPixel(newData.x, newData.y, newData.color_index);
-                        }
+                        const { x, y, color_index, color_hex } = payload.new as any;
+                        const drawValue = color_hex || color_index;
+                        updateLocalPixel(x, y, drawValue);
                     }
                 )
                 .subscribe();
@@ -398,24 +420,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         };
     }, [eventId, userProfile]);
 
-    // Fetch user's pixels painted count
-    useEffect(() => {
-        const fetchPixelsPainted = async () => {
-            if (!userProfile?.id || !eventId) return;
-            const { count, error } = await supabase
-                .from('pixel_history')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', userProfile.id)
-                .eq('event_id', eventId);
-
-            if (error) {
-                console.error('[STATS] Error fetching pixels painted:', error);
-            } else {
-                setPixelsPainted(count || 0);
-            }
-        };
-        fetchPixelsPainted();
-    }, [userProfile?.id, eventId]);
 
     // --- Image Processing (Mathematically Grid-Linked) ---
     const getProcessedGuidanceCanvas = useCallback(() => {
@@ -466,12 +470,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         const imageData = ctx.createImageData(gridWidth, gridHeight);
         const data32 = new Uint32Array(imageData.data.buffer);
         const pixels = pixelDataRef.current;
-        const len = pixels.length;
-
-        for (let i = 0; i < len; i++) {
-            const colorIdx = pixels[i];
-            data32[i] = UINT32_PALETTE[colorIdx !== undefined ? colorIdx : 0];
-        }
+        data32.set(pixels);
 
         ctx.putImageData(imageData, 0, 0);
     }, [gridWidth, gridHeight]);
@@ -551,24 +550,33 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     ctx.restore();
                 }
 
-                // Draw Pending Pixels (Real Content Preview)
-                if (pendingPixelsRef.current.size > 0) {
-                    pendingPixelsRef.current.forEach((colorIndex, key) => {
-                        const [pxStr, pyStr] = key.split(',');
-                        const x = parseInt(pxStr);
-                        const y = parseInt(pyStr);
+                // Draw Pending Pixels (Visual Feedback)
+                const viewPortWorldWidth = displayCanvas.width / scale;
+                const viewPortWorldHeight = displayCanvas.height / scale;
+                const viewPortWorldCenterX = -offsetX;
+                const viewPortWorldCenterY = -offsetY;
 
+                const startX = Math.floor(viewPortWorldCenterX - viewPortWorldWidth / 2 + gridWidth / 2);
+                const endX = Math.ceil(viewPortWorldCenterX + viewPortWorldWidth / 2 + gridWidth / 2);
+                const startY = Math.floor(viewPortWorldCenterY - viewPortWorldHeight / 2 + gridHeight / 2);
+                const endY = Math.ceil(viewPortWorldCenterY + viewPortWorldHeight / 2 + gridHeight / 2);
+
+                pendingPixelsRef.current.forEach((val, key) => {
+                    const [x, y] = key.split(',').map(Number);
+                    if (x >= startX && x <= endX && y >= startY && y <= endY) {
                         const px = pixelStartX + x;
                         const py = pixelStartY + y;
 
-                        if (colorIndex === ERASER_INDEX) {
+                        if (val === ERASER_INDEX || val === 0) {
                             ctx.fillStyle = '#ffffff';
+                        } else if (typeof val === 'string') {
+                            ctx.fillStyle = val;
                         } else {
-                            ctx.fillStyle = COLOR_PALETTE[colorIndex] || 'rgba(0,0,0,0)';
+                            ctx.fillStyle = COLOR_PALETTE[val as number] || 'rgba(0,0,0,0)';
                         }
                         ctx.fillRect(px, py, 1, 1);
-                    });
-                }
+                    }
+                });
 
                 if (scale > 15) {
                     ctx.beginPath();
@@ -847,29 +855,25 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         return COLOR_PALETTE[closestIndex];
     };
 
-    const paintPixel = async (clientX: number, clientY: number) => {
-        const { x, y, worldX, worldY } = screenToWorld(clientX, clientY);
+    const paintPixel = (clientX: number, clientY: number) => {
+        const { x, y } = screenToWorld(clientX, clientY);
         if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return;
 
-        let colorIndex: number | undefined;
+        let drawValue: string | number | undefined;
 
         if (isSmartPicking && guidanceImage && guidanceRawDataRef.current) {
             const imageData = guidanceRawDataRef.current;
             const imgW = guidanceImage.naturalWidth;
             const imgH = guidanceImage.naturalHeight;
 
-            // 1. Calculate the base (unsnapped) world position of the guidance image
             const gWidthUnsnapped = imgW * guidanceState.scale;
             const gHeightUnsnapped = imgH * guidanceState.scale;
             const startXUnsnapped = guidanceState.x - gWidthUnsnapped / 2;
             const startYUnsnapped = guidanceState.y - gHeightUnsnapped / 2;
 
-            // 2. Center of the current grid cell we are painting
             const cellCenterXWorld = x - gridWidth / 2 + 0.5;
             const cellCenterYWorld = y - gridHeight / 2 + 0.5;
 
-            // 3. Map world center DIRECTLY to the source image pixels (Zero Interpolation)
-            // This bypasses all intermediate buffers and visual snapping artifacts.
             const relX = cellCenterXWorld - startXUnsnapped;
             const relY = cellCenterYWorld - startYUnsnapped;
 
@@ -886,30 +890,27 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     const a = pixels[baseIdx + 3];
 
                     if (a > 10) {
-                        const nearestHex = findNearestPaletteColor(r, g, b);
-                        colorIndex = COLOR_MAP[nearestHex];
+                        drawValue = rgbToHex(r, g, b);
                     }
                 }
             }
-            if (colorIndex === undefined) return;
         } else {
             if (!selectedColor && !isEraser) return;
-            colorIndex = isEraser ? ERASER_INDEX : COLOR_MAP[selectedColor!];
+            drawValue = isEraser ? ERASER_INDEX : COLOR_MAP[selectedColor!];
         }
 
-        if (colorIndex === undefined) return;
+        if (drawValue === undefined) return;
 
         const newMap = new Map(pendingPixelsRef.current);
         const key = `${x},${y}`;
 
-        // If eraser, don't toggle back. If same color, toggle back (undo).
-        if (colorIndex === ERASER_INDEX) {
-            newMap.set(key, colorIndex);
+        if (drawValue === ERASER_INDEX) {
+            newMap.set(key, drawValue);
             playPaintSound();
-        } else if (newMap.get(key) === colorIndex) {
+        } else if (newMap.get(key) === drawValue) {
             newMap.delete(key);
         } else {
-            newMap.set(key, colorIndex);
+            newMap.set(key, drawValue);
             playPaintSound();
         }
 
@@ -921,28 +922,25 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const confirmPaint = async () => {
         if (pendingPixels.size === 0) return;
 
-        console.log(`[PIXEL_SAVE] Starting batch save of ${pendingPixels.size} pixels for event ${eventId}...`);
-        const pixelsToSave: { event_id: string, x: number, y: number, color_index: number, user_id: string }[] = [];
+        const pixelsToSave: { event_id: string, x: number, y: number, color_index: number, color_hex: string | null, user_id: string }[] = [];
         const currentUserId = userProfile?.id;
 
-        if (!currentUserId) {
-            console.error("[PIXEL_SAVE] ERROR: No user profile found. Cannot save pixels.");
-            return;
-        }
+        if (!currentUserId) return;
 
-        pendingPixels.forEach((colorIndex, key) => {
+        pendingPixels.forEach((drawValue, key) => {
             const [xStr, yStr] = key.split(',');
             const x = parseInt(xStr);
             const y = parseInt(yStr);
 
-            // Persist immediately to the local main buffer
-            updateLocalPixel(x, y, colorIndex);
+            updateLocalPixel(x, y, drawValue);
 
+            const isHex = typeof drawValue === 'string';
             pixelsToSave.push({
                 event_id: eventId,
                 x,
                 y,
-                color_index: colorIndex,
+                color_index: isHex ? -1 : (drawValue as number),
+                color_hex: isHex ? (drawValue as string) : null,
                 user_id: currentUserId
             });
         });
@@ -950,47 +948,19 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         const pixelCount = pendingPixels.size;
         setPendingPixels(new Map());
         pendingPixelsRef.current = new Map();
-
-        // Final visual sync for the whole buffer
         updateDataCanvasFull();
         needsRedrawRef.current = true;
 
         try {
-            console.log(`[PIXEL_SAVE] Inserting ${pixelsToSave.length} pixels into pixel_history in chunks...`);
-
-            // Chunk size of 100 to avoid database timeouts (statement_timeout)
             const CHUNK_SIZE = 100;
             for (let i = 0; i < pixelsToSave.length; i += CHUNK_SIZE) {
                 const chunk = pixelsToSave.slice(i, i + CHUNK_SIZE);
-                console.log(`[PIXEL_SAVE] Saving chunk ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(pixelsToSave.length / CHUNK_SIZE)}...`);
-
                 const { error } = await supabase.from('pixel_history').insert(chunk);
-                if (error) {
-                    console.error("[PIXEL_SAVE] SUPABASE ERROR in chunk:", error.message);
-                    throw error;
-                }
+                if (error) throw error;
             }
-
-            console.log(`[PIXEL_SAVE] SUCCESS: ${pixelCount} pixels saved correctly across all chunks.`);
-
-            // AUTO-SAVE CURRENT TEMPLATE TO HISTORY ON SUCCESSFUL PAINT
-            if (guidanceImage) {
-                const currentItem: GuidanceHistoryItem = {
-                    image: guidanceImage.src,
-                    opacity: guidanceOpacity,
-                    gridStep: guidanceGridStep,
-                    state: guidanceState
-                };
-
-                setGuidanceHistory(prev => {
-                    const filtered = prev.filter(h => h.image !== currentItem.image);
-                    return [currentItem, ...filtered].slice(0, 3);
-                });
-            }
+            incrementLocalCount();
         } catch (err) {
-            console.error("[PIXEL_SAVE] FAILED to save batch pixels:", err);
-            // On failure, notify the user or provide a retry mechanism?
-            // For now, we just log the error as it likely means the server reached a hard limit
+            console.error("[PIXEL_SAVE] FAILED:", err);
         }
     };
 
@@ -1057,15 +1027,12 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 setGuidanceImage(img);
 
                 // Calculate the exact center of the VISIBLE viewport in world coordinates
-                const viewportWidth = displayCanvasRef.current?.width || 800;
-                const viewportHeight = displayCanvasRef.current?.height || 600;
-
-                // The center of the visible viewport in screen space is simply (width/2, height/2)
-                // To convert to world space: worldX = (screenX - offsetX) / scale
-                const centerX = (viewportWidth / 2 - offsetX) / scale;
-                const centerY = (viewportHeight / 2 - offsetY) / scale;
+                // Formula: P_world_center = -Offset
+                const centerX = -offsetX;
+                const centerY = -offsetY;
 
                 // Set a visible initial scale (auto-fit to 40% of viewport width)
+                const viewportWidth = displayCanvasRef.current?.width || 800;
                 const worldViewportWidth = viewportWidth / scale;
                 const initialScale = (worldViewportWidth * 0.4) / Math.max(1, img.naturalWidth);
 
@@ -1402,77 +1369,13 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
                 {/* Profile Stats Panel - Top Right */}
                 <div className="absolute top-4 right-4 z-40 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
-                    {!showProfilePanel ? (
-                        <button
-                            onClick={() => setShowProfilePanel(true)}
-                            className="w-12 h-12 bg-white rounded-full shadow-xl border-2 border-slate-100 overflow-hidden hover:scale-110 active:scale-95 transition-all flex items-center justify-center"
-                            title="Ver Estadísticas"
-                        >
-                            {userProfile && (
-                                <AvatarWithFrame
-                                    size={44}
-                                    avatarUrl={getStorageUrl(userProfile.avatar_url)}
-                                    frameUrl={equippedFrame?.image_url}
-                                    frameScale={equippedFrame?.frame_settings?.navbar?.scale || 1}
-                                    offsetX={equippedFrame?.frame_settings?.navbar?.x || 0}
-                                    offsetY={equippedFrame?.frame_settings?.navbar?.y || 0}
-                                    name={userProfile.nombre}
-                                />
-                            )}
-                        </button>
-                    ) : (
-                        <div className="bg-white rounded-3xl shadow-2xl p-5 border border-slate-100 w-72 animate-in slide-in-from-top-4">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-full overflow-hidden shadow-md">
-                                        {userProfile && (
-                                            <AvatarWithFrame
-                                                size={48}
-                                                avatarUrl={getStorageUrl(userProfile.avatar_url)}
-                                                frameUrl={equippedFrame?.image_url}
-                                                frameScale={equippedFrame?.frame_settings?.navbar?.scale || 1}
-                                                offsetX={equippedFrame?.frame_settings?.navbar?.x || 0}
-                                                offsetY={equippedFrame?.frame_settings?.navbar?.y || 0}
-                                                name={userProfile.nombre}
-                                            />
-                                        )}
-                                    </div>
-                                    <div>
-                                        <h5 className="font-bold text-slate-800 text-sm">{userProfile?.nombre || 'Usuario'}</h5>
-                                        <p className="text-[10px] text-slate-400 uppercase tracking-wide">Nivel {userProfile?.es_vip ? 'VIP' : '3'}</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setShowProfilePanel(false)}
-                                    className="bg-slate-50 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-
-                            <div className="space-y-3 border-t border-slate-100 pt-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                                            <Pencil className="w-4 h-4 text-blue-600" />
-                                        </div>
-                                        <span className="text-xs font-medium text-slate-600">Píxeles Pintados</span>
-                                    </div>
-                                    <span className="font-bold text-blue-600 text-sm">{pixelsPainted.toLocaleString()}</span>
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center">
-                                            <span className="text-amber-600 font-bold text-xs">💰</span>
-                                        </div>
-                                        <span className="text-xs font-medium text-slate-600">Monedas</span>
-                                    </div>
-                                    <span className="font-bold text-amber-600 text-sm">{userProfile?.monedas?.toLocaleString() || 0}</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    <ProfileStatsPanel
+                        show={showProfilePanel}
+                        onToggle={setShowProfilePanel}
+                        userProfile={userProfile}
+                        equippedFrame={equippedFrame}
+                        pixelsPainted={pixelsPainted}
+                    />
                 </div>
 
                 {isEditingGuidance && (
