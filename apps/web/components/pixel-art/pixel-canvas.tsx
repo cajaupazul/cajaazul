@@ -812,21 +812,30 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
         // 1. Convert sample to OKLab (Perceptual Linear)
         const sampleLab = linearToOKLab(srgbToLinear(r), srgbToLinear(g), srgbToLinear(b));
+        const sampleChroma = Math.sqrt(sampleLab.a * sampleLab.a + sampleLab.b * sampleLab.b);
 
         let minDistance = Infinity;
         let closestIndex = 0;
 
         // 2. Euclidean distance in OKLab space
-        // We add a weighting factor to 'a' and 'b' (chroma) to prioritize hue preservation
-        // over slight lightness differences, which helps with vibrant colors like blue.
+        // We prioritize Hue and Chroma over Lightness (0.8 vs 2.2)
+        // to avoid vibrant colors turning gray when there is a chromatic alternative.
         for (let i = 0; i < PALETTE_OKLAB.length; i++) {
             const pLab = PALETTE_OKLAB[i];
+            const paletteChroma = Math.sqrt(pLab.a * pLab.a + pLab.b * pLab.b);
+
             const dl = sampleLab.l - pLab.l;
             const da = sampleLab.a - pLab.a;
             const db = sampleLab.b - pLab.b;
 
-            // Perceptual distance with chroma emphasis
-            const dist = dl * dl + (da * da + db * db) * 1.5;
+            // Updated formula: prioritizes chromaticity (2.2) over luminosity (0.8)
+            let dist = dl * dl * 0.8 + (da * da + db * db) * 2.2;
+
+            // Penalty: if the source is vibrant (>0.05) but the palette choice is dull (<0.02),
+            // we heavily penalize it (1.8x) to force a more chromatic alternative if available.
+            if (sampleChroma > 0.05 && paletteChroma < 0.02) {
+                dist *= 1.8;
+            }
 
             if (dist < minDistance) {
                 minDistance = dist;
