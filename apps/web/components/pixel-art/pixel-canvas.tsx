@@ -209,8 +209,16 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             history: guidanceHistory
         };
 
-        // Saving high-res base64 can be slow, but it's acceptable for this UX
-        localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+        try {
+            // Saving high-res base64 can be slow, but it's acceptable for this UX
+            localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+        } catch (err) {
+            if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+                console.error("[STORAGE] LocalStorage limit exceeded. History may be too large.");
+            } else {
+                console.error("[STORAGE] Error saving guidance:", err);
+            }
+        }
     }, [eventId, userProfile?.id, guidanceOpacity, guidanceGridStep, guidanceState, guidanceImage, guidanceHistory]);
 
     // --- Data Fetching & Subscription ---
@@ -926,6 +934,11 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         img.src = item.image;
     };
 
+    const removeGuidanceFromHistory = (e: React.MouseEvent, index: number) => {
+        e.stopPropagation();
+        setGuidanceHistory(prev => prev.filter((_, i) => i !== index));
+    };
+
     const handleUploadGuidance = (file: File) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -1057,14 +1070,22 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                                 const item = guidanceHistory[idx];
                                                 if (item) {
                                                     return (
-                                                        <button
-                                                            key={idx}
-                                                            onClick={() => restoreGuidance(item)}
-                                                            className="w-10 h-10 rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-100 transition-all hover:scale-110 active:scale-90 shadow-sm bg-white group/slot"
-                                                            title="Continuar con esta plantilla"
-                                                        >
-                                                            <img src={item.image} className="w-full h-full object-cover opacity-60 group-hover:slot:opacity-100 transition-opacity" />
-                                                        </button>
+                                                        <div key={idx} className="relative group/slot">
+                                                            <button
+                                                                onClick={() => restoreGuidance(item)}
+                                                                className="w-10 h-10 rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-100 transition-all hover:scale-110 active:scale-90 shadow-sm bg-white"
+                                                                title="Continuar con esta plantilla"
+                                                            >
+                                                                <img src={item.image} className="w-full h-full object-cover opacity-60 group-hover/slot:opacity-100 transition-opacity" />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => removeGuidanceFromHistory(e, idx)}
+                                                                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-md scale-0 group-hover/slot:scale-100 transition-transform hover:bg-rose-600 z-10"
+                                                                title="Eliminar este espacio"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
                                                     );
                                                 }
                                                 return (
