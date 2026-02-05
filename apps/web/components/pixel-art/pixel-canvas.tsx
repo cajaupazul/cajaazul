@@ -234,6 +234,13 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 setGuidanceState(data.state ?? { x: 0, y: 0, scale: 1 });
                 setGuidanceHistory(data.history ?? []);
 
+                if (data.pending) {
+                    const pendingMap = new Map<string, number>(data.pending);
+                    setPendingPixels(pendingMap);
+                    pendingPixelsRef.current = pendingMap;
+                    needsRedrawRef.current = true;
+                }
+
                 // NOTE: We DO NOT auto-load the image anymore as per user request.
                 // It stays in history to be manually restored.
             } catch (e) {
@@ -251,7 +258,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             gridStep: guidanceGridStep,
             state: guidanceState,
             image: guidanceImage?.src || null,
-            history: guidanceHistory
+            history: guidanceHistory,
+            pending: Array.from(pendingPixelsRef.current.entries())
         };
 
         try {
@@ -840,7 +848,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             const imageData = guidanceRawDataRef.current;
             const imgW = guidanceImage.naturalWidth;
             const imgH = guidanceImage.naturalHeight;
-            const step = guidanceGridStep;
 
             // 1. Calculate the base (unsnapped) world position of the guidance image
             const gWidthUnsnapped = imgW * guidanceState.scale;
@@ -848,38 +855,18 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             const startXUnsnapped = guidanceState.x - gWidthUnsnapped / 2;
             const startYUnsnapped = guidanceState.y - gHeightUnsnapped / 2;
 
-            // 2. Exact same dimensions as getProcessedGuidanceCanvas()
-            const bufferWidth = Math.max(1, Math.ceil(gWidthUnsnapped / step));
-            const bufferHeight = Math.max(1, Math.ceil(gHeightUnsnapped / step));
-
-            // 3. Exact same snapping logic as render()
-            const snappedStartX = Math.floor(startXUnsnapped / step) * step;
-            const snappedStartY = Math.floor(startYUnsnapped / step) * step;
-
-            // 4. Center of the current grid cell we are painting
-            // Matches pixelStartX + x + 0.5 in world coordinates
+            // 2. Center of the current grid cell we are painting
             const cellCenterXWorld = x - gridWidth / 2 + 0.5;
             const cellCenterYWorld = y - gridHeight / 2 + 0.5;
 
-            // 5. Bounds check against the RENDERED area (the snapped quad)
-            const renderedWidth = bufferWidth * step;
-            const renderedHeight = bufferHeight * step;
+            // 3. Map world center DIRECTLY to the source image pixels (Zero Interpolation)
+            // This bypasses all intermediate buffers and visual snapping artifacts.
+            const relX = cellCenterXWorld - startXUnsnapped;
+            const relY = cellCenterYWorld - startYUnsnapped;
 
-            if (
-                cellCenterXWorld >= snappedStartX &&
-                cellCenterXWorld < snappedStartX + renderedWidth &&
-                cellCenterYWorld >= snappedStartY &&
-                cellCenterYWorld < snappedStartY + renderedHeight
-            ) {
-                // 6. Map world center to the relative "buffer pixel" (0 to bufferWidth-1)
-                // This corresponds exactly to the pixel in the guidance hint
-                const bufX = Math.floor((cellCenterXWorld - snappedStartX) / step);
-                const bufY = Math.floor((cellCenterYWorld - snappedStartY) / step);
-
-                // 7. Map buffer pixel back to the EXACT center of the source image region it represents
-                // This ensures we pick the 'real' color from the original data without displacement or interpolation error.
-                const srcX = Math.floor(((bufX + 0.5) / bufferWidth) * imgW);
-                const srcY = Math.floor(((bufY + 0.5) / bufferHeight) * imgH);
+            if (relX >= 0 && relX < gWidthUnsnapped && relY >= 0 && relY < gHeightUnsnapped) {
+                const srcX = Math.floor((relX / gWidthUnsnapped) * imgW);
+                const srcY = Math.floor((relY / gHeightUnsnapped) * imgH);
 
                 if (srcX >= 0 && srcX < imgW && srcY >= 0 && srcY < imgH) {
                     const pixels = imageData.data;
