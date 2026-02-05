@@ -840,27 +840,46 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             const imageData = guidanceRawDataRef.current;
             const imgW = guidanceImage.naturalWidth;
             const imgH = guidanceImage.naturalHeight;
+            const step = guidanceGridStep;
 
-            const gWidthWorld = imgW * guidanceState.scale;
-            const gHeightWorld = imgH * guidanceState.scale;
-            const gLeft = guidanceState.x - gWidthWorld / 2;
-            const gTop = guidanceState.y - gHeightWorld / 2;
+            // 1. Calculate the base (unsnapped) world position of the guidance image
+            const gWidthUnsnapped = imgW * guidanceState.scale;
+            const gHeightUnsnapped = imgH * guidanceState.scale;
+            const startXUnsnapped = guidanceState.x - gWidthUnsnapped / 2;
+            const startYUnsnapped = guidanceState.y - gHeightUnsnapped / 2;
 
-            const relX = worldX - gLeft;
-            const relY = worldY - gTop;
+            // 2. Exact same dimensions as getProcessedGuidanceCanvas()
+            const bufferWidth = Math.max(1, Math.ceil(gWidthUnsnapped / step));
+            const bufferHeight = Math.max(1, Math.ceil(gHeightUnsnapped / step));
 
-            if (relX >= 0 && relX < gWidthWorld && relY >= 0 && relY < gHeightWorld) {
-                // DETERMINISTIC SAMPLING: Use the GEOMETRIC CENTER of the target pixel cell
-                // to avoid edge-bleeding artifacts from the mouse position.
-                const cellCenterXWorld = x - gridWidth / 2 + 0.5;
-                const cellCenterYWorld = y - gridHeight / 2 + 0.5;
+            // 3. Exact same snapping logic as render()
+            const snappedStartX = Math.floor(startXUnsnapped / step) * step;
+            const snappedStartY = Math.floor(startYUnsnapped / step) * step;
 
-                // Map world center back to original image pixel coordinates
-                const relCenterX = cellCenterXWorld - gLeft;
-                const relCenterY = cellCenterYWorld - gTop;
+            // 4. Center of the current grid cell we are painting
+            // Matches pixelStartX + x + 0.5 in world coordinates
+            const cellCenterXWorld = x - gridWidth / 2 + 0.5;
+            const cellCenterYWorld = y - gridHeight / 2 + 0.5;
 
-                const srcX = Math.floor((relCenterX / gWidthWorld) * imgW);
-                const srcY = Math.floor((relCenterY / gHeightWorld) * imgH);
+            // 5. Bounds check against the RENDERED area (the snapped quad)
+            const renderedWidth = bufferWidth * step;
+            const renderedHeight = bufferHeight * step;
+
+            if (
+                cellCenterXWorld >= snappedStartX &&
+                cellCenterXWorld < snappedStartX + renderedWidth &&
+                cellCenterYWorld >= snappedStartY &&
+                cellCenterYWorld < snappedStartY + renderedHeight
+            ) {
+                // 6. Map world center to the relative "buffer pixel" (0 to bufferWidth-1)
+                // This corresponds exactly to the pixel in the guidance hint
+                const bufX = Math.floor((cellCenterXWorld - snappedStartX) / step);
+                const bufY = Math.floor((cellCenterYWorld - snappedStartY) / step);
+
+                // 7. Map buffer pixel back to the EXACT center of the source image region it represents
+                // This ensures we pick the 'real' color from the original data without displacement or interpolation error.
+                const srcX = Math.floor(((bufX + 0.5) / bufferWidth) * imgW);
+                const srcY = Math.floor(((bufY + 0.5) / bufferHeight) * imgH);
 
                 if (srcX >= 0 && srcX < imgW && srcY >= 0 && srcY < imgH) {
                     const pixels = imageData.data;
