@@ -33,6 +33,11 @@ interface ProfessorComment {
         nombre: string;
         avatar_url: string | null;
         active_frame_key?: string | null;
+        background_url?: string | null;
+        bio?: string | null;
+        created_at?: string;
+        puntos?: number;
+        es_vip?: boolean;
     };
 }
 
@@ -46,6 +51,11 @@ interface Rating {
         nombre: string;
         avatar_url: string | null;
         active_frame_key?: string | null;
+        background_url?: string | null;
+        bio?: string | null;
+        created_at?: string;
+        puntos?: number;
+        es_vip?: boolean;
     };
 }
 

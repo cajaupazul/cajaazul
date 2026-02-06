@@ -66,7 +66,7 @@ function ProfessorRatingsWrapper() {
             .select('id, especialidad, otros_cursos')
             .ilike('nombre', currentProf.nombre),
           supabase.from('professor_ratings')
-            .select('*, profiles(nombre, avatar_url, background_url, active_frame_key)')
+            .select('*, profiles(nombre, avatar_url, background_url, active_frame_key, bio, created_at, puntos, es_vip)')
             .eq('professor_id', professorId)
             .order('created_at', { ascending: false }),
           orQuery
@@ -84,7 +84,7 @@ function ProfessorRatingsWrapper() {
             .select('courses(id, nombre)')
             .eq('professor_id', professorId),
           supabase.from('professor_comments')
-            .select('*, profiles(nombre, avatar_url, background_url, active_frame_key)')
+            .select('*, profiles(nombre, avatar_url, background_url, active_frame_key, bio, created_at, puntos, es_vip)')
             .eq('professor_id', professorId)
             .order('created_at', { ascending: false }),
           supabase.from('profiles')
