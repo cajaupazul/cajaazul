@@ -78,18 +78,23 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
         if (profile.id) cancelPrefetch(profile.id);
     };
 
+    // Construct the background URL correctly
+    const backgroundUrl = profile.background_url
+        ? getStorageUrl(profile.background_url, 'profile-avatars')
+        : null;
+
     return (
         <>
-            <div
+            <span
                 ref={refs.setReference}
                 {...getReferenceProps({
                     onMouseEnter: handleMouseEnter,
                     onMouseLeave: handleMouseLeave
                 })}
-                className="inline-flex"
+                className="inline-flex cursor-pointer"
             >
                 {children}
-            </div>
+            </span>
 
             <FloatingPortal>
                 <AnimatePresence>
@@ -106,15 +111,17 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
                         >
                             <div className="w-[360px] max-w-[380px] bg-[#1a1a1a] rounded-xl border border-[#2a2a2a] shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden font-sans">
                                 {/* Cover Background */}
-                                <div className="relative h-[120px] w-full bg-[#0c0c0c]">
-                                    <div
-                                        className="absolute inset-0 bg-cover bg-center"
-                                        style={{
-                                            backgroundImage: `url(${profile.background_url ? getStorageUrl(profile.background_url, 'profile-avatars') : PLACEHOLDERS.BACKGROUND})`
-                                        }}
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/20 to-black/80" />
-                                    </div>
+                                <div className="relative h-[120px] w-full overflow-hidden bg-[#0c0c0c]">
+                                    {backgroundUrl ? (
+                                        <img
+                                            src={backgroundUrl}
+                                            alt="Cover"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-b from-zinc-800 to-black" />
+                                    )}
+                                    <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/80" />
 
                                     {/* Action Buttons */}
                                     <div className="absolute top-3 right-3 flex gap-2 z-10">
@@ -122,6 +129,7 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
                                             <a
                                                 href={profile.link_instagram}
                                                 target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="p-1.5 rounded-md bg-black/40 text-white/70 hover:bg-black/60 hover:text-white transition-colors border border-white/10"
                                             >
                                                 <Instagram className="w-4 h-4" />
