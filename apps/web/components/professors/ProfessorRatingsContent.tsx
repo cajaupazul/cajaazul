@@ -18,6 +18,7 @@ import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 import { StickerCanvas } from '@/components/ui/StickerCanvas';
 import { PLACEHOLDERS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
+import { UserHoverCard } from '@/components/ui/UserHoverCard';
 import { FileText, LayoutPanelLeft, FolderRoot } from 'lucide-react';
 
 interface ProfessorComment {
@@ -162,24 +163,38 @@ const CommentItem = ({
             )}
 
             <div className="absolute left-0 top-0 z-20">
-                <AvatarWithFrame
-                    avatarUrl={comment.profiles?.avatar_url || PLACEHOLDERS.AVATAR}
-                    name={comment.profiles?.nombre || 'Usuario'}
-                    frameUrl={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.image_url : null}
-                    frameScale={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.scale : 1}
-                    offsetX={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.x : 0}
-                    offsetY={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.y : 0}
-                    size={isReply ? "sm" : "md"}
-                    className="ring-2 ring-bb-dark shadow-xl"
-                />
+                <UserHoverCard profile={{
+                    id: comment.user_id,
+                    nombre: comment.profiles?.nombre || 'Usuario',
+                    avatar_url: comment.profiles?.avatar_url,
+                    role: 'user' // Default to user, in a real app this would come from the joined data
+                }}>
+                    <AvatarWithFrame
+                        avatarUrl={comment.profiles?.avatar_url || PLACEHOLDERS.AVATAR}
+                        name={comment.profiles?.nombre || 'Usuario'}
+                        frameUrl={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.image_url : null}
+                        frameScale={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.scale : 1}
+                        offsetX={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.x : 0}
+                        offsetY={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.y : 0}
+                        size={isReply ? "sm" : "md"}
+                        className="ring-2 ring-bb-dark shadow-xl"
+                    />
+                </UserHoverCard>
             </div>
 
             <div className="flex flex-col">
                 <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
-                        <p className="font-bold text-white text-sm md:text-base hover:text-blue-400 cursor-pointer transition-colors tracking-tight">
-                            {comment.profiles?.nombre}
-                        </p>
+                        <UserHoverCard profile={{
+                            id: comment.user_id,
+                            nombre: comment.profiles?.nombre || 'Usuario',
+                            avatar_url: comment.profiles?.avatar_url,
+                            role: 'user'
+                        }}>
+                            <p className="font-bold text-white text-sm md:text-base hover:text-blue-400 cursor-pointer transition-colors tracking-tight">
+                                {comment.profiles?.nombre}
+                            </p>
+                        </UserHoverCard>
                         <span className="text-bb-text-secondary opacity-40 text-xs">•</span>
                         <p className="text-[10px] md:text-xs font-medium text-bb-text-secondary opacity-60">
                             {new Date(comment.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}
@@ -256,8 +271,6 @@ export default function ProfessorRatingsContent({
     const [commentText, setCommentText] = useState('');
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
-    const [hoveredUser, setHoveredUser] = useState<string | null>(null);
-    const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
     const [materials, setMaterials] = useState<any[]>(initialMaterials);
     const [viewingFile, setViewingFile] = useState<{ path: string; name: string } | null>(null);
     const [replyToId, setReplyToId] = useState<string | null>(null);
@@ -491,14 +504,7 @@ export default function ProfessorRatingsContent({
         ? (ratings.filter(r => r.facilidad).reduce((sum, r) => sum + (r.facilidad || 0), 0) / ratings.filter(r => r.facilidad).length).toFixed(1)
         : '0.0';
 
-    const handleUserHover = (e: React.MouseEvent, userId: string) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        setHoverPosition({
-            x: rect.right,
-            y: rect.top
-        });
-        setHoveredUser(userId);
-    };
+
 
 
     return (

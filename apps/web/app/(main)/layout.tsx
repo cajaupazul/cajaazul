@@ -1,6 +1,7 @@
 import { ThemeProvider } from "@/lib/theme-context";
 import { ProfileProvider } from "@/lib/profile-context";
 import { DashboardDataProvider } from "@/lib/dashboard-data-context";
+import { UserHoverCardProvider } from "@/components/ui/UserHoverCardProvider";
 
 export default function MainLayout({
     children,
@@ -11,7 +12,9 @@ export default function MainLayout({
         <ProfileProvider>
             <ThemeProvider>
                 <DashboardDataProvider>
-                    {children}
+                    <UserHoverCardProvider>
+                        {children}
+                    </UserHoverCardProvider>
                 </DashboardDataProvider>
             </ThemeProvider>
         </ProfileProvider>

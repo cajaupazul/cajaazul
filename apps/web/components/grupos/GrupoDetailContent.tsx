@@ -18,6 +18,7 @@ import {
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
+import { UserHoverCard } from '@/components/ui/UserHoverCard';
 
 interface Miembro {
     user_id: string;
@@ -46,35 +47,13 @@ export default function GrupoDetailContent({
     const [activeTab, setActiveTab] = useState<'pizarra' | 'miembros' | 'galeria' | 'recursos'>('pizarra');
     const [miembros, setMiembros] = useState<Miembro[]>(initialMiembros);
     const [isMember, setIsMember] = useState(initialIsMember);
-    const [hoveredMiembro, setHoveredMiembro] = useState<string | null>(null);
-    const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
 
     useEffect(() => {
         setMiembros(initialMiembros);
         setIsMember(initialIsMember);
     }, [initialMiembros, initialIsMember, grupo]);
 
-    const handleMiembroHover = (e: React.MouseEvent<HTMLElement>, userId: string) => {
-        if (window.innerWidth < 768) return; // No hover on mobile
-        const rect = e.currentTarget.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const cardWidth = 320;
-        const cardHeight = 280;
 
-        let x = rect.right + 10;
-        let y = rect.top;
-
-        if (x + cardWidth > viewportWidth) {
-            x = rect.left - cardWidth - 10;
-        }
-
-        if (y + cardHeight > window.innerHeight) {
-            y = window.innerHeight - cardHeight - 20;
-        }
-
-        setHoveredMiembro(userId);
-        setHoverPosition({ x, y });
-    };
 
     const handleUnirse = async () => {
         try {
@@ -345,48 +324,26 @@ export default function GrupoDetailContent({
                                     const p = miembro.profile;
                                     const esCreador = grupo.created_by === miembro.user_id;
                                     return (
-                                        <div
-                                            key={miembro.user_id}
-                                            className={`group border rounded-2xl p-4 transition-all duration-300 relative overflow-hidden ${themeMode === 'light' ? 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-lg' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
-                                            onMouseEnter={(e) => handleMiembroHover(e, miembro.user_id)}
-                                            onMouseLeave={() => setHoveredMiembro(null)}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <Avatar className="w-12 h-12 md:w-14 md:h-14 rounded-xl border-2 border-white/5 group-hover:border-blue-500/50 transition-all">
-                                                    <AvatarImage src={getStorageUrl(p?.avatar_url)} />
-                                                    <AvatarFallback className="bg-white/10 font-bold">{p?.nombre?.charAt(0).toUpperCase()}</AvatarFallback>
-                                                </Avatar>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="font-bold truncate">{p?.nombre || 'Usuario'}</p>
-                                                        {esCreador && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-tighter shrink-0">Admin</span>}
+                                        <UserHoverCard profile={p || { id: miembro.user_id, nombre: 'Usuario', role: 'user' }}>
+                                            <div
+                                                key={miembro.user_id}
+                                                className={`group border rounded-2xl p-4 transition-all duration-300 relative overflow-hidden ${themeMode === 'light' ? 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-lg' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <Avatar className="w-12 h-12 md:w-14 md:h-14 rounded-xl border-2 border-white/5 group-hover:border-blue-500/50 transition-all">
+                                                        <AvatarImage src={getStorageUrl(p?.avatar_url)} />
+                                                        <AvatarFallback className="bg-white/10 font-bold">{p?.nombre?.charAt(0).toUpperCase()}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="font-bold truncate">{p?.nombre || 'Usuario'}</p>
+                                                            {esCreador && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-tighter shrink-0">Admin</span>}
+                                                        </div>
+                                                        <p className="text-[10px] opacity-40 truncate uppercase font-bold tracking-widest">{p?.carrera || 'Estudiante'}</p>
                                                     </div>
-                                                    <p className="text-[10px] opacity-40 truncate uppercase font-bold tracking-widest">{p?.carrera || 'Estudiante'}</p>
                                                 </div>
                                             </div>
-
-                                            {/* Hover Detail Card */}
-                                            {hoveredMiembro === miembro.user_id && (
-                                                <div
-                                                    className="fixed bg-[#121212] border border-white/10 rounded-[2rem] shadow-[0_30px_100px_rgba(0,0,0,0.8)] z-[100] w-[300px] overflow-hidden animate-in fade-in zoom-in-95 duration-300 hidden md:block text-white"
-                                                    style={{ left: `${hoverPosition.x}px`, top: `${hoverPosition.y}px` }}
-                                                >
-                                                    <div className="h-24 bg-cover bg-center" style={{ backgroundImage: p?.background_url ? `url('${p.background_url}')` : 'none', backgroundColor: colors?.primary + '20' }} />
-                                                    <div className="px-6 pb-6 -mt-10 flex flex-col items-center">
-                                                        <Avatar className="w-20 h-20 border-4 border-[#121212] shadow-2xl rounded-2xl">
-                                                            <AvatarImage src={getStorageUrl(p?.avatar_url)} />
-                                                            <AvatarFallback className="text-2xl font-black">{p?.nombre?.charAt(0).toUpperCase()}</AvatarFallback>
-                                                        </Avatar>
-                                                        <h4 className="mt-4 font-black text-lg text-center tracking-tight truncate w-full">{p?.nombre}</h4>
-                                                        <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-4">{p?.carrera || 'Miembro'}</p>
-                                                        {p?.bio && <p className="text-xs text-center text-white/50 leading-tight italic line-clamp-3 mb-4 px-2">"{p.bio}"</p>}
-                                                        <div className="flex gap-4 opacity-50">
-                                                            {p?.link_instagram && <Instagram className="w-4 h-4 cursor-pointer hover:text-pink-500 transition-colors" />}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                        </UserHoverCard>
                                     );
                                 })}
                             </div>
