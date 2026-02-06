@@ -312,14 +312,16 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 }
 
                 const expectedSizeRGBA = gridWidth * gridHeight * 4;
-                if (bytes.length === expectedSizeRGBA) {
-                    // Direct merge into the Single Source of Truth
-                    pixelDataRef.current = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
-                    updateDataCanvasFull();
-                    needsRedrawRef.current = true;
-                } else {
-                    console.warn("[MURAL_ENGINE] Buffer size mismatch. Expected RGBA.", bytes.length);
+                if (bytes.length !== expectedSizeRGBA) {
+                    console.error(`[MURAL_ENGINE] RGBA Buffer size mismatch! Expected ${expectedSizeRGBA}, received ${bytes.length}.`);
+                    return; // Stop to prevent corrupted memory state
                 }
+
+                // Direct merge into the Single Source of Truth
+                // Each pixel is 4 bytes, so Uint32Array length is bytes.length / 4 = gridWidth * gridHeight
+                pixelDataRef.current = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.length / 4);
+                updateDataCanvasFull();
+                needsRedrawRef.current = true;
             }
         } catch (e) {
             console.error("Error fetching mural board:", e);

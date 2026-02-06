@@ -49,7 +49,7 @@ DECLARE
 BEGIN
     -- Initialize buffer with transparency (all zeros)
     -- Size: width * height * 4 bytes
-    v_result := decode(repeat('00', p_width * p_height * 8), 'hex');
+    v_result := decode(repeat('00', p_width * p_height * 4), 'hex');
     
     FOR r IN (SELECT x, y, color_hex FROM public.pixel_board_state WHERE event_id = p_event_id) LOOP
         -- Simple HEX to RGB conversion
