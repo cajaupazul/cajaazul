@@ -35,17 +35,18 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
     const { refs, floatingStyles, context } = useFloating({
         open: isOpen,
         onOpenChange: setIsOpen,
+        placement: 'bottom-start',
         strategy: 'fixed',
         middleware: [
-            offset(6),
-            flip({ fallbackAxisSideDirection: 'end', padding: 10 }),
+            offset(8),
+            flip({ padding: 10 }),
             shift({ padding: 10 }),
         ],
         whileElementsMounted: autoUpdate,
     });
 
     const hover = useHover(context, {
-        delay: { open: 150, close: 100 },
+        delay: { open: 200, close: 100 },
         handleClose: safePolygon(),
     });
 
@@ -57,16 +58,16 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
 
     const badgeConfig = useMemo(() => {
         if (profile.role === 'admin' || profile.role === 'superadmin') {
-            return { label: 'Administrador', color: 'bg-red-500/20 text-red-400 border-red-500/30' };
+            return { label: 'ADMIN', color: 'bg-red-500/20 text-red-500 border-red-500/20' };
         }
         if (profile.es_vip) {
-            return { label: 'VIP', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' };
+            return { label: 'VIP', color: 'bg-amber-500/20 text-amber-500 border-amber-500/20' };
         }
-        return { label: 'Estudiante', color: 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30' };
+        return { label: 'USER', color: 'bg-zinc-500/20 text-zinc-500 border-zinc-500/20' };
     }, [profile]);
 
     const joinedDate = useMemo(() => {
-        if (!profile.created_at) return 'Recientemente';
+        if (!profile.created_at) return '';
         return new Date(profile.created_at).toLocaleDateString('es-ES', {
             month: 'long',
             year: 'numeric'
@@ -89,7 +90,7 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
                     onMouseEnter: handleMouseEnter,
                     onMouseLeave: handleMouseLeave
                 })}
-                className="inline-block"
+                className="inline-flex"
             >
                 {children}
             </div>
@@ -101,29 +102,43 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
                             ref={refs.setFloating}
                             style={floatingStyles}
                             {...getFloatingProps()}
-                            initial={{ opacity: 0, y: 5, scale: 0.98 }}
+                            initial={{ opacity: 0, y: 5, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 5, scale: 0.98 }}
-                            transition={{ duration: 0.1, ease: 'easeOut' }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.15, ease: 'easeOut' }}
                             className="z-[9999] outline-none"
                         >
-                            <div className="w-[380px] bg-[#0c0c0c] rounded-xl border border-zinc-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden pointer-events-auto">
-                                {/* Main Content Row */}
-                                <div className="relative flex h-[100px]">
-                                    {/* Cover Background (Left Half / Fixed Width or Full Overlay) */}
-                                    <div className="absolute inset-0 z-0">
-                                        <div
-                                            className="w-full h-full bg-cover bg-center"
-                                            style={{
-                                                backgroundImage: `url(${profile.background_url ? getStorageUrl(profile.background_url, 'profile-avatars') : PLACEHOLDERS.BACKGROUND})`
-                                            }}
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-r from-[#0c0c0c] via-[#0c0c0c]/40 to-[#0c0c0c]" />
+                            <div className="w-[320px] bg-zinc-950 rounded-xl border border-zinc-800 shadow-2xl overflow-hidden">
+                                {/* Banner Area with Avatar Overhang */}
+                                <div className="relative h-[80px]">
+                                    <div
+                                        className="absolute inset-0 bg-cover bg-center"
+                                        style={{
+                                            backgroundImage: `url(${profile.background_url ? getStorageUrl(profile.background_url, 'profile-avatars') : PLACEHOLDERS.BACKGROUND})`
+                                        }}
+                                    >
+                                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
                                     </div>
 
-                                    {/* Avatar Column */}
-                                    <div className="relative z-10 pl-3 flex items-center">
-                                        <div className="w-[72px] h-[72px] rounded-lg border-2 border-white/5 overflow-hidden bg-zinc-900 shadow-xl flex-shrink-0 ring-1 ring-black">
+                                    {/* Action Buttons */}
+                                    <div className="absolute top-2 right-2 flex gap-1 z-10">
+                                        {profile.link_instagram && (
+                                            <a
+                                                href={profile.link_instagram}
+                                                target="_blank"
+                                                className="p-1.5 rounded-full bg-black/30 text-white/70 hover:bg-black/50 hover:text-white transition-colors border border-white/10"
+                                            >
+                                                <Instagram className="w-3.5 h-3.5" />
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Content Area */}
+                                <div className="px-4 pb-3 relative">
+                                    {/* Avatar */}
+                                    <div className="absolute -top-10 left-4">
+                                        <div className="w-[72px] h-[72px] rounded-xl border-[3px] border-zinc-950 overflow-hidden bg-zinc-900 shadow-lg">
                                             <img
                                                 src={getStorageUrl(profile.avatar_url, 'profile-avatars', PLACEHOLDERS.AVATAR)}
                                                 alt={profile.nombre}
@@ -132,52 +147,54 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
                                         </div>
                                     </div>
 
-                                    {/* Info Column */}
-                                    <div className="relative z-10 flex-1 px-4 flex flex-col justify-center min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h3 className="text-base font-black text-white tracking-tight truncate leading-tight">
+                                    {/* Header Info (Right of Avatar) */}
+                                    <div className="pl-[84px] pt-2 min-h-[40px] flex flex-col justify-center">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-bold text-white text-sm truncate">
                                                 {profile.nombre}
                                             </h3>
-                                            <span className={`px-1.5 py-0.5 rounded text-[7px] font-black uppercase border leading-none ${badgeConfig.color}`}>
+                                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold uppercase border ${badgeConfig.color}`}>
                                                 {badgeConfig.label}
                                             </span>
                                         </div>
-
                                         {profile.bio && (
-                                            <p className="text-zinc-300 text-[10px] line-clamp-2 leading-tight italic opacity-80 mb-1.5">
-                                                "{profile.bio}"
+                                            <p className="text-zinc-400 text-xs line-clamp-1 mt-0.5">
+                                                {profile.bio}
                                             </p>
                                         )}
+                                    </div>
 
-                                        <div className="flex items-center gap-1.5 text-zinc-500 text-[8px] font-bold uppercase tracking-wider">
-                                            <Calendar className="w-2.5 h-2.5" />
-                                            {joinedDate}
+                                    {/* Stats Grid */}
+                                    <div className="mt-4 grid grid-cols-3 gap-2 py-3 border-t border-zinc-800/50">
+                                        <div className="text-center">
+                                            <div className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider mb-0.5">Mensajes</div>
+                                            <div className="text-white font-bold text-sm flex items-center justify-center gap-1.5">
+                                                <MessageCircle className="w-3.5 h-3.5 text-blue-500" />
+                                                {stats?.messages_count || 0}
+                                            </div>
+                                        </div>
+                                        <div className="text-center border-l border-zinc-800/50">
+                                            <div className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider mb-0.5">Reacción</div>
+                                            <div className="text-white font-bold text-sm flex items-center justify-center gap-1.5">
+                                                <Star className="w-3.5 h-3.5 text-amber-500" />
+                                                {stats?.reaction_score || 0}
+                                            </div>
+                                        </div>
+                                        <div className="text-center border-l border-zinc-800/50">
+                                            <div className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider mb-0.5">Puntos</div>
+                                            <div className="text-white font-bold text-sm flex items-center justify-center gap-1.5">
+                                                <Trophy className="w-3.5 h-3.5 text-emerald-500" />
+                                                {profile.puntos || 0}
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Quick Actions (Right Top) */}
-                                    <div className="absolute top-2 right-2 flex gap-1 z-20">
-                                        {profile.link_instagram && (
-                                            <a href={profile.link_instagram} target="_blank" className="p-1 rounded-md bg-black/40 backdrop-blur-md border border-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-colors">
-                                                <Instagram className="w-3 h-3" />
-                                            </a>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Bottom Info / Stats Bar - Ultra Compact */}
-                                <div className="flex bg-black/40 border-t border-white/[0.03]">
-                                    <div className="flex-1 py-1.5 flex items-center justify-center gap-2 border-r border-white/[0.03] group hover:bg-white/[0.02] transition-colors">
-                                        <MessageCircle className="w-2.5 h-2.5 text-blue-500/50 group-hover:text-blue-400" />
-                                        <span className="text-[10px] font-black text-zinc-100">{stats?.messages_count || 0}</span>
-                                    </div>
-                                    <div className="flex-1 py-1.5 flex items-center justify-center gap-2 border-r border-white/[0.03] group hover:bg-white/[0.02] transition-colors">
-                                        <Star className="w-2.5 h-2.5 text-yellow-500/50 group-hover:text-yellow-400" />
-                                        <span className="text-[10px] font-black text-zinc-100">{stats?.reaction_score || 0}</span>
-                                    </div>
-                                    <div className="flex-1 py-1.5 flex items-center justify-center gap-2 group hover:bg-white/[0.02] transition-colors">
-                                        <Trophy className="w-2.5 h-2.5 text-emerald-500/50 group-hover:text-emerald-400" />
-                                        <span className="text-[10px] font-black text-zinc-100">{profile.puntos || 0}</span>
+                                    {/* Footer */}
+                                    <div className="flex items-center justify-between pt-2 border-t border-zinc-800/50">
+                                        <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-medium">
+                                            <Calendar className="w-3 h-3" />
+                                            <span>Se unió en {joinedDate}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
