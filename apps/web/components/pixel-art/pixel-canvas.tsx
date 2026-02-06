@@ -9,6 +9,8 @@ import { Palette, COLOR_PALETTE, COLOR_MAP } from './palette';
 import { NavigationControls } from './overlay-controls';
 import { ProfileStatsPanel } from './profile-stats-panel';
 import { usePixelStats } from './use-pixel-stats';
+import { useTemplateSlots, TemplateSlot } from './use-template-slots';
+import { TemplateSlotBar } from './template-slot-bar';
 import {
     Download,
     Share2,
@@ -185,7 +187,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const [guidanceState, setGuidanceState] = useState({ x: 0, y: 0, scale: 1 });
     const [showGuidancePanel, setShowGuidancePanel] = useState(false);
     const [isSmartPicking, setIsSmartPicking] = useState(false);
-    const [guidanceHistory, setGuidanceHistory] = useState<GuidanceHistoryItem[]>([]);
+
+    // WPlace Slot System
+    const { slots: guidanceHistory, saveSlot, deleteSlot } = useTemplateSlots(userProfile?.id, eventId);
 
     const [tooltipData, setTooltipData] = useState<{ x: number, y: number, color: string } | null>(null);
 
@@ -237,78 +241,57 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const needsRedrawRef = useRef(true);
     const isRunningRef = useRef(true);
     const frameIdRef = useRef<number>(0);
+    const [isSaving, setIsSaving] = useState(false);
 
     // --- Persistence (LocalStorage) ---
 
     useEffect(() => {
         if (!eventId || !userProfile?.id) return;
-        const storageKey = `pixel-art-guidance-${eventId}-${userProfile.id}`;
+        const storageKey = `pixel-art-pending-${eventId}-${userProfile.id}`;
 
-        // 1. Load from storage on mount
         const saved = localStorage.getItem(storageKey);
         if (saved) {
             try {
                 const data = JSON.parse(saved);
-                setGuidanceOpacity(data.opacity ?? 0.5);
-                setGuidanceGridStep(data.gridStep ?? 1);
-                setGuidanceState(data.state ?? { x: 0, y: 0, scale: 1 });
-                setGuidanceHistory(data.history ?? []);
-
                 if (data.pending) {
                     const pendingMap = new Map<string, string | number>(data.pending);
                     setPendingPixels(pendingMap);
                     pendingPixelsRef.current = pendingMap;
                     needsRedrawRef.current = true;
                 }
-
-                // Auto-restore the image if it exists
-                if (data.image) {
-                    const img = new Image();
-                    img.onload = () => {
-                        // Capture raw data for picking
-                        const off = document.createElement('canvas');
-                        off.width = img.naturalWidth;
-                        off.height = img.naturalHeight;
-                        const ctx = off.getContext('2d', { willReadFrequently: true });
-                        if (ctx) {
-                            ctx.drawImage(img, 0, 0);
-                            guidanceRawDataRef.current = ctx.getImageData(0, 0, off.width, off.height);
-                        }
-                        setGuidanceImage(img);
-                        setIsEditingGuidance(true);
-                    };
-                    img.src = data.image;
-                }
             } catch (e) {
-                console.error("Error loading guidance persistence:", e);
+                console.error("Error loading pending pixel persistence:", e);
             }
         }
     }, [eventId, userProfile?.id]);
 
+    // Guidance image / state sync to slot system
     useEffect(() => {
-        if (!eventId || !userProfile?.id) return;
-        const storageKey = `pixel-art-guidance-${eventId}-${userProfile.id}`;
+        if (!guidanceImage || !userProfile?.id) return;
 
-        const dataToSave = {
+        // Auto-update the active slot meta-data periodically or on change
+        saveSlot({
+            image: guidanceImage.src,
             opacity: guidanceOpacity,
             gridStep: guidanceGridStep,
-            state: guidanceState,
-            image: guidanceImage?.src || null,
-            history: guidanceHistory,
+            state: guidanceState
+        });
+    }, [guidanceOpacity, guidanceGridStep, guidanceState, guidanceImage, userProfile?.id]);
+
+    useEffect(() => {
+        if (!eventId || !userProfile?.id) return;
+        const storageKey = `pixel-art-pending-${eventId}-${userProfile.id}`;
+
+        const dataToSave = {
             pending: Array.from(pendingPixelsRef.current.entries())
         };
 
         try {
-            // Saving high-res base64 can be slow, but it's acceptable for this UX
             localStorage.setItem(storageKey, JSON.stringify(dataToSave));
         } catch (err) {
-            if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-                console.error("[STORAGE] LocalStorage limit exceeded. History may be too large.");
-            } else {
-                console.error("[STORAGE] Error saving guidance:", err);
-            }
+            console.error("[STORAGE] Error saving pending pixels:", err);
         }
-    }, [eventId, userProfile?.id, guidanceOpacity, guidanceGridStep, guidanceState, guidanceImage, guidanceHistory]);
+    }, [eventId, userProfile?.id, pendingPixels]);
 
     // --- Data Fetching & Subscription ---
 
@@ -943,13 +926,16 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     };
 
     const confirmPaint = async () => {
-        if (pendingPixels.size === 0) return;
+        if (pendingPixels.size === 0 || isSaving) return;
 
         const currentUserId = userProfile?.id;
         if (!currentUserId) return;
 
+        setIsSaving(true);
         const oldMap = new Map(pendingPixelsRef.current);
         const pixelCount = pendingPixels.size;
+
+        // Optimistic Clear
         setPendingPixels(new Map());
         pendingPixelsRef.current = new Map();
         updateDataCanvasFull();
@@ -977,11 +963,15 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
         try {
             const CHUNK_SIZE = 100;
+            console.log(`[PIXEL_SAVE] Attempting to save ${pixelsToSave.length} pixels...`);
+
             for (let i = 0; i < pixelsToSave.length; i += CHUNK_SIZE) {
                 const chunk = pixelsToSave.slice(i, i + CHUNK_SIZE);
-                const { error } = await supabase.from('pixel_history').insert(chunk);
+                const { error, data } = await supabase.from('pixel_history').insert(chunk).select();
+
                 if (error) {
-                    // Fallback: If color_hex is missing in DB, try saving as index if possible
+                    console.error("[PIXEL_SAVE] Supabase Insert Error:", error);
+                    // Fallback: If color_hex is missing in DB
                     if (error.message?.includes('color_hex')) {
                         console.warn("[PIXEL_SAVE] Missing color_hex column. Saving indices only.");
                         const fallbackChunk = chunk.map(p => ({ ...p, color_hex: null }));
@@ -992,19 +982,22 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     }
                 }
             }
+
+            console.log("[PIXEL_SAVE] SUCCESS");
             incrementLocalCount();
         } catch (err) {
             console.error("[PIXEL_SAVE] FAILED:", err);
-            // Put pixels back so user doesn't lose them on failed save
+            // Restore pending pixels so data isn't lost on failure
             setPendingPixels(oldMap);
             pendingPixelsRef.current = oldMap;
+        } finally {
+            setIsSaving(false);
         }
     };
 
-    const restoreGuidance = (item: GuidanceHistoryItem) => {
+    const restoreGuidance = (item: TemplateSlot) => {
         const img = new Image();
         img.onload = () => {
-            // Capture raw image data for picking
             const off = document.createElement('canvas');
             off.width = img.naturalWidth;
             off.height = img.naturalHeight;
@@ -1013,8 +1006,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 ctx.drawImage(img, 0, 0);
                 guidanceRawDataRef.current = ctx.getImageData(0, 0, off.width, off.height);
             }
-            colorMatchCacheRef.current.clear(); // Clear cache for new image context
-
+            colorMatchCacheRef.current.clear();
             setGuidanceImage(img);
             setGuidanceOpacity(item.opacity);
             setGuidanceGridStep(item.gridStep);
@@ -1024,9 +1016,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         img.src = item.image;
     };
 
-    const removeGuidanceFromHistory = (e: React.MouseEvent, index: number) => {
-        e.stopPropagation();
-        setGuidanceHistory(prev => prev.filter((_, i) => i !== index));
+    const removeGuidanceFromHistory = (image: string) => {
+        deleteSlot(image);
     };
 
     const handleUploadGuidance = (file: File) => {
@@ -1045,19 +1036,13 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 }
                 colorMatchCacheRef.current.clear(); // Clear cache for new image
 
-                // Save current guidance to history before replacing
+                // Auto-save history when a NEW image is uploaded
                 if (guidanceImage) {
-                    const currentItem: GuidanceHistoryItem = {
+                    saveSlot({
                         image: guidanceImage.src,
                         opacity: guidanceOpacity,
                         gridStep: guidanceGridStep,
                         state: guidanceState
-                    };
-
-                    setGuidanceHistory(prev => {
-                        // Avoid duplicates if same image
-                        const filtered = prev.filter(h => h.image !== currentItem.image);
-                        return [currentItem, ...filtered].slice(0, 3);
                     });
                 }
 
@@ -1159,46 +1144,13 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                         <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Redo className="w-4 h-4" /></button>
                                     </div>
 
-                                    <div className="hidden sm:flex items-center gap-1.5 bg-slate-50 p-1 rounded-2xl border border-slate-100 group animate-in slide-in-from-left duration-300">
-                                        <div className="px-2 border-r border-slate-200">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Continuar</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 px-1">
-                                            {[0, 1, 2].map((idx) => {
-                                                const item = guidanceHistory[idx];
-                                                if (item) {
-                                                    return (
-                                                        <div key={idx} className="relative group/slot">
-                                                            <button
-                                                                onClick={() => restoreGuidance(item)}
-                                                                className="w-10 h-10 rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-100 transition-all hover:scale-110 active:scale-90 shadow-sm bg-white"
-                                                                title="Continuar con esta plantilla"
-                                                            >
-                                                                <img src={item.image} className="w-full h-full object-cover opacity-60 group-hover/slot:opacity-100 transition-opacity" />
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => removeGuidanceFromHistory(e, idx)}
-                                                                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-md scale-0 group-hover/slot:scale-100 transition-transform hover:bg-rose-600 z-10"
-                                                                title="Eliminar este espacio"
-                                                            >
-                                                                <X className="w-3 h-3" />
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                }
-                                                return (
-                                                    <button
-                                                        key={idx}
-                                                        onClick={() => document.getElementById('guidance-upload')?.click()}
-                                                        className="w-10 h-10 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300 hover:text-blue-400 hover:border-blue-200 hover:bg-white transition-all hover:scale-105"
-                                                        title="Nuevo espacio de guardado"
-                                                    >
-                                                        <Plus className="w-4 h-4" />
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
+                                    <TemplateSlotBar
+                                        slots={guidanceHistory}
+                                        onRestore={restoreGuidance}
+                                        onDelete={removeGuidanceFromHistory}
+                                        onUploadClick={() => document.getElementById('guidance-upload')?.click()}
+                                        className="hidden sm:flex"
+                                    />
 
                                     {userProfile && (
                                         <div className="hidden lg:flex items-center gap-2 pr-4 border-r border-slate-100">
@@ -1245,19 +1197,25 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                             <div className="flex justify-center -mt-1 pb-1">
                                 <button
                                     onClick={confirmPaint}
-                                    disabled={pendingPixels.size === 0}
+                                    disabled={pendingPixels.size === 0 || isSaving}
                                     className={cn(
                                         "px-10 py-3 rounded-2xl font-black transition-all flex items-center gap-3 shadow-xl transform active:scale-95 group relative overflow-hidden",
-                                        pendingPixels.size > 0
+                                        pendingPixels.size > 0 && !isSaving
                                             ? "bg-blue-600 text-white hover:bg-blue-500 hover:scale-[1.02] shadow-blue-200"
                                             : "bg-slate-100 text-slate-400 cursor-not-allowed"
                                     )}
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                                    <Sparkles className={cn("w-5 h-5", pendingPixels.size > 0 ? "animate-pulse" : "")} />
-                                    <span className="tracking-tight text-lg">Pintar {pendingPixels.size > 0 ? pendingPixels.size : ''}</span>
-                                    <div className="h-5 w-[1px] bg-white/20 mx-1" />
-                                    <span className="text-sm opacity-80">{userProfile?.monedas || 0}</span>
+                                    <Sparkles className={cn("w-5 h-5", pendingPixels.size > 0 && !isSaving ? "animate-pulse" : "")} />
+                                    <span className="tracking-tight text-lg">
+                                        {isSaving ? "Guardando..." : `Pintar ${pendingPixels.size > 0 ? pendingPixels.size : ''}`}
+                                    </span>
+                                    {!isSaving && (
+                                        <>
+                                            <div className="h-5 w-[1px] bg-white/20 mx-1" />
+                                            <span className="text-sm opacity-80">{userProfile?.monedas || 0}</span>
+                                        </>
+                                    )}
                                 </button>
                             </div>
 
