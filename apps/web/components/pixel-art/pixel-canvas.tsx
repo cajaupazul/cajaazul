@@ -54,24 +54,18 @@ const DEFAULT_gridHeight = 1000;
 // Special index for Eraser (Transparent)
 const ERASER_INDEX = 255;
 
-// Pre-compute integer colors for faster 32-bit writes
+// Pre-compute integer colors for faster 32-bit writes (ABGR for canvas)
+// Final architecture uses color_hex, so palette is just for brush selection.
 const computeUint32Colors = (palette: string[]) => {
-    // Size 256 to accommodate the eraser index at 255
-    const buffer = new Uint32Array(256);
+    const buffer = new Uint32Array(palette.length);
     palette.forEach((hex, i) => {
-        // Hex is #RRGGBB
         const r = parseInt(hex.slice(1, 3), 16);
         const g = parseInt(hex.slice(3, 5), 16);
         const b = parseInt(hex.slice(5, 7), 16);
         const a = 255;
-
-        // ABGR for Little Endian
+        // ABGR for Little Endian canvas.putImageData
         buffer[i] = (a << 24) | (b << 16) | (g << 8) | r;
     });
-
-    // Set Index 255 to Transparent (0x00000000)
-    buffer[ERASER_INDEX] = 0; // Fully transparent
-
     return buffer;
 };
 
@@ -297,7 +291,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
     const fetchGridData = async () => {
         try {
-            // ARCHITECTURE CHANGE: Fetch state as a single blob via RPC to maintain performance
+            // MURAL ENGINE: Fetch 4-byte RGBA buffer
             const { data, error } = await supabase.rpc('get_pixel_board_blob', {
                 p_event_id: eventId,
                 p_width: gridWidth,
@@ -313,40 +307,39 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     for (let i = 0; i < len; i++) {
                         bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
                     }
-                } else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-                    bytes = new Uint8Array(data as any);
                 } else {
                     bytes = new Uint8Array(data as any);
                 }
 
-                const expectedSizeIndex = gridWidth * gridHeight;
-                const expectedSizeTrueColor = gridWidth * gridHeight * 4;
-
-                if (bytes.length === expectedSizeTrueColor) {
-                    // True Color 32-bit buffer
+                const expectedSizeRGBA = gridWidth * gridHeight * 4;
+                if (bytes.length === expectedSizeRGBA) {
+                    // Direct merge into the Single Source of Truth
                     pixelDataRef.current = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+                    updateDataCanvasFull();
+                    needsRedrawRef.current = true;
                 } else {
-                    // Legacy 8-bit index buffer
-                    const uint32buf = new Uint32Array(gridWidth * gridHeight);
-                    for (let i = 0; i < bytes.length; i++) {
-                        const idx = bytes[i];
-                        uint32buf[i] = idx === ERASER_INDEX ? 0 : UINT32_PALETTE[idx];
-                    }
-                    pixelDataRef.current = uint32buf;
+                    console.warn("[MURAL_ENGINE] Buffer size mismatch. Expected RGBA.", bytes.length);
                 }
-
-                updateDataCanvasFull();
-                needsRedrawRef.current = true;
             }
         } catch (e) {
-            console.error("Error fetching board:", e);
+            console.error("Error fetching mural board:", e);
         }
     };
 
-    const updateLocalPixel = (x: number, y: number, color: number | string) => {
+    const updateLocalPixel = (x: number, y: number, colorValue: number | string) => {
         if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
             const idx = y * gridWidth + x;
-            const uint32 = typeof color === 'string' ? hexToUint32(color) : (color === ERASER_INDEX ? 0 : UINT32_PALETTE[color]);
+
+            // Single source of truth calculation
+            let uint32 = 0;
+            if (colorValue === ERASER_INDEX || colorValue === 0) {
+                uint32 = 0;
+            } else if (typeof colorValue === 'string') {
+                uint32 = hexToUint32(colorValue);
+            } else {
+                uint32 = UINT32_PALETTE[colorValue] || 0;
+            }
+
             pixelDataRef.current[idx] = uint32;
 
             const ctx = dataCanvasRef.current?.getContext('2d');
@@ -370,24 +363,22 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         let boardChannel: any;
 
         const setupBoardSync = async () => {
-            // Initial load using optimized RPC blob
             await fetchGridData();
 
-            // Realtime subscription to the row-based state
             boardChannel = supabase
                 .channel(`board-state-${eventId}`)
                 .on(
                     'postgres_changes',
                     {
-                        event: '*', // Sync any change to the board (INSERT or UPDATE)
+                        event: '*',
                         schema: 'public',
                         table: 'pixel_board_state',
                         filter: `event_id=eq.${eventId}`
                     },
                     (payload) => {
-                        const { x, y, color_index, color_hex } = payload.new as any;
-                        const drawValue = color_hex || color_index;
-                        updateLocalPixel(x, y, drawValue);
+                        const { x, y, color_hex } = payload.new as any;
+                        // Autoritative sync from DB state
+                        updateLocalPixel(x, y, color_hex);
                     }
                 )
                 .subscribe();
@@ -555,34 +546,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     }
                     ctx.restore();
                 }
-
-                // Draw Pending Pixels (Visual Feedback)
-                const viewPortWorldWidth = displayCanvas.width / scale;
-                const viewPortWorldHeight = displayCanvas.height / scale;
-                const viewPortWorldCenterX = -offsetX;
-                const viewPortWorldCenterY = -offsetY;
-
-                const startX = Math.floor(viewPortWorldCenterX - viewPortWorldWidth / 2 + gridWidth / 2);
-                const endX = Math.ceil(viewPortWorldCenterX + viewPortWorldWidth / 2 + gridWidth / 2);
-                const startY = Math.floor(viewPortWorldCenterY - viewPortWorldHeight / 2 + gridHeight / 2);
-                const endY = Math.ceil(viewPortWorldCenterY + viewPortWorldHeight / 2 + gridHeight / 2);
-
-                pendingPixelsRef.current.forEach((val, key) => {
-                    const [x, y] = key.split(',').map(Number);
-                    if (x >= startX && x <= endX && y >= startY && y <= endY) {
-                        const px = pixelStartX + x;
-                        const py = pixelStartY + y;
-
-                        if (val === ERASER_INDEX || val === 0) {
-                            ctx.fillStyle = '#ffffff';
-                        } else if (typeof val === 'string') {
-                            ctx.fillStyle = val;
-                        } else {
-                            ctx.fillStyle = COLOR_PALETTE[val as number] || 'rgba(0,0,0,0)';
-                        }
-                        ctx.fillRect(px, py, 1, 1);
-                    }
-                });
 
                 if (scale > 15) {
                     ctx.beginPath();
@@ -932,64 +895,84 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         if (!currentUserId) return;
 
         setIsSaving(true);
-        const oldMap = new Map(pendingPixelsRef.current);
-        const pixelCount = pendingPixels.size;
+        const transactionMap = new Map(pendingPixelsRef.current);
 
-        // Optimistic Clear
+        // MURAL ENGINE: Transactional Flow
+        // 1. SNAPSHOT for potential rollback
+        const snapshot = new Map<string, number>();
+        transactionMap.forEach((_, key) => {
+            const [x, y] = key.split(',').map(Number);
+            const idx = y * gridWidth + x;
+            snapshot.set(key, pixelDataRef.current[idx]);
+        });
+
+        // 2. OPTIMISTIC MERGE into Single Source of Truth
+        transactionMap.forEach((val, key) => {
+            const [x, y] = key.split(',').map(Number);
+            updateLocalPixel(x, y, val);
+        });
+
+        // Clear reactive pending state (SSOT buffer now owns them for the view)
         setPendingPixels(new Map());
         pendingPixelsRef.current = new Map();
-        updateDataCanvasFull();
         needsRedrawRef.current = true;
 
         const pixelsToSave: any[] = [];
-
-        oldMap.forEach((drawValue, key) => {
+        transactionMap.forEach((drawValue, key) => {
             const [xStr, yStr] = key.split(',');
             const x = parseInt(xStr);
             const y = parseInt(yStr);
 
-            updateLocalPixel(x, y, drawValue);
+            // Authoritative hex sampling for DB
+            let colorHex: string;
+            if (typeof drawValue === 'string') {
+                colorHex = drawValue;
+            } else if (drawValue === ERASER_INDEX || drawValue === 0) {
+                colorHex = '#FFFFFF'; // Treat eraser as white for now in state table
+            } else {
+                colorHex = COLOR_PALETTE[drawValue as number];
+            }
 
-            const isHex = typeof drawValue === 'string';
             pixelsToSave.push({
                 event_id: eventId,
                 x,
                 y,
-                color_index: isHex ? -1 : (drawValue as number),
-                color_hex: isHex ? (drawValue as string) : null,
+                color_hex: colorHex,
                 user_id: currentUserId
             });
         });
 
         try {
             const CHUNK_SIZE = 100;
-            console.log(`[PIXEL_SAVE] Attempting to save ${pixelsToSave.length} pixels...`);
+            console.log(`[PIXEL_SAVE] Transaction Started: ${pixelsToSave.length} pixels.`);
 
             for (let i = 0; i < pixelsToSave.length; i += CHUNK_SIZE) {
                 const chunk = pixelsToSave.slice(i, i + CHUNK_SIZE);
-                const { error, data } = await supabase.from('pixel_history').insert(chunk).select();
+                // UPSERT Batch using PRIMARY KEY (event_id, x, y)
+                const { error } = await supabase.from('pixel_board_state').upsert(chunk, {
+                    onConflict: 'event_id,x,y'
+                });
 
-                if (error) {
-                    console.error("[PIXEL_SAVE] Supabase Insert Error:", error);
-                    // Fallback: If color_hex is missing in DB
-                    if (error.message?.includes('color_hex')) {
-                        console.warn("[PIXEL_SAVE] Missing color_hex column. Saving indices only.");
-                        const fallbackChunk = chunk.map(p => ({ ...p, color_hex: null }));
-                        const { error: fError } = await supabase.from('pixel_history').insert(fallbackChunk);
-                        if (fError) throw fError;
-                    } else {
-                        throw error;
-                    }
-                }
+                if (error) throw error;
             }
 
-            console.log("[PIXEL_SAVE] SUCCESS");
+            console.log("[PIXEL_SAVE] Transaction Committed.");
             incrementLocalCount();
         } catch (err) {
-            console.error("[PIXEL_SAVE] FAILED:", err);
-            // Restore pending pixels so data isn't lost on failure
-            setPendingPixels(oldMap);
-            pendingPixelsRef.current = oldMap;
+            console.error("[PIXEL_SAVE] Transaction FAILED. Rolling back buffer.", err);
+
+            // ROLLBACK: Restore original buffer values
+            snapshot.forEach((oldUint32, key) => {
+                const [x, y] = key.split(',').map(Number);
+                const idx = y * gridWidth + x;
+                pixelDataRef.current[idx] = oldUint32;
+            });
+            updateDataCanvasFull();
+            needsRedrawRef.current = true;
+
+            // Restore pending UI state
+            setPendingPixels(transactionMap);
+            pendingPixelsRef.current = transactionMap;
         } finally {
             setIsSaving(false);
         }
