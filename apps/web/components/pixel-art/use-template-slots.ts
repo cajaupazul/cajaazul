@@ -10,6 +10,7 @@ export interface TemplateSlot {
     gridStep: number;
     state: { x: number, y: number, scale: number };
     updated_at: string;
+    slot_index?: number; // 1, 2, or 3
 }
 
 export function useTemplateSlots(userId: string | undefined, eventId: string) {
@@ -23,22 +24,29 @@ export function useTemplateSlots(userId: string | undefined, eventId: string) {
         async function fetchSlots() {
             setLoading(true);
             try {
-                // Try fetching from Supabase
+                // Try fetching from Supabase, ordered by slot_index
                 const { data, error } = await supabase
                     .from('pixel_templates')
                     .select('*')
                     .eq('user_id', userId)
                     .eq('event_id', eventId)
-                    .order('updated_at', { ascending: false })
-                    .limit(3);
+                    .order('slot_index', { ascending: true });
 
                 if (error) {
-                    // Fallback to LocalStorage if table doesn't exist yet
                     console.warn("[TEMPLATES] Supabase fetch failed, falling back to LocalStorage:", error.message);
                     const local = localStorage.getItem(`pixel-slots-${eventId}-${userId}`);
                     if (local) setSlots(JSON.parse(local));
                 } else {
-                    setSlots(data || []);
+                    // Map DB results to match TemplateSlot interface
+                    const mappedSlots: TemplateSlot[] = (data || []).map(row => ({
+                        image: row.image_data,
+                        opacity: row.opacity,
+                        gridStep: row.grid_step,
+                        state: { x: row.world_x, y: row.world_y, scale: row.scale },
+                        updated_at: row.updated_at,
+                        slot_index: row.slot_index
+                    }));
+                    setSlots(mappedSlots);
                 }
             } catch (err) {
                 console.error("[TEMPLATES] Fetch Error:", err);
@@ -53,14 +61,43 @@ export function useTemplateSlots(userId: string | undefined, eventId: string) {
     const saveSlot = async (template: Omit<TemplateSlot, 'updated_at'>) => {
         if (!userId) return;
 
+        // 1. Determine which slot_index to use (1, 2, or 3)
+        // If the image already exists in a slot, we update THAT slot_index.
+        // If it's new, we find the first empty slot or use FIFO.
+        let targetSlotIndex = template.slot_index;
+
+        if (!targetSlotIndex) {
+            const existing = slots.find(s => s.image === template.image);
+            if (existing) {
+                targetSlotIndex = existing.slot_index;
+            } else {
+                // Find first empty index between 1-3
+                const usedIndices = slots.map(s => s.slot_index).filter(Boolean) as number[];
+                for (let i = 1; i <= 3; i++) {
+                    if (!usedIndices.includes(i)) {
+                        targetSlotIndex = i;
+                        break;
+                    }
+                }
+                // If all full, replace the oldest slot (highest updated_at would be newest, so lowest is oldest)
+                if (!targetSlotIndex) {
+                    const oldest = [...slots].sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime())[0];
+                    targetSlotIndex = oldest?.slot_index || 1;
+                }
+            }
+        }
+
         const newSlot: TemplateSlot = {
             ...template,
+            slot_index: targetSlotIndex,
             updated_at: new Date().toISOString()
         };
 
-        // UI Logic: Filter duplicates and Slot FIFO (Max 3)
-        let updatedSlots = [newSlot, ...slots.filter(s => s.image !== template.image)].slice(0, 3);
-        setSlots(updatedSlots);
+        // UI Update (Keep local state in sync)
+        setSlots(prev => {
+            const filtered = prev.filter(s => s.slot_index !== targetSlotIndex);
+            return [...filtered, newSlot].sort((a, b) => (a.slot_index || 0) - (b.slot_index || 0));
+        });
 
         // Persistent Save
         try {
@@ -69,6 +106,7 @@ export function useTemplateSlots(userId: string | undefined, eventId: string) {
                 .upsert({
                     user_id: userId,
                     event_id: eventId,
+                    slot_index: targetSlotIndex, // PRIMARY KEY identifier
                     image_data: template.image,
                     opacity: template.opacity,
                     grid_step: template.gridStep,
@@ -76,20 +114,23 @@ export function useTemplateSlots(userId: string | undefined, eventId: string) {
                     world_y: template.state.y,
                     scale: template.state.scale,
                     updated_at: newSlot.updated_at
-                }, { onConflict: 'user_id,event_id,image_data' });
+                }, { onConflict: 'user_id,event_id,slot_index' }); // Using slot_index instead of image_data
 
             if (error) {
-                console.warn("[TEMPLATES] Supabase save failed, using LocalStorage fallback:", error.message);
-                localStorage.setItem(`pixel-slots-${eventId}-${userId}`, JSON.stringify(updatedSlots));
+                console.error("[TEMPLATES] Supabase save failed:", error.message);
+                // On error, sync localstorage for extreme resilience
+                localStorage.setItem(`pixel-slots-${eventId}-${userId}`, JSON.stringify(slots));
             }
         } catch (err) {
             console.error("[TEMPLATES] Save Error:", err);
-            localStorage.setItem(`pixel-slots-${eventId}-${userId}`, JSON.stringify(updatedSlots));
         }
     };
 
     const deleteSlot = async (image: string) => {
         if (!userId) return;
+
+        const slot = slots.find(s => s.image === image);
+        if (!slot) return;
 
         setSlots(prev => prev.filter(s => s.image !== image));
 
@@ -99,14 +140,9 @@ export function useTemplateSlots(userId: string | undefined, eventId: string) {
                 .delete()
                 .eq('user_id', userId)
                 .eq('event_id', eventId)
-                .eq('image_data', image);
+                .eq('slot_index', slot.slot_index);
         } catch (err) {
-            // Local fallback deletion
-            const local = localStorage.getItem(`pixel-slots-${eventId}-${userId}`);
-            if (local) {
-                const filtered = JSON.parse(local).filter((s: any) => s.image !== image);
-                localStorage.setItem(`pixel-slots-${eventId}-${userId}`, JSON.stringify(filtered));
-            }
+            console.error("[TEMPLATES] Delete Error:", err);
         }
     };
 
