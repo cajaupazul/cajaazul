@@ -164,10 +164,14 @@ const CommentItem = ({
 
             <div className="absolute left-0 top-0 z-20">
                 <UserHoverCard profile={{
-                    id: comment.user_id,
                     nombre: comment.profiles?.nombre || 'Usuario',
                     avatar_url: comment.profiles?.avatar_url,
-                    role: 'user' // Default to user, in a real app this would come from the joined data
+                    background_url: comment.profiles?.background_url,
+                    bio: comment.profiles?.bio,
+                    created_at: comment.profiles?.created_at,
+                    puntos: comment.profiles?.puntos,
+                    es_vip: comment.profiles?.es_vip,
+                    role: 'user'
                 }}>
                     <AvatarWithFrame
                         avatarUrl={comment.profiles?.avatar_url || PLACEHOLDERS.AVATAR}
@@ -189,6 +193,11 @@ const CommentItem = ({
                             id: comment.user_id,
                             nombre: comment.profiles?.nombre || 'Usuario',
                             avatar_url: comment.profiles?.avatar_url,
+                            background_url: comment.profiles?.background_url,
+                            bio: comment.profiles?.bio,
+                            created_at: comment.profiles?.created_at,
+                            puntos: comment.profiles?.puntos,
+                            es_vip: comment.profiles?.es_vip,
                             role: 'user'
                         }}>
                             <p className="font-bold text-white text-sm md:text-base hover:text-blue-400 cursor-pointer transition-colors tracking-tight">
@@ -310,7 +319,7 @@ export default function ProfessorRatingsContent({
                         const fetchProfile = async () => {
                             const { data: profileData } = await supabase
                                 .from('profiles')
-                                .select('nombre, avatar_url, active_frame_key')
+                                .select('nombre, avatar_url, active_frame_key, background_url, bio, created_at, puntos, es_vip')
                                 .eq('id', newComment.user_id)
                                 .single();
 
