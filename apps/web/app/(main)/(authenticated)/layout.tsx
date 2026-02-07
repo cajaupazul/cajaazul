@@ -437,6 +437,7 @@ export default function AuthenticatedLayout({
                 </button>
                 <h1 className="text-xl sm:text-2xl font-bold text-bb-text truncate transition-colors">
                   {(() => {
+                    if (pathname === '/profile') return 'Perfil';
                     // Helper to find active label recursively
                     for (const item of navItems) {
                       if (item.href && isActive(item.href)) return item.label;
