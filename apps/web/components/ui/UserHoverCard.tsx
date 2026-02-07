@@ -28,7 +28,7 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
     const [isOpen, setIsOpen] = useState(false);
     const { statsCache, loadingIds, prefetchUserStats, cancelPrefetch } = useUserHoverCard();
 
-    const { refs, floatingStyles, context } = useFloating({
+    const { x, y, strategy, refs, context } = useFloating({
         open: isOpen,
         onOpenChange: setIsOpen,
         placement: 'top-start',
@@ -101,13 +101,19 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
                     {isOpen && (
                         <motion.div
                             ref={refs.setFloating}
-                            style={floatingStyles}
+                            style={{
+                                position: strategy,
+                                top: y ?? 0,
+                                left: x ?? 0,
+                                width: 'max-content',
+                                zIndex: 9999
+                            }}
                             {...getFloatingProps()}
                             initial={{ opacity: 0, scale: 0.96, y: 4 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.96, y: 4 }}
                             transition={{ duration: 0.15, ease: 'easeOut' }}
-                            className="z-[9999] outline-none"
+                            className="outline-none"
                         >
                             <div className="w-[360px] max-w-[380px] bg-[#1a1a1a] rounded-xl border border-[#2a2a2a] shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden font-sans">
                                 {/* Cover Background */}
