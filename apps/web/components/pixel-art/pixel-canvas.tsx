@@ -185,13 +185,13 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
         setIsLoadingPixel(true);
         try {
-            // Step 1 & 2: Query pixel_board_state with maybeSingle()
+            // Step 1: Query pixel_board_state with simplified join
             const { data, error } = await supabase
                 .from('pixel_board_state')
                 .select(`
                     user_id,
                     color_hex,
-                    profiles:user_id (
+                    profiles (
                         id,
                         nombre,
                         avatar_url,
@@ -203,12 +203,11 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 .eq('event_id', eventId)
                 .eq('x', px)
                 .eq('y', py)
-                .maybeSingle(); // Use maybeSingle instead of single
+                .maybeSingle();
 
             // Step 4: Log errors
             if (error) {
                 console.error("[PIXEL_INFO] Pixel lookup failed:", error);
-                // Step 5: Handle empty pixels gracefully
                 setSelectedPixel({
                     x: px,
                     y: py,
@@ -218,7 +217,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 return;
             }
 
-            // Step 5: Handle null data (empty pixel)
             if (!data) {
                 console.log("[PIXEL_INFO] Empty pixel at", px, py);
                 setSelectedPixel({
@@ -230,10 +228,10 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 return;
             }
 
-            // Successfully found pixel data
             let ownerInfo = null;
             const dbColor = data.color_hex || '#FFFFFF';
 
+            // data.profiles will be an object because of maybeSingle() and the relationship
             if (data.profiles) {
                 const profile = data.profiles as any;
                 let frameUrl = null;
@@ -244,7 +242,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         .from('shop_items')
                         .select('image_url, frame_settings')
                         .eq('frame_key', profile.active_frame_key)
-                        .maybeSingle(); // Use maybeSingle here too
+                        .maybeSingle();
                     if (frameData) {
                         frameUrl = frameData.image_url;
                         frameSettings = frameData.frame_settings;
