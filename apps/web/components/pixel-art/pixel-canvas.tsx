@@ -787,6 +787,108 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 let frameUrl = null;
                 let frameSettings = null;
 
+                // If user has a frame, fetch it
+                if (profile.active_frame_key) {
+                    const { data: frameData } = await supabase
+                        .from('shop_items')
+                        .select('image_url, frame_settings')
+                        .eq('frame_key', profile.active_frame_key)
+                        .single();
+                    if (frameData) {
+                        frameUrl = frameData.image_url;
+                        frameSettings = frameData.frame_settings;
+                    }
+                }
+
+                ownerInfo = {
+                    ...profile,
+                    frame_url: frameUrl,
+                    frame_settings: frameSettings
+                };
+            }
+
+            setSelectedPixel({
+                x,
+                y,
+                color: localColor,
+                owner: ownerInfo
+            });
+
+        } catch (err) {
+            console.error("Error fetching pixel details:", err);
+            // Even if fetch fails, show local color
+            setSelectedPixel({
+                x,
+                y,
+                color: '#FFFFFF', // Fallback or handle appropriately
+                owner: null
+            });
+        } finally {
+            setIsLoadingPixel(false);
+        }
+    };
+
+    // --- Pixel Selection & Info Panel ---
+    const [selectedPixel, setSelectedPixel] = useState<{
+        x: number;
+        y: number;
+        color: string;
+        owner?: {
+            id: string;
+            nombre: string;
+            avatar_url: string | null;
+            active_frame_key?: string | null;
+            es_vip?: boolean;
+            role?: string;
+            frame_url?: string | null; // Joined from shop_items
+            frame_settings?: any;
+        } | null;
+    } | null>(null);
+    const [isLoadingPixel, setIsLoadingPixel] = useState(false);
+
+    const fetchPixelDetails = async (x: number, y: number) => {
+        setIsLoadingPixel(true);
+        try {
+            // Check local color first
+            const idx = y * gridWidth + x;
+            const uint32 = pixelDataRef.current[idx];
+            let localColor = '#FFFFFF';
+            if (uint32 === 0) {
+                // Empty
+            } else {
+                const r = uint32 & 0xFF;
+                const g = (uint32 >> 8) & 0xFF;
+                const b = (uint32 >> 16) & 0xFF;
+                localColor = rgbToHex(r, g, b);
+            }
+
+            // Fetch owner info
+            const { data, error } = await supabase
+                .from('pixel_board_state')
+                .select(`
+                    user_id,
+                    color_hex,
+                    profiles:user_id (
+                        id,
+                        nombre,
+                        avatar_url,
+                        active_frame_key,
+                        es_vip,
+                        role
+                    )
+                `)
+                .eq('event_id', eventId)
+                .eq('x', x)
+                .eq('y', y)
+                .single();
+
+            let ownerInfo = null;
+
+            if (data?.profiles) {
+                const profile = data.profiles as any;
+                let frameUrl = null;
+                let frameSettings = null;
+
                 // If user has a frame, fetch it (or use cache if we had one)
                 if (profile.active_frame_key) {
                     const { data: frameData } = await supabase
