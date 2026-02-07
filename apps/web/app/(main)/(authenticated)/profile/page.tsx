@@ -6,7 +6,6 @@ import { useTheme } from '@/lib/theme-context';
 import { useProfile } from '@/lib/profile-context';
 import { useRouter } from 'next/navigation';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
-import { StickerCanvas } from '@/components/ui/StickerCanvas';
 import { PLACEHOLDERS } from '@/lib/constants';
 import {
   Camera,
@@ -14,8 +13,6 @@ import {
   MapPin,
   Zap,
   Calendar,
-  Edit2,
-  Save,
   X,
   Award,
   BookOpen,
@@ -225,418 +222,281 @@ export default function ProfilePage() {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-bb-dark overflow-hidden transition-colors duration-300">
-      {/* Background with gradient overlay */}
-      <div className="relative min-h-screen">
-        {profile && (
-          <StickerCanvas
-            targetType="profile"
-            targetId={profile.id}
-            canEdit={true}
-          />
+    <div className="min-h-screen bg-[#070708] text-white selection:bg-blue-500/30">
+      {/* Background Banner */}
+      <div className="relative h-48 md:h-64 w-full overflow-hidden">
+        <img
+          key={backgroundImage}
+          src={getStorageUrl(backgroundImage, 'profile-avatars', PLACEHOLDERS.BACKGROUND)}
+          alt="Profile Background"
+          className="w-full h-full object-cover grayscale-[20%] opacity-60"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#070708] via-transparent to-transparent" />
+
+        {editing && !uploadingBackground && (
+          <label className="absolute top-6 right-6 p-2.5 rounded-xl bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 transition-all cursor-pointer group active:scale-95 z-30">
+            <Camera className="w-4 h-4 text-white/70 group-hover:text-white" />
+            <input ref={bgInputRef} type="file" accept="image/*" onChange={handleBackgroundUpload} className="hidden" />
+          </label>
         )}
+      </div>
 
-        {/* Background Image */}
-        <div className="absolute top-0 left-0 w-full h-64 md:h-96 overflow-hidden">
-          <img
-            key={backgroundImage} // Force re-render on URL change
-            src={getStorageUrl(backgroundImage, 'profile-avatars', PLACEHOLDERS.BACKGROUND)}
-            alt="Profile Background"
-            className="w-full h-full object-cover object-center transition-all duration-500"
-            onError={(e) => {
-              console.error('Error loading background image:', e.currentTarget.src);
-              // Fallback to placeholder if load fails
-              if (e.currentTarget.src !== PLACEHOLDERS.BACKGROUND) {
-                e.currentTarget.src = PLACEHOLDERS.BACKGROUND;
-              }
-            }}
-          />
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 relative z-10 pb-20">
+        {/* Main Header Card */}
+        <div className="bg-white/[0.03] backdrop-blur-2xl border border-white/5 rounded-[2rem] p-6 md:p-10 shadow-2xl shadow-black/50 overflow-hidden relative group">
+          {/* Subtle accent light */}
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
 
-          {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-bb-dark" />
-
-          {/* Loading Overlay */}
-          {uploadingBackground && (
-            <div className="absolute inset-0 bg-black/60 z-40 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-300">
-              <div className="flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-faculty-primary"></div>
-                <p className="text-white/90 font-medium text-sm animate-pulse">Subiendo fondo...</p>
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-8 relative z-10">
+            {/* Avatar Section */}
+            <div className="relative">
+              <div className="relative p-1 rounded-full bg-gradient-to-tr from-blue-500/20 via-transparent to-pink-500/20">
+                <AvatarWithFrame
+                  size={140}
+                  avatarUrl={getStorageUrl(formData.avatar_url || profile.avatar_url, 'profile-avatars', PLACEHOLDERS.AVATAR)}
+                  frameUrl={equippedFrame?.image_url}
+                  frameScale={equippedFrame?.frame_settings?.profile?.scale}
+                  offsetX={equippedFrame?.frame_settings?.profile?.x}
+                  offsetY={equippedFrame?.frame_settings?.profile?.y}
+                  name={profile.nombre}
+                  className="shadow-xl"
+                />
               </div>
-            </div>
-          )}
 
-          {/* Background edit button */}
-          {editing && !uploadingBackground && (
-            <label
-              className="absolute top-4 right-4 p-3 rounded-full backdrop-blur-md bg-bb-sidebar/50 hover:bg-bb-sidebar text-bb-text transition-all cursor-pointer hover:scale-110 active:scale-95 z-30 shadow-lg border border-bb-border"
-              title="Cambiar fondo"
-            >
-              <Camera className="w-5 h-5" />
-              <input
-                ref={bgInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleBackgroundUpload}
-                disabled={uploadingBackground}
-                className="hidden"
-              />
-            </label>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
-          {/* Profile Header */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 mb-8 md:mb-12 mt-12 md:mt-20">
-            {/* Avatar */}
-            <div className="relative group">
-              <AvatarWithFrame
-                size={140}
-                avatarUrl={getStorageUrl(formData.avatar_url || profile.avatar_url, 'profile-avatars', PLACEHOLDERS.AVATAR)}
-                frameUrl={equippedFrame?.image_url}
-                frameScale={equippedFrame?.frame_settings?.profile?.scale}
-                offsetX={equippedFrame?.frame_settings?.profile?.x}
-                offsetY={equippedFrame?.frame_settings?.profile?.y}
-                name={profile.nombre}
-                className="shadow-2xl transition-transform duration-300"
-              />
-
-              {/* Avatar Loading Overlay */}
-              {uploadingAvatar && (
-                <div className="absolute inset-0 rounded-full bg-black/60 z-40 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-300">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/80"></div>
-                </div>
-              )}
-
-              {/* Avatar Upload Button */}
               {editing && !uploadingAvatar && (
-                <label className="absolute bottom-2 right-2 cursor-pointer z-30">
-                  <div
-                    className="p-3 rounded-full text-white shadow-lg hover:opacity-90 transition-all hover:scale-110 backdrop-blur-sm bg-opacity-80"
-                    style={{ backgroundColor: colors?.primary }}
-                  >
-                    <Camera className="w-5 h-5" />
+                <label className="absolute bottom-2 right-2 cursor-pointer group">
+                  <div className="p-2.5 rounded-full bg-blue-600 shadow-xl group-hover:bg-blue-500 transition-all border-2 border-[#161617]">
+                    <Camera className="w-4 h-4 text-white" />
                   </div>
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    disabled={uploadingAvatar}
-                    className="hidden"
-                  />
+                  <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
                 </label>
               )}
             </div>
 
-            {/* User Info */}
-            <div className="flex-1 min-w-0 text-center sm:text-left">
-              <div className="mb-4">
-                <h1 className="text-3xl md:text-5xl font-bold text-bb-text mb-2 leading-tight flex items-center justify-center sm:justify-start gap-3">
-                  {editing ? (
-                    <input
-                      type="text"
-                      name="nombre"
-                      value={formData.nombre || ''}
-                      onChange={handleInputChange}
-                      className="bg-bb-card border border-bb-border rounded-lg px-4 py-2 text-bb-text w-full backdrop-blur-md focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
-                    />
-                  ) : (
-                    <>
-                      {profile.nombre}
-                      {(profile.role === 'admin' || profile.role === 'superadmin') && (
-                        <ShieldCheck className="w-8 h-8 md:w-10 md:h-10 text-blue-400 fill-blue-400/10 shrink-0" />
-                      )}
-                    </>
-                  )}
-                </h1>
-                <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 text-bb-text-secondary text-xs md:text-sm">
-                  <div className="flex items-center gap-2 bg-bb-card md:bg-transparent px-3 py-1.5 md:p-0 rounded-full md:rounded-none border border-bb-border md:border-0">
-                    <Mail className="w-3.5 h-3.5 md:w-4 md:h-4 text-bb-text-secondary" />
-                    <span>{userEmail}</span>
+            {/* Info Section */}
+            <div className="flex-1 text-center md:text-left pt-2">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+                <div>
+                  <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white flex items-center justify-center md:justify-start gap-3 mb-2">
+                    {editing ? (
+                      <input
+                        type="text"
+                        name="nombre"
+                        value={formData.nombre || ''}
+                        onChange={handleInputChange}
+                        className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-2xl md:text-4xl font-black focus:ring-2 focus:ring-blue-500/50 outline-none w-full"
+                      />
+                    ) : (
+                      <>
+                        {profile.nombre}
+                        {(profile.role === 'admin' || profile.role === 'superadmin') && (
+                          <ShieldCheck className="w-6 h-6 md:w-8 md:h-8 text-blue-400 fill-blue-400/20" />
+                        )}
+                      </>
+                    )}
+                  </h1>
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-white/50 text-sm font-medium">
+                    <span className="flex items-center gap-2">
+                      <Mail className="w-3.5 h-3.5 opacity-60" />
+                      {userEmail}
+                    </span>
+                    {profile.link_instagram && !editing && (
+                      <a
+                        href={profile.link_instagram.startsWith('http') ? profile.link_instagram : `https://instagram.com/${profile.link_instagram}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-pink-400/80 hover:text-pink-400 transition-colors"
+                      >
+                        <Instagram className="w-3.5 h-3.5" />
+                        <span>@{profile.link_instagram.replace(/.*\//, '').replace('@', '')}</span>
+                      </a>
+                    )}
                   </div>
-                  {profile.link_instagram && !editing && (
-                    <a
-                      href={profile.link_instagram.startsWith('http') ? profile.link_instagram : `https://instagram.com/${profile.link_instagram}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 hover:text-bb-text transition-colors"
-                    >
-                      <Instagram className="w-4 h-4 text-pink-500" />
-                      <span>@{profile.link_instagram.replace('https://instagram.com/', '').replace('/', '')}</span>
-                    </a>
-                  )}
                 </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-center sm:justify-start gap-3 flex-wrap mt-4 md:mt-0">
-                <button
-                  onClick={() => {
-                    if (editing) handleSave();
-                    else setEditing(true);
-                  }}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all duration-200 text-white hover:scale-105 shadow-lg shadow-blue-500/10 text-sm md:text-base w-full sm:w-auto justify-center"
-                  style={{ backgroundColor: colors?.primary }}
-                  disabled={uploadingAvatar || uploadingBackground}
-                >
-                  {editing ? (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Guardar
-                    </>
-                  ) : (
-                    <>
-                      <Edit2 className="w-4 h-4" />
-                      Editar Perfil
-                    </>
-                  )}
-                </button>
-                {editing && (
+                <div className="flex items-center gap-3">
                   <button
-                    onClick={handleCancel}
-                    disabled={uploadingAvatar || uploadingBackground}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold bg-bb-card hover:bg-bb-hover text-bb-text transition-all backdrop-blur text-sm md:text-base w-full sm:w-auto justify-center border border-bb-border"
+                    onClick={() => editing ? handleSave() : setEditing(true)}
+                    className="flex-1 md:flex-none px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95 text-sm"
                   >
-                    <X className="w-4 h-4" />
-                    Cancelar
+                    {editing ? 'Guardar Cambios' : 'Editar Perfil'}
                   </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            {/* Puntos */}
-            <div className="rounded-xl p-6 border transition-all hover:shadow-lg bg-bb-card border-bb-border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-bb-text-secondary text-[10px] md:text-xs uppercase tracking-widest mb-1 md:mb-2">Puntos</p>
-                  <p className="text-3xl md:text-4xl font-bold" style={{ color: colors?.primary }}>
-                    {profile.puntos}
-                  </p>
+                  {editing && (
+                    <button
+                      onClick={handleCancel}
+                      className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl border border-white/10 transition-all text-sm"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
-                <Zap className="w-10 h-10 md:w-12 md:h-12" style={{ color: colors?.primary, opacity: 0.2 }} />
-              </div>
-            </div>
-
-            {/* Miembro desde */}
-            <div className="rounded-xl p-6 border transition-all hover:shadow-lg bg-bb-card border-bb-border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-bb-text-secondary text-[10px] md:text-xs uppercase tracking-widest mb-1 md:mb-2">Miembro desde</p>
-                  <p className="text-2xl md:text-3xl font-bold text-bb-text">
-                    {new Date(profile.created_at).getFullYear()}
-                  </p>
-                </div>
-                <Calendar className="w-10 h-10 md:w-12 md:h-12" style={{ color: colors?.primary, opacity: 0.2 }} />
-              </div>
-            </div>
-
-            {/* Logros */}
-            <div className="rounded-xl p-6 border transition-all hover:shadow-lg bg-bb-card border-bb-border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-bb-text-secondary text-[10px] md:text-xs uppercase tracking-widest mb-1 md:mb-2">Logros</p>
-                  <p className="text-2xl md:text-3xl font-bold text-bb-text">
-                    {Math.floor(profile.puntos / 50)}
-                  </p>
-                </div>
-                <Award className="w-10 h-10 md:w-12 md:h-12" style={{ color: colors?.primary, opacity: 0.2 }} />
-              </div>
-            </div>
-          </div>
-
-          {/* Info Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-            <div className="p-4 rounded-lg border bg-bb-card border-bb-border">
-              <div className="text-xs text-bb-text-secondary uppercase tracking-wider mb-2 flex items-center gap-2">
-                <MapPin className="w-4 h-4" style={{ color: colors?.primary }} />
-                Universidad
-              </div>
-              {editing ? (
-                <input
-                  type="text"
-                  name="universidad"
-                  value={formData.universidad || ''}
-                  readOnly
-                  className="w-full bg-bb-dark border border-bb-border rounded px-3 py-2 text-bb-text/50 focus:outline-none cursor-not-allowed"
-                />
-              ) : (
-                <div className="text-bb-text font-semibold text-lg">
-                  {profile.universidad || 'No especificada'}
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 rounded-lg border bg-bb-card border-bb-border">
-              <div className="text-xs text-bb-text-secondary uppercase tracking-wider mb-2 flex items-center gap-2">
-                <BookOpen className="w-4 h-4" style={{ color: colors?.primary }} />
-                Facultad
-              </div>
-              {editing ? (
-                <input
-                  type="text"
-                  name="carrera"
-                  value={formData.carrera || ''}
-                  readOnly
-                  className="w-full bg-bb-dark border border-bb-border rounded px-3 py-2 text-bb-text/50 focus:outline-none cursor-not-allowed"
-                />
-              ) : (
-                <div className="text-bb-text font-semibold text-lg">
-                  {profile.carrera || 'No especificada'}
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 rounded-lg border bg-bb-card border-bb-border">
-              <div className="text-xs text-bb-text-secondary uppercase tracking-wider mb-2 flex items-center gap-2">
-                <Instagram className="w-4 h-4" style={{ color: colors?.primary }} />
-                Instagram
-              </div>
-              {editing ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-bb-text-secondary text-sm">instagram.com/</span>
-                  <input
-                    type="text"
-                    name="link_instagram"
-                    value={formData.link_instagram?.replace('https://instagram.com/', '') || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, link_instagram: e.target.value }))}
-                    placeholder="usuario"
-                    className="w-full bg-bb-dark border border-bb-border rounded px-3 py-2 text-bb-text focus:outline-none focus:border-faculty-primary/50"
-                  />
-                </div>
-              ) : (
-                profile.link_instagram ? (
-                  <a
-                    href={`https://instagram.com/${profile.link_instagram.replace('https://instagram.com/', '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-bb-text font-semibold text-lg hover:underline truncate block"
-                  >
-                    @{profile.link_instagram.replace('https://instagram.com/', '')}
-                  </a>
-                ) : (
-                  <div className="text-bb-text-secondary italic">No vinculado</div>
-                )
-              )}
-            </div>
-          </div>
-
-          {/* Bio Section */}
-          <div
-            className="rounded-xl p-6 border bg-bb-card border-bb-border"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-bb-text flex items-center gap-2">
-                <span style={{ color: colors?.primary }}>✨</span>
-                Acerca de ti
-              </h2>
-            </div>
-
-            {editing ? (
-              <textarea
-                name="bio"
-                value={formData.bio || ''}
-                onChange={handleInputChange}
-                placeholder="Cuéntanos sobre ti, tus intereses, logros..."
-                className="w-full bg-bb-dark border border-bb-border rounded-lg px-4 py-3 text-bb-text placeholder-bb-text-secondary focus:outline-none focus:border-faculty-primary/50 resize-none"
-                rows={4}
-              />
-            ) : (
-              <p className="text-bb-text-secondary leading-relaxed text-base">
-                {profile.bio || '📝 No hay información personal. ¡Edita tu perfil para agregarlo!'}
-              </p>
-            )}
-            {/* Personalization Section (Theme Switcher) */}
-            <div
-              className="rounded-xl p-6 border bg-bb-card border-bb-border mb-8 mt-8"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-bb-text flex items-center gap-2">
-                  <span style={{ color: colors?.primary }}>🎨</span>
-                  Personalización
-                </h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {/* Light Mode Option */}
-                <button
-                  onClick={() => setThemeMode('light')}
-                  className={`group relative p-3 rounded-xl border-2 transition-all duration-300 text-left overflow-hidden ${themeMode === 'light'
-                    ? 'border-blue-500 bg-white shadow-md'
-                    : 'border-transparent bg-bb-hover hover:border-bb-border'
-                    }`}
-                >
-                  <div className="flex items-center gap-3 relative z-10">
-                    <div className={`p-1.5 rounded-lg ${themeMode === 'light' ? 'bg-blue-100 text-blue-600' : 'bg-bb-card text-bb-text-secondary'}`}>
-                      <Calendar className="w-4 h-4" />
-                    </div>
-                    <span className={`font-bold text-sm ${themeMode === 'light' ? 'text-gray-900' : 'text-bb-text-secondary group-hover:text-bb-text'}`}>
-                      Modo Claro
-                    </span>
-                    {themeMode === 'light' && <Award className="w-4 h-4 text-blue-500 ml-auto" />}
+              {/* Minimalist Stats Strip */}
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-8 border-t border-white/5 pt-6 mt-6">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Puntos</span>
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-blue-500" />
+                    <span className="text-xl font-black">{profile.puntos}</span>
                   </div>
-                </button>
-
-                {/* Solid Dark Mode Option */}
-                <button
-                  onClick={() => setThemeMode('dark')}
-                  className={`group relative p-3 rounded-xl border-2 transition-all duration-300 text-left overflow-hidden ${themeMode === 'dark'
-                    ? 'border-blue-500 bg-black shadow-md shadow-blue-500/10'
-                    : 'border-transparent bg-bb-hover hover:border-bb-border'
-                    }`}
-                >
-                  <div className="flex items-center gap-3 relative z-10">
-                    <div className={`p-1.5 rounded-lg ${themeMode === 'dark' ? 'bg-blue-900/30 text-blue-400' : 'bg-bb-card text-bb-text-secondary'}`}>
-                      <Zap className="w-4 h-4" />
-                    </div>
-                    <span className={`font-bold text-sm ${themeMode === 'dark' ? 'text-white' : 'text-bb-text-secondary group-hover:text-bb-text'}`}>
-                      Modo Oscuro
-                    </span>
-                    {themeMode === 'dark' && <Award className="w-4 h-4 text-blue-500 ml-auto" />}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Miembro</span>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-white/40" />
+                    <span className="text-xl font-black">{new Date(profile.created_at).getFullYear()}</span>
                   </div>
-                </button>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Logros</span>
+                  <div className="flex items-center gap-2">
+                    <Award className="w-4 h-4 text-white/40" />
+                    <span className="text-xl font-black">{Math.floor(profile.puntos / 50)}</span>
+                  </div>
+                </div>
               </div>
             </div>
-
-          </div>
-
-          {/* Safety & Security Section */}
-          <div className="rounded-xl p-6 border bg-bb-card border-bb-border mb-8 mt-8">
-            <h2 className="text-xl font-bold text-bb-text flex items-center gap-2 mb-6">
-              <span className="text-red-500">🔒</span>
-              Seguridad y Privacidad
-            </h2>
-
-            <div className="flex flex-col md:flex-row items-center justify-between p-4 rounded-xl bg-red-500/5 border border-red-500/10 gap-4">
-              <div>
-                <h3 className="text-bb-text font-bold mb-1">Cerrar mi Cuenta</h3>
-                <p className="text-bb-text-secondary text-sm">Elimina permanentemente tu cuenta y todos sus datos asociados.</p>
-              </div>
-              <button
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold bg-red-600/10 hover:bg-red-600 text-red-600 hover:text-white transition-all text-sm w-full md:w-auto justify-center border border-red-500/20"
-              >
-                <Trash2 className="w-4 h-4" />
-                Eliminar Cuenta
-              </button>
-            </div>
-          </div>
-
-          <DeleteAccountModal
-            isOpen={isDeleteModalOpen}
-            onClose={() => setIsDeleteModalOpen(false)}
-          />
-
-          {/* Footer */}
-          <div className="text-center mt-12 text-bb-text-secondary text-xs">
-            <p>Última actualización: {new Date(profile.updated_at).toLocaleDateString('es-ES')} </p>
-            <p className="mt-2 text-bb-text-secondary/60">ID: {profile.id.substring(0, 8)}...</p>
           </div>
         </div>
+
+        {/* Secondary Info & Sections */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+          {/* Main Content Column */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Bio Section */}
+            <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-8">
+              <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white/30 mb-6 flex items-center gap-3">
+                <span className="w-1 h-3 bg-blue-500 rounded-full" />
+                Descripción
+              </h2>
+              {editing ? (
+                <textarea
+                  name="bio"
+                  value={formData.bio || ''}
+                  onChange={handleInputChange}
+                  placeholder="Escribe algo sobre ti..."
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none min-h-[140px] text-sm leading-relaxed"
+                />
+              ) : (
+                <p className="text-white/60 leading-relaxed text-base font-medium">
+                  {profile.bio || 'Sin biografía disponible. Haz clic en Editar para agregar una.'}
+                </p>
+              )}
+            </div>
+
+            {/* Customization & Settings Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-8">
+                <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white/30 mb-6 flex items-center gap-3">
+                  <span className="w-1 h-3 bg-pink-500 rounded-full" />
+                  Personalización
+                </h2>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setThemeMode('light')}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition-all ${themeMode === 'light' ? 'bg-blue-600 border-blue-500' : 'bg-white/5 border-white/5 hover:border-white/20 text-white/50 hover:text-white'}`}
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span className="text-xs font-bold uppercase tracking-tighter">Claro</span>
+                  </button>
+                  <button
+                    onClick={() => setThemeMode('dark')}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition-all ${themeMode === 'dark' ? 'bg-blue-600 border-blue-500' : 'bg-white/5 border-white/5 hover:border-white/20 text-white/50 hover:text-white'}`}
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    <span className="text-xs font-bold uppercase tracking-tighter">Oscuro</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-red-500/[0.02] border border-red-500/10 rounded-3xl p-8">
+                <h2 className="text-sm font-black uppercase tracking-[0.2em] text-red-500/40 mb-6 flex items-center gap-3">
+                  <span className="w-1 h-3 bg-red-500 rounded-full" />
+                  Seguridad
+                </h2>
+                <button
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="w-full flex items-center justify-between group p-3 rounded-xl bg-red-500/5 border border-red-500/10 hover:bg-red-500 hover:border-red-500 transition-all text-red-500 hover:text-white"
+                >
+                  <span className="text-xs font-black uppercase">Cerrar Cuenta</span>
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar Column */}
+          <div className="space-y-6">
+            <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-8">
+              <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white/30 mb-6 flex items-center gap-3">
+                <span className="w-1 h-3 bg-teal-500 rounded-full" />
+                Información
+              </h2>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/20 block mb-2">Universidad</label>
+                  <div className="flex items-center gap-3 text-white/80">
+                    <MapPin className="w-4 h-4 text-teal-400" />
+                    <span className="text-sm font-bold">{profile.universidad || 'UP'}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/20 block mb-2">Facultad</label>
+                  <div className="flex items-center gap-3 text-white/80">
+                    <BookOpen className="w-4 h-4 text-teal-400" />
+                    <span className="text-sm font-bold">{profile.carrera || 'Facultad'}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/20 block mb-2">Instagram</label>
+                  {editing ? (
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs">
+                      <Instagram className="w-3.5 h-3.5 text-pink-400" />
+                      <input
+                        type="text"
+                        value={formData.link_instagram?.replace('https://instagram.com/', '') || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, link_instagram: e.target.value }))}
+                        className="bg-transparent outline-none flex-1 text-white"
+                        placeholder="usuario"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 text-white/80">
+                      <Instagram className="w-4 h-4 text-pink-400" />
+                      <span className="text-sm font-bold truncate">@{profile.link_instagram || 'no_vinculado'}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Verification Badge (if applicable) */}
+            <div className="bg-gradient-to-br from-blue-600/20 to-teal-600/5 border border-white/5 rounded-3xl p-6 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-white uppercase tracking-tight">Estudiante Verificado</p>
+                <p className="text-[10px] text-white/40 font-medium">Cuenta activa y validada</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer info */}
+        <div className="mt-12 text-center text-[10px] font-black uppercase tracking-[0.2em] text-white/10">
+          Última actualización: {new Date(profile.updated_at).toLocaleDateString('es-ES')} • ID: {profile.id.substring(0, 8)}
+        </div>
       </div>
-    </div >
+
+      <DeleteAccountModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+      />
+    </div>
   );
 }
