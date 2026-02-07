@@ -41,7 +41,8 @@ import {
     Unlock,
     Info,
     Check,
-    Pencil
+    Pencil,
+    Star
 } from 'lucide-react';
 
 // High Contrast Cursor (Black with White Border)
