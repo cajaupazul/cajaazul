@@ -28,6 +28,7 @@ const MATERIAL_TYPES = [
     { value: 'ppt', label: '📊 Presentación (PPT)', description: 'Diapositivas de clase' },
     { value: 'examen', label: '📝 Examen Pasado', description: 'Parciales, finales o prácticas' },
     { value: 'guia', label: '📚 Guía de Estudio', description: 'Resúmenes y apuntes' },
+    { value: 'enlace', label: '🔗 Enlace / Link', description: 'Links externos o videos' },
     { value: 'otro', label: '📎 Otro Material', description: 'Cualquier otro recurso útil' },
 ];
 
@@ -42,6 +43,15 @@ export default function FullPageUploadForm({
     const [materialType, setMaterialType] = useState('otro');
     const [professorId, setProfessorId] = useState<string>('none');
     const [description, setDescription] = useState('');
+    const [links, setLinks] = useState<{ titulo: string; url: string }[]>([{ titulo: '', url: '' }]);
+
+    const addLinkRow = () => setLinks(prev => [...prev, { titulo: '', url: '' }]);
+    const updateLink = (index: number, field: 'titulo' | 'url', value: string) => {
+        const newLinks = [...links];
+        newLinks[index][field] = value;
+        setLinks(newLinks);
+    };
+    const removeLinkRow = (index: number) => setLinks(prev => prev.filter((_, i) => i !== index));
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFiles = Array.from(e.target.files || []);
@@ -53,8 +63,13 @@ export default function FullPageUploadForm({
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (files.length === 0 || !materialType) {
+        if (materialType !== 'enlace' && files.length === 0) {
             alert('Por favor selecciona al menos un archivo');
+            return;
+        }
+
+        if (materialType === 'enlace' && links.some(l => !l.url)) {
+            alert('Por favor ingresa la URL de todos los enlaces');
             return;
         }
 
@@ -65,39 +80,48 @@ export default function FullPageUploadForm({
             if (!user) throw new Error('Usuario no autenticado');
             const userId = user.id;
 
-            for (const file of files) {
-                // 1. Crear nombre único para el archivo
-                const fileExt = file.name.split('.').pop();
-                const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+            if (materialType === 'enlace') {
+                for (const link of links) {
+                    if (!link.url) continue;
+                    const { error: insertError } = await supabase.from('materials').insert({
+                        course_id: courseId,
+                        user_id: userId,
+                        professor_id: professorId === 'none' ? null : professorId,
+                        titulo: link.titulo || 'Enlace Externo',
+                        descripcion: description.trim() || null,
+                        url_archivo: link.url,
+                        tipo: 'enlace',
+                        descargas: 0,
+                    });
+                    if (insertError) throw new Error(`Error al guardar enlace: ${insertError.message}`);
+                }
+            } else {
+                for (const file of files) {
+                    const fileExt = file.name.split('.').pop();
+                    const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-                // 2. Subir archivo a R2 via Proxy
-                const { uploadFileToR2 } = await import('@/lib/r2-storage');
-                const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
+                    const { uploadFileToR2 } = await import('@/lib/r2-storage');
+                    const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
 
-                // 3. (Supabase Storage upload removed)
+                    const { error: insertError } = await supabase.from('materials').insert({
+                        course_id: courseId,
+                        user_id: userId,
+                        professor_id: professorId === 'none' ? null : professorId,
+                        titulo: file.name.split('.')[0] || file.name,
+                        descripcion: description.trim() || null,
+                        url_archivo: materialUrl,
+                        tipo: materialType,
+                        descargas: 0,
+                    });
 
-                // 4. Insertar en base de datos
-                const { error: insertError } = await supabase.from('materials').insert({
-                    course_id: courseId,
-                    user_id: userId,
-                    professor_id: professorId === 'none' ? null : professorId,
-                    titulo: file.name.split('.')[0] || file.name,
-                    descripcion: description.trim() || null,
-                    url_archivo: materialUrl,
-                    tipo: materialType,
-                    descargas: 0,
-                });
+                    if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
 
-                if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
-
-                // 5. Si es un sílabo, actualizar la tabla de cursos
-                if (materialType === 'syllabus') {
-                    const { error: updateCourseError } = await supabase
-                        .from('courses')
-                        .update({ syllabus_url: materialUrl })
-                        .eq('id', courseId);
-
-                    if (updateCourseError) console.error('Error updating course syllabus_url:', updateCourseError);
+                    if (materialType === 'syllabus') {
+                        await supabase
+                            .from('courses')
+                            .update({ syllabus_url: materialUrl })
+                            .eq('id', courseId);
+                    }
                 }
             }
 
@@ -133,59 +157,108 @@ export default function FullPageUploadForm({
                 {/* 1. Selección de Archivo */}
                 <div className="space-y-4">
                     <Label className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
-                        <CheckCircle className={`h-5 w-5 ${files.length > 0 ? 'text-green-500' : 'text-bb-border'}`} />
-                        1. Selecciona los archivos
+                        <CheckCircle className={`h-5 w-5 ${materialType === 'enlace' ? (links.some(l => l.url) ? 'text-green-500' : 'text-bb-border') : (files.length > 0 ? 'text-green-500' : 'text-bb-border')}`} />
+                        1. {materialType === 'enlace' ? 'Agrega los enlaces' : 'Selecciona los archivos'}
                     </Label>
 
-                    <div className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${files.length > 0 ? 'border-blue-500 bg-blue-500/5' : 'border-bb-border hover:border-blue-500 hover:bg-bb-darker/50'
-                        }`}>
-                        <input
-                            id="file"
-                            type="file"
-                            multiple
-                            onChange={handleFileChange}
-                            className="hidden"
-                            accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
-                        />
-                        <label htmlFor="file" className="cursor-pointer block w-full h-full">
-                            <div className="flex flex-col items-center gap-4 py-4">
-                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform active:scale-90 ${files.length > 0 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-bb-darker text-blue-400 border border-bb-border'}`}>
-                                    <Upload className="h-8 w-8" />
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-lg font-bold text-white">Arrastra tus archivos aquí o haz clic para explorar</p>
-                                    <p className="text-xs text-bb-text-secondary font-medium">Soporta múltiples archivos: PDF, PPT, Word, Imágenes, ZIP</p>
-                                </div>
-                            </div>
-                        </label>
-                    </div>
-
-                    {files.length > 0 && (
-                        <div className="space-y-3 mt-4">
-                            <Label className="text-[10px] font-black text-bb-text-secondary uppercase tracking-[0.2em] px-1 italic">Archivos Seleccionados ({files.length})</Label>
-                            <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar border border-bb-border/30 rounded-2xl p-2 bg-bb-darker/30">
-                                {files.map((f, i) => (
-                                    <div key={i} className="flex items-center justify-between p-3 bg-bb-card rounded-xl border border-bb-border group hover:border-blue-500/30 transition-all">
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className="p-2 bg-blue-500/10 rounded-lg">
-                                                <FileText className="h-4 w-4 text-blue-400 shrink-0" />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-bold text-white truncate">{f.name}</p>
-                                                <p className="text-[10px] text-bb-text-secondary font-medium">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setFiles(prev => prev.filter((_, idx) => idx !== i))}
-                                            className="p-2 hover:bg-red-500/10 text-bb-text-secondary hover:text-red-500 rounded-lg transition-all"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </button>
+                    {materialType === 'enlace' ? (
+                        <div className="space-y-4">
+                            {links.map((link, index) => (
+                                <div key={index} className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-bb-darker/50 rounded-2xl border border-bb-border">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-bb-text-secondary tracking-widest pl-1">Título del enlace</Label>
+                                        <Input
+                                            placeholder="Ej: Video de la clase"
+                                            value={link.titulo}
+                                            onChange={(e) => updateLink(index, 'titulo', e.target.value)}
+                                            className="h-11 bg-bb-card border-bb-border text-white rounded-xl"
+                                        />
                                     </div>
-                                ))}
-                            </div>
+                                    <div className="space-y-2 relative">
+                                        <Label className="text-[10px] font-black uppercase text-bb-text-secondary tracking-widest pl-1">URL / Link *</Label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                placeholder="https://..."
+                                                value={link.url}
+                                                onChange={(e) => updateLink(index, 'url', e.target.value)}
+                                                className="h-11 bg-bb-card border-bb-border text-white rounded-xl flex-1"
+                                            />
+                                            {links.length > 1 && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    onClick={() => removeLinkRow(index)}
+                                                    className="h-11 w-11 p-0 text-red-400 hover:bg-red-500/10 rounded-xl"
+                                                >
+                                                    <X className="h-5 w-5" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={addLinkRow}
+                                className="w-full h-12 border-dashed border-2 border-bb-border text-bb-text-secondary hover:text-blue-400 hover:border-blue-500/50 rounded-2xl font-bold transition-all"
+                            >
+                                + Agregar otro enlace
+                            </Button>
                         </div>
+                    ) : (
+                        <>
+                            <div className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${files.length > 0 ? 'border-blue-500 bg-blue-500/5' : 'border-bb-border hover:border-blue-500 hover:bg-bb-darker/50'
+                                }`}>
+                                <input
+                                    id="file"
+                                    type="file"
+                                    multiple
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                    accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
+                                />
+                                <label htmlFor="file" className="cursor-pointer block w-full h-full">
+                                    <div className="flex flex-col items-center gap-4 py-4">
+                                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform active:scale-90 ${files.length > 0 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-bb-darker text-blue-400 border border-bb-border'}`}>
+                                            <Upload className="h-8 w-8" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-lg font-bold text-white">Arrastra tus archivos aquí o haz clic para explorar</p>
+                                            <p className="text-xs text-bb-text-secondary font-medium">Soporta múltiples archivos: PDF, PPT, Word, Imágenes, ZIP</p>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            {files.length > 0 && (
+                                <div className="space-y-3 mt-4">
+                                    <Label className="text-[10px] font-black text-bb-text-secondary uppercase tracking-[0.2em] px-1 italic">Archivos Seleccionados ({files.length})</Label>
+                                    <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar border border-bb-border/30 rounded-2xl p-2 bg-bb-darker/30">
+                                        {files.map((f, i) => (
+                                            <div key={i} className="flex items-center justify-between p-3 bg-bb-card rounded-xl border border-bb-border group hover:border-blue-500/30 transition-all">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                                                        <FileText className="h-4 w-4 text-blue-400 shrink-0" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-bold text-white truncate">{f.name}</p>
+                                                        <p className="text-[10px] text-bb-text-secondary font-medium">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFiles(prev => prev.filter((_, idx) => idx !== i))}
+                                                    className="p-2 hover:bg-red-500/10 text-bb-text-secondary hover:text-red-500 rounded-lg transition-all"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
 
@@ -274,6 +347,9 @@ export default function FullPageUploadForm({
                             <p className="text-[10px] text-bb-text-secondary mt-4 leading-relaxed italic font-medium">
                                 Si el material corresponde a una clase específica de un profesor, selecciónalo aquí. Esto ayudará a otros estudiantes a encontrar materiales de sus docentes.
                             </p>
+                            <p className="text-[9px] text-blue-400/70 mt-2 font-bold uppercase tracking-tighter">
+                                * Si el profesor no se encuentra en la lista, deberías agregar uno nuevo.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -289,10 +365,10 @@ export default function FullPageUploadForm({
                     </Button>
                     <Button
                         type="submit"
-                        disabled={uploading || files.length === 0}
+                        disabled={uploading || (materialType === 'enlace' ? links.every(l => !l.url) : files.length === 0)}
                         className="w-full sm:w-64 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all text-white font-black uppercase tracking-widest text-xs h-12 rounded-xl active:scale-95 disabled:opacity-50"
                     >
-                        {uploading ? 'Subiendo...' : 'Publicar Materiales'}
+                        {uploading ? 'Subiendo...' : (materialType === 'enlace' ? 'Publicar Enlaces' : 'Publicar Materiales')}
                     </Button>
                 </div>
             </form>

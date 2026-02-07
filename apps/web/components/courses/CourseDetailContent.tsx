@@ -11,7 +11,7 @@ import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import { PLACEHOLDERS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
 
-type TabType = 'todos' | 'silabo' | 'presentaciones' | 'examenes' | 'otros';
+type TabType = 'todos' | 'silabo' | 'presentaciones' | 'examenes' | 'enlaces' | 'otros';
 
 interface CourseDetailContentProps {
     course: Course;
@@ -118,12 +118,17 @@ export default function CourseDetailContent({
         return materialsForCounts.filter(m => m.tipo?.toLowerCase().includes('examen')).length;
     }, [materialsForCounts]);
 
+    const enlacesCount = useMemo(() => {
+        return materialsForCounts.filter(m => m.tipo === 'enlace').length;
+    }, [materialsForCounts]);
+
     const otrosCount = useMemo(() => {
         return materialsForCounts.filter(m =>
             !m.tipo?.toLowerCase().includes('ppt') &&
             !m.tipo?.toLowerCase().includes('presentacion') &&
             !m.tipo?.toLowerCase().includes('examen') &&
-            m.tipo !== 'syllabus'
+            m.tipo !== 'syllabus' &&
+            m.tipo !== 'enlace'
         ).length;
     }, [materialsForCounts]);
 
@@ -154,12 +159,17 @@ export default function CourseDetailContent({
             return base.filter(m => m.tipo?.toLowerCase().includes('examen'));
         }
 
+        if (activeTab === 'enlaces') {
+            return base.filter(m => m.tipo === 'enlace');
+        }
+
         if (activeTab === 'otros') {
             return base.filter(m =>
                 !m.tipo?.toLowerCase().includes('ppt') &&
                 !m.tipo?.toLowerCase().includes('presentacion') &&
                 !m.tipo?.toLowerCase().includes('examen') &&
-                m.tipo !== 'syllabus'
+                m.tipo !== 'syllabus' &&
+                m.tipo !== 'enlace'
             );
         }
 
@@ -183,6 +193,7 @@ export default function CourseDetailContent({
         { id: 'silabo' as TabType, label: '📖 Sílabo', count: syllabusCount },
         { id: 'presentaciones' as TabType, label: '📊 Presentaciones', count: presentacionesCount },
         { id: 'examenes' as TabType, label: '📝 Exámenes Pasados', count: examenesCount },
+        { id: 'enlaces' as TabType, label: '🔗 Enlaces', count: enlacesCount },
         { id: 'otros' as TabType, label: '📚 Otros Recursos', count: otrosCount },
     ];
 
@@ -216,12 +227,24 @@ export default function CourseDetailContent({
                             icon = <FileText className="w-5 h-5" />;
                             colorClass = 'text-teal-400';
                             bgClass = 'bg-teal-500/10';
+                        } else if (materialType === 'enlace') {
+                            icon = <LayoutPanelLeft className="w-5 h-5" />;
+                            colorClass = 'text-blue-400';
+                            bgClass = 'bg-blue-500/10';
                         }
+
+                        const handleItemClick = () => {
+                            if (materialType === 'enlace') {
+                                window.open(material.url_archivo, '_blank');
+                            } else {
+                                setViewingFile({ path: material.url_archivo, name: material.titulo });
+                            }
+                        };
 
                         return (
                             <div
                                 key={material.id}
-                                onClick={() => setViewingFile({ path: material.url_archivo, name: material.titulo })}
+                                onClick={handleItemClick}
                                 className="flex items-center justify-between p-3 bg-bb-darker/30 hover:bg-bb-card rounded-xl border border-bb-border/50 hover:border-blue-500/30 transition-all cursor-pointer group active:scale-[0.99]"
                             >
                                 <div className="flex items-center gap-4 min-w-0">
@@ -258,7 +281,7 @@ export default function CourseDetailContent({
                                         </button>
                                     )}
                                     <Button variant="ghost" size="sm" className="hidden sm:flex text-bb-text-secondary hover:text-white h-8 px-2 text-xs font-bold">
-                                        Ver Documento
+                                        {materialType === 'enlace' ? 'Ir al enlace' : 'Ver Documento'}
                                     </Button>
                                     <LayoutPanelLeft className="w-4 h-4 text-bb-text-secondary group-hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all" />
                                 </div>
@@ -288,12 +311,25 @@ export default function CourseDetailContent({
                         borderColor = 'border-red-500/20';
                         textColor = 'text-red-400';
                         icon = <FileText className="w-6 h-6 md:w-8 md:h-8" />;
+                    } else if (materialType === 'enlace') {
+                        bgColor = 'bg-blue-500/10';
+                        borderColor = 'border-blue-500/20';
+                        textColor = 'text-blue-400';
+                        icon = <LayoutPanelLeft className="w-6 h-6 md:w-8 md:h-8" />;
                     }
+
+                    const handleItemClick = () => {
+                        if (materialType === 'enlace') {
+                            window.open(material.url_archivo, '_blank');
+                        } else {
+                            setViewingFile({ path: material.url_archivo, name: material.titulo });
+                        }
+                    };
 
                     return (
                         <div
                             key={material.id}
-                            onClick={() => setViewingFile({ path: material.url_archivo, name: material.titulo })}
+                            onClick={handleItemClick}
                             className={`relative p-3 md:p-4 ${bgColor} rounded-xl hover:bg-opacity-20 transition-all border ${borderColor} flex flex-col items-center gap-2 md:gap-3 group cursor-pointer active:scale-95`}
                         >
                             {currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (

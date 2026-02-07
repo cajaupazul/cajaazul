@@ -36,6 +36,7 @@ const MATERIAL_TYPES = [
     { value: 'ppt', label: '📊 Presentación (PPT)' },
     { value: 'examen', label: '📝 Examen Pasado' },
     { value: 'guia', label: '📚 Guía de Estudio' },
+    { value: 'enlace', label: '🔗 Enlace / Link' },
     { value: 'otro', label: '📎 Otro Material' },
 ];
 
@@ -50,6 +51,15 @@ export default function UploadMaterialsForm({
     const [materialType, setMaterialType] = useState('otro');
     const [professorId, setProfessorId] = useState<string>('none');
     const [description, setDescription] = useState('');
+    const [links, setLinks] = useState<{ titulo: string; url: string }[]>([{ titulo: '', url: '' }]);
+
+    const addLinkRow = () => setLinks(prev => [...prev, { titulo: '', url: '' }]);
+    const updateLink = (index: number, field: 'titulo' | 'url', value: string) => {
+        const newLinks = [...links];
+        newLinks[index][field] = value;
+        setLinks(newLinks);
+    };
+    const removeLinkRow = (index: number) => setLinks(prev => prev.filter((_, i) => i !== index));
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFiles = Array.from(e.target.files || []);
@@ -61,8 +71,13 @@ export default function UploadMaterialsForm({
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (files.length === 0 || !materialType) {
+        if (materialType !== 'enlace' && files.length === 0) {
             alert('Por favor selecciona al menos un archivo');
+            return;
+        }
+
+        if (materialType === 'enlace' && links.some(l => !l.url)) {
+            alert('Por favor ingresa la URL de todos los enlaces');
             return;
         }
 
@@ -73,46 +88,54 @@ export default function UploadMaterialsForm({
             if (!user) throw new Error('Usuario no autenticado');
             const userId = user.id;
 
-            for (const file of files) {
-                // Crear nombre único para el archivo
-                const fileExt = file.name.split('.').pop();
-                const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-
-                // Subir archivo a R2 via Proxy
-                const { uploadFileToR2 } = await import('@/lib/r2-storage');
-                const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
-
-                // (Supabase Storage upload removed)
-
-                // Insertar registro en la tabla materials
-                const { error: insertError } = await supabase.from('materials').insert({
-                    course_id: courseId,
-                    user_id: userId,
-                    professor_id: professorId === 'none' ? null : professorId,
-                    titulo: file.name.split('.')[0] || file.name,
-                    descripcion: description.trim() || null,
-                    url_archivo: materialUrl,
-                    tipo: materialType,
-                    descargas: 0,
-                });
-
-                if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
-
-                // Trigger conversion for Office files (non-blocking)
-                const officeExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'];
-                if (officeExtensions.includes(fileExt?.toLowerCase() || '')) {
-                    // Import dynamically to avoid SSR issues if any (though this is client component)
-                    const { triggerFileConversion } = await import('@/lib/converter');
-                    // Fire and forget - don't await completion, just scheduling
-                    triggerFileConversion(materialUrl.split('/course_materials/')[1] || materialUrl.replace(`${process.env.NEXT_PUBLIC_API_URL}/storage/secure-url?path=`, '').split('&')[0], 'course-materials').catch(console.error);
+            if (materialType === 'enlace') {
+                for (const link of links) {
+                    if (!link.url) continue;
+                    const { error: insertError } = await supabase.from('materials').insert({
+                        course_id: courseId,
+                        user_id: userId,
+                        professor_id: professorId === 'none' ? null : professorId,
+                        titulo: link.titulo || 'Enlace Externo',
+                        descripcion: description.trim() || null,
+                        url_archivo: link.url,
+                        tipo: 'enlace',
+                        descargas: 0,
+                    });
+                    if (insertError) throw new Error(`Error al guardar enlace: ${insertError.message}`);
                 }
+            } else {
+                for (const file of files) {
+                    const fileExt = file.name.split('.').pop();
+                    const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-                // Actualizar syllabus_url en courses si es tipo syllabus
-                if (materialType === 'syllabus') {
-                    await supabase
-                        .from('courses')
-                        .update({ syllabus_url: materialUrl })
-                        .eq('id', courseId);
+                    const { uploadFileToR2 } = await import('@/lib/r2-storage');
+                    const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
+
+                    const { error: insertError } = await supabase.from('materials').insert({
+                        course_id: courseId,
+                        user_id: userId,
+                        professor_id: professorId === 'none' ? null : professorId,
+                        titulo: file.name.split('.')[0] || file.name,
+                        descripcion: description.trim() || null,
+                        url_archivo: materialUrl,
+                        tipo: materialType,
+                        descargas: 0,
+                    });
+
+                    if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
+
+                    const officeExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'];
+                    if (officeExtensions.includes(fileExt?.toLowerCase() || '')) {
+                        const { triggerFileConversion } = await import('@/lib/converter');
+                        triggerFileConversion(materialUrl.split('/course_materials/')[1] || materialUrl.replace(`${process.env.NEXT_PUBLIC_API_URL}/storage/secure-url?path=`, '').split('&')[0], 'course-materials').catch(console.error);
+                    }
+
+                    if (materialType === 'syllabus') {
+                        await supabase
+                            .from('courses')
+                            .update({ syllabus_url: materialUrl })
+                            .eq('id', courseId);
+                    }
                 }
             }
 
@@ -189,8 +212,11 @@ export default function UploadMaterialsForm({
                                 ))}
                             </SelectContent>
                         </Select>
+                        <p className="text-[9px] text-blue-400 mt-2 font-bold uppercase tracking-tighter">
+                            * Si el profesor no se encuentra en la lista, deberías agregar uno nuevo.
+                        </p>
                         {allProfessors.length === 0 && (
-                            <p className="text-[9px] text-bb-text-secondary mt-2 italic font-medium">
+                            <p className="text-[9px] text-bb-text-secondary mt-1 italic font-medium">
                                 No hay profesores registrados para este curso todavía.
                             </p>
                         )}
@@ -209,57 +235,103 @@ export default function UploadMaterialsForm({
                         />
                     </div>
 
-                    {/* Seleccionar Archivo */}
+                    {/* Selección de Archivos o Links */}
                     <div>
-                        <Label htmlFor="file" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">Archivos *</Label>
-                        <div className={`mt-1 border-2 border-dashed rounded-xl p-6 text-center transition-all ${files.length > 0 ? 'border-blue-500 bg-blue-500/5' : 'border-bb-border hover:border-blue-500 hover:bg-bb-darker/50'}`}>
-                            <input
-                                id="file-modal"
-                                type="file"
-                                multiple
-                                onChange={handleFileChange}
-                                className="hidden"
-                                accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
-                            />
-                            <label
-                                htmlFor="file-modal"
-                                className="cursor-pointer flex flex-col items-center gap-3"
-                            >
-                                <div className={`p-3 rounded-xl transition-all ${files.length > 0 ? 'bg-blue-600 text-white' : 'bg-bb-darker text-blue-400 border border-bb-border'}`}>
-                                    <Upload className="h-6 w-6" />
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="font-bold text-sm text-white">
-                                        {files.length > 0 ? '¡Archivos seleccionados!' : 'Haz clic para seleccionar'}
-                                    </p>
-                                    <p className="text-[10px] text-bb-text-secondary font-medium">
-                                        Soporta múltiples archivos
-                                    </p>
-                                </div>
-                            </label>
-                        </div>
-                        {files.length > 0 && (
-                            <div className="mt-4 space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                                {files.map((f, i) => (
-                                    <div key={i} className="p-2 bg-bb-darker/50 rounded-xl flex items-center justify-between border border-bb-border group transition-all">
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className="p-1.5 bg-blue-500/10 rounded-lg">
-                                                <FileText className="h-3 w-3 text-blue-400 shrink-0" />
-                                            </div>
-                                            <span className="text-[11px] font-bold text-white truncate">
-                                                {f.name}
-                                            </span>
+                        <Label htmlFor="file" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">
+                            {materialType === 'enlace' ? 'Enlaces *' : 'Archivos *'}
+                        </Label>
+
+                        {materialType === 'enlace' ? (
+                            <div className="space-y-3">
+                                {links.map((link, index) => (
+                                    <div key={index} className="space-y-2 p-3 bg-bb-darker/50 rounded-xl border border-bb-border">
+                                        <Input
+                                            placeholder="Título del enlace (opcional)"
+                                            value={link.titulo}
+                                            onChange={(e) => updateLink(index, 'titulo', e.target.value)}
+                                            className="h-9 bg-bb-card border-bb-border text-white text-xs rounded-lg"
+                                        />
+                                        <div className="flex gap-2">
+                                            <Input
+                                                placeholder="https://..."
+                                                value={link.url}
+                                                onChange={(e) => updateLink(index, 'url', e.target.value)}
+                                                className="h-9 bg-bb-card border-bb-border text-white text-xs rounded-lg flex-1"
+                                            />
+                                            {links.length > 1 && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    onClick={() => removeLinkRow(index)}
+                                                    className="h-9 w-9 p-0 text-red-400 hover:bg-red-500/10 rounded-lg"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setFiles(prev => prev.filter((_, idx) => idx !== i))}
-                                            className="p-1.5 text-bb-text-secondary hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
-                                        >
-                                            <X className="h-3.5 w-3.5" />
-                                        </button>
                                     </div>
                                 ))}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={addLinkRow}
+                                    className="w-full h-10 border-dashed border-bb-border text-bb-text-secondary hover:text-blue-400 rounded-xl text-xs font-bold"
+                                >
+                                    + Agregar otro enlace
+                                </Button>
                             </div>
+                        ) : (
+                            <>
+                                <div className={`mt-1 border-2 border-dashed rounded-xl p-6 text-center transition-all ${files.length > 0 ? 'border-blue-500 bg-blue-500/5' : 'border-bb-border hover:border-blue-500 hover:bg-bb-darker/50'}`}>
+                                    <input
+                                        id="file-modal"
+                                        type="file"
+                                        multiple
+                                        onChange={handleFileChange}
+                                        className="hidden"
+                                        accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
+                                    />
+                                    <label
+                                        htmlFor="file-modal"
+                                        className="cursor-pointer flex flex-col items-center gap-3"
+                                    >
+                                        <div className={`p-3 rounded-xl transition-all ${files.length > 0 ? 'bg-blue-600 text-white' : 'bg-bb-darker text-blue-400 border border-bb-border'}`}>
+                                            <Upload className="h-6 w-6" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="font-bold text-sm text-white">
+                                                {files.length > 0 ? '¡Archivos seleccionados!' : 'Haz clic para seleccionar'}
+                                            </p>
+                                            <p className="text-[10px] text-bb-text-secondary font-medium">
+                                                Soporta múltiples archivos
+                                            </p>
+                                        </div>
+                                    </label>
+                                </div>
+                                {files.length > 0 && (
+                                    <div className="mt-4 space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                                        {files.map((f, i) => (
+                                            <div key={i} className="p-2 bg-bb-darker/50 rounded-xl flex items-center justify-between border border-bb-border group transition-all">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="p-1.5 bg-blue-500/10 rounded-lg">
+                                                        <FileText className="h-3 w-3 text-blue-400 shrink-0" />
+                                                    </div>
+                                                    <span className="text-[11px] font-bold text-white truncate">
+                                                        {f.name}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFiles(prev => prev.filter((_, idx) => idx !== i))}
+                                                    className="p-1.5 text-bb-text-secondary hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
 
@@ -275,10 +347,10 @@ export default function UploadMaterialsForm({
                         </Button>
                         <Button
                             type="submit"
-                            disabled={uploading || files.length === 0}
+                            disabled={uploading || (materialType === 'enlace' ? links.every(l => !l.url) : files.length === 0)}
                             className="flex-1 bg-blue-600 hover:bg-blue-700 font-black uppercase tracking-widest text-[10px] h-11 rounded-xl shadow-lg shadow-blue-600/20 active:scale-95 disabled:opacity-50"
                         >
-                            {uploading ? 'Subiendo...' : 'Subir Materiales'}
+                            {uploading ? 'Subiendo...' : (materialType === 'enlace' ? 'Publicar Enlaces' : 'Publicar Materiales')}
                         </Button>
                     </div>
                 </form>
