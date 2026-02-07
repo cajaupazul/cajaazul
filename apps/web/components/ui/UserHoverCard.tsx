@@ -196,13 +196,11 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
                                                 href={profile.link_instagram}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="group flex items-center justify-center p-1.5 rounded-lg transition-all hover:scale-110"
+                                                className="group relative flex items-center justify-center p-1.5 rounded-lg transition-all hover:scale-110"
                                                 title="Instagram"
                                             >
-                                                <div className="absolute inset-0 bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] opacity-80 group-hover:opacity-100 rounded-lg blur-[2px] transition-opacity" />
-                                                <div className="relative bg-black p-1 rounded-md">
-                                                    <Instagram className="w-3.5 h-3.5 text-white" />
-                                                </div>
+                                                <div className="absolute inset-0 bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] rounded-lg opacity-90 group-hover:opacity-100 transition-opacity" />
+                                                <Instagram className="relative w-3.5 h-3.5 text-white" />
                                             </a>
                                         )}
                                     </div>
