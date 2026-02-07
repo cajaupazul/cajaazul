@@ -167,8 +167,25 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const [isLoadingPixel, setIsLoadingPixel] = useState(false);
 
     const fetchPixelDetails = async (x: number, y: number) => {
+        // Step 3: Strict Type Safety - Ensure integers, no decimals, no undefined, no NaN
+        const px = Math.floor(Number(x));
+        const py = Math.floor(Number(y));
+
+        if (!Number.isFinite(px) || !Number.isFinite(py)) {
+            console.error("[PIXEL_INFO] Invalid coordinates:", { x, y, px, py });
+            return;
+        }
+
+        // Step 4: Defensive Logging
+        console.log("[PIXEL_INFO] Fetching pixel info:", {
+            event_id: eventId,
+            x: px,
+            y: py
+        });
+
         setIsLoadingPixel(true);
         try {
+            // Step 1 & 2: Query pixel_board_state with maybeSingle()
             const { data, error } = await supabase
                 .from('pixel_board_state')
                 .select(`
@@ -184,52 +201,76 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     )
                 `)
                 .eq('event_id', eventId)
-                .eq('x', x)
-                .eq('y', y)
-                .single();
+                .eq('x', px)
+                .eq('y', py)
+                .maybeSingle(); // Use maybeSingle instead of single
 
-            let ownerInfo = null;
-            let dbColor = '#FFFFFF';
-
-            if (data) {
-                dbColor = data.color_hex;
-                if (data.profiles) {
-                    const profile = data.profiles as any;
-                    let frameUrl = null;
-                    let frameSettings = null;
-
-                    if (profile.active_frame_key) {
-                        const { data: frameData } = await supabase
-                            .from('shop_items')
-                            .select('image_url, frame_settings')
-                            .eq('frame_key', profile.active_frame_key)
-                            .single();
-                        if (frameData) {
-                            frameUrl = frameData.image_url;
-                            frameSettings = frameData.frame_settings;
-                        }
-                    }
-
-                    ownerInfo = {
-                        ...profile,
-                        frame_url: frameUrl,
-                        frame_settings: frameSettings
-                    };
-                }
+            // Step 4: Log errors
+            if (error) {
+                console.error("[PIXEL_INFO] Pixel lookup failed:", error);
+                // Step 5: Handle empty pixels gracefully
+                setSelectedPixel({
+                    x: px,
+                    y: py,
+                    color: '#FFFFFF',
+                    owner: null
+                });
+                return;
             }
 
+            // Step 5: Handle null data (empty pixel)
+            if (!data) {
+                console.log("[PIXEL_INFO] Empty pixel at", px, py);
+                setSelectedPixel({
+                    x: px,
+                    y: py,
+                    color: '#FFFFFF',
+                    owner: null
+                });
+                return;
+            }
+
+            // Successfully found pixel data
+            let ownerInfo = null;
+            const dbColor = data.color_hex || '#FFFFFF';
+
+            if (data.profiles) {
+                const profile = data.profiles as any;
+                let frameUrl = null;
+                let frameSettings = null;
+
+                if (profile.active_frame_key) {
+                    const { data: frameData } = await supabase
+                        .from('shop_items')
+                        .select('image_url, frame_settings')
+                        .eq('frame_key', profile.active_frame_key)
+                        .maybeSingle(); // Use maybeSingle here too
+                    if (frameData) {
+                        frameUrl = frameData.image_url;
+                        frameSettings = frameData.frame_settings;
+                    }
+                }
+
+                ownerInfo = {
+                    ...profile,
+                    frame_url: frameUrl,
+                    frame_settings: frameSettings
+                };
+            }
+
+            console.log("[PIXEL_INFO] Successfully fetched pixel:", { px, py, owner: ownerInfo?.nombre || 'None' });
             setSelectedPixel({
-                x,
-                y,
+                x: px,
+                y: py,
                 color: dbColor,
                 owner: ownerInfo
             });
 
         } catch (err) {
-            console.error("Error fetching pixel details:", err);
+            console.error("[PIXEL_INFO] Unexpected error:", err);
             setSelectedPixel({
-                x,
-                y,
+                x: px,
+                y: py,
                 color: '#FFFFFF',
                 owner: null
             });
