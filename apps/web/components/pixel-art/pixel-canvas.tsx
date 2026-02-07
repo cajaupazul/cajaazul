@@ -148,6 +148,96 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const [offsetX, setOffsetX] = useState(0);
     const [offsetY, setOffsetY] = useState(0);
 
+    // --- Pixel Selection & Info Panel ---
+    const [selectedPixel, setSelectedPixel] = useState<{
+        x: number;
+        y: number;
+        color: string;
+        owner?: {
+            id: string;
+            nombre: string;
+            avatar_url: string | null;
+            active_frame_key?: string | null;
+            es_vip?: boolean;
+            role?: string;
+            frame_url?: string | null; // Joined from shop_items
+            frame_settings?: any;
+        } | null;
+    } | null>(null);
+    const [isLoadingPixel, setIsLoadingPixel] = useState(false);
+
+    const fetchPixelDetails = async (x: number, y: number) => {
+        setIsLoadingPixel(true);
+        try {
+            const { data, error } = await supabase
+                .from('pixel_board_state')
+                .select(`
+                    user_id,
+                    color_hex,
+                    profiles:user_id (
+                        id,
+                        nombre,
+                        avatar_url,
+                        active_frame_key,
+                        es_vip,
+                        role
+                    )
+                `)
+                .eq('event_id', eventId)
+                .eq('x', x)
+                .eq('y', y)
+                .single();
+
+            let ownerInfo = null;
+            let dbColor = '#FFFFFF';
+
+            if (data) {
+                dbColor = data.color_hex;
+                if (data.profiles) {
+                    const profile = data.profiles as any;
+                    let frameUrl = null;
+                    let frameSettings = null;
+
+                    if (profile.active_frame_key) {
+                        const { data: frameData } = await supabase
+                            .from('shop_items')
+                            .select('image_url, frame_settings')
+                            .eq('frame_key', profile.active_frame_key)
+                            .single();
+                        if (frameData) {
+                            frameUrl = frameData.image_url;
+                            frameSettings = frameData.frame_settings;
+                        }
+                    }
+
+                    ownerInfo = {
+                        ...profile,
+                        frame_url: frameUrl,
+                        frame_settings: frameSettings
+                    };
+                }
+            }
+
+            setSelectedPixel({
+                x,
+                y,
+                color: dbColor,
+                owner: ownerInfo
+            });
+
+        } catch (err) {
+            console.error("Error fetching pixel details:", err);
+            setSelectedPixel({
+                x,
+                y,
+                color: '#FFFFFF',
+                owner: null
+            });
+        } finally {
+            setIsLoadingPixel(false);
+        }
+    };
+
     const [selectedColor, setSelectedColor] = useState<string | null>('#000000');
     // Helper to track if we are in 'mode' eraser
     const isEraser = selectedColor === 'eraser';
@@ -727,203 +817,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         if (tooltipData) setTooltipData(null);
     };
 
-    // --- Pixel Selection & Info Panel ---
-    const [selectedPixel, setSelectedPixel] = useState<{
-        x: number;
-        y: number;
-        color: string;
-        owner?: {
-            id: string;
-            nombre: string;
-            avatar_url: string | null;
-            active_frame_key?: string | null;
-            es_vip?: boolean;
-            role?: string;
-            frame_url?: string | null; // Joined from shop_items
-            frame_settings?: any;
-        } | null;
-    } | null>(null);
-    const [isLoadingPixel, setIsLoadingPixel] = useState(false);
-
-    const fetchPixelDetails = async (x: number, y: number) => {
-        setIsLoadingPixel(true);
-        try {
-            // Check local color first
-            const idx = y * gridWidth + x;
-            const uint32 = pixelDataRef.current[idx];
-            let localColor = '#FFFFFF';
-            if (uint32 === 0) {
-                // Empty
-            } else {
-                const r = uint32 & 0xFF;
-                const g = (uint32 >> 8) & 0xFF;
-                const b = (uint32 >> 16) & 0xFF;
-                localColor = rgbToHex(r, g, b);
-            }
-
-            // Fetch owner info
-            const { data, error } = await supabase
-                .from('pixel_board_state')
-                .select(`
-                    user_id,
-                    color_hex,
-                    profiles:user_id (
-                        id,
-                        nombre,
-                        avatar_url,
-                        active_frame_key,
-                        es_vip,
-                        role
-                    )
-                `)
-                .eq('event_id', eventId)
-                .eq('x', x)
-                .eq('y', y)
-                .single();
-
-            let ownerInfo = null;
-
-            if (data?.profiles) {
-                const profile = data.profiles as any;
-                let frameUrl = null;
-                let frameSettings = null;
-
-                // If user has a frame, fetch it
-                if (profile.active_frame_key) {
-                    const { data: frameData } = await supabase
-                        .from('shop_items')
-                        .select('image_url, frame_settings')
-                        .eq('frame_key', profile.active_frame_key)
-                        .single();
-                    if (frameData) {
-                        frameUrl = frameData.image_url;
-                        frameSettings = frameData.frame_settings;
-                    }
-                }
-
-                ownerInfo = {
-                    ...profile,
-                    frame_url: frameUrl,
-                    frame_settings: frameSettings
-                };
-            }
-
-            setSelectedPixel({
-                x,
-                y,
-                color: localColor,
-                owner: ownerInfo
-            });
-
-        } catch (err) {
-            console.error("Error fetching pixel details:", err);
-            // Even if fetch fails, show local color
-            setSelectedPixel({
-                x,
-                y,
-                color: '#FFFFFF', // Fallback or handle appropriately
-                owner: null
-            });
-        } finally {
-            setIsLoadingPixel(false);
-        }
-    };
-
-    // --- Pixel Selection & Info Panel ---
-    const [selectedPixel, setSelectedPixel] = useState<{
-        x: number;
-        y: number;
-        color: string;
-        owner?: {
-            id: string;
-            nombre: string;
-            avatar_url: string | null;
-            active_frame_key?: string | null;
-            es_vip?: boolean;
-            role?: string;
-            frame_url?: string | null; // Joined from shop_items
-            frame_settings?: any;
-        } | null;
-    } | null>(null);
-    const [isLoadingPixel, setIsLoadingPixel] = useState(false);
-
-    const fetchPixelDetails = async (x: number, y: number) => {
-        setIsLoadingPixel(true);
-        try {
-            // Check local color first
-            const idx = y * gridWidth + x;
-            const uint32 = pixelDataRef.current[idx];
-            let localColor = '#FFFFFF';
-            if (uint32 === 0) {
-                // Empty
-            } else {
-                const r = uint32 & 0xFF;
-                const g = (uint32 >> 8) & 0xFF;
-                const b = (uint32 >> 16) & 0xFF;
-                localColor = rgbToHex(r, g, b);
-            }
-
-            // Fetch owner info
-            const { data, error } = await supabase
-                .from('pixel_board_state')
-                .select(`
-                    user_id,
-                    color_hex,
-                    profiles:user_id (
-                        id,
-                        nombre,
-                        avatar_url,
-                        active_frame_key,
-                        es_vip,
-                        role
-                    )
-                `)
-                .eq('event_id', eventId)
-                .eq('x', x)
-                .eq('y', y)
-                .single();
-
-            let ownerInfo = null;
-
-            if (data?.profiles) {
-                const profile = data.profiles as any;
-                let frameUrl = null;
-                let frameSettings = null;
-
-                // If user has a frame, fetch it (or use cache if we had one)
-                if (profile.active_frame_key) {
-                    const { data: frameData } = await supabase
-                        .from('shop_items')
-                        .select('image_url, frame_settings')
-                        .eq('frame_key', profile.active_frame_key)
-                        .single();
-                    if (frameData) {
-                        frameUrl = frameData.image_url;
-                        frameSettings = frameData.frame_settings;
-                    }
-                }
-
-                ownerInfo = {
-                    ...profile,
-                    frame_url: frameUrl,
-                    frame_settings: frameSettings
-                };
-            }
-
-            setSelectedPixel({
-                x,
-                y,
-                color: localColor,
-                owner: ownerInfo
-            });
-
-        } catch (err) {
-            console.error("Error fetching pixel details:", err);
-        } finally {
-            setIsLoadingPixel(false);
-        }
-    };
-
     const handleMouseUp = (e: React.MouseEvent) => {
         if (e.button !== 0) {
             setIsPanning(false);
@@ -947,13 +840,337 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         isDraggingRef.current = false;
     };
 
-    // ... (rest of input handling)
+    const handleMouseLeave = () => {
+        setIsPanning(false);
+        lastMouseRef.current = null;
+        dragStartRef.current = null;
+        isDraggingRef.current = false;
+        setCursorGridPos(null);
+        cursorGridPosRef.current = null;
+    };
 
-    // ... (rest of rendering)
+    const handleMouseEnter = (e: React.MouseEvent) => {
+        if (e.buttons !== 1) {
+            dragStartRef.current = null;
+            isDraggingRef.current = false;
+        }
+    };
+
+    const handleWheel = useCallback((e: WheelEvent) => {
+        e.preventDefault();
+        const zoomIntensity = 0.1;
+        const delta = -Math.sign(e.deltaY);
+        const factor = Math.exp(delta * zoomIntensity);
+
+        if (isEditingGuidance && guidanceImage) {
+            setGuidanceState(prev => ({
+                ...prev,
+                scale: Math.max(0.001, Math.min(1000, prev.scale * factor))
+            }));
+        } else {
+            setScale(s => Math.max(0.05, Math.min(100, s * factor)));
+        }
+    }, [isEditingGuidance, guidanceImage]);
+
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+        container.addEventListener('wheel', handleWheel, { passive: false });
+        return () => container.removeEventListener('wheel', handleWheel);
+    }, [handleWheel]);
+
+    const findNearestPaletteColor = (r: number, g: number, b: number) => {
+        // Packing as uint32 for cache lookup: ABGR or RGBA doesn't matter as long as consistent
+        // We use 0xFF for alpha because we are sampling target opaque pixels
+        const key = (r | (g << 8) | (b << 16) | (255 << 24)) >>> 0;
+
+        if (colorMatchCacheRef.current.has(key)) {
+            return COLOR_PALETTE[colorMatchCacheRef.current.get(key)!];
+        }
+
+        // 1. Convert sample to OKLab (Perceptual Linear)
+        const sampleLab = linearToOKLab(srgbToLinear(r), srgbToLinear(g), srgbToLinear(b));
+        const sampleChroma = Math.sqrt(sampleLab.a * sampleLab.a + sampleLab.b * sampleLab.b);
+
+        let minDistance = Infinity;
+        let closestIndex = 0;
+
+        // 2. Euclidean distance in OKLab space
+        // We prioritize Hue and Chroma over Lightness (0.8 vs 2.2)
+        // to avoid vibrant colors turning gray when there is a chromatic alternative.
+        for (let i = 0; i < PALETTE_OKLAB.length; i++) {
+            const pLab = PALETTE_OKLAB[i];
+            const paletteChroma = Math.sqrt(pLab.a * pLab.a + pLab.b * pLab.b);
+
+            const dl = sampleLab.l - pLab.l;
+            const da = sampleLab.a - pLab.a;
+            const db = sampleLab.b - pLab.b;
+
+            // Updated formula: prioritizes chromaticity (2.2) over luminosity (0.8)
+            let dist = dl * dl * 0.8 + (da * da + db * db) * 2.2;
+
+            // Penalty: if the source is vibrant (>0.05) but the palette choice is dull (<0.02),
+            // we heavily penalize it (1.8x) to force a more chromatic alternative if available.
+            if (sampleChroma > 0.05 && paletteChroma < 0.02) {
+                dist *= 1.8;
+            }
+
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestIndex = i;
+            }
+        }
+
+        colorMatchCacheRef.current.set(key, closestIndex);
+        return COLOR_PALETTE[closestIndex];
+    };
+
+    const paintPixel = (clientX: number, clientY: number) => {
+        const { x, y } = screenToWorld(clientX, clientY);
+        if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return;
+
+        let drawValue: string | number | undefined;
+
+        if (isSmartPicking && guidanceImage && guidanceRawDataRef.current) {
+            const imageData = guidanceRawDataRef.current;
+            const imgW = guidanceImage.naturalWidth;
+            const imgH = guidanceImage.naturalHeight;
+
+            const gWidthUnsnapped = imgW * guidanceState.scale;
+            const gHeightUnsnapped = imgH * guidanceState.scale;
+            const startXUnsnapped = guidanceState.x - gWidthUnsnapped / 2;
+            const startYUnsnapped = guidanceState.y - gHeightUnsnapped / 2;
+
+            const cellCenterXWorld = x - gridWidth / 2 + 0.5;
+            const cellCenterYWorld = y - gridHeight / 2 + 0.5;
+
+            const relX = cellCenterXWorld - startXUnsnapped;
+            const relY = cellCenterYWorld - startYUnsnapped;
+
+            if (relX >= 0 && relX < gWidthUnsnapped && relY >= 0 && relY < gHeightUnsnapped) {
+                const srcX = Math.floor((relX / gWidthUnsnapped) * imgW);
+                const srcY = Math.floor((relY / gHeightUnsnapped) * imgH);
+
+                if (srcX >= 0 && srcX < imgW && srcY >= 0 && srcY < imgH) {
+                    const pixels = imageData.data;
+                    const baseIdx = (srcY * imgW + srcX) * 4;
+                    const r = pixels[baseIdx];
+                    const g = pixels[baseIdx + 1];
+                    const b = pixels[baseIdx + 2];
+                    const a = pixels[baseIdx + 3];
+
+                    if (a > 10) {
+                        drawValue = rgbToHex(r, g, b);
+                    }
+                }
+            }
+        } else {
+            if (!selectedColor && !isEraser) return;
+            drawValue = isEraser ? ERASER_INDEX : COLOR_MAP[selectedColor!];
+        }
+
+        if (drawValue === undefined) return;
+
+        const newMap = new Map(pendingPixelsRef.current);
+        const key = `${x},${y}`;
+
+        if (drawValue === ERASER_INDEX) {
+            newMap.set(key, drawValue);
+            playPaintSound();
+        } else if (newMap.get(key) === drawValue) {
+            newMap.delete(key);
+        } else {
+            newMap.set(key, drawValue);
+            playPaintSound();
+        }
+
+        pendingPixelsRef.current = newMap;
+        setPendingPixels(newMap);
+        needsRedrawRef.current = true;
+    };
+
+    const confirmPaint = async () => {
+        if (pendingPixels.size === 0 || isSaving) return;
+
+        const currentUserId = userProfile?.id;
+        if (!currentUserId) return;
+
+        setIsSaving(true);
+        const transactionMap = new Map(pendingPixelsRef.current);
+
+        // MURAL ENGINE: Transactional Flow
+        // 1. SNAPSHOT for potential rollback
+        const snapshot = new Map<string, number>();
+        transactionMap.forEach((_, key) => {
+            const [x, y] = key.split(',').map(Number);
+            const idx = y * gridWidth + x;
+            snapshot.set(key, pixelDataRef.current[idx]);
+        });
+
+        // 2. OPTIMISTIC MERGE into Single Source of Truth
+        transactionMap.forEach((val, key) => {
+            const [x, y] = key.split(',').map(Number);
+            updateLocalPixel(x, y, val);
+        });
+
+        // Clear reactive pending state (SSOT buffer now owns them for the view)
+        setPendingPixels(new Map());
+        pendingPixelsRef.current = new Map();
+        needsRedrawRef.current = true;
+
+        const pixelsToSave: any[] = [];
+        transactionMap.forEach((drawValue, key) => {
+            const [xStr, yStr] = key.split(',');
+            const x = parseInt(xStr);
+            const y = parseInt(yStr);
+
+            // Authoritative hex sampling for DB
+            let colorHex: string;
+            if (typeof drawValue === 'string') {
+                colorHex = drawValue;
+            } else if (drawValue === ERASER_INDEX || drawValue === 0) {
+                colorHex = '#FFFFFF'; // Treat eraser as white for now in state table
+            } else {
+                colorHex = COLOR_PALETTE[drawValue as number];
+            }
+
+            pixelsToSave.push({
+                event_id: eventId,
+                x,
+                y,
+                color_hex: colorHex,
+                user_id: currentUserId
+            });
+        });
+
+        try {
+            const CHUNK_SIZE = 100;
+            console.log(`[PIXEL_SAVE] Transaction Started: ${pixelsToSave.length} pixels.`);
+
+            for (let i = 0; i < pixelsToSave.length; i += CHUNK_SIZE) {
+                const chunk = pixelsToSave.slice(i, i + CHUNK_SIZE);
+                // UPSERT Batch using PRIMARY KEY (event_id, x, y)
+                const { error } = await supabase.from('pixel_board_state').upsert(chunk, {
+                    onConflict: 'event_id,x,y'
+                });
+
+                if (error) throw error;
+            }
+
+            console.log("[PIXEL_SAVE] Transaction Committed.");
+            incrementLocalCount();
+        } catch (err) {
+            console.error("[PIXEL_SAVE] Transaction FAILED. Rolling back buffer.", err);
+
+            // ROLLBACK: Restore original buffer values
+            snapshot.forEach((oldUint32, key) => {
+                const [x, y] = key.split(',').map(Number);
+                const idx = y * gridWidth + x;
+                pixelDataRef.current[idx] = oldUint32;
+            });
+            updateDataCanvasFull();
+            needsRedrawRef.current = true;
+
+            // Restore pending UI state
+            setPendingPixels(transactionMap);
+            pendingPixelsRef.current = transactionMap;
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const restoreGuidance = (item: TemplateSlot) => {
+        const img = new Image();
+        img.onload = () => {
+            const off = document.createElement('canvas');
+            off.width = img.naturalWidth;
+            off.height = img.naturalHeight;
+            const ctx = off.getContext('2d', { willReadFrequently: true });
+            if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                guidanceRawDataRef.current = ctx.getImageData(0, 0, off.width, off.height);
+            }
+            colorMatchCacheRef.current.clear();
+            setGuidanceImage(img);
+            setGuidanceOpacity(item.opacity);
+            setGuidanceGridStep(item.gridStep);
+            setGuidanceState(item.state);
+            setIsEditingGuidance(true);
+        };
+        img.src = item.image;
+    };
+
+    const removeGuidanceFromHistory = (image: string) => {
+        deleteSlot(image);
+    };
+
+    const handleUploadGuidance = (file: File) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                // Capture raw image data for picking
+                const off = document.createElement('canvas');
+                off.width = img.naturalWidth;
+                off.height = img.naturalHeight;
+                const ctx = off.getContext('2d', { willReadFrequently: true });
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0);
+                    guidanceRawDataRef.current = ctx.getImageData(0, 0, off.width, off.height);
+                }
+                colorMatchCacheRef.current.clear(); // Clear cache for new image
+
+                // Auto-save history when a NEW image is uploaded
+                if (guidanceImage) {
+                    saveSlot({
+                        image: guidanceImage.src,
+                        opacity: guidanceOpacity,
+                        gridStep: guidanceGridStep,
+                        state: guidanceState
+                    });
+                }
+
+                setGuidanceImage(img);
+
+                // Calculate the exact center of the VISIBLE viewport in world coordinates
+                // Formula: P_world_center = -Offset
+                const centerX = -offsetX;
+                const centerY = -offsetY;
+
+                // Set a visible initial scale (auto-fit to 40% of viewport width)
+                const viewportWidth = displayCanvasRef.current?.width || 800;
+                const worldViewportWidth = viewportWidth / scale;
+                const initialScale = (worldViewportWidth * 0.4) / Math.max(1, img.naturalWidth);
+
+                setGuidanceState({
+                    x: centerX,
+                    y: centerY,
+                    scale: initialScale
+                });
+
+                setIsEditingGuidance(true);
+            };
+            img.src = e.target?.result as string;
+        };
+        reader.readAsDataURL(file);
+    };
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (displayCanvasRef.current && containerRef.current) {
+                const rect = containerRef.current.getBoundingClientRect();
+                displayCanvasRef.current.width = rect.width;
+                displayCanvasRef.current.height = rect.height;
+            }
+        };
+        window.addEventListener('resize', handleResize);
+        handleResize();
+        setTimeout(handleResize, 100);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     return (
         <div ref={containerRef} className="relative w-full h-full bg-[#1a1a1a] overflow-hidden font-sans rounded-xl shadow-2xl border border-white/10">
-            {/* ... canvas elements ... */}
             <canvas ref={dataCanvasRef} width={gridWidth} height={gridHeight} className="hidden" />
 
             <div
@@ -967,10 +1184,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 onMouseLeave={handleMouseLeave}
                 onMouseEnter={handleMouseEnter}
                 onContextMenu={(e) => e.preventDefault()}
-                onClick={() => {
-                    // Clicks on background (not captured by panel) could deselect
-                    // handled by logic inside panel to stopPropagation
-                }}
             >
                 <canvas
                     ref={displayCanvasRef}
@@ -979,7 +1192,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     onContextMenu={(e) => e.preventDefault()}
                 />
 
-                {/* ... existing tooltip ... */}
                 {tooltipData && (
                     <div className="fixed z-50 pointer-events-none flex items-center gap-2 bg-black/80 text-white text-xs px-2 py-1 rounded border border-white/20 shadow-xl"
                         style={{ left: tooltipData.x + 15, top: tooltipData.y + 15 }}>
@@ -1056,7 +1268,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                     onClick={() => {
                                         setIsPaintMode(true);
                                         isPaintModeRef.current = true;
-                                        // Optional: Set cursor/view to this pixel? 
                                         setSelectedPixel(null);
                                     }}
                                     className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold h-12 rounded-xl shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wide group"
@@ -1075,8 +1286,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     </div>
                 )}
 
-
-                {!isPaintMode && !selectedPixel && (
+                {!isPaintMode ? (
                     <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30">
                         <button
                             onClick={() => {
@@ -1088,11 +1298,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                             ✏️ PINTAR
                         </button>
                     </div>
-                )}
-
-                {isPaintMode && (
+                ) : (
                     <div className="absolute bottom-0 left-0 z-30 w-full pointer-events-none" onContextMenu={(e) => e.preventDefault()}>
-                        {/* ... Existing Paint Mode UI ... */}
                         <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-t-[1.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-4 md:px-8 md:py-5 border-t border-slate-200/60 flex flex-col gap-4 animate-in slide-in-from-bottom-full duration-500" onMouseDown={e => e.stopPropagation()}>
 
                             <div className="flex items-center justify-between px-2">
@@ -1208,7 +1415,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                 </button>
                             </div>
 
-                            {/* ... existing guidance panel ... */}
                             {showGuidancePanel && (
                                 <div className="absolute bottom-full left-4 mb-6 bg-white rounded-3xl shadow-2xl p-5 border border-slate-100 w-80 animate-in slide-in-from-bottom-4 z-50 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
