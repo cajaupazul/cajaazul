@@ -10,10 +10,19 @@ export interface UserStats {
     updated_at: string;
 }
 
+export interface FrameData {
+    id: string;
+    frame_key: string;
+    image_url: string;
+    frame_settings: any;
+}
+
 interface UserHoverCardContextType {
     statsCache: Map<string, UserStats>;
+    framesCache: Map<string, FrameData>;
     loadingIds: Set<string>;
     fetchUserStats: (userId: string) => Promise<void>;
+    fetchFrame: (frameKey: string) => Promise<void>;
     prefetchUserStats: (userId: string) => void;
     cancelPrefetch: (userId: string) => void;
 }
@@ -22,11 +31,11 @@ const UserHoverCardContext = createContext<UserHoverCardContextType | undefined>
 
 export function UserHoverCardProvider({ children }: { children: React.ReactNode }) {
     const [statsCache, setStatsCache] = useState<Map<string, UserStats>>(new Map());
+    const [framesCache, setFramesCache] = useState<Map<string, FrameData>>(new Map());
     const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
     const prefetchTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
     const fetchUserStats = useCallback(async (userId: string) => {
-        // Don't fetch if already in cache or currently loading
         if (statsCache.has(userId) || loadingIds.has(userId)) return;
 
         setLoadingIds(prev => new Set(prev).add(userId));
@@ -39,7 +48,6 @@ export function UserHoverCardProvider({ children }: { children: React.ReactNode 
                 .single();
 
             if (error) {
-                // If not found, it might be a new user without stats yet
                 if (error.code === 'PGRST116') {
                     const emptyStats: UserStats = {
                         user_id: userId,
@@ -65,10 +73,28 @@ export function UserHoverCardProvider({ children }: { children: React.ReactNode 
         }
     }, [statsCache, loadingIds]);
 
+    const fetchFrame = useCallback(async (frameKey: string) => {
+        if (framesCache.has(frameKey)) return;
+
+        try {
+            const { data, error } = await supabase
+                .from('shop_items')
+                .select('*')
+                .eq('frame_key', frameKey)
+                .eq('type', 'profile_frame')
+                .single();
+
+            if (data) {
+                setFramesCache(prev => new Map(prev).set(frameKey, data as FrameData));
+            }
+        } catch (err) {
+            console.error(`[HOVER_CARD] Error fetching frame ${frameKey}:`, err);
+        }
+    }, [framesCache]);
+
     const prefetchUserStats = useCallback((userId: string) => {
         if (statsCache.has(userId) || loadingIds.has(userId)) return;
 
-        // Debounce/Delay prefetch by 150ms to avoid flicker on fast movement
         const timer = setTimeout(() => {
             fetchUserStats(userId);
             prefetchTimers.current.delete(userId);
@@ -88,8 +114,10 @@ export function UserHoverCardProvider({ children }: { children: React.ReactNode 
     return (
         <UserHoverCardContext.Provider value={{
             statsCache,
+            framesCache,
             loadingIds,
             fetchUserStats,
+            fetchFrame,
             prefetchUserStats,
             cancelPrefetch
         }}>
@@ -105,3 +133,4 @@ export function useUserHoverCard() {
     }
     return context;
 }
+

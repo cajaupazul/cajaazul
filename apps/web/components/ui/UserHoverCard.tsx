@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     useFloating,
     autoUpdate,
@@ -26,7 +26,7 @@ interface UserHoverCardProps {
 
 export function UserHoverCard({ profile, children }: UserHoverCardProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const { statsCache, loadingIds, prefetchUserStats, cancelPrefetch } = useUserHoverCard();
+    const { statsCache, framesCache, loadingIds, prefetchUserStats, fetchFrame, cancelPrefetch } = useUserHoverCard();
 
     const { x, y, strategy, refs, context } = useFloating({
         open: isOpen,
@@ -50,7 +50,14 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
     const { getReferenceProps, getFloatingProps } = useInteractions([hover, role]);
 
     const stats = statsCache.get(profile.id || '');
+    const frame = profile.active_frame_key ? framesCache.get(profile.active_frame_key) : null;
     const isLoading = loadingIds.has(profile.id || '');
+
+    useEffect(() => {
+        if (isOpen && profile.active_frame_key) {
+            fetchFrame(profile.active_frame_key);
+        }
+    }, [isOpen, profile.active_frame_key, fetchFrame]);
 
     const badgeConfig = useMemo(() => {
         if (profile.role === 'admin' || profile.role === 'superadmin') {
@@ -128,32 +135,35 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
                                         <div className="w-full h-full bg-gradient-to-b from-zinc-800 to-black" />
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/80" />
-
-                                    {/* Action Buttons */}
-                                    <div className="absolute top-3 right-3 flex gap-2 z-10">
-                                        {profile.link_instagram && (
-                                            <a
-                                                href={profile.link_instagram}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="p-1.5 rounded-md bg-black/40 text-white/70 hover:bg-black/60 hover:text-white transition-colors border border-white/10"
-                                            >
-                                                <Instagram className="w-4 h-4" />
-                                            </a>
-                                        )}
-                                    </div>
                                 </div>
 
                                 {/* Content Area with Overlapping Avatar */}
                                 <div className="px-5 pt-0 pb-4 relative">
                                     {/* Avatar - Strictly positioned */}
                                     <div className="absolute -top-9 left-4">
-                                        <div className="w-[80px] h-[80px] rounded-full border-[3px] border-[#1a1a1a] overflow-hidden bg-[#1a1a1a] shadow-lg">
-                                            <img
-                                                src={getStorageUrl(profile.avatar_url, 'profile-avatars', PLACEHOLDERS.AVATAR)}
-                                                alt={profile.nombre}
-                                                className="w-full h-full object-cover"
-                                            />
+                                        <div className="relative w-[80px] h-[80px]">
+                                            <div className="w-full h-full rounded-full border-[3px] border-[#1a1a1a] overflow-hidden bg-[#1a1a1a] shadow-lg relative z-10">
+                                                <img
+                                                    src={getStorageUrl(profile.avatar_url, 'profile-avatars', PLACEHOLDERS.AVATAR)}
+                                                    alt={profile.nombre}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                            {/* Frame Overlay */}
+                                            {frame && (
+                                                <div
+                                                    className="absolute inset-0 z-20 pointer-events-none"
+                                                    style={{
+                                                        transform: `translate(${frame.frame_settings?.profile?.x || 0}px, ${frame.frame_settings?.profile?.y || 0}px) scale(${frame.frame_settings?.profile?.scale || 1})`
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={getStorageUrl(frame.image_url, 'shop-items')}
+                                                        alt="Frame"
+                                                        className="w-full h-full object-contain"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -174,10 +184,27 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
                                         )}
                                     </div>
 
-                                    {/* Secondary Info */}
-                                    <div className="mt-4 flex items-center gap-2 text-xs text-zinc-500 font-medium">
-                                        <span className="text-zinc-500">Se unió:</span>
-                                        <span className="text-zinc-400">{joinedDate}</span>
+                                    {/* Secondary Info & Instagram */}
+                                    <div className="mt-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
+                                            <span className="text-zinc-500">Se unió:</span>
+                                            <span className="text-zinc-400">{joinedDate}</span>
+                                        </div>
+
+                                        {profile.link_instagram && (
+                                            <a
+                                                href={profile.link_instagram}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="group flex items-center justify-center p-1.5 rounded-lg transition-all hover:scale-110"
+                                                title="Instagram"
+                                            >
+                                                <div className="absolute inset-0 bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] opacity-80 group-hover:opacity-100 rounded-lg blur-[2px] transition-opacity" />
+                                                <div className="relative bg-black p-1 rounded-md">
+                                                    <Instagram className="w-3.5 h-3.5 text-white" />
+                                                </div>
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
 
