@@ -87,7 +87,7 @@ const getColorFromName = (nombre: string) => {
 
 // Function to upgrade old low-quality images to high-quality Unsplash
 const getHighQualityBackgroundImage = (url: string | null, professorName: string): string => {
-    // If URL is from an old/broken source or null, replace with Unsplash nature background
+    // If URL is null, or from an old/broken source, use a stable nature background
     if (!url || url.includes('picsum.photos') || url.includes('source.unsplash.com') || url.includes('unsplash.com/featured')) {
         const seed = professorName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
         const randomId = PROFESSOR_NATURE_BGS[seed % PROFESSOR_NATURE_BGS.length];
@@ -100,6 +100,34 @@ const getHighQualityBackgroundImage = (url: string | null, professorName: string
     }
 
     return url;
+};
+
+const ProfessorBackground = ({ url, name }: { url: string | null; name: string }) => {
+    const [currentUrl, setCurrentUrl] = useState(() => getHighQualityBackgroundImage(url, name));
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    const handleError = () => {
+        // Fallback to a random nature image from our verified list on error
+        const seed = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const randomId = PROFESSOR_NATURE_BGS[(seed + 1) % PROFESSOR_NATURE_BGS.length];
+        setCurrentUrl(`https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`);
+    };
+
+    return (
+        <>
+            <img
+                src={currentUrl}
+                alt=""
+                className="hidden"
+                onLoad={() => setIsLoaded(true)}
+                onError={handleError}
+            />
+            <div
+                className={`absolute inset-0 bg-cover bg-center transition-all duration-1000 ${isLoaded ? 'opacity-80 scale-100' : 'opacity-0 scale-110 blur-sm'}`}
+                style={{ backgroundImage: `url("${currentUrl}")` }}
+            />
+        </>
+    );
 };
 
 interface ProfessorRatingsContentProps {
@@ -545,10 +573,7 @@ export default function ProfessorRatingsContent({
                 >
                     {professor.background_image_url && (
                         <div className="relative h-32 overflow-hidden bg-gradient-to-br from-bb-sidebar to-bb-dark">
-                            <div
-                                className="absolute inset-0 bg-cover bg-center opacity-80"
-                                style={{ backgroundImage: `url("${getHighQualityBackgroundImage(professor.background_image_url, professor.nombre)}")` }}
-                            />
+                            <ProfessorBackground url={professor.background_image_url} name={professor.nombre} />
                             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-bb-card/40 to-bb-card" />
                         </div>
                     )}

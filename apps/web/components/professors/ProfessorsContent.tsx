@@ -49,6 +49,34 @@ const getHighQualityBackgroundImage = (url: string | null, professorName: string
     return url;
 };
 
+const ProfessorBackground = ({ url, name }: { url: string | null; name: string }) => {
+    const [currentUrl, setCurrentUrl] = useState(() => getHighQualityBackgroundImage(url, name));
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    const handleError = () => {
+        // Fallback to a random nature image from our verified list on error
+        const seed = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const randomId = PROFESSOR_NATURE_BGS[(seed + 1) % PROFESSOR_NATURE_BGS.length];
+        setCurrentUrl(`https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`);
+    };
+
+    return (
+        <>
+            <img
+                src={currentUrl}
+                alt=""
+                className="hidden"
+                onLoad={() => setIsLoaded(true)}
+                onError={handleError}
+            />
+            <div
+                className={`absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-all duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0 scale-110'}`}
+                style={{ backgroundImage: `url("${currentUrl}")` }}
+            />
+        </>
+    );
+};
+
 export default function ProfessorsContent({
     initialProfessors,
     initialSavedProfessors,
@@ -125,10 +153,7 @@ export default function ProfessorsContent({
                                 >
                                     <Card className="h-full overflow-hidden transition-all duration-300 bg-bb-card border border-bb-border flex flex-col rounded-xl hover:border-blue-500/30">
                                         <div className="relative h-20 md:h-24 overflow-hidden flex-shrink-0 bg-gradient-to-br from-bb-sidebar to-bb-dark">
-                                            <div
-                                                className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-500"
-                                                style={{ backgroundImage: `url("${getHighQualityBackgroundImage(professor.background_image_url, professor.nombre)}")` }}
-                                            />
+                                            <ProfessorBackground url={professor.background_image_url} name={professor.nombre} />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
                                             {isTopRated && (
                                                 <div className="absolute top-2 right-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
