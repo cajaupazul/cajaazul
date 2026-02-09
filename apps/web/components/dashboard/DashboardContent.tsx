@@ -22,9 +22,6 @@ import OptionsSelector from '@/components/OptionsSelector';
 interface DashboardContentProps {
     profile: Profile | null;
     courses: Course[];
-    materialsCount: number;
-    communityCount: number;
-    motivational: string;
 }
 
 const getGreeting = () => {
@@ -55,10 +52,7 @@ const itemVariants: Variants = {
 
 export default function DashboardContent({
     profile,
-    courses,
-    materialsCount,
-    communityCount,
-    motivational
+    courses
 }: DashboardContentProps) {
     const router = useRouter();
     const { colors } = useTheme();
@@ -108,84 +102,8 @@ export default function DashboardContent({
                     </div>
                 </motion.div>
 
-                <motion.div variants={itemVariants} className="mb-8 relative z-20">
+                <motion.div variants={itemVariants} className="mb-0 relative z-20">
                     <OptionsSelector />
-                </motion.div>
-
-                <motion.div
-                    variants={itemVariants}
-                    className="bg-bb-card rounded-3xl p-6 md:p-8 mb-8 md:mb-10 border border-bb-border"
-                >
-                    <div className="flex items-start gap-4 md:gap-6">
-                        <div className="bg-yellow-500/20 p-3 md:p-4 rounded-2xl flex-shrink-0">
-                            <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-yellow-400" />
-                        </div>
-                        <div>
-                            <h3 className="text-bb-text-secondary font-bold text-[10px] md:text-sm tracking-widest uppercase mb-1">Tu Dosis Diaria</h3>
-                            <p className="text-lg md:text-3xl font-bold text-bb-text italic leading-tight">
-                                "{motivational}"
-                            </p>
-                        </div>
-                    </div>
-                </motion.div>
-
-                <motion.div
-                    variants={itemVariants}
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
-                >
-                    {[
-                        {
-                            title: 'Tus Puntos',
-                            value: profile?.puntos || 0,
-                            sub: 'Nivel Estudiante',
-                            icon: Award,
-                            color: 'blue',
-                            badge: 'Top 10%'
-                        },
-                        {
-                            title: 'Materiales',
-                            value: materialsCount,
-                            sub: 'Subidos',
-                            icon: BookOpen,
-                            color: 'teal'
-                        },
-                        {
-                            title: 'Interacciones',
-                            value: 0,
-                            sub: 'Esta semana',
-                            icon: TrendingUp,
-                            color: 'green'
-                        },
-                        {
-                            title: 'Comunidad',
-                            value: communityCount,
-                            sub: 'Miembros activos',
-                            icon: Users,
-                            color: 'purple'
-                        }
-                    ].map((stat, i) => (
-                        <motion.div
-                            key={i}
-                            whileHover={{ y: -3 }}
-                            className="bg-bb-card rounded-2xl p-4 md:p-6 border border-bb-border"
-                        >
-                            <div className="flex justify-between items-start mb-3 md:mb-4">
-                                <div className={`p-2.5 md:p-3 rounded-xl bg-${stat.color}-500/10 text-${stat.color}-400`}>
-                                    <stat.icon className="h-5 w-5 md:h-6 md:w-6" />
-                                </div>
-                                {stat.badge && (
-                                    <span className={`px-2 py-1 rounded-lg bg-${stat.color}-500/10 text-${stat.color}-400 text-[9px] md:text-[10px] font-bold border border-${stat.color}-500/20 uppercase tracking-wide`}>
-                                        {stat.badge}
-                                    </span>
-                                )}
-                            </div>
-                            <div className="relative z-10">
-                                <h3 className="text-2xl md:text-4xl font-black text-bb-text mb-1 tracking-tight">{stat.value.toLocaleString()}</h3>
-                                <p className="text-xs md:text-sm text-bb-text-secondary font-medium">{stat.title}</p>
-                                <p className="text-[10px] md:text-xs text-bb-text-secondary/70 mt-1">{stat.sub}</p>
-                            </div>
-                        </motion.div>
-                    ))}
                 </motion.div>
 
 
