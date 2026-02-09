@@ -233,7 +233,7 @@ export default function AdminMaterialManager({
 
                             <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-bb-border scrollbar-track-transparent">
                                 <div className="space-y-3">
-                                    {selectedUserMatches?.materials.map((material) => (
+                                    {selectedUserMatches?.materials.map((material: Material) => (
                                         <div
                                             key={material.id}
                                             className="group flex flex-col md:flex-row gap-4 p-4 rounded-xl bg-bb-card border border-bb-border hover:border-bb-border-active transition-all"
