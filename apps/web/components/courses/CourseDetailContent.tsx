@@ -51,9 +51,19 @@ export default function CourseDetailContent({
         router.refresh();
     };
 
-    const handleDeleteMaterial = async (materialId: string, materialUrl: string) => {
-        if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'superadmin')) {
-            alert('No tienes permisos para eliminar materiales');
+    const handleDeleteMaterial = async (material: any) => {
+        const materialId = material.id;
+        const materialUrl = material.url_archivo;
+        const createdAt = new Date(material.created_at);
+        const now = new Date();
+        const diffHours = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+
+        const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+        const isOwner = currentUser?.id === material.user_id;
+        const within24h = diffHours < 24;
+
+        if (!isAdmin && (!isOwner || !within24h)) {
+            alert('No tienes permisos para eliminar este material o ya pasaron las 24 horas permitidas.');
             return;
         }
 
@@ -268,18 +278,21 @@ export default function CourseDetailContent({
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 px-2">
-                                    {currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeleteMaterial(material.id, material.url_archivo);
-                                            }}
-                                            className="p-2 rounded-lg hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all"
-                                            title="Eliminar material"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    )}
+                                    {currentUser && (
+                                        (currentUser.role === 'admin' || currentUser.role === 'superadmin') ||
+                                        (material.user_id === currentUser.id && (new Date().getTime() - new Date(material.created_at).getTime()) / (1000 * 60 * 60) < 24)
+                                    ) && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteMaterial(material);
+                                                }}
+                                                className="p-2 rounded-lg hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all"
+                                                title="Eliminar material"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
                                     <Button variant="ghost" size="sm" className="hidden sm:flex text-bb-text-secondary hover:text-white h-8 px-2 text-xs font-bold">
                                         {materialType === 'enlace' ? 'Ir al enlace' : 'Ver Documento'}
                                     </Button>
@@ -332,18 +345,21 @@ export default function CourseDetailContent({
                             onClick={handleItemClick}
                             className={`relative p-3 md:p-4 ${bgColor} rounded-xl hover:bg-opacity-20 transition-all border ${borderColor} flex flex-col items-center gap-2 md:gap-3 group cursor-pointer active:scale-95`}
                         >
-                            {currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteMaterial(material.id, material.url_archivo);
-                                    }}
-                                    className="absolute top-1.5 right-1.5 p-1 rounded-lg bg-bb-dark/90 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all opacity-0 group-hover:opacity-100 z-10"
-                                    title="Eliminar material"
-                                >
-                                    <Trash2 className="w-3 h-3" />
-                                </button>
-                            )}
+                            {currentUser && (
+                                (currentUser.role === 'admin' || currentUser.role === 'superadmin') ||
+                                (material.user_id === currentUser.id && (new Date().getTime() - new Date(material.created_at).getTime()) / (1000 * 60 * 60) < 24)
+                            ) && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteMaterial(material);
+                                        }}
+                                        className="absolute top-1.5 right-1.5 p-1 rounded-lg bg-bb-dark/90 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all opacity-0 group-hover:opacity-100 z-10"
+                                        title="Eliminar material"
+                                    >
+                                        <Trash2 className="w-3 h-3" />
+                                    </button>
+                                )}
                             <div className={`${textColor} group-hover:scale-110 transition-transform`}>
                                 {icon}
                             </div>

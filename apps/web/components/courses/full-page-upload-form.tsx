@@ -347,7 +347,11 @@ export default function FullPageUploadForm({
                             <p className="text-[10px] text-bb-text-secondary mt-4 leading-relaxed italic font-medium">
                                 Si el material corresponde a una clase específica de un profesor, selecciónalo aquí. Esto ayudará a otros estudiantes a encontrar materiales de sus docentes.
                             </p>
-                            <p className="text-[9px] text-blue-400/70 mt-2 font-bold uppercase tracking-tighter">
+                            <p className="text-[10px] text-blue-400 mt-3 font-bold uppercase tracking-tight flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                Solo podrás eliminar tu material durante las primeras 24 horas.
+                            </p>
+                            <p className="text-[9px] text-blue-400/70 mt-4 font-bold uppercase tracking-tighter">
                                 * Si el profesor no se encuentra en la lista, deberías agregar uno nuevo.
                             </p>
                         </div>
