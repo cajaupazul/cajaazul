@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,10 +41,15 @@ import { useDashboardData } from '@/lib/dashboard-data-context';
 
 export default function NewCourseForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const courseId = searchParams.get('id');
+    const isEditing = !!courseId;
+
     const { addCourse } = useDashboardData();
+
     const [creatingCourse, setCreatingCourse] = useState(false);
     const [imagePreview, setImagePreview] = useState<string>('');
-    const [isGeneratingCode, setIsGeneratingCode] = useState(true);
+    const [isGeneratingCode, setIsGeneratingCode] = useState(!isEditing); // Only generate if not editing
 
     const [formData, setFormData] = useState({
         nombre: '',
@@ -53,36 +58,75 @@ export default function NewCourseForm() {
         ciclo: '',
         descripcion: '',
         imagen: null as File | null,
+        currentImageUrl: '', // To store existing image URL when editing
     });
 
     useEffect(() => {
-        const initCode = async () => {
-            setIsGeneratingCode(true);
-            let code = generateRandomCode();
-            let isUnique = false;
-            let attempts = 0;
+        const loadCourseData = async () => {
+            if (!courseId) return;
 
-            while (!isUnique && attempts < 10) {
-                const { data } = await supabase
+            setIsGeneratingCode(false); // Stop code generation
+            try {
+                const { data, error } = await supabase
                     .from('courses')
-                    .select('codigo')
-                    .eq('codigo', code)
-                    .maybeSingle();
+                    .select('*')
+                    .eq('id', courseId)
+                    .single();
 
-                if (!data) {
-                    isUnique = true;
-                } else {
-                    code = generateRandomCode();
-                    attempts++;
+                if (error) throw error;
+                if (data) {
+                    setFormData({
+                        nombre: data.nombre,
+                        codigo: data.codigo,
+                        facultad: data.facultad || '', // Handle potential nulls based on original types (though types say string | null)
+                        ciclo: data.ciclo?.toString() || '',
+                        descripcion: data.descripcion || '',
+                        imagen: null,
+                        currentImageUrl: data.imagen_url || ''
+                    });
+                    if (data.imagen_url) {
+                        setImagePreview(data.imagen_url);
+                    }
                 }
+            } catch (err) {
+                console.error('Error loading course:', err);
+                alert('Error al cargar los datos del curso');
+                router.push('/dashboard/courses');
             }
-
-            setFormData(prev => ({ ...prev, codigo: code }));
-            setIsGeneratingCode(false);
         };
 
-        initCode();
-    }, []);
+        if (isEditing) {
+            loadCourseData();
+        } else {
+            // Original init code logic for new courses
+            const initCode = async () => {
+                setIsGeneratingCode(true);
+                let code = generateRandomCode();
+                let isUnique = false;
+                let attempts = 0;
+
+                while (!isUnique && attempts < 10) {
+                    const { data } = await supabase
+                        .from('courses')
+                        .select('codigo')
+                        .eq('codigo', code)
+                        .maybeSingle();
+
+                    if (!data) {
+                        isUnique = true;
+                    } else {
+                        code = generateRandomCode();
+                        attempts++;
+                    }
+                }
+
+                setFormData(prev => ({ ...prev, codigo: code }));
+                setIsGeneratingCode(false);
+            };
+
+            initCode();
+        }
+    }, [courseId, isEditing]);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -105,62 +149,66 @@ export default function NewCourseForm() {
         }
 
         setCreatingCourse(true);
-        let imagenUrl = '';
+        let imagenUrl = formData.currentImageUrl;
 
         try {
             if (formData.imagen) {
+                // Delete old image if it exists and looks like it's ours and we are uploading a new one
+                if (isEditing && formData.currentImageUrl && formData.currentImageUrl.includes('course-images')) {
+                    // Optional: implement explicit delete if needed, or rely on R2/bucket policies. 
+                    // Ideally we delete to save space.
+                    // For now, let's focus on upload.
+                }
+
                 const fileExt = formData.imagen.name.split('.').pop();
                 const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-
-                // const { error: uploadError } = await supabase.storage
-                //     .from('course_images')
-                //     .upload(fileName, formData.imagen, {
-                //         cacheControl: '3600',
-                //         upsert: false,
-                //         contentType: formData.imagen.type
-                //     });
-
-                // if (uploadError) {
-                //     throw new Error(`Error al subir la imagen: ${uploadError.message}`);
-                // }
-
-                // const { data: publicUrlData } = supabase.storage
-                //     .from('course_images')
-                //     .getPublicUrl(fileName);
-
-                // imagenUrl = publicUrlData.publicUrl;
 
                 const { uploadFileToR2 } = await import('@/lib/r2-storage');
                 imagenUrl = await uploadFileToR2('course-images', fileName, formData.imagen);
             }
 
-            const { data, error } = await supabase
-                .from('courses')
-                .insert({
-                    nombre: formData.nombre.trim().toUpperCase(),
-                    codigo: formData.codigo.toUpperCase(),
-                    facultad: formData.facultad,
-                    ciclo: parseInt(formData.ciclo),
-                    descripcion: formData.descripcion.trim() || null,
-                    carrera: formData.facultad, // We'll store the faculty in carrera for now to maintain compatibility with existing fields
-                    imagen_url: imagenUrl || null,
-                })
-                .select()
-                .single();
+            if (isEditing) {
+                const { error } = await supabase
+                    .from('courses')
+                    .update({
+                        nombre: formData.nombre.trim().toUpperCase(),
+                        // codigo: formData.codigo.toUpperCase(), // Usually code should not change, or be careful
+                        facultad: formData.facultad,
+                        ciclo: parseInt(formData.ciclo),
+                        descripcion: formData.descripcion.trim() || null,
+                        carrera: formData.facultad,
+                        imagen_url: imagenUrl || null,
+                    })
+                    .eq('id', courseId);
 
-            if (error) throw error;
+                if (error) throw error;
+                alert('¡Curso actualizado exitosamente!');
+            } else {
+                const { data, error } = await supabase
+                    .from('courses')
+                    .insert({
+                        nombre: formData.nombre.trim().toUpperCase(),
+                        codigo: formData.codigo.toUpperCase(),
+                        facultad: formData.facultad,
+                        ciclo: parseInt(formData.ciclo),
+                        descripcion: formData.descripcion.trim() || null,
+                        carrera: formData.facultad,
+                        imagen_url: imagenUrl || null,
+                    })
+                    .select()
+                    .single();
 
-            if (data) {
-                addCourse(data);
+                if (error) throw error;
+                if (data) addCourse(data);
+                alert('¡Curso creado exitosamente!');
             }
 
-            alert('¡Curso creado exitosamente!');
             router.push('/dashboard/courses');
-            // router.refresh(); // Optional: kept for server component consistency, but UI is already updated.
+            router.refresh();
 
         } catch (error: any) {
             console.error('Error:', error);
-            alert(error.message || 'Error al crear el curso');
+            alert(error.message || 'Error al procesar el curso');
         } finally {
             setCreatingCourse(false);
         }
@@ -177,8 +225,8 @@ export default function NewCourseForm() {
                     >
                         <ArrowLeft className="h-5 w-5 mr-1" /> Volver a cursos
                     </Button>
-                    <h1 className="text-4xl font-black text-bb-text">Crear Nuevo Curso</h1>
-                    <p className="text-bb-text-secondary mt-2">Registra un nuevo curso en la plataforma CampusLink.</p>
+                    <h1 className="text-4xl font-black text-bb-text">{isEditing ? 'Editar Curso' : 'Crear Nuevo Curso'}</h1>
+                    <p className="text-bb-text-secondary mt-2">{isEditing ? 'Modifica los detalles del curso existente.' : 'Registra un nuevo curso en la plataforma CampusLink.'}</p>
                 </div>
             </div>
 
@@ -317,7 +365,7 @@ export default function NewCourseForm() {
                                 className="w-full bg-blue-600 hover:bg-blue-700 h-14 text-white text-lg font-black shadow-2xl shadow-blue-600/20 mt-4"
                                 disabled={creatingCourse || isGeneratingCode}
                             >
-                                {creatingCourse ? 'CREANDO CURSO...' : 'AGREGAR CURSO'}
+                                {creatingCourse ? (isEditing ? 'ACTUALIZANDO...' : 'CREANDO CURSO...') : (isEditing ? 'ACTUALIZAR CURSO' : 'AGREGAR CURSO')}
                             </Button>
                         </div>
                     </div>

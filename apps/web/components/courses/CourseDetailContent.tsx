@@ -102,22 +102,8 @@ export default function CourseDetailContent({
 
 
 
-    const handleEditImage = async () => {
-        const newUrl = prompt('Ingrese la nueva URL de la imagen del curso (deje vacío para mantener la actual):', course.imagen_url || '');
-        if (newUrl !== null && newUrl !== course.imagen_url) {
-            try {
-                const { error } = await supabase
-                    .from('courses')
-                    .update({ imagen_url: newUrl || null })
-                    .eq('id', course.id);
-
-                if (error) throw error;
-                router.refresh();
-            } catch (error: any) {
-                console.error('Error updating course image:', error);
-                alert('Error al actualizar la imagen: ' + error.message);
-            }
-        }
+    const handleEditCourse = () => {
+        router.push(`/dashboard/courses/new?id=${course.id}`);
     };
 
     // Base materials list filtered ONLY by professor (for counts)
@@ -421,8 +407,8 @@ export default function CourseDetailContent({
                         variant="ghost"
                         size="icon"
                         className="absolute top-4 right-4 bg-bb-dark/50 border border-bb-border hover:bg-bb-card text-white backdrop-blur-md z-20"
-                        onClick={handleEditImage}
-                        title="Editar imagen del curso"
+                        onClick={handleEditCourse}
+                        title="Editar curso completo"
                     >
                         <Pencil className="h-4 w-4" />
                     </Button>
