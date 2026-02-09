@@ -76,6 +76,12 @@ export default function UploadMaterialsForm({
             return;
         }
 
+        // Validate professor selection for types other than 'enlace' and 'otro'
+        if (materialType !== 'enlace' && materialType !== 'otro' && professorId === 'none') {
+            alert('Para este tipo de material, debes seleccionar un profesor específico.');
+            return;
+        }
+
         if (materialType === 'enlace' && links.some(l => !l.url)) {
             alert('Por favor ingresa la URL de todos los enlaces');
             return;
