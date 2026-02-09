@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2 } from 'lucide-react';
+import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2, Pencil } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import { PLACEHOLDERS } from '@/lib/constants';
@@ -97,6 +97,26 @@ export default function CourseDetailContent({
         } catch (error: any) {
             console.error('Error deleting material:', error);
             alert('Error al eliminar el material: ' + error.message);
+        }
+    };
+
+
+
+    const handleEditImage = async () => {
+        const newUrl = prompt('Ingrese la nueva URL de la imagen del curso (deje vacío para mantener la actual):', course.imagen_url || '');
+        if (newUrl !== null && newUrl !== course.imagen_url) {
+            try {
+                const { error } = await supabase
+                    .from('courses')
+                    .update({ imagen_url: newUrl || null })
+                    .eq('id', course.id);
+
+                if (error) throw error;
+                router.refresh();
+            } catch (error: any) {
+                console.error('Error updating course image:', error);
+                alert('Error al actualizar la imagen: ' + error.message);
+            }
         }
     };
 
@@ -395,6 +415,18 @@ export default function CourseDetailContent({
                 >
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
+
+                {currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-4 right-4 bg-bb-dark/50 border border-bb-border hover:bg-bb-card text-white backdrop-blur-md z-20"
+                        onClick={handleEditImage}
+                        title="Editar imagen del curso"
+                    >
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                )}
             </div>
 
             <div className="w-full px-4 sm:px-6 lg:px-10 py-6 md:py-10 max-w-[1600px] mx-auto">
