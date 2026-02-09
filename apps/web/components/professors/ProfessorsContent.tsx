@@ -10,7 +10,7 @@ import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useDashboardData } from '@/lib/dashboard-data-context';
-import { PLACEHOLDERS, PROFESSOR_NATURE_BGS } from '@/lib/constants';
+import { PLACEHOLDERS, getDiversifiedProfessorBackground } from '@/lib/constants';
 
 interface ProfessorsContentProps {
     initialProfessors: any[];
@@ -28,37 +28,25 @@ const getColorFromName = (nombre: string) => {
     return colors[Math.abs(hash) % colors.length];
 };
 
-const getRandomBackgroundImage = () => {
-    const randomId = PROFESSOR_NATURE_BGS[Math.floor(Math.random() * PROFESSOR_NATURE_BGS.length)];
-    return `https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`;
-};
-
-const getHighQualityBackgroundImage = (url: string | null, professorName: string): string => {
-    // If URL is null, or from an old/broken source, use a stable nature background
-    if (!url || url.includes('picsum.photos') || url.includes('source.unsplash.com') || url.includes('unsplash.com/featured')) {
-        const seed = professorName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const randomId = PROFESSOR_NATURE_BGS[seed % PROFESSOR_NATURE_BGS.length];
-        return `https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`;
-    }
-
-    // Attempt to upgrade direct unsplash links if they are missing required params or look broken
-    if (url.includes('images.unsplash.com') && !url.includes('auto=format')) {
-        return `${url}${url.includes('?') ? '&' : '?'}auto=format&fit=crop&q=80&w=1600&h=900`;
-    }
-
-    return url;
-};
-
-const ProfessorBackground = ({ url, name }: { url: string | null; name: string }) => {
-    const [currentUrl, setCurrentUrl] = useState(() => getHighQualityBackgroundImage(url, name));
+const ProfessorBackground = ({ url, name, specialty }: { url: string | null; name: string; specialty?: string | null }) => {
+    const [currentUrl, setCurrentUrl] = useState(() => getDiversifiedProfessorBackground(name, specialty, url));
     const [isLoaded, setIsLoaded] = useState(false);
 
     const handleError = () => {
-        // Fallback to a random nature image from our verified list on error
-        const seed = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const randomId = PROFESSOR_NATURE_BGS[(seed + 1) % PROFESSOR_NATURE_BGS.length];
-        setCurrentUrl(`https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`);
+        // Fallback to LoremFlickr for guaranteed uniqueness on error
+        const seed = `${name}-${specialty || ''}-fallback`;
+        setCurrentUrl(`https://loremflickr.com/1600/900/nature,landscape,forest,mountain/all?lock=${Math.abs(hashString(seed))}`);
     };
+
+    // Helper for secondary fallback hash if needed
+    function hashString(str: string): number {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash |= 0;
+        }
+        return hash;
+    }
 
     return (
         <>
@@ -153,7 +141,7 @@ export default function ProfessorsContent({
                                 >
                                     <Card className="h-full overflow-hidden transition-all duration-300 bg-bb-card border border-bb-border flex flex-col rounded-xl hover:border-blue-500/30">
                                         <div className="relative h-20 md:h-24 overflow-hidden flex-shrink-0 bg-gradient-to-br from-bb-sidebar to-bb-dark">
-                                            <ProfessorBackground url={professor.background_image_url} name={professor.nombre} />
+                                            <ProfessorBackground url={professor.background_image_url} name={professor.nombre} specialty={professor.especialidad} />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
                                             {isTopRated && (
                                                 <div className="absolute top-2 right-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">

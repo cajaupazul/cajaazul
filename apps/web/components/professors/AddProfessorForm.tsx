@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Autocomplete } from '@/components/ui/Autocomplete';
 import { courseCatalog } from '@/lib/data/courseCatalog';
 import { useDashboardData } from '@/lib/dashboard-data-context';
-import { PROFESSOR_NATURE_BGS, PLACEHOLDERS } from '@/lib/constants';
+import { getDiversifiedProfessorBackground, PLACEHOLDERS } from '@/lib/constants';
 import {
     Select,
     SelectContent,
@@ -165,8 +165,11 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
     // Removed unused handler
 
     const getRandomBackgroundImage = () => {
-        const randomId = PROFESSOR_NATURE_BGS[Math.floor(Math.random() * PROFESSOR_NATURE_BGS.length)];
-        return `https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`;
+        // Use current form values to generate a deterministic but diversified background
+        // Or just use a truly random one if specialty isn't set yet
+        const currentName = formData.nombre || 'Nuevo Profesor';
+        const currentSpecialty = formData.especialidad || 'General';
+        return getDiversifiedProfessorBackground(currentName, currentSpecialty);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {

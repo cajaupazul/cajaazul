@@ -16,7 +16,7 @@ import BouncingBalls from '@/components/BouncingBalls';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 import { StickerCanvas } from '@/components/ui/StickerCanvas';
-import { PLACEHOLDERS, PROFESSOR_NATURE_BGS } from '@/lib/constants';
+import { PLACEHOLDERS, getDiversifiedProfessorBackground, getStringHash } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
 import { FileText, LayoutPanelLeft, FolderRoot } from 'lucide-react';
@@ -86,31 +86,14 @@ const getColorFromName = (nombre: string) => {
 };
 
 // Function to upgrade old low-quality images to high-quality Unsplash
-const getHighQualityBackgroundImage = (url: string | null, professorName: string): string => {
-    // If URL is null, or from an old/broken source, use a stable nature background
-    if (!url || url.includes('picsum.photos') || url.includes('source.unsplash.com') || url.includes('unsplash.com/featured')) {
-        const seed = professorName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const randomId = PROFESSOR_NATURE_BGS[seed % PROFESSOR_NATURE_BGS.length];
-        return `https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`;
-    }
-
-    // Attempt to upgrade direct unsplash links if they are missing required params or look broken
-    if (url.includes('images.unsplash.com') && !url.includes('auto=format')) {
-        return `${url}${url.includes('?') ? '&' : '?'}auto=format&fit=crop&q=80&w=1600&h=900`;
-    }
-
-    return url;
-};
-
-const ProfessorBackground = ({ url, name }: { url: string | null; name: string }) => {
-    const [currentUrl, setCurrentUrl] = useState(() => getHighQualityBackgroundImage(url, name));
+const ProfessorBackground = ({ url, name, specialty }: { url: string | null; name: string; specialty?: string | null }) => {
+    const [currentUrl, setCurrentUrl] = useState(() => getDiversifiedProfessorBackground(name, specialty, url));
     const [isLoaded, setIsLoaded] = useState(false);
 
     const handleError = () => {
-        // Fallback to a random nature image from our verified list on error
-        const seed = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const randomId = PROFESSOR_NATURE_BGS[(seed + 1) % PROFESSOR_NATURE_BGS.length];
-        setCurrentUrl(`https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`);
+        // Fallback to LoremFlickr for guaranteed uniqueness on error
+        const hash = getStringHash(`${name}-${specialty || ''}-fallback`);
+        setCurrentUrl(`https://loremflickr.com/1600/900/nature,landscape,forest,mountain/all?lock=${hash}`);
     };
 
     return (
@@ -573,7 +556,7 @@ export default function ProfessorRatingsContent({
                 >
                     {professor.background_image_url && (
                         <div className="relative h-32 overflow-hidden bg-gradient-to-br from-bb-sidebar to-bb-dark">
-                            <ProfessorBackground url={professor.background_image_url} name={professor.nombre} />
+                            <ProfessorBackground url={professor.background_image_url} name={professor.nombre} specialty={professor.especialidad} />
                             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-bb-card/40 to-bb-card" />
                         </div>
                     )}
