@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2, Pencil } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
+import AdminMaterialManager from './AdminMaterialManager';
 import { PLACEHOLDERS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
 
@@ -35,6 +36,7 @@ export default function CourseDetailContent({
     const [viewingFile, setViewingFile] = useState<{ path: string; name: string } | null>(null);
     const [selectedProfessorId, setSelectedProfessorId] = useState<string>(searchParams.get('professor') || 'all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [showAdminManager, setShowAdminManager] = useState(false);
 
     // Sync state with url param
     useEffect(() => {
@@ -569,6 +571,19 @@ export default function CourseDetailContent({
                                 </div>
                             ) : (
                                 <div className="bg-bb-card p-8 rounded-2xl border border-bb-border text-center">
+                                    <div className="flex items-center gap-2">
+                                        {currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setShowAdminManager(true)}
+                                                className="h-8 w-8 p-0 rounded-full bg-bb-dark/50 border border-bb-border hover:bg-bb-card text-bb-text-secondary hover:text-white"
+                                                title="Gestionar materiales (Admin)"
+                                            >
+                                                <Pencil className="h-3.5 w-3.5" />
+                                            </Button>
+                                        )}
+                                    </div>
                                     <div className="w-12 h-12 rounded-full bg-bb-darker flex items-center justify-center mx-auto mb-3">
                                         <Users className="w-6 h-6 text-bb-text/20" />
                                     </div>
@@ -587,6 +602,17 @@ export default function CourseDetailContent({
                 filePath={viewingFile?.path || null}
                 fileName={viewingFile?.name || null}
             />
+            {/* Admin Manager Modal */}
+            {showAdminManager && (
+                <AdminMaterialManager
+                    isOpen={showAdminManager}
+                    onClose={() => setShowAdminManager(false)}
+                    materials={materials}
+                    allProfessors={allProfessors}
+                    courseName={course.nombre}
+                />
+            )}
         </div>
     );
 }
+
