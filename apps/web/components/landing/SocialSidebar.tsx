@@ -23,7 +23,7 @@ const SOCIAL_LINKS = [
 
 export default function SocialSidebar() {
     return (
-        <div className="fixed left-0 top-0 bottom-0 w-[40px] md:w-[50px] z-[60] hidden xl:flex flex-col items-center justify-center bg-[#002d5a] border-r border-white/10">
+        <div className="fixed left-0 top-0 bottom-0 w-[40px] md:w-[50px] z-[110] hidden xl:flex flex-col items-center justify-center bg-[#002d5a] border-r border-white/10">
             <div className="flex flex-col gap-6">
                 {SOCIAL_LINKS.map((social, idx) => (
                     <a

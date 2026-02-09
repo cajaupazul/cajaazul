@@ -19,7 +19,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="relative w-full bg-white select-none">
+    <div className="relative w-full bg-white select-none xl:pl-[50px]">
       <SocialSidebar />
 
       {/* Navbar - Refined and Minimalist */}
@@ -27,7 +27,7 @@ export default function HomePage() {
         className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${scrolled ? 'bg-white shadow-md py-2' : 'bg-white/95 backdrop-blur-sm py-4 md:py-6'
           }`}
       >
-        <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-24 flex justify-between items-center">
+        <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-24 flex justify-between items-center transition-all duration-300">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-12 h-12 flex items-center justify-center transform group-hover:rotate-12 transition-transform">
@@ -69,7 +69,7 @@ export default function HomePage() {
           <div className="inline-block px-5 py-2 bg-blue-50 text-blue-700 text-[11px] font-black rounded-full uppercase tracking-[0.25em] mb-4">
             Comunidad Universitaria Colaborativa
           </div>
-          <h2 className="text-4xl md:text-6xl font-black text-[#002d5a] leading-[1.05] tracking-tight italic uppercase leading-none">
+          <h2 className="text-4xl md:text-6xl font-black text-[#002d5a] leading-tight tracking-tight italic uppercase">
             Todo lo que necesitas <br />
             <span className="text-blue-600">para tu éxito.</span>
           </h2>
