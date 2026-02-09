@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Autocomplete } from '@/components/ui/Autocomplete';
 import { courseCatalog } from '@/lib/data/courseCatalog';
 import { useDashboardData } from '@/lib/dashboard-data-context';
+import { PROFESSOR_NATURE_BGS, PLACEHOLDERS } from '@/lib/constants';
 import {
     Select,
     SelectContent,
@@ -164,19 +165,7 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
     // Removed unused handler
 
     const getRandomBackgroundImage = () => {
-        const NATURE_BG_IDS = [
-            'photo-1501854140801-50d01698950b',
-            'photo-1470074184345-d97a063efcf9',
-            'photo-1441974231531-c6227db76b6e',
-            'photo-1501785888041-af3ef285b470',
-            'photo-1472214103451-9374bd1c798e',
-            'photo-1500382017468-9049fed747ef',
-            'photo-1469474968028-56623f02e42e',
-            'photo-1447752875215-b2761acb3c5d',
-            'photo-1433086966358-54859d0ed716',
-            'photo-1511497584788-8767ef7299b2',
-        ];
-        const randomId = NATURE_BG_IDS[Math.floor(Math.random() * NATURE_BG_IDS.length)];
+        const randomId = PROFESSOR_NATURE_BGS[Math.floor(Math.random() * PROFESSOR_NATURE_BGS.length)];
         return `https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`;
     };
 

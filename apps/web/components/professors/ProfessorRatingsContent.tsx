@@ -16,7 +16,7 @@ import BouncingBalls from '@/components/BouncingBalls';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 import { StickerCanvas } from '@/components/ui/StickerCanvas';
-import { PLACEHOLDERS } from '@/lib/constants';
+import { PLACEHOLDERS, PROFESSOR_NATURE_BGS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
 import { FileText, LayoutPanelLeft, FolderRoot } from 'lucide-react';
@@ -87,30 +87,19 @@ const getColorFromName = (nombre: string) => {
 
 // Function to upgrade old low-quality images to high-quality Unsplash
 const getHighQualityBackgroundImage = (url: string | null, professorName: string): string => {
-    // If URL is from Picsum (old low quality), replace with Unsplash
+    // If URL is from an old/broken source or null, replace with Unsplash nature background
     if (!url || url.includes('picsum.photos') || url.includes('source.unsplash.com') || url.includes('unsplash.com/featured')) {
-        const NATURE_BG_IDS = [
-            'photo-1501854140801-50d01698950b',
-            'photo-1470074184345-d97a063efcf9',
-            'photo-1441974231531-c6227db76b6e',
-            'photo-1501785888041-af3ef285b470',
-            'photo-1472214103451-9374bd1c798e',
-            'photo-1500382017468-9049fed747ef',
-            'photo-1469474968028-56623f02e42e',
-            'photo-1447752875215-b2761acb3c5d',
-            'photo-1433086966358-54859d0ed716',
-            'photo-1511497584788-8767ef7299b2',
-        ];
-        // Use professor name to generate consistent seed for same professor
         const seed = professorName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const randomId = NATURE_BG_IDS[seed % NATURE_BG_IDS.length];
+        const randomId = PROFESSOR_NATURE_BGS[seed % PROFESSOR_NATURE_BGS.length];
         return `https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`;
     }
-    // If already Unsplash but low resolution, upgrade it
-    if (url.includes('source.unsplash.com') && !url.includes('1600x900')) {
-        return url.replace(/\d+x\d+/, '1600x900');
+
+    // Attempt to upgrade direct unsplash links if they are missing required params or look broken
+    if (url.includes('images.unsplash.com') && !url.includes('auto=format')) {
+        return `${url}${url.includes('?') ? '&' : '?'}auto=format&fit=crop&q=80&w=1600&h=900`;
     }
-    return url || PLACEHOLDERS.BACKGROUND;
+
+    return url;
 };
 
 interface ProfessorRatingsContentProps {
@@ -555,12 +544,12 @@ export default function ProfessorRatingsContent({
                     className="mb-10 relative overflow-hidden rounded-3xl bg-bb-card border border-bb-border"
                 >
                     {professor.background_image_url && (
-                        <div className="relative h-32 overflow-hidden">
+                        <div className="relative h-32 overflow-hidden bg-gradient-to-br from-bb-sidebar to-bb-dark">
                             <div
-                                className="absolute inset-0 bg-cover bg-center"
+                                className="absolute inset-0 bg-cover bg-center opacity-80"
                                 style={{ backgroundImage: `url("${getHighQualityBackgroundImage(professor.background_image_url, professor.nombre)}")` }}
                             />
-                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-bb-card/20 to-bb-card" />
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-bb-card/40 to-bb-card" />
                         </div>
                     )}
 

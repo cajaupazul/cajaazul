@@ -10,7 +10,7 @@ import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useDashboardData } from '@/lib/dashboard-data-context';
-import { PLACEHOLDERS } from '@/lib/constants';
+import { PLACEHOLDERS, PROFESSOR_NATURE_BGS } from '@/lib/constants';
 
 interface ProfessorsContentProps {
     initialProfessors: any[];
@@ -29,40 +29,23 @@ const getColorFromName = (nombre: string) => {
 };
 
 const getRandomBackgroundImage = () => {
-    const NATURE_BG_IDS = [
-        'photo-1501854140801-50d01698950b',
-        'photo-1470074184345-d97a063efcf9',
-        'photo-1441974231531-c6227db76b6e',
-        'photo-1501785888041-af3ef285b470',
-        'photo-1472214103451-9374bd1c798e',
-        'photo-1500382017468-9049fed747ef',
-        'photo-1469474968028-56623f02e42e',
-        'photo-1447752875215-b2761acb3c5d',
-        'photo-1433086966358-54859d0ed716',
-        'photo-1511497584788-8767ef7299b2',
-    ];
-    const randomId = NATURE_BG_IDS[Math.floor(Math.random() * NATURE_BG_IDS.length)];
+    const randomId = PROFESSOR_NATURE_BGS[Math.floor(Math.random() * PROFESSOR_NATURE_BGS.length)];
     return `https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`;
 };
 
 const getHighQualityBackgroundImage = (url: string | null, professorName: string): string => {
+    // If URL is null, or from an old/broken source, use a stable nature background
     if (!url || url.includes('picsum.photos') || url.includes('source.unsplash.com') || url.includes('unsplash.com/featured')) {
-        const NATURE_BG_IDS = [
-            'photo-1501854140801-50d01698950b',
-            'photo-1470074184345-d97a063efcf9',
-            'photo-1441974231531-c6227db76b6e',
-            'photo-1501785888041-af3ef285b470',
-            'photo-1472214103451-9374bd1c798e',
-            'photo-1500382017468-9049fed747ef',
-            'photo-1469474968028-56623f02e42e',
-            'photo-1447752875215-b2761acb3c5d',
-            'photo-1433086966358-54859d0ed716',
-            'photo-1511497584788-8767ef7299b2',
-        ];
         const seed = professorName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const randomId = NATURE_BG_IDS[seed % NATURE_BG_IDS.length];
+        const randomId = PROFESSOR_NATURE_BGS[seed % PROFESSOR_NATURE_BGS.length];
         return `https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`;
     }
+
+    // Attempt to upgrade direct unsplash links if they are missing required params or look broken
+    if (url.includes('images.unsplash.com') && !url.includes('auto=format')) {
+        return `${url}${url.includes('?') ? '&' : '?'}auto=format&fit=crop&q=80&w=1600&h=900`;
+    }
+
     return url;
 };
 
@@ -141,7 +124,7 @@ export default function ProfessorsContent({
                                     className="group relative"
                                 >
                                     <Card className="h-full overflow-hidden transition-all duration-300 bg-bb-card border border-bb-border flex flex-col rounded-xl hover:border-blue-500/30">
-                                        <div className="relative h-20 md:h-24 overflow-hidden flex-shrink-0">
+                                        <div className="relative h-20 md:h-24 overflow-hidden flex-shrink-0 bg-gradient-to-br from-bb-sidebar to-bb-dark">
                                             <div
                                                 className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-500"
                                                 style={{ backgroundImage: `url("${getHighQualityBackgroundImage(professor.background_image_url, professor.nombre)}")` }}
