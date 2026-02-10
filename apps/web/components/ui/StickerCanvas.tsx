@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, ShopItem } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
@@ -8,9 +8,6 @@ import { useTheme } from '@/lib/theme-context';
 import {
     Plus,
     X,
-    RotateCcw,
-    Maximize2,
-    Minimize2,
     Trash2,
     Check,
     Palette,
@@ -39,6 +36,23 @@ interface StickerCanvasProps {
     canEdit?: boolean;
 }
 
+// Responsive base size for stickers
+function useResponsiveBase() {
+    const [base, setBase] = useState(120);
+    useEffect(() => {
+        const calc = () => {
+            const w = window.innerWidth;
+            if (w < 640) setBase(66);
+            else if (w < 1024) setBase(90);
+            else setBase(120);
+        };
+        calc();
+        window.addEventListener('resize', calc);
+        return () => window.removeEventListener('resize', calc);
+    }, []);
+    return base;
+}
+
 export function StickerCanvas({ targetType, targetId, canEdit = false }: StickerCanvasProps) {
     const { profile } = useProfile();
     const { colors } = useTheme();
@@ -48,6 +62,7 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
     const [showInventory, setShowInventory] = useState(false);
     const [loading, setLoading] = useState(true);
     const canvasRef = useRef<HTMLDivElement>(null);
+    const baseSize = useResponsiveBase();
 
     useEffect(() => {
         if (targetId) {
@@ -111,7 +126,6 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
     };
 
     const updateSticker = async (id: string, settings: DecorationSettings) => {
-        // En un entorno productivo usaríamos debounce para no saturar Supabase
         const { error } = await supabase
             .from('user_decorations')
             .update({ settings })
@@ -140,7 +154,7 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
 
     return (
         <div className="absolute inset-0 z-20 pointer-events-none" ref={canvasRef}>
-            {/* Decoraciones */}
+            {/* Decorations */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 {decorations.map((deco) => (
                     <StickerItem
@@ -150,24 +164,25 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
                         onUpdate={(settings) => updateSticker(deco.id, settings)}
                         onDelete={() => deleteSticker(deco.id)}
                         canvasRef={canvasRef}
+                        baseSize={baseSize}
                     />
                 ))}
             </div>
 
-            {/* Controles de Edición */}
+            {/* Edit Controls — top-right, icon-only */}
             {(canEdit || targetType === 'professor') && (
-                <div className="absolute bottom-4 right-4 pointer-events-auto flex flex-col gap-2 z-50">
+                <div className="absolute top-4 right-4 pointer-events-auto flex flex-col gap-2 z-50">
                     <AnimatePresence>
                         {isEditing && (
                             <motion.div
-                                initial={{ opacity: 0, y: 20 }}
+                                initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 20 }}
+                                exit={{ opacity: 0, y: -10 }}
                                 className="flex flex-col gap-2"
                             >
                                 <Button
                                     onClick={() => setShowInventory(true)}
-                                    className="rounded-full shadow-lg bg-bb-sidebar hover:bg-bb-hover text-bb-text border border-bb-border"
+                                    className="rounded-full shadow-lg bg-bb-sidebar hover:bg-bb-hover text-bb-text border border-bb-border h-10 w-10"
                                     size="icon"
                                     title="Añadir Sticker"
                                 >
@@ -176,7 +191,7 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
 
                                 <Button
                                     onClick={handleToggleEdit}
-                                    className="rounded-full shadow-xl bg-green-500 hover:bg-green-600 text-white"
+                                    className="rounded-full shadow-xl bg-green-500 hover:bg-green-600 text-white h-10 w-10"
                                     size="icon"
                                     title="Finalizar Edición"
                                 >
@@ -189,18 +204,18 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
                     {!isEditing && (
                         <Button
                             onClick={handleToggleEdit}
-                            className={`rounded-full shadow-xl text-white hover:scale-110 transition-transform ${isEditing ? 'opacity-0 pointer-events-none' : ''}`}
+                            className="rounded-full shadow-xl text-white hover:scale-110 transition-transform h-10 w-10"
                             style={{ backgroundColor: colors?.primary }}
-                            size="lg"
+                            size="icon"
+                            title="Decorar"
                         >
-                            <Palette className="w-5 h-5 mr-2" />
-                            Decorar
+                            <Palette className="w-5 h-5" />
                         </Button>
                     )}
                 </div>
             )}
 
-            {/* Modal de Inventario de Stickers */}
+            {/* Sticker Inventory Modal */}
             <AnimatePresence>
                 {showInventory && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm pointer-events-auto">
@@ -259,32 +274,195 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
     );
 }
 
-function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef }: {
+// ─── StickerItem with gesture-based manipulation ───────────────────────────
+
+function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, baseSize }: {
     decoration: Decoration;
     isEditing: boolean;
     onUpdate: (settings: DecorationSettings) => void;
     onDelete: () => void;
     canvasRef: React.RefObject<HTMLDivElement | null>;
+    baseSize: number;
 }) {
     const [settings, setSettings] = useState(decoration.settings);
-    const [isHovered, setIsHovered] = useState(false);
+    const stickerRef = useRef<HTMLDivElement>(null);
+    const rotateHandleRef = useRef<HTMLDivElement>(null);
+    const resizeHandleRef = useRef<HTMLDivElement>(null);
 
+    // Keep settings in sync if decoration changes externally
+    useEffect(() => {
+        setSettings(decoration.settings);
+    }, [decoration.settings]);
+
+    // Debounced save to DB
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+    const saveSettings = useCallback((newSettings: DecorationSettings) => {
+        setSettings(newSettings);
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => onUpdate(newSettings), 300);
+    }, [onUpdate]);
+
+    // ── Drag to move ──
     const handleDragEnd = (event: any, info: any) => {
         if (!isEditing) return;
-
         const newSettings = { ...settings, x: settings.x + info.offset.x, y: settings.y + info.offset.y };
-        setSettings(newSettings);
-        onUpdate(newSettings);
+        saveSettings(newSettings);
     };
 
-    const updateProp = (prop: keyof DecorationSettings, delta: number) => {
-        const newSettings = { ...settings, [prop]: settings[prop] + delta };
-        setSettings(newSettings);
-        onUpdate(newSettings);
-    };
+    // ── Mouse drag for rotation handle ──
+    useEffect(() => {
+        if (!isEditing) return;
+        const handle = rotateHandleRef.current;
+        const sticker = stickerRef.current;
+        if (!handle || !sticker) return;
+
+        let active = false;
+        let startAngle = 0;
+
+        const getCenter = () => {
+            const rect = sticker.getBoundingClientRect();
+            return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 };
+        };
+
+        const onPointerDown = (e: PointerEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            active = true;
+            handle.setPointerCapture(e.pointerId);
+            const { cx, cy } = getCenter();
+            startAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI) - settings.rotate;
+        };
+
+        const onPointerMove = (e: PointerEvent) => {
+            if (!active) return;
+            const { cx, cy } = getCenter();
+            const angle = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
+            const newRotate = angle - startAngle;
+            saveSettings({ ...settings, rotate: Math.round(newRotate) });
+        };
+
+        const onPointerUp = () => { active = false; };
+
+        handle.addEventListener('pointerdown', onPointerDown);
+        handle.addEventListener('pointermove', onPointerMove);
+        handle.addEventListener('pointerup', onPointerUp);
+        handle.addEventListener('pointercancel', onPointerUp);
+
+        return () => {
+            handle.removeEventListener('pointerdown', onPointerDown);
+            handle.removeEventListener('pointermove', onPointerMove);
+            handle.removeEventListener('pointerup', onPointerUp);
+            handle.removeEventListener('pointercancel', onPointerUp);
+        };
+    }, [isEditing, settings, saveSettings]);
+
+    // ── Mouse drag for resize handle ──
+    useEffect(() => {
+        if (!isEditing) return;
+        const handle = resizeHandleRef.current;
+        const sticker = stickerRef.current;
+        if (!handle || !sticker) return;
+
+        let active = false;
+        let startDist = 0;
+        let startScale = 1;
+
+        const getCenter = () => {
+            const rect = sticker.getBoundingClientRect();
+            return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 };
+        };
+
+        const onPointerDown = (e: PointerEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            active = true;
+            handle.setPointerCapture(e.pointerId);
+            const { cx, cy } = getCenter();
+            startDist = Math.hypot(e.clientX - cx, e.clientY - cy);
+            startScale = settings.scale;
+        };
+
+        const onPointerMove = (e: PointerEvent) => {
+            if (!active) return;
+            const { cx, cy } = getCenter();
+            const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+            const ratio = dist / startDist;
+            const newScale = Math.max(0.3, Math.min(3, startScale * ratio));
+            saveSettings({ ...settings, scale: Math.round(newScale * 100) / 100 });
+        };
+
+        const onPointerUp = () => { active = false; };
+
+        handle.addEventListener('pointerdown', onPointerDown);
+        handle.addEventListener('pointermove', onPointerMove);
+        handle.addEventListener('pointerup', onPointerUp);
+        handle.addEventListener('pointercancel', onPointerUp);
+
+        return () => {
+            handle.removeEventListener('pointerdown', onPointerDown);
+            handle.removeEventListener('pointermove', onPointerMove);
+            handle.removeEventListener('pointerup', onPointerUp);
+            handle.removeEventListener('pointercancel', onPointerUp);
+        };
+    }, [isEditing, settings, saveSettings]);
+
+    // ── Pinch-to-zoom + two-finger rotate (mobile) ──
+    useEffect(() => {
+        if (!isEditing) return;
+        const el = stickerRef.current;
+        if (!el) return;
+
+        let initialDist = 0;
+        let initialAngle = 0;
+        let initialScale = 1;
+        let initialRotate = 0;
+
+        const onTouchStart = (e: TouchEvent) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const dx = e.touches[1].clientX - e.touches[0].clientX;
+                const dy = e.touches[1].clientY - e.touches[0].clientY;
+                initialDist = Math.hypot(dx, dy);
+                initialAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+                initialScale = settings.scale;
+                initialRotate = settings.rotate;
+            }
+        };
+
+        const onTouchMove = (e: TouchEvent) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const dx = e.touches[1].clientX - e.touches[0].clientX;
+                const dy = e.touches[1].clientY - e.touches[0].clientY;
+                const dist = Math.hypot(dx, dy);
+                const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+                const scaleRatio = dist / initialDist;
+                const newScale = Math.max(0.3, Math.min(3, initialScale * scaleRatio));
+                const newRotate = initialRotate + (angle - initialAngle);
+
+                saveSettings({
+                    ...settings,
+                    scale: Math.round(newScale * 100) / 100,
+                    rotate: Math.round(newRotate)
+                });
+            }
+        };
+
+        el.addEventListener('touchstart', onTouchStart, { passive: false });
+        el.addEventListener('touchmove', onTouchMove, { passive: false });
+
+        return () => {
+            el.removeEventListener('touchstart', onTouchStart);
+            el.removeEventListener('touchmove', onTouchMove);
+        };
+    }, [isEditing, settings, saveSettings]);
+
+    const visualSize = baseSize * settings.scale;
 
     return (
         <motion.div
+            ref={stickerRef}
             drag={isEditing}
             dragMomentum={false}
             onDragEnd={handleDragEnd}
@@ -292,17 +470,14 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef }: {
             animate={{
                 x: settings.x,
                 y: settings.y,
-                scale: settings.scale,
                 rotate: settings.rotate
             }}
             transition={{ type: 'spring', damping: 20, stiffness: 300, mass: 0.5 }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing ${isEditing ? 'z-[60]' : 'z-10'}`}
+            className={`absolute pointer-events-auto ${isEditing ? 'cursor-grab active:cursor-grabbing z-[60]' : 'z-10'}`}
             style={{
                 touchAction: 'none',
-                width: 120,
-                height: 120,
+                width: visualSize,
+                height: visualSize,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -315,29 +490,53 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef }: {
                 draggable={false}
             />
 
-            {/* Controles del Sticker (Solo en modo edición) */}
+            {/* Editing controls */}
             <AnimatePresence>
-                {isEditing && (isHovered || true) && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-bb-sidebar/95 backdrop-blur border border-bb-border p-1 rounded-full shadow-2xl z-50"
-                    >
-                        <button onClick={() => updateProp('rotate', -15)} className="p-1.5 hover:bg-bb-hover rounded-full text-bb-text transition-colors" title="Rotar Izquierda">
-                            <RotateCcw className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => updateProp('scale', -0.1)} className="p-1.5 hover:bg-bb-hover rounded-full text-bb-text transition-colors" title="Achicar">
-                            <Minimize2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => updateProp('scale', 0.1)} className="p-1.5 hover:bg-bb-hover rounded-full text-bb-text transition-colors" title="Agrandar">
-                            <Maximize2 className="w-3.5 h-3.5" />
-                        </button>
-                        <div className="w-[1px] h-4 bg-bb-border mx-1" />
-                        <button onClick={onDelete} className="p-1.5 hover:bg-red-500/20 text-red-400 rounded-full transition-colors" title="Eliminar">
+                {isEditing && (
+                    <>
+                        {/* Dashed border to show selection */}
+                        <div className="absolute inset-0 border-2 border-dashed border-blue-400/50 rounded-xl pointer-events-none" />
+
+                        {/* Delete button — top right */}
+                        <motion.button
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                            className="absolute -top-3 -right-3 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg z-50 transition-colors"
+                            title="Eliminar"
+                        >
                             <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                    </motion.div>
+                        </motion.button>
+
+                        {/* Rotate handle — bottom right */}
+                        <div
+                            ref={rotateHandleRef}
+                            className="absolute -bottom-3 -right-3 w-7 h-7 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing z-50 transition-colors select-none"
+                            title="Arrastrar para rotar"
+                            style={{ touchAction: 'none' }}
+                        >
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                                <path d="M21 3v5h-5" />
+                            </svg>
+                        </div>
+
+                        {/* Resize handle — bottom left */}
+                        <div
+                            ref={resizeHandleRef}
+                            className="absolute -bottom-3 -left-3 w-7 h-7 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg cursor-nwse-resize z-50 transition-colors select-none"
+                            title="Arrastrar para redimensionar"
+                            style={{ touchAction: 'none' }}
+                        >
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M15 3h6v6" />
+                                <path d="M9 21H3v-6" />
+                                <path d="M21 3L14 10" />
+                                <path d="M3 21l7-7" />
+                            </svg>
+                        </div>
+                    </>
                 )}
             </AnimatePresence>
         </motion.div>
