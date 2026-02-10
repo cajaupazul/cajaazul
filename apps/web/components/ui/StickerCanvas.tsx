@@ -127,13 +127,22 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
         }
     };
 
-    const updateSticker = async (id: string, settings: DecorationSettings) => {
+    const updateSticker = async (id: string, newSettings: DecorationSettings) => {
+        // Optimistically update local state
+        setDecorations(prev => prev.map(d =>
+            d.id === id ? { ...d, settings: newSettings } : d
+        ));
+
         const { error } = await supabase
             .from('user_decorations')
-            .update({ settings })
+            .update({ settings: newSettings })
             .eq('id', id);
 
-        if (error) console.error('Error updating sticker:', error);
+        if (error) {
+            console.error('Error updating sticker:', error);
+            // Revert on error
+            fetchDecorations();
+        }
     };
 
     const deleteSticker = async (id: string) => {
@@ -166,7 +175,7 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
                             key={deco.id}
                             decoration={deco}
                             isEditing={canEditThis}
-                            onUpdate={(settings) => updateSticker(deco.id, settings)}
+                            onSave={(settings) => updateSticker(deco.id, settings)}
                             onDelete={() => deleteSticker(deco.id)}
                             canvasRef={canvasRef}
                             baseSize={baseSize}
@@ -282,10 +291,10 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
 
 // ─── StickerItem with gesture-based manipulation ───────────────────────────
 
-function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, baseSize }: {
+function StickerItem({ decoration, isEditing, onSave, onDelete, canvasRef, baseSize }: {
     decoration: Decoration;
     isEditing: boolean;
-    onUpdate: (settings: DecorationSettings) => void;
+    onSave: (settings: DecorationSettings) => void;
     onDelete: () => void;
     canvasRef: React.RefObject<HTMLDivElement | null>;
     baseSize: number;
@@ -303,25 +312,36 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
         settingsRef.current = decoration.settings;
     }, [decoration.settings]);
 
-    // Debounced save to DB
+    // Debounced save (for rotation/resize continuous operations)
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-    const saveToDb = useCallback((newSettings: DecorationSettings) => {
+    const debouncedSave = useCallback((newSettings: DecorationSettings) => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => onUpdate(newSettings), 300);
-    }, [onUpdate]);
+        saveTimeoutRef.current = setTimeout(() => onSave(newSettings), 300);
+    }, [onSave]);
 
-    const updateSettings = useCallback((newSettings: DecorationSettings) => {
+    // Update local state + debounced save (for continuous gestures)
+    const updateSettingsContinuous = useCallback((newSettings: DecorationSettings) => {
         setSettings(newSettings);
         settingsRef.current = newSettings;
-        saveToDb(newSettings);
-    }, [saveToDb]);
+        debouncedSave(newSettings);
+    }, [debouncedSave]);
 
-    // ── Drag to move (framer-motion) ──
+    // Update local state + immediate save (for drag end)
+    const updateSettingsImmediate = useCallback((newSettings: DecorationSettings) => {
+        setSettings(newSettings);
+        settingsRef.current = newSettings;
+        // Clear any pending debounce
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        onSave(newSettings);
+    }, [onSave]);
+
+    // ── Drag to move (framer-motion) — saves immediately ──
     const handleDragEnd = useCallback((event: any, info: any) => {
         if (!isEditing || isDraggingHandle) return;
         const s = settingsRef.current;
-        updateSettings({ ...s, x: s.x + info.offset.x, y: s.y + info.offset.y });
-    }, [isEditing, isDraggingHandle, updateSettings]);
+        const newSettings = { ...s, x: s.x + info.offset.x, y: s.y + info.offset.y };
+        updateSettingsImmediate(newSettings);
+    }, [isEditing, isDraggingHandle, updateSettingsImmediate]);
 
     // ── Rotate handle: React onPointerDown + window listeners ──
     const handleRotatePointerDown = useCallback((e: React.PointerEvent) => {
@@ -341,18 +361,20 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
             const r = el.getBoundingClientRect();
             const angle = Math.atan2(ev.clientY - (r.top + r.height / 2), ev.clientX - (r.left + r.width / 2)) * (180 / Math.PI);
             const newRotate = Math.round(angle - startAngle);
-            updateSettings({ ...settingsRef.current, rotate: newRotate });
+            updateSettingsContinuous({ ...settingsRef.current, rotate: newRotate });
         };
 
         const onUp = () => {
             setIsDraggingHandle(false);
+            // Flush the final rotation value immediately
+            onSave(settingsRef.current);
             window.removeEventListener('pointermove', onMove);
             window.removeEventListener('pointerup', onUp);
         };
 
         window.addEventListener('pointermove', onMove);
         window.addEventListener('pointerup', onUp);
-    }, [updateSettings]);
+    }, [updateSettingsContinuous, onSave]);
 
     // ── Resize handle: React onPointerDown + window listeners ──
     const handleResizePointerDown = useCallback((e: React.PointerEvent) => {
@@ -374,18 +396,20 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
             const dist = Math.hypot(ev.clientX - (r.left + r.width / 2), ev.clientY - (r.top + r.height / 2));
             const ratio = dist / startDist;
             const newScale = Math.max(0.3, Math.min(3, Math.round(startScale * ratio * 100) / 100));
-            updateSettings({ ...settingsRef.current, scale: newScale });
+            updateSettingsContinuous({ ...settingsRef.current, scale: newScale });
         };
 
         const onUp = () => {
             setIsDraggingHandle(false);
+            // Flush the final scale value immediately
+            onSave(settingsRef.current);
             window.removeEventListener('pointermove', onMove);
             window.removeEventListener('pointerup', onUp);
         };
 
         window.addEventListener('pointermove', onMove);
         window.addEventListener('pointerup', onUp);
-    }, [updateSettings]);
+    }, [updateSettingsContinuous, onSave]);
 
     // ── Pinch-to-zoom + two-finger rotate (mobile) ──
     useEffect(() => {
@@ -422,7 +446,7 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
                 const newScale = Math.max(0.3, Math.min(3, Math.round(initialScale * scaleRatio * 100) / 100));
                 const newRotate = Math.round(initialRotate + (angle - initialAngle));
 
-                updateSettings({ ...settingsRef.current, scale: newScale, rotate: newRotate });
+                updateSettingsContinuous({ ...settingsRef.current, scale: newScale, rotate: newRotate });
             }
         };
 
@@ -433,7 +457,7 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
             el.removeEventListener('touchstart', onTouchStart);
             el.removeEventListener('touchmove', onTouchMove);
         };
-    }, [isEditing, updateSettings]);
+    }, [isEditing, updateSettingsContinuous]);
 
     const visualSize = baseSize * settings.scale;
 
