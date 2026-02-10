@@ -295,7 +295,7 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
     }, [decoration.settings]);
 
     // Debounced save to DB
-    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const saveSettings = useCallback((newSettings: DecorationSettings) => {
         setSettings(newSettings);
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
