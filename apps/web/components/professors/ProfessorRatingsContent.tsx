@@ -529,14 +529,12 @@ export default function ProfessorRatingsContent({
     return (
         <div className="min-h-screen bg-bb-dark relative overflow-hidden transition-colors duration-300">
             <BouncingBalls />
-            {/* Stickers at z-0 so they stay BEHIND all important content */}
-            <div className="absolute inset-0 z-[1]">
-                <StickerCanvas
-                    targetType="professor"
-                    targetId={professor.id}
-                    canEdit={true}
-                />
-            </div>
+            {/* Stickers — canvas handles its own z-index and pointer-events */}
+            <StickerCanvas
+                targetType="professor"
+                targetId={professor.id}
+                canEdit={true}
+            />
 
             {/* === FULL-WIDTH BANNER (edge-to-edge, like Course Detail) === */}
             <div className="relative h-52 md:h-72 lg:h-80 w-full bg-bb-darker border-b border-bb-border overflow-hidden">

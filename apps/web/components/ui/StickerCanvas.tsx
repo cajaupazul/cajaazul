@@ -64,6 +64,8 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
     const canvasRef = useRef<HTMLDivElement>(null);
     const baseSize = useResponsiveBase();
 
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
+
     useEffect(() => {
         if (targetId) {
             fetchDecorations();
@@ -155,18 +157,22 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
     return (
         <div className="absolute inset-0 z-20 pointer-events-none" ref={canvasRef}>
             {/* Decorations */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                {decorations.map((deco) => (
-                    <StickerItem
-                        key={deco.id}
-                        decoration={deco}
-                        isEditing={isEditing}
-                        onUpdate={(settings) => updateSticker(deco.id, settings)}
-                        onDelete={() => deleteSticker(deco.id)}
-                        canvasRef={canvasRef}
-                        baseSize={baseSize}
-                    />
-                ))}
+            <div className="absolute inset-0 pointer-events-none">
+                {decorations.map((deco) => {
+                    // Permission: only owner or admin can edit/delete
+                    const canEditThis = isEditing && (isAdmin || deco.placer_id === profile?.id);
+                    return (
+                        <StickerItem
+                            key={deco.id}
+                            decoration={deco}
+                            isEditing={canEditThis}
+                            onUpdate={(settings) => updateSticker(deco.id, settings)}
+                            onDelete={() => deleteSticker(deco.id)}
+                            canvasRef={canvasRef}
+                            baseSize={baseSize}
+                        />
+                    );
+                })}
             </div>
 
             {/* Edit Controls — top-right, icon-only */}
@@ -285,126 +291,101 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
     baseSize: number;
 }) {
     const [settings, setSettings] = useState(decoration.settings);
-    const stickerRef = useRef<HTMLDivElement>(null);
-    const rotateHandleRef = useRef<HTMLDivElement>(null);
-    const resizeHandleRef = useRef<HTMLDivElement>(null);
+    const settingsRef = useRef(decoration.settings);
+    settingsRef.current = settings;
 
-    // Keep settings in sync if decoration changes externally
+    const stickerRef = useRef<HTMLDivElement>(null);
+    const [isDraggingHandle, setIsDraggingHandle] = useState(false);
+
+    // Sync if decoration changes externally
     useEffect(() => {
         setSettings(decoration.settings);
+        settingsRef.current = decoration.settings;
     }, [decoration.settings]);
 
     // Debounced save to DB
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-    const saveSettings = useCallback((newSettings: DecorationSettings) => {
-        setSettings(newSettings);
+    const saveToDb = useCallback((newSettings: DecorationSettings) => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => onUpdate(newSettings), 300);
     }, [onUpdate]);
 
-    // ── Drag to move ──
-    const handleDragEnd = (event: any, info: any) => {
-        if (!isEditing) return;
-        const newSettings = { ...settings, x: settings.x + info.offset.x, y: settings.y + info.offset.y };
-        saveSettings(newSettings);
-    };
+    const updateSettings = useCallback((newSettings: DecorationSettings) => {
+        setSettings(newSettings);
+        settingsRef.current = newSettings;
+        saveToDb(newSettings);
+    }, [saveToDb]);
 
-    // ── Mouse drag for rotation handle ──
-    useEffect(() => {
-        if (!isEditing) return;
-        const handle = rotateHandleRef.current;
-        const sticker = stickerRef.current;
-        if (!handle || !sticker) return;
+    // ── Drag to move (framer-motion) ──
+    const handleDragEnd = useCallback((event: any, info: any) => {
+        if (!isEditing || isDraggingHandle) return;
+        const s = settingsRef.current;
+        updateSettings({ ...s, x: s.x + info.offset.x, y: s.y + info.offset.y });
+    }, [isEditing, isDraggingHandle, updateSettings]);
 
-        let active = false;
-        let startAngle = 0;
+    // ── Rotate handle: React onPointerDown + window listeners ──
+    const handleRotatePointerDown = useCallback((e: React.PointerEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingHandle(true);
 
-        const getCenter = () => {
-            const rect = sticker.getBoundingClientRect();
-            return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 };
+        const el = stickerRef.current;
+        if (!el) return;
+
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const startAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI) - settingsRef.current.rotate;
+
+        const onMove = (ev: PointerEvent) => {
+            const r = el.getBoundingClientRect();
+            const angle = Math.atan2(ev.clientY - (r.top + r.height / 2), ev.clientX - (r.left + r.width / 2)) * (180 / Math.PI);
+            const newRotate = Math.round(angle - startAngle);
+            updateSettings({ ...settingsRef.current, rotate: newRotate });
         };
 
-        const onPointerDown = (e: PointerEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-            active = true;
-            handle.setPointerCapture(e.pointerId);
-            const { cx, cy } = getCenter();
-            startAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI) - settings.rotate;
+        const onUp = () => {
+            setIsDraggingHandle(false);
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
         };
 
-        const onPointerMove = (e: PointerEvent) => {
-            if (!active) return;
-            const { cx, cy } = getCenter();
-            const angle = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
-            const newRotate = angle - startAngle;
-            saveSettings({ ...settings, rotate: Math.round(newRotate) });
-        };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+    }, [updateSettings]);
 
-        const onPointerUp = () => { active = false; };
+    // ── Resize handle: React onPointerDown + window listeners ──
+    const handleResizePointerDown = useCallback((e: React.PointerEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingHandle(true);
 
-        handle.addEventListener('pointerdown', onPointerDown);
-        handle.addEventListener('pointermove', onPointerMove);
-        handle.addEventListener('pointerup', onPointerUp);
-        handle.addEventListener('pointercancel', onPointerUp);
+        const el = stickerRef.current;
+        if (!el) return;
 
-        return () => {
-            handle.removeEventListener('pointerdown', onPointerDown);
-            handle.removeEventListener('pointermove', onPointerMove);
-            handle.removeEventListener('pointerup', onPointerUp);
-            handle.removeEventListener('pointercancel', onPointerUp);
-        };
-    }, [isEditing, settings, saveSettings]);
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const startDist = Math.hypot(e.clientX - cx, e.clientY - cy);
+        const startScale = settingsRef.current.scale;
 
-    // ── Mouse drag for resize handle ──
-    useEffect(() => {
-        if (!isEditing) return;
-        const handle = resizeHandleRef.current;
-        const sticker = stickerRef.current;
-        if (!handle || !sticker) return;
-
-        let active = false;
-        let startDist = 0;
-        let startScale = 1;
-
-        const getCenter = () => {
-            const rect = sticker.getBoundingClientRect();
-            return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 };
-        };
-
-        const onPointerDown = (e: PointerEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-            active = true;
-            handle.setPointerCapture(e.pointerId);
-            const { cx, cy } = getCenter();
-            startDist = Math.hypot(e.clientX - cx, e.clientY - cy);
-            startScale = settings.scale;
-        };
-
-        const onPointerMove = (e: PointerEvent) => {
-            if (!active) return;
-            const { cx, cy } = getCenter();
-            const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+        const onMove = (ev: PointerEvent) => {
+            const r = el.getBoundingClientRect();
+            const dist = Math.hypot(ev.clientX - (r.left + r.width / 2), ev.clientY - (r.top + r.height / 2));
             const ratio = dist / startDist;
-            const newScale = Math.max(0.3, Math.min(3, startScale * ratio));
-            saveSettings({ ...settings, scale: Math.round(newScale * 100) / 100 });
+            const newScale = Math.max(0.3, Math.min(3, Math.round(startScale * ratio * 100) / 100));
+            updateSettings({ ...settingsRef.current, scale: newScale });
         };
 
-        const onPointerUp = () => { active = false; };
-
-        handle.addEventListener('pointerdown', onPointerDown);
-        handle.addEventListener('pointermove', onPointerMove);
-        handle.addEventListener('pointerup', onPointerUp);
-        handle.addEventListener('pointercancel', onPointerUp);
-
-        return () => {
-            handle.removeEventListener('pointerdown', onPointerDown);
-            handle.removeEventListener('pointermove', onPointerMove);
-            handle.removeEventListener('pointerup', onPointerUp);
-            handle.removeEventListener('pointercancel', onPointerUp);
+        const onUp = () => {
+            setIsDraggingHandle(false);
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
         };
-    }, [isEditing, settings, saveSettings]);
+
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+    }, [updateSettings]);
 
     // ── Pinch-to-zoom + two-finger rotate (mobile) ──
     useEffect(() => {
@@ -424,8 +405,8 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
                 const dy = e.touches[1].clientY - e.touches[0].clientY;
                 initialDist = Math.hypot(dx, dy);
                 initialAngle = Math.atan2(dy, dx) * (180 / Math.PI);
-                initialScale = settings.scale;
-                initialRotate = settings.rotate;
+                initialScale = settingsRef.current.scale;
+                initialRotate = settingsRef.current.rotate;
             }
         };
 
@@ -438,14 +419,10 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
                 const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
                 const scaleRatio = dist / initialDist;
-                const newScale = Math.max(0.3, Math.min(3, initialScale * scaleRatio));
-                const newRotate = initialRotate + (angle - initialAngle);
+                const newScale = Math.max(0.3, Math.min(3, Math.round(initialScale * scaleRatio * 100) / 100));
+                const newRotate = Math.round(initialRotate + (angle - initialAngle));
 
-                saveSettings({
-                    ...settings,
-                    scale: Math.round(newScale * 100) / 100,
-                    rotate: Math.round(newRotate)
-                });
+                updateSettings({ ...settingsRef.current, scale: newScale, rotate: newRotate });
             }
         };
 
@@ -456,14 +433,14 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
             el.removeEventListener('touchstart', onTouchStart);
             el.removeEventListener('touchmove', onTouchMove);
         };
-    }, [isEditing, settings, saveSettings]);
+    }, [isEditing, updateSettings]);
 
     const visualSize = baseSize * settings.scale;
 
     return (
         <motion.div
             ref={stickerRef}
-            drag={isEditing}
+            drag={isEditing && !isDraggingHandle}
             dragMomentum={false}
             onDragEnd={handleDragEnd}
             initial={false}
@@ -490,14 +467,14 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
                 draggable={false}
             />
 
-            {/* Editing controls */}
+            {/* Editing controls — only shown for stickers the user can edit */}
             <AnimatePresence>
                 {isEditing && (
                     <>
-                        {/* Dashed border to show selection */}
+                        {/* Selection border */}
                         <div className="absolute inset-0 border-2 border-dashed border-blue-400/50 rounded-xl pointer-events-none" />
 
-                        {/* Delete button — top right */}
+                        {/* Delete — top right */}
                         <motion.button
                             initial={{ opacity: 0, scale: 0.5 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -509,9 +486,12 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
                             <Trash2 className="w-3.5 h-3.5" />
                         </motion.button>
 
-                        {/* Rotate handle — bottom right */}
-                        <div
-                            ref={rotateHandleRef}
+                        {/* Rotate handle — bottom right (drag in circles to rotate) */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            onPointerDown={handleRotatePointerDown}
                             className="absolute -bottom-3 -right-3 w-7 h-7 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing z-50 transition-colors select-none"
                             title="Arrastrar para rotar"
                             style={{ touchAction: 'none' }}
@@ -520,11 +500,14 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
                                 <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
                                 <path d="M21 3v5h-5" />
                             </svg>
-                        </div>
+                        </motion.div>
 
-                        {/* Resize handle — bottom left */}
-                        <div
-                            ref={resizeHandleRef}
+                        {/* Resize handle — bottom left (drag outward/inward to scale) */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            onPointerDown={handleResizePointerDown}
                             className="absolute -bottom-3 -left-3 w-7 h-7 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg cursor-nwse-resize z-50 transition-colors select-none"
                             title="Arrastrar para redimensionar"
                             style={{ touchAction: 'none' }}
@@ -535,7 +518,7 @@ function StickerItem({ decoration, isEditing, onUpdate, onDelete, canvasRef, bas
                                 <path d="M21 3L14 10" />
                                 <path d="M3 21l7-7" />
                             </svg>
-                        </div>
+                        </motion.div>
                     </>
                 )}
             </AnimatePresence>
