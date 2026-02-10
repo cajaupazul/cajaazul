@@ -527,91 +527,114 @@ export default function ProfessorRatingsContent({
 
 
     return (
-        <div className="min-h-screen bg-bb-dark p-8 relative overflow-hidden transition-colors duration-300">
+        <div className="min-h-screen bg-bb-dark relative overflow-hidden transition-colors duration-300">
             <BouncingBalls />
-            <StickerCanvas
-                targetType="professor"
-                targetId={professor.id}
-                canEdit={true}
-            />
+            {/* Stickers at z-0 so they stay BEHIND all important content */}
+            <div className="absolute inset-0 z-[1]">
+                <StickerCanvas
+                    targetType="professor"
+                    targetId={professor.id}
+                    canEdit={true}
+                />
+            </div>
 
-            <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={containerVariants}
-                className="max-w-7xl mx-auto relative z-10"
-            >
-                <motion.div variants={itemVariants} className="mb-8">
-                    <Link href="/dashboard/professors">
-                        <Button variant="ghost" className="text-bb-text-secondary hover:text-bb-text hover:bg-bb-hover group pl-0">
-                            <ArrowLeft className="h-5 w-5 mr-1 group-hover:-translate-x-1 transition-transform" />
-                            Volver a Profesores
-                        </Button>
-                    </Link>
-                </motion.div>
+            {/* === FULL-WIDTH BANNER (edge-to-edge, like Course Detail) === */}
+            <div className="relative h-52 md:h-72 lg:h-80 w-full bg-bb-darker border-b border-bb-border overflow-hidden">
+                {professor.background_image_url ? (
+                    <ProfessorBackground url={professor.background_image_url} name={professor.nombre} specialty={professor.especialidad} />
+                ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-bb-darker to-teal-900/30" />
+                )}
+                {/* Cinematic gradient overlays */}
+                <div className="absolute inset-0 bg-gradient-to-t from-bb-dark via-bb-dark/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-bb-dark/60 via-transparent to-transparent" />
 
-                <motion.div
-                    variants={itemVariants}
-                    className="mb-10 relative overflow-hidden rounded-3xl bg-bb-card border border-bb-border"
+                {/* Back Button on banner */}
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="absolute top-4 left-4 z-20 bg-bb-dark/50 border-white/10 text-white hover:bg-white/10 backdrop-blur-md transition-all hover:scale-110 shadow-lg"
+                    onClick={() => router.back()}
                 >
-                    {professor.background_image_url && (
-                        <div className="relative h-32 overflow-hidden bg-gradient-to-br from-bb-sidebar to-bb-dark">
-                            <ProfessorBackground url={professor.background_image_url} name={professor.nombre} specialty={professor.especialidad} />
-                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-bb-card/40 to-bb-card" />
-                        </div>
-                    )}
+                    <ArrowLeft className="h-5 w-5" />
+                </Button>
+            </div>
 
-                    <div className={`relative z-10 p-8 flex flex-col md:flex-row gap-8 items-center md:items-start text-center md:text-left ${professor.background_image_url ? '-mt-16' : ''}`}>
-                        <div className="relative group">
-                            <div className="h-24 w-24 md:h-32 md:w-32 rounded-2xl md:rounded-3xl flex items-center justify-center bg-bb-sidebar border-4 border-bb-card shadow-2xl overflow-hidden relative z-20 transition-transform duration-500 hover:scale-105">
-                                <img
-                                    src={getStorageUrl(professor.avatar_url || '/profes/tl.webp', 'profile-avatars', PLACEHOLDERS.AVATAR)}
-                                    alt={professor.nombre}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        (e.target as HTMLImageElement).src = '/profes/tl.webp';
-                                    }}
-                                />
+            {/* === MAIN CONTENT (all at z-10, above stickers) === */}
+            <div className="relative z-10 w-full">
+                <motion.div
+                    initial="hidden"
+                    animate="visible"
+                    variants={containerVariants}
+                    className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+                >
+                    {/* Professor Identity Card - overlaps the banner */}
+                    <motion.div variants={itemVariants} className="-mt-24 md:-mt-28 mb-8">
+                        <div className="flex flex-col md:flex-row gap-6 items-center md:items-end">
+                            {/* Avatar overlapping banner */}
+                            <div className="relative shrink-0 group">
+                                <div className="h-32 w-32 md:h-40 md:w-40 rounded-3xl flex items-center justify-center bg-bb-sidebar border-4 border-bb-dark shadow-2xl overflow-hidden relative z-20 transition-transform duration-500 hover:scale-105 hover:rotate-1 group-hover:border-blue-500/30">
+                                    <img
+                                        src={getStorageUrl(professor.avatar_url || '/profes/tl.webp', 'profile-avatars', PLACEHOLDERS.AVATAR)}
+                                        alt={professor.nombre}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = '/profes/tl.webp';
+                                        }}
+                                    />
+                                </div>
+                                <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-bb-dark text-sm font-black px-4 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 border-4 border-bb-dark z-30 transform group-hover:scale-110 transition-transform">
+                                    <Star className="w-4 h-4 fill-bb-dark" /> {avgRating}
+                                </div>
                             </div>
-                            <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-xl flex items-center gap-1 border border-yellow-400/50 z-30">
-                                <Star className="w-3.5 h-3.5 fill-white" /> {avgRating}
-                            </div>
-                        </div>
 
-                        <div className="flex-1 space-y-2">
-                            <h1 className="text-3xl md:text-5xl font-black text-bb-text drop-shadow-md">{professor.nombre}</h1>
-                            <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                                {professor.especialidad && professorLinkMapping[professor.especialidad.toLowerCase()] ? (
-                                    <Link
-                                        href={`/dashboard/professors/view?id=${professorLinkMapping[professor.especialidad.toLowerCase()]}`}
-                                        className="bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs border border-white/10 hover:bg-white/10 transition-colors font-bold uppercase tracking-wider"
-                                    >
-                                        {professor.especialidad}
-                                    </Link>
-                                ) : (
-                                    professor.especialidad && (
-                                        <span className="bg-black/40 backdrop-blur-md text-white/50 px-3 py-1 rounded-full text-xs border border-white/5 uppercase tracking-wider">
+                            {/* Name & Tags */}
+                            <div className="flex-1 space-y-3 text-center md:text-left pb-2">
+                                <motion.h1
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 }}
+                                    className="text-4xl md:text-6xl font-black text-white leading-[0.9] tracking-tighter uppercase drop-shadow-2xl"
+                                >
+                                    {professor.nombre}
+                                </motion.h1>
+
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.3 }}
+                                    className="flex flex-wrap gap-2 justify-center md:justify-start"
+                                >
+                                    {professor.especialidad && professorLinkMapping[professor.especialidad.toLowerCase()] ? (
+                                        <Link
+                                            href={`/dashboard/professors/view?id=${professorLinkMapping[professor.especialidad.toLowerCase()]}`}
+                                            className="bg-blue-500/20 backdrop-blur-md text-blue-300 px-4 py-1.5 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-all uppercase tracking-wider text-xs font-bold shadow-lg shadow-blue-900/20"
+                                        >
                                             {professor.especialidad}
-                                        </span>
-                                    )
-                                )}
+                                        </Link>
+                                    ) : (
+                                        professor.especialidad && (
+                                            <span className="bg-white/5 backdrop-blur-md text-white/70 px-4 py-1.5 rounded-full border border-white/10 uppercase tracking-wider text-xs font-bold">
+                                                {professor.especialidad}
+                                            </span>
+                                        )
+                                    )}
 
-                                {professor.facultad && (
-                                    <span className="bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 font-medium">
-                                        <Info className="w-3 h-3" />
-                                        {professor.facultad}
-                                    </span>
-                                )}
+                                    {professor.facultad && (
+                                        <span className="bg-white/5 backdrop-blur-md text-white/70 px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2 text-xs font-medium">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]" />
+                                            {professor.facultad}
+                                        </span>
+                                    )}
+                                </motion.div>
                             </div>
                         </div>
+                    </motion.div>
 
-                        {/* Actions moved out of here to clear space for stickers */}
-                    </div>
-
-                    {/* New Action Bar & Stats Combined */}
-                    <div className="bg-bb-card/50 backdrop-blur-md border-t border-bb-border grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-bb-border">
+                    {/* Stats & Actions Bar */}
+                    <motion.div variants={itemVariants} className="bg-bb-card/60 backdrop-blur-md border border-bb-border rounded-2xl mb-10 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-bb-border overflow-hidden">
                         {/* Stats Section */}
-                        <div className="grid grid-cols-3 divide-x divide-bb-border py-2">
+                        <div className="grid grid-cols-3 divide-x divide-bb-border py-4">
                             {[
                                 { label: 'Calificación', value: avgRating, icon: Star, color: 'text-yellow-400' },
                                 { label: 'Claridad', value: avgClaridad, icon: Sparkles, color: 'text-blue-400' },
@@ -695,389 +718,386 @@ export default function ProfessorRatingsContent({
                                 <Share2 className="h-5 w-5" />
                             </Button>
                         </div>
-                    </div>
+                    </motion.div>
 
+                    <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+                        <div className="lg:col-span-2 space-y-6">
+                            {professor.email && (
+                                <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
+                                    <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
+                                        <MessageCircle className="w-5 h-5 text-blue-400" />
+                                        Contacto
+                                    </h3>
+                                    <a
+                                        href={`mailto:${professor.email}`}
+                                        className="flex items-center gap-3 text-bb-text hover:text-blue-400 transition-colors group"
+                                    >
+                                        <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <rect width="20" height="16" x="2" y="4" rx="2" />
+                                                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-bb-text-secondary">Correo Electrónico</p>
+                                            <p className="font-medium">{professor.email}</p>
+                                        </div>
+                                    </a>
+                                </div>
+                            )}
 
+                            {/* Moved Materials Section here - prominent position */}
+                            {materials.length > 0 && (
+                                <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-bold text-bb-text flex items-center gap-2">
+                                            <FolderRoot className="w-5 h-5 text-purple-400" />
+                                            Materiales del Profesor
+                                        </h3>
+                                        <span className="text-xs font-bold text-bb-text-secondary bg-bb-darker px-2 py-1 rounded-lg">
+                                            {materials.length} total
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {materials.slice(0, 4).map((material) => {
+                                            let bgColor = 'bg-blue-500/10';
+                                            let borderColor = 'border-blue-500/20';
+                                            let textColor = 'text-blue-400';
+                                            let icon = <LayoutPanelLeft className="w-5 h-5" />;
 
-                </motion.div>
+                                            if (material.tipo?.toLowerCase().includes('ppt')) {
+                                                bgColor = 'bg-orange-500/10';
+                                                borderColor = 'border-orange-500/20';
+                                                textColor = 'text-orange-400';
+                                            } else if (material.tipo?.toLowerCase().includes('examen')) {
+                                                bgColor = 'bg-red-500/10';
+                                                borderColor = 'border-red-500/20';
+                                                textColor = 'text-red-400';
+                                                icon = <FileText className="w-5 h-5" />;
+                                            }
 
-                <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
-                    <div className="lg:col-span-2 space-y-6">
-                        {professor.email && (
+                                            const firstMaterialCourseId = material.courses?.id;
+
+                                            return (
+                                                <div
+                                                    key={material.id}
+                                                    onClick={() => setViewingFile({ path: material.url_archivo, name: material.titulo })}
+                                                    className={`p-3 ${bgColor} rounded-xl hover:bg-opacity-20 transition-all border ${borderColor} flex flex-col items-center gap-2 group cursor-pointer active:scale-95`}
+                                                >
+                                                    <div className={`${textColor} group-hover:scale-110 transition-transform`}>
+                                                        {icon}
+                                                    </div>
+                                                    <div className="text-center min-w-0 w-full">
+                                                        <p className="text-[10px] font-bold text-bb-text truncate group-hover:text-white leading-tight">
+                                                            {material.titulo}
+                                                        </p>
+                                                        {material.courses?.nombre && (
+                                                            <p className="text-[8px] text-bb-text-secondary truncate mt-0.5 uppercase tracking-tighter">
+                                                                {material.courses.nombre}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {materials.length > 0 && (
+                                        <div className="mt-4 pt-4 border-t border-bb-border flex justify-center">
+                                            <Link
+                                                href={materials[0].courses?.id ? `/dashboard/courses/view?id=${materials[0].courses.id}&professor=${professor.id}` : '#'}
+                                                className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 group"
+                                            >
+                                                Ver todos los materiales en el curso
+                                                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                                            </Link>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
                                 <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
-                                    <MessageCircle className="w-5 h-5 text-blue-400" />
-                                    Contacto
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+                                    </svg>
+                                    Otros Cursos
                                 </h3>
-                                <a
-                                    href={`mailto:${professor.email}`}
-                                    className="flex items-center gap-3 text-bb-text hover:text-blue-400 transition-colors group"
-                                >
-                                    <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <rect width="20" height="16" x="2" y="4" rx="2" />
-                                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-bb-text-secondary">Correo Electrónico</p>
-                                        <p className="font-medium">{professor.email}</p>
-                                    </div>
-                                </a>
-                            </div>
-                        )}
+                                <div className="flex flex-wrap gap-2">
+                                    {aggregatedOtherCourses.length > 0 ? (
+                                        aggregatedOtherCourses.map((curso: string, idx: number) => {
+                                            const trimmedCurso = curso.trim();
+                                            const professorId = professorLinkMapping[trimmedCurso.toLowerCase()];
 
-                        {/* Moved Materials Section here - prominent position */}
-                        {materials.length > 0 && (
-                            <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-bold text-bb-text flex items-center gap-2">
-                                        <FolderRoot className="w-5 h-5 text-purple-400" />
-                                        Materiales del Profesor
-                                    </h3>
-                                    <span className="text-xs font-bold text-bb-text-secondary bg-bb-darker px-2 py-1 rounded-lg">
-                                        {materials.length} total
-                                    </span>
+                                            // Only link if professor profile exists
+                                            if (professorId) {
+                                                return (
+                                                    <Link
+                                                        key={idx}
+                                                        href={`/dashboard/professors/view?id=${professorId}`}
+                                                        className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium hover:bg-purple-500/20 transition-colors"
+                                                    >
+                                                        {trimmedCurso}
+                                                    </Link>
+                                                );
+                                            }
+
+                                            // If no professor profile exists, show as disabled/grayed out
+                                            return (
+                                                <span key={idx} className="px-4 py-2 rounded-xl bg-bb-darker/50 text-bb-text-secondary/40 border border-bb-border/50 text-sm font-medium opacity-50 cursor-not-allowed">
+                                                    {trimmedCurso}
+                                                </span>
+                                            );
+                                        })
+                                    ) : (
+                                        <p className="text-sm text-bb-text-secondary">No se encontraron otros cursos.</p>
+                                    )}
                                 </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                    {materials.slice(0, 4).map((material) => {
-                                        let bgColor = 'bg-blue-500/10';
-                                        let borderColor = 'border-blue-500/20';
-                                        let textColor = 'text-blue-400';
-                                        let icon = <LayoutPanelLeft className="w-5 h-5" />;
+                            </div>
+                        </div>
 
-                                        if (material.tipo?.toLowerCase().includes('ppt')) {
-                                            bgColor = 'bg-orange-500/10';
-                                            borderColor = 'border-orange-500/20';
-                                            textColor = 'text-orange-400';
-                                        } else if (material.tipo?.toLowerCase().includes('examen')) {
-                                            bgColor = 'bg-red-500/10';
-                                            borderColor = 'border-red-500/20';
-                                            textColor = 'text-red-400';
-                                            icon = <FileText className="w-5 h-5" />;
-                                        }
+                        <div className="space-y-6">
+                            <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
+                                    <User className="w-5 h-5 text-green-400" />
+                                    Otros Profesores de {professor.especialidad}
+                                </h3>
 
-                                        const firstMaterialCourseId = material.courses?.id;
-
-                                        return (
-                                            <div
-                                                key={material.id}
-                                                onClick={() => setViewingFile({ path: material.url_archivo, name: material.titulo })}
-                                                className={`p-3 ${bgColor} rounded-xl hover:bg-opacity-20 transition-all border ${borderColor} flex flex-col items-center gap-2 group cursor-pointer active:scale-95`}
+                                {relatedProfessors.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {relatedProfessors.map((prof) => (
+                                            <Link
+                                                key={prof.id}
+                                                href={`/dashboard/professors/view?id=${prof.id}`}
+                                                className="block p-4 rounded-xl bg-bb-darker border border-bb-border hover:border-green-500/50 hover:bg-green-500/5 transition-all group"
                                             >
-                                                <div className={`${textColor} group-hover:scale-110 transition-transform`}>
-                                                    {icon}
-                                                </div>
-                                                <div className="text-center min-w-0 w-full">
-                                                    <p className="text-[10px] font-bold text-bb-text truncate group-hover:text-white leading-tight">
-                                                        {material.titulo}
-                                                    </p>
-                                                    {material.courses?.nombre && (
-                                                        <p className="text-[8px] text-bb-text-secondary truncate mt-0.5 uppercase tracking-tighter">
-                                                            {material.courses.nombre}
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500/20 to-blue-500/20 flex items-center justify-center text-green-400 font-bold text-sm shrink-0 group-hover:scale-110 transition-transform">
+                                                        {prof.nombre.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-bold text-bb-text group-hover:text-green-400 transition-colors truncate">
+                                                            {prof.nombre}
                                                         </p>
-                                                    )}
+                                                        {prof.facultad && (
+                                                            <p className="text-xs text-bb-text-secondary truncate mt-0.5">
+                                                                {prof.facultad}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <Info className="w-8 h-8 text-bb-text-secondary mx-auto mb-2 opacity-20" />
+                                        <p className="text-sm text-bb-text-secondary">
+                                            No hay otros profesores de {professor.especialidad}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Summary Card Below */}
+                            <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
+                                    <TrendingUp className="w-5 h-5 text-blue-400" />
+                                    Resumen
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-bb-text-secondary text-sm">Total de Reseñas</span>
+                                        <span className="text-bb-text font-bold text-lg">{ratings.length}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    <motion.div variants={itemVariants} className="space-y-8 mt-12">
+                        <div className="flex items-center justify-between border-b border-bb-border pb-4">
+                            <h2 className="text-2xl font-black text-bb-text flex items-center gap-3">
+                                <MessageCircle className="w-7 h-7 text-blue-500" />
+                                Sección de Comentarios
+                                <span className="text-sm font-bold bg-bb-card px-2 py-1 rounded-lg text-bb-text-secondary border border-bb-border">
+                                    {comments.length}
+                                </span>
+                            </h2>
+                        </div>
+
+                        {/* New Comment Input Box - Social Style (Polished) */}
+                        <div className="bg-bb-darker/30 border border-white/5 rounded-[32px] p-4 md:p-6 mb-12 hover:bg-bb-darker/50 transition-all group/input shadow-xl">
+                            <div className="flex flex-col sm:flex-row gap-4 md:gap-6">
+                                <div className="shrink-0 pt-1 flex justify-center sm:block">
+                                    <AvatarWithFrame
+                                        avatarUrl={profile?.avatar_url || PLACEHOLDERS.AVATAR}
+                                        name={profile?.nombre || 'Usuario'}
+                                        frameUrl={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.image_url : null}
+                                        frameScale={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.scale : 1}
+                                        offsetX={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.x : 0}
+                                        offsetY={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.y : 0}
+                                        size="md"
+                                        className="ring-4 ring-bb-dark shadow-2xl transition-transform group-hover/input:scale-105"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <form onSubmit={handleSubmitComment}>
+                                        <Textarea
+                                            value={commentText}
+                                            onChange={(e) => setCommentText(e.target.value)}
+                                            placeholder="Comparte tu opinión o haz una pregunta sobre este profesor..."
+                                            className="bg-transparent border-none text-bb-text min-h-[140px] rounded-none resize-none focus:ring-0 text-base md:text-lg placeholder:text-bb-text/30 p-0 shadow-none scrollbar-hide font-medium leading-relaxed"
+                                        />
+                                        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-white/5 mt-4 pt-4 gap-4 sm:gap-0">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-bb-text/20 group-hover/input:text-bb-text/40 transition-colors">
+                                                Tu opinión importa
+                                            </p>
+                                            <Button
+                                                type="submit"
+                                                disabled={isSubmittingComment || !commentText.trim()}
+                                                className="bg-blue-600 hover:bg-blue-500 text-white font-black px-10 h-10 rounded-full shadow-lg shadow-blue-500/10 active:scale-95 transition-all flex items-center gap-2.5 text-xs uppercase tracking-wider"
+                                            >
+                                                {isSubmittingComment ? (
+                                                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                                ) : (
+                                                    <>
+                                                        Publicar
+                                                        <ArrowRight className="w-4 h-4" />
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Delete Confirmation Modal */}
+                        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                            <DialogContent className="bg-bb-card border-bb-border text-bb-text sm:max-w-md text-center">
+                                <DialogHeader>
+                                    <DialogTitle className="text-xl font-bold">¿Eliminar comentario?</DialogTitle>
+                                    <DialogDescription className="text-bb-text-secondary pt-2">
+                                        Esta acción no se puede deshacer. El comentario desaparecerá permanentemente.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="flex flex-col gap-3 mt-4">
+                                    <Button
+                                        disabled={isDeleting}
+                                        onClick={confirmDelete}
+                                        className="w-full bg-red-600 hover:bg-red-500 text-white font-bold h-12 rounded-xl shadow-lg active:scale-95 transition-all"
+                                    >
+                                        {isDeleting ? (
+                                            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            "Eliminar permanentemente"
+                                        )}
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        disabled={isDeleting}
+                                        onClick={() => setIsDeleteDialogOpen(false)}
+                                        className="w-full text-bb-text-secondary hover:text-white font-bold h-12 rounded-xl transition-all"
+                                    >
+                                        Cancelar
+                                    </Button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+
+                        {/* Social Wall Style Comments (Cleaned) */}
+                        {comments.length > 0 ? (
+                            <div className="space-y-4">
+                                {comments
+                                    .filter(c => !c.parent_id)
+                                    .map((comment) => {
+                                        const replies = comments.filter(r => r.parent_id === comment.id);
+                                        return (
+                                            <div key={comment.id} className="relative group/parent">
+                                                <CommentItem
+                                                    comment={comment}
+                                                    profile={profile}
+                                                    frameMap={frameMap}
+                                                    onLike={handleLikeComment}
+                                                    onDelete={handleDeleteComment}
+                                                    onReply={() => setReplyToId(comment.id)}
+                                                    isReply={false}
+                                                    hasReplies={replies.length > 0}
+                                                />
+
+                                                {replyToId === comment.id && (
+                                                    <div className="ml-14 md:ml-20 mt-4 mb-10">
+                                                        <div className="bg-bb-darker border border-white/5 rounded-3xl p-5 shadow-2xl relative overflow-hidden">
+                                                            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/30" />
+                                                            <form onSubmit={(e) => handleSubmitComment(e, comment.id)} className="space-y-4">
+                                                                <Textarea
+                                                                    value={replyText}
+                                                                    onChange={(e) => setReplyText(e.target.value)}
+                                                                    placeholder="Escribe una respuesta amable..."
+                                                                    className="bg-transparent border-none text-bb-text min-h-[100px] rounded-none resize-none focus:ring-0 p-0 text-sm md:text-base placeholder:text-bb-text/20 shadow-none font-medium"
+                                                                    autoFocus
+                                                                />
+                                                                <div className="flex justify-end gap-3 pt-2 border-t border-white/5">
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        onClick={() => {
+                                                                            setReplyToId(null);
+                                                                            setReplyText('');
+                                                                        }}
+                                                                        className="text-bb-text-secondary h-9 px-6 rounded-full hover:bg-white/5 transition-colors font-bold text-xs"
+                                                                    >
+                                                                        Cancelar
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="submit"
+                                                                        disabled={isSubmittingReply || !replyText.trim()}
+                                                                        className="bg-blue-600 hover:bg-blue-500 text-white font-black h-9 px-8 rounded-full shadow-lg active:scale-95 transition-all text-xs uppercase tracking-wider"
+                                                                    >
+                                                                        {isSubmittingReply ? 'Enviando...' : 'Responder'}
+                                                                    </Button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {replies.length > 0 && (
+                                                    <div className="ml-14 md:ml-20 space-y-2">
+                                                        {replies.map((reply) => (
+                                                            <CommentItem
+                                                                key={reply.id}
+                                                                comment={reply}
+                                                                profile={profile}
+                                                                frameMap={frameMap}
+                                                                onLike={handleLikeComment}
+                                                                onDelete={handleDeleteComment}
+                                                                onReply={() => setReplyToId(reply.id)}
+                                                                isReply={true}
+                                                                hasReplies={false}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
+                            </div>
+                        ) : (
+                            <div className="text-center py-20 bg-bb-card/30 rounded-[40px] border-2 border-dashed border-bb-border/50 group hover:border-blue-500/30 transition-all">
+                                <div className="w-20 h-20 rounded-full bg-bb-darker flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                                    <MessageCircle className="w-10 h-10 text-bb-text-secondary opacity-30" />
                                 </div>
-
-                                {materials.length > 0 && (
-                                    <div className="mt-4 pt-4 border-t border-bb-border flex justify-center">
-                                        <Link
-                                            href={materials[0].courses?.id ? `/dashboard/courses/view?id=${materials[0].courses.id}&professor=${professor.id}` : '#'}
-                                            className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 group"
-                                        >
-                                            Ver todos los materiales en el curso
-                                            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                                        </Link>
-                                    </div>
-                                )}
+                                <h3 className="text-xl font-bold text-bb-text mb-2">Aún no hay comentarios</h3>
+                                <p className="text-bb-text-secondary max-w-xs mx-auto text-sm">
+                                    Sé el primero en compartir tu experiencia o preguntar algo sobre este profesor.
+                                </p>
                             </div>
                         )}
-
-                        <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
-                            <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-                                </svg>
-                                Otros Cursos
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                {aggregatedOtherCourses.length > 0 ? (
-                                    aggregatedOtherCourses.map((curso: string, idx: number) => {
-                                        const trimmedCurso = curso.trim();
-                                        const professorId = professorLinkMapping[trimmedCurso.toLowerCase()];
-
-                                        // Only link if professor profile exists
-                                        if (professorId) {
-                                            return (
-                                                <Link
-                                                    key={idx}
-                                                    href={`/dashboard/professors/view?id=${professorId}`}
-                                                    className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium hover:bg-purple-500/20 transition-colors"
-                                                >
-                                                    {trimmedCurso}
-                                                </Link>
-                                            );
-                                        }
-
-                                        // If no professor profile exists, show as disabled/grayed out
-                                        return (
-                                            <span key={idx} className="px-4 py-2 rounded-xl bg-bb-darker/50 text-bb-text-secondary/40 border border-bb-border/50 text-sm font-medium opacity-50 cursor-not-allowed">
-                                                {trimmedCurso}
-                                            </span>
-                                        );
-                                    })
-                                ) : (
-                                    <p className="text-sm text-bb-text-secondary">No se encontraron otros cursos.</p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-6">
-                        <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
-                            <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
-                                <User className="w-5 h-5 text-green-400" />
-                                Otros Profesores de {professor.especialidad}
-                            </h3>
-
-                            {relatedProfessors.length > 0 ? (
-                                <div className="space-y-3">
-                                    {relatedProfessors.map((prof) => (
-                                        <Link
-                                            key={prof.id}
-                                            href={`/dashboard/professors/view?id=${prof.id}`}
-                                            className="block p-4 rounded-xl bg-bb-darker border border-bb-border hover:border-green-500/50 hover:bg-green-500/5 transition-all group"
-                                        >
-                                            <div className="flex items-start gap-3">
-                                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500/20 to-blue-500/20 flex items-center justify-center text-green-400 font-bold text-sm shrink-0 group-hover:scale-110 transition-transform">
-                                                    {prof.nombre.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-bold text-bb-text group-hover:text-green-400 transition-colors truncate">
-                                                        {prof.nombre}
-                                                    </p>
-                                                    {prof.facultad && (
-                                                        <p className="text-xs text-bb-text-secondary truncate mt-0.5">
-                                                            {prof.facultad}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-8">
-                                    <Info className="w-8 h-8 text-bb-text-secondary mx-auto mb-2 opacity-20" />
-                                    <p className="text-sm text-bb-text-secondary">
-                                        No hay otros profesores de {professor.especialidad}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Summary Card Below */}
-                        <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
-                            <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
-                                <TrendingUp className="w-5 h-5 text-blue-400" />
-                                Resumen
-                            </h3>
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-bb-text-secondary text-sm">Total de Reseñas</span>
-                                    <span className="text-bb-text font-bold text-lg">{ratings.length}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    </motion.div>
                 </motion.div>
-
-                <motion.div variants={itemVariants} className="space-y-8 mt-12">
-                    <div className="flex items-center justify-between border-b border-bb-border pb-4">
-                        <h2 className="text-2xl font-black text-bb-text flex items-center gap-3">
-                            <MessageCircle className="w-7 h-7 text-blue-500" />
-                            Sección de Comentarios
-                            <span className="text-sm font-bold bg-bb-card px-2 py-1 rounded-lg text-bb-text-secondary border border-bb-border">
-                                {comments.length}
-                            </span>
-                        </h2>
-                    </div>
-
-                    {/* New Comment Input Box - Social Style (Polished) */}
-                    <div className="bg-bb-darker/30 border border-white/5 rounded-[32px] p-4 md:p-6 mb-12 hover:bg-bb-darker/50 transition-all group/input shadow-xl">
-                        <div className="flex flex-col sm:flex-row gap-4 md:gap-6">
-                            <div className="shrink-0 pt-1 flex justify-center sm:block">
-                                <AvatarWithFrame
-                                    avatarUrl={profile?.avatar_url || PLACEHOLDERS.AVATAR}
-                                    name={profile?.nombre || 'Usuario'}
-                                    frameUrl={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.image_url : null}
-                                    frameScale={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.scale : 1}
-                                    offsetX={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.x : 0}
-                                    offsetY={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.y : 0}
-                                    size="md"
-                                    className="ring-4 ring-bb-dark shadow-2xl transition-transform group-hover/input:scale-105"
-                                />
-                            </div>
-                            <div className="flex-1">
-                                <form onSubmit={handleSubmitComment}>
-                                    <Textarea
-                                        value={commentText}
-                                        onChange={(e) => setCommentText(e.target.value)}
-                                        placeholder="Comparte tu opinión o haz una pregunta sobre este profesor..."
-                                        className="bg-transparent border-none text-bb-text min-h-[140px] rounded-none resize-none focus:ring-0 text-base md:text-lg placeholder:text-bb-text/30 p-0 shadow-none scrollbar-hide font-medium leading-relaxed"
-                                    />
-                                    <div className="flex flex-col sm:flex-row items-center justify-between border-t border-white/5 mt-4 pt-4 gap-4 sm:gap-0">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-bb-text/20 group-hover/input:text-bb-text/40 transition-colors">
-                                            Tu opinión importa
-                                        </p>
-                                        <Button
-                                            type="submit"
-                                            disabled={isSubmittingComment || !commentText.trim()}
-                                            className="bg-blue-600 hover:bg-blue-500 text-white font-black px-10 h-10 rounded-full shadow-lg shadow-blue-500/10 active:scale-95 transition-all flex items-center gap-2.5 text-xs uppercase tracking-wider"
-                                        >
-                                            {isSubmittingComment ? (
-                                                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                            ) : (
-                                                <>
-                                                    Publicar
-                                                    <ArrowRight className="w-4 h-4" />
-                                                </>
-                                            )}
-                                        </Button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Delete Confirmation Modal */}
-                    <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                        <DialogContent className="bg-bb-card border-bb-border text-bb-text sm:max-w-md text-center">
-                            <DialogHeader>
-                                <DialogTitle className="text-xl font-bold">¿Eliminar comentario?</DialogTitle>
-                                <DialogDescription className="text-bb-text-secondary pt-2">
-                                    Esta acción no se puede deshacer. El comentario desaparecerá permanentemente.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="flex flex-col gap-3 mt-4">
-                                <Button
-                                    disabled={isDeleting}
-                                    onClick={confirmDelete}
-                                    className="w-full bg-red-600 hover:bg-red-500 text-white font-bold h-12 rounded-xl shadow-lg active:scale-95 transition-all"
-                                >
-                                    {isDeleting ? (
-                                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                    ) : (
-                                        "Eliminar permanentemente"
-                                    )}
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    disabled={isDeleting}
-                                    onClick={() => setIsDeleteDialogOpen(false)}
-                                    className="w-full text-bb-text-secondary hover:text-white font-bold h-12 rounded-xl transition-all"
-                                >
-                                    Cancelar
-                                </Button>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
-
-                    {/* Social Wall Style Comments (Cleaned) */}
-                    {comments.length > 0 ? (
-                        <div className="space-y-4">
-                            {comments
-                                .filter(c => !c.parent_id)
-                                .map((comment) => {
-                                    const replies = comments.filter(r => r.parent_id === comment.id);
-                                    return (
-                                        <div key={comment.id} className="relative group/parent">
-                                            <CommentItem
-                                                comment={comment}
-                                                profile={profile}
-                                                frameMap={frameMap}
-                                                onLike={handleLikeComment}
-                                                onDelete={handleDeleteComment}
-                                                onReply={() => setReplyToId(comment.id)}
-                                                isReply={false}
-                                                hasReplies={replies.length > 0}
-                                            />
-
-                                            {replyToId === comment.id && (
-                                                <div className="ml-14 md:ml-20 mt-4 mb-10">
-                                                    <div className="bg-bb-darker border border-white/5 rounded-3xl p-5 shadow-2xl relative overflow-hidden">
-                                                        <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/30" />
-                                                        <form onSubmit={(e) => handleSubmitComment(e, comment.id)} className="space-y-4">
-                                                            <Textarea
-                                                                value={replyText}
-                                                                onChange={(e) => setReplyText(e.target.value)}
-                                                                placeholder="Escribe una respuesta amable..."
-                                                                className="bg-transparent border-none text-bb-text min-h-[100px] rounded-none resize-none focus:ring-0 p-0 text-sm md:text-base placeholder:text-bb-text/20 shadow-none font-medium"
-                                                                autoFocus
-                                                            />
-                                                            <div className="flex justify-end gap-3 pt-2 border-t border-white/5">
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="ghost"
-                                                                    onClick={() => {
-                                                                        setReplyToId(null);
-                                                                        setReplyText('');
-                                                                    }}
-                                                                    className="text-bb-text-secondary h-9 px-6 rounded-full hover:bg-white/5 transition-colors font-bold text-xs"
-                                                                >
-                                                                    Cancelar
-                                                                </Button>
-                                                                <Button
-                                                                    type="submit"
-                                                                    disabled={isSubmittingReply || !replyText.trim()}
-                                                                    className="bg-blue-600 hover:bg-blue-500 text-white font-black h-9 px-8 rounded-full shadow-lg active:scale-95 transition-all text-xs uppercase tracking-wider"
-                                                                >
-                                                                    {isSubmittingReply ? 'Enviando...' : 'Responder'}
-                                                                </Button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {replies.length > 0 && (
-                                                <div className="ml-14 md:ml-20 space-y-2">
-                                                    {replies.map((reply) => (
-                                                        <CommentItem
-                                                            key={reply.id}
-                                                            comment={reply}
-                                                            profile={profile}
-                                                            frameMap={frameMap}
-                                                            onLike={handleLikeComment}
-                                                            onDelete={handleDeleteComment}
-                                                            onReply={() => setReplyToId(reply.id)}
-                                                            isReply={true}
-                                                            hasReplies={false}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                        </div>
-                    ) : (
-                        <div className="text-center py-20 bg-bb-card/30 rounded-[40px] border-2 border-dashed border-bb-border/50 group hover:border-blue-500/30 transition-all">
-                            <div className="w-20 h-20 rounded-full bg-bb-darker flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                                <MessageCircle className="w-10 h-10 text-bb-text-secondary opacity-30" />
-                            </div>
-                            <h3 className="text-xl font-bold text-bb-text mb-2">Aún no hay comentarios</h3>
-                            <p className="text-bb-text-secondary max-w-xs mx-auto text-sm">
-                                Sé el primero en compartir tu experiencia o preguntar algo sobre este profesor.
-                            </p>
-                        </div>
-                    )}
-                </motion.div>
-            </motion.div>
+            </div>
 
             <SecureFileModal
                 isOpen={!!viewingFile}
