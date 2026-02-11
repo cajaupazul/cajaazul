@@ -1,14 +1,9 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { Payment } from '@mercadopago/sdk-react';
-import { initMercadoPago } from '@mercadopago/sdk-react';
-import { X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ShoppingBag, ShieldCheck, X } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useProfile } from '@/lib/profile-context';
-
-// Initialize with the Public Key provided by the user
-const MP_PUBLIC_KEY = 'APP_USR-c89b2d7b-b44e-4926-ba40-3d456209235d';
 
 interface PaymentModalProps {
     isOpen: boolean;
@@ -33,54 +28,16 @@ export default function PaymentModal({
 }: PaymentModalProps) {
     const { profile } = useProfile();
     const [viewState, setViewState] = React.useState<'form' | 'success' | 'error'>('form');
+    const [loadingRedirection, setLoadingRedirection] = React.useState(false);
 
     useEffect(() => {
         if (isOpen) {
             setViewState('form');
-            initMercadoPago(MP_PUBLIC_KEY, { locale: 'es-PE' });
+            setLoadingRedirection(false);
         }
     }, [isOpen]);
 
     if (!isOpen || !product) return null;
-
-    const onSubmit = async (param: any) => {
-        const { formData } = param;
-
-        try {
-            const result = await apiFetch('/checkout/process', {
-                method: 'POST',
-                body: JSON.stringify({
-                    ...formData,
-                    product_id: product.id,
-                }),
-            });
-
-            // Call the parent success handler immediately to start credit update
-            onPaymentSuccess(result);
-            // Switch to success view
-            setViewState('success');
-
-            return Promise.resolve();
-
-        } catch (error: any) {
-            // onPaymentError(error); // Don't close or show error toast yet, let Brick handle or show custom error
-            console.error(error);
-            return new Promise((resolve, reject) => {
-                reject({
-                    cause: error.message || 'Error processing payment',
-                });
-            });
-        }
-    };
-
-    const onError = async (error: any) => {
-        console.error('Payment Brick Error:', error);
-        // We can choose to stay in form view or switch to error view
-    };
-
-    const onReady = async () => {
-        // console.log('Brick is ready');
-    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -107,27 +64,72 @@ export default function PaymentModal({
                 </div>
 
                 {/* Body */}
-                <div className="p-0 sm:p-6 bg-white overflow-y-auto">
+                <div className="p-6 bg-white shrink-0">
                     {viewState === 'form' ? (
-                        <div className="p-4 sm:p-0 min-h-[400px]">
-                            <Payment
-                                initialization={{
-                                    amount: product.price,
-                                    payer: {
-                                        email: profile?.email || 'pago@campuslink.pe',
-                                        entityType: 'individual'
+                        <div className="flex flex-col items-center justify-center space-y-8 py-10">
+                            <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner">
+                                <ShoppingBag size={48} strokeWidth={1.5} />
+                            </div>
+
+                            <div className="text-center space-y-2 max-w-sm">
+                                <p className="text-gray-600 text-lg">
+                                    Serás redirigido a la plataforma segura de <strong>Mercado Pago</strong> para completar tu compra de <strong>{product.name}</strong>.
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                    Aceptamos Yape, Plin, tarjetas de crédito, débito y efectivo.
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        setLoadingRedirection(true);
+                                        const response = await apiFetch('/checkout', {
+                                            method: 'POST',
+                                            body: JSON.stringify({
+                                                product_id: product.id,
+                                                items: [{
+                                                    id: product.id,
+                                                    title: product.name,
+                                                    quantity: 1,
+                                                    unit_price: product.price,
+                                                    currency_id: 'PEN'
+                                                }]
+                                            })
+                                        });
+
+                                        if (response.init_point) {
+                                            window.location.href = response.init_point;
+                                        } else {
+                                            throw new Error('No se pudo generar el link de pago');
+                                        }
+                                    } catch (err) {
+                                        console.error('Error creating preference:', err);
+                                        alert('Hubo un error al conectar con Mercado Pago. Por favor intente de nuevo.');
+                                        setLoadingRedirection(false);
                                     }
                                 }}
-                                customization={{
-                                    paymentMethods: {
-                                        creditCard: 'all',
-                                        debitCard: 'all',
-                                    }
-                                }}
-                                onSubmit={onSubmit}
-                                onReady={onReady}
-                                onError={onError}
-                            />
+                                disabled={loadingRedirection}
+                                className="w-full h-14 bg-[#009EE3] hover:bg-[#0086C3] text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all transform active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loadingRedirection ? (
+                                    <>
+                                        <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <span>Generando link...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <ShieldCheck size={24} />
+                                        <span>Pagar con Mercado Pago | S/ {product.price.toFixed(2)}</span>
+                                    </>
+                                )}
+                            </button>
+
+                            <div className="flex items-center gap-4 opacity-40">
+                                <img src="https://http2.mlstatic.com/storage/logos-api-admin/a5f04830-191d-11ee-81b2-1fd38f4e4441-m.svg" alt="Visa" className="h-6" />
+                                <img src="https://http2.mlstatic.com/storage/logos-api-admin/aa2b8f70-191d-11ee-be4a-334337b777a8-m.svg" alt="MasterCard" className="h-6" />
+                                <img src="https://http2.mlstatic.com/storage/logos-api-admin/7d93f860-b3a1-11ee-9e6b-9b6ef1a70967-xs@2x.png" alt="Yape" className="h-6" />
+                            </div>
                         </div>
                     ) : (
                         <div className="p-8 flex flex-col items-center text-center space-y-6">
