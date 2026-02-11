@@ -5,6 +5,7 @@ import { Payment } from '@mercadopago/sdk-react';
 import { initMercadoPago } from '@mercadopago/sdk-react';
 import { X } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { useProfile } from '@/lib/profile-context';
 
 // Initialize with the Public Key provided by the user
 const MP_PUBLIC_KEY = 'APP_USR-c89b2d7b-b44e-4926-ba40-3d456209235d';
@@ -30,6 +31,7 @@ export default function PaymentModal({
     onPaymentSuccess,
     onPaymentError
 }: PaymentModalProps) {
+    const { profile } = useProfile();
     const [viewState, setViewState] = React.useState<'form' | 'success' | 'error'>('form');
 
     useEffect(() => {
@@ -40,19 +42,6 @@ export default function PaymentModal({
     }, [isOpen]);
 
     if (!isOpen || !product) return null;
-
-    const customization: any = {
-        visual: {
-            style: {
-                theme: 'default',
-            }
-        },
-        paymentMethods: {
-            maxInstallments: 1,
-            creditCard: 'all',
-            debitCard: 'all',
-        }
-    };
 
     const onSubmit = async (param: any) => {
         const { formData } = param;
@@ -124,8 +113,16 @@ export default function PaymentModal({
                             <Payment
                                 initialization={{
                                     amount: product.price,
+                                    payer: {
+                                        email: profile?.email || 'pago@campuslink.pe',
+                                    }
                                 }}
-                                customization={customization}
+                                customization={{
+                                    paymentMethods: {
+                                        creditCard: 'all',
+                                        debitCard: 'all',
+                                    }
+                                }}
                                 onSubmit={onSubmit}
                                 onReady={onReady}
                                 onError={onError}
