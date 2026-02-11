@@ -24,7 +24,7 @@ export default function LoginPage() {
 
 function LoginContent() {
   const router = useRouter();
-  const { session, loading: profileLoading, clearProfile } = useProfile();
+  const { session, profile, loading: profileLoading, clearProfile } = useProfile();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,10 +48,21 @@ function LoginContent() {
   // Listen for session confirmation from the Provider
   useEffect(() => {
     if (session && !profileLoading) {
-      console.log('[LOGIN_PAGE] Session confirmed by provider, redirecting to dashboard...');
-      router.replace('/dashboard');
+      if (typeof window !== 'undefined') {
+        const profileStr = localStorage.getItem('sb-' + process.env.NEXT_PUBLIC_SUPABASE_URL + '-auth-token');
+        // If we have a session but no profile yet, we should probably wait or check if onboarding is needed
+        // For now, let the Auth Callback (server-side) handle the primary redirection.
+        // We only redirect here if we are SURE the user is fully logged in and ready.
+        if (profile) {
+          console.log('[LOGIN_PAGE] Session and profile confirmed, redirecting to dashboard...');
+          router.replace('/dashboard');
+        } else {
+          console.log('[LOGIN_PAGE] Session detected but waiting for profile/onboarding...');
+          // Optional: router.replace('/auth/complete-profile');
+        }
+      }
     }
-  }, [session, profileLoading, router]);
+  }, [session, profile, profileLoading, router]);
 
   useEffect(() => {
     // 1. Prioridad: Errores en el fragmento (#error=...) que Supabase inyecta

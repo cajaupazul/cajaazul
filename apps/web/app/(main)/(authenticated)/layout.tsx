@@ -72,10 +72,8 @@ export default function AuthenticatedLayout({
         console.log('[AUTH_GUARD] No session. Redirecting...');
         router.replace('/auth/login');
       } else if (!profile) {
-        console.warn('[AUTH_GUARD] Profile missing. Signing out...');
-        supabase.auth.signOut().then(() => {
-          router.replace('/auth/login?error=profile_not_found');
-        });
+        console.warn('[AUTH_GUARD] Profile missing. Redirecting to onboarding...');
+        router.replace('/auth/complete-profile');
       } else {
         // Auth is confirmed and profile is loaded
         setIsAuthReady(true);
