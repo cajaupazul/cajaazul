@@ -22,11 +22,17 @@ export function GoogleButton({ text = 'Continuar con Google' }: { text?: string 
 
         const resetLoading = () => setLoading(false);
 
-        // CLEANUP: Ensure no left-over session data before starting fresh login
+        // CLEANUP: Remove stale profile/session data, but PRESERVE Supabase PKCE keys (sb-*)
         if (typeof window !== 'undefined') {
-            localStorage.clear();
-            sessionStorage.clear();
-            console.log('[AUTH_CLEANUP] LocalStorage and SessionStorage cleared before OAuth');
+            const keysToRemove: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && !key.startsWith('sb-')) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+            console.log('[AUTH_CLEANUP] Cleared non-Supabase keys, preserved PKCE verifier');
         }
 
         // 1. Focus listener: If the user returns to the window, they likely cancelled.

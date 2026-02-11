@@ -1,15 +1,10 @@
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from './supabase/client';
 import { getPublicFileUrl } from './r2-storage';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 
-if (typeof window !== 'undefined') {
-  console.log('[BROWSER_SUPABASE] URL:', supabaseUrl ? 'Defined' : 'UNDEFINED');
-  console.log('[BROWSER_SUPABASE] KEY:', supabaseAnonKey ? `Defined (${supabaseAnonKey.slice(0, 5)}...)` : 'UNDEFINED');
-}
-
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient();
 
 /**
  * Resolves a storage path or full URL to a valid public URL.

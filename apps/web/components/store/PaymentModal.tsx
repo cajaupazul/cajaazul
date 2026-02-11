@@ -54,6 +54,9 @@ export default function PaymentModal({
             bankTransfer: 'all',
             creditCard: 'all',
             debitCard: 'all',
+            mercadoPago: 'all',
+            wallet_purchase: 'all',
+            atm: 'all',
         }
     };
 
