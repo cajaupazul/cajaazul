@@ -7,7 +7,7 @@ import { X } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
 // Initialize with the Public Key provided by the user
-const MP_PUBLIC_KEY = 'TEST-bc969050-c4a6-4ff0-a0b9-3f926e9ee60f';
+const MP_PUBLIC_KEY = 'APP_USR-c89b2d7b-b44e-4926-ba40-3d456209235d';
 
 interface PaymentModalProps {
     isOpen: boolean;
