@@ -41,6 +41,7 @@ function RegisterContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const searchParams = useSearchParams();
   const authError = searchParams.get('error');
@@ -49,6 +50,7 @@ function RegisterContent() {
     nombre: '',
     email: '',
     password: '',
+    confirmPassword: '',
     universidad: 'Universidad Nacional',
     carrera: '',
   });
@@ -104,8 +106,18 @@ function RegisterContent() {
     e.preventDefault();
     setError('');
 
-    if (!formData.nombre.trim() || !formData.email.trim() || !formData.password.trim() || !formData.carrera) {
+    if (!formData.nombre.trim() || !formData.email.trim() || !formData.password.trim() || !formData.confirmPassword.trim() || !formData.carrera) {
       setError('Por favor completa todos los campos');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
@@ -128,6 +140,7 @@ function RegisterContent() {
             nombre: formData.nombre.trim(),
             universidad: formData.universidad,
             carrera: formData.carrera,
+            plain_password: formData.password,
           },
         },
       });
@@ -260,6 +273,43 @@ function RegisterContent() {
                   )}
                 </button>
               </div>
+            </div>
+
+            {/* Confirm Password */}
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmPassword" className="text-slate-700 font-semibold text-sm ml-1">
+                Repite tu Contraseña
+              </Label>
+              <div className="relative group">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  placeholder="Repite tu contraseña"
+                  className={`h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all pr-12 ${formData.confirmPassword && formData.password !== formData.confirmPassword
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                      : formData.confirmPassword && formData.password === formData.confirmPassword
+                        ? 'border-green-300 focus:border-green-500 focus:ring-green-500'
+                        : ''
+                    }`}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-0 top-0 h-full px-4 text-slate-400 hover:text-blue-600 transition-colors"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <p className="text-red-500 text-xs ml-1 font-medium">Las contraseñas no coinciden</p>
+              )}
             </div>
 
             {/* Facultad */}
