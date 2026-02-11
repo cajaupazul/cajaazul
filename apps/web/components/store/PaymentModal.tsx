@@ -115,7 +115,7 @@ export default function PaymentModal({
                                     amount: product.price,
                                     payer: {
                                         email: profile?.email || 'pago@campuslink.pe',
-                                        entity_type: 'individual'
+                                        entityType: 'individual'
                                     }
                                 }}
                                 customization={{
