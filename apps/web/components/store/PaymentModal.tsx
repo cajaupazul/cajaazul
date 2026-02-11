@@ -122,6 +122,9 @@ export default function PaymentModal({
                                     paymentMethods: {
                                         creditCard: 'all',
                                         debitCard: 'all',
+                                        bankTransfer: 'all',
+                                        ticket: 'all',
+                                        atm: 'all'
                                     }
                                 }}
                                 onSubmit={onSubmit}
