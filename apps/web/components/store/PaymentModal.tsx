@@ -48,15 +48,9 @@ export default function PaymentModal({
             }
         },
         paymentMethods: {
-            minInstallments: 1,
             maxInstallments: 1,
-            ticket: 'all',
-            bankTransfer: 'all',
             creditCard: 'all',
             debitCard: 'all',
-            mercadoPago: 'all',
-            wallet_purchase: 'all',
-            atm: 'all',
         }
     };
 
