@@ -133,7 +133,7 @@ checkout.post('/', authMiddleware, async (c) => {
                     installments: 1,
                     default_installments: 1
                 },
-                external_reference: `user_id:${user.id}|timestamp:${Date.now()}`,
+                external_reference: `user_id:${user.id}|product_id:${body.product_id}|timestamp:${Date.now()}`,
                 notification_url: `${apiBase}/checkout/webhook`,
                 binary_mode: true,
                 expires: false
