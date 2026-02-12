@@ -87,14 +87,7 @@ export default function PaymentModal({
                                         const response = await apiFetch('/checkout', {
                                             method: 'POST',
                                             body: JSON.stringify({
-                                                product_id: product.id,
-                                                items: [{
-                                                    id: product.id,
-                                                    title: product.name,
-                                                    quantity: 1,
-                                                    unit_price: product.price,
-                                                    currency_id: 'PEN'
-                                                }]
+                                                product_id: product.id
                                             })
                                         });
 

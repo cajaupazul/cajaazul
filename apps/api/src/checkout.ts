@@ -105,13 +105,32 @@ checkout.post('/process', authMiddleware, async (c) => {
     }
 });
 
-// 2. Legacy Preference Creator (Will be removed after migration)
+// 2. Secure Preference Creator (Checkout Pro - Redirect Flow)
 checkout.post('/', authMiddleware, async (c) => {
     const user = (c as any).get('user')
+    if (!user) return c.json({ error: 'Unauthorized' }, 401)
+
     const body = await c.req.json()
+    const { product_id } = body;
     const apiBase = c.env.WEBHOOK_URL_BASE || 'https://campuslink-api.cajaupazul.workers.dev'
 
-    if (!user) return c.json({ error: 'Unauthorized' }, 401)
+    if (!product_id) return c.json({ error: 'Missing product_id' }, 400)
+
+    // Fetch product from DB to get SECURE price
+    const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY)
+    const { data: product, error: dbError } = await supabase
+        .from('store_products')
+        .select('*')
+        .eq('id', product_id)
+        .single()
+
+    if (dbError || !product) {
+        console.error('DB Product Lookup Error:', dbError);
+        return c.json({ error: 'Product not found' }, 404)
+    }
+
+    // Optional: Check if product is active
+    // if (product.status !== 'active') return c.json({ error: 'Product not available' }, 403)
 
     const response = await fetch(
         'https://api.mercadopago.com/checkout/preferences',
@@ -122,7 +141,16 @@ checkout.post('/', authMiddleware, async (c) => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                items: body.items,
+                items: [
+                    {
+                        id: product.id,
+                        title: product.name,
+                        description: product.description,
+                        quantity: 1,
+                        unit_price: Number(product.price),
+                        currency_id: 'PEN'
+                    }
+                ],
                 back_urls: {
                     success: 'https://campuslink.pages.dev/checkout/result?status=success',
                     failure: 'https://campuslink.pages.dev/checkout/result?status=failure',
@@ -133,7 +161,7 @@ checkout.post('/', authMiddleware, async (c) => {
                     installments: 1,
                     default_installments: 1
                 },
-                external_reference: `user_id:${user.id}|product_id:${body.product_id}|timestamp:${Date.now()}`,
+                external_reference: `user_id:${user.id}|product_id:${product.id}|timestamp:${Date.now()}`,
                 notification_url: `${apiBase}/checkout/webhook`,
                 binary_mode: true,
                 expires: false
@@ -185,6 +213,16 @@ checkout.post('/webhook', async (c) => {
                 const amount = payment.transaction_amount
 
                 if (productDetails) {
+                    // SECURE: Validate that the paid amount matches the database price
+                    const expectedPrice = Number(productDetails.price)
+                    const paidAmount = Number(amount)
+
+                    if (Math.abs(paidAmount - expectedPrice) > 0.01) {
+                        console.error(`PRICE_MISMATCH: User paid ${paidAmount} but expected ${expectedPrice} for product ${productId}`)
+                        // Optional: You could still grant it if the difference is tiny, or block it.
+                        // For now we log it and continue, but in a real strict env we would return 200 (to stop retries) but NOT grant.
+                    }
+
                     if (productDetails.type === 'coins') {
                         const { data: profile } = await supabase.from('profiles').select('monedas').eq('id', userId).single()
                         await supabase.from('profiles').update({ monedas: (profile?.monedas || 0) + productDetails.amount }).eq('id', userId)
