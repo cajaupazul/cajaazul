@@ -55,12 +55,14 @@ function StoreContent() {
     const [activeView, setActiveView] = useState<'items' | 'recharge'>('items');
 
     const status = searchParams.get('status');
+    const paymentStatus = searchParams.get('payment');
+    const effectiveStatus = paymentStatus || status;
 
     React.useEffect(() => {
-        if (status === 'success') {
+        if (effectiveStatus === 'success') {
             refreshProfile();
         }
-    }, [status, refreshProfile]);
+    }, [effectiveStatus, refreshProfile]);
 
     const [shopCategories, setShopCategories] = useState<ShopCategory[]>([]);
 
@@ -235,7 +237,7 @@ function StoreContent() {
     return (
         <div className="p-3 sm:p-8 max-w-6xl mx-auto space-y-8 sm:space-y-12">
             {/* Alert Messages for Payment Status */}
-            {status === 'success' && (
+            {effectiveStatus === 'success' && (
                 <div className="bg-green-500/10 border border-green-500/20 p-6 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
                     <CheckCircle2 className="text-green-500 flex-shrink-0" size={32} />
                     <div>
@@ -245,7 +247,7 @@ function StoreContent() {
                 </div>
             )}
 
-            {status === 'failure' && (
+            {effectiveStatus === 'failure' && (
                 <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
                     <XCircle className="text-red-500 flex-shrink-0" size={32} />
                     <div>
@@ -255,7 +257,7 @@ function StoreContent() {
                 </div>
             )}
 
-            {status === 'pending' && (
+            {effectiveStatus === 'pending' && (
                 <div className="bg-yellow-500/10 border border-yellow-500/20 p-6 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
                     <AlertCircle className="text-yellow-500 flex-shrink-0" size={32} />
                     <div>
