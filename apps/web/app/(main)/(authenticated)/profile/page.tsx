@@ -225,7 +225,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-bb-dark text-bb-text pb-12">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 pt-4 sm:pt-8 space-y-4 sm:space-y-6">
+      <div className="max-w-none mx-auto px-3 sm:px-4 lg:px-8 pt-4 sm:pt-8 space-y-4 sm:space-y-6">
 
         {/* ============================================ */}
         {/* MAIN PROFILE CARD - Gaming Style             */}
@@ -349,35 +349,8 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Stats Row */}
-          <div className="px-4 sm:px-6 pb-4 sm:pb-5">
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              <div className="bg-white/[0.03] rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center border border-white/[0.04] hover:border-white/[0.08] transition-colors">
-                <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
-                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-white/30">Puntos</span>
-                </div>
-                <span className="text-xl sm:text-2xl font-black text-white">{profile.puntos}</span>
-              </div>
-              <div className="bg-white/[0.03] rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center border border-white/[0.04] hover:border-white/[0.08] transition-colors">
-                <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-400" />
-                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-white/30">Miembro</span>
-                </div>
-                <span className="text-xl sm:text-2xl font-black text-white">{memberYear}</span>
-              </div>
-              <div className="bg-white/[0.03] rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center border border-white/[0.04] hover:border-white/[0.08] transition-colors">
-                <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-400" />
-                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-white/30">Logros</span>
-                </div>
-                <span className="text-xl sm:text-2xl font-black text-white">{achievements}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Info Pills */}
-          <div className="px-4 sm:px-6 pb-4 sm:pb-6 flex flex-wrap gap-2">
+          {/* Quick Info Pills (Move these above stats Row) */}
+          <div className="px-4 sm:px-6 pb-4 sm:pb-5 flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-white/[0.04] text-white/50 text-[10px] sm:text-xs font-medium border border-white/[0.04]">
               <Mail className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-400/70" />
               <span className="truncate max-w-[150px] sm:max-w-none">{userEmail}</span>
@@ -401,6 +374,33 @@ export default function ProfilePage() {
                 {profile.monedas} monedas
               </span>
             )}
+          </div>
+
+          {/* Stats Row (Moved here) */}
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="bg-white/[0.03] rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center border border-white/[0.04] hover:border-white/[0.08] transition-colors">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
+                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-white/30">Puntos</span>
+                </div>
+                <span className="text-xl sm:text-2xl font-black text-white">{profile.puntos}</span>
+              </div>
+              <div className="bg-white/[0.03] rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center border border-white/[0.04] hover:border-white/[0.08] transition-colors">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-400" />
+                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-white/30">Miembro</span>
+                </div>
+                <span className="text-xl sm:text-2xl font-black text-white">{memberYear}</span>
+              </div>
+              <div className="bg-white/[0.03] rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center border border-white/[0.04] hover:border-white/[0.08] transition-colors">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-400" />
+                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-white/30">Logros</span>
+                </div>
+                <span className="text-xl sm:text-2xl font-black text-white">{achievements}</span>
+              </div>
+            </div>
           </div>
         </div>
 
