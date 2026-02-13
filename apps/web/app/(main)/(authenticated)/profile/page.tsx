@@ -229,14 +229,13 @@ export default function ProfilePage() {
       {/* ============================================ */}
       {/* 1. EDGE-TO-EDGE BANNER                      */}
       {/* ============================================ */}
-      <div className="relative h-48 sm:h-64 md:h-80 w-full overflow-hidden">
+      <div className="relative h-48 sm:h-64 md:h-80 w-full overflow-hidden border-b border-white/10">
         <img
           key={backgroundImage}
           src={getStorageUrl(backgroundImage, 'profile-avatars', PLACEHOLDERS.BACKGROUND)}
           alt="Banner"
-          className="w-full h-full object-cover opacity-80"
+          className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#060709] via-transparent to-black/20" />
 
         {editing && !uploadingBackground && (
           <label className="absolute top-6 right-6 p-3 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 transition-all cursor-pointer z-30">
@@ -320,8 +319,25 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* DESCRIPTION (Moved under name) */}
+              <div className="max-w-xl">
+                {editing ? (
+                  <textarea
+                    name="bio"
+                    value={formData.bio || ''}
+                    onChange={handleInputChange}
+                    placeholder="Escribe algo sobre ti..."
+                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2 text-white/60 placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/20 resize-none min-h-[80px] leading-relaxed transition-all text-sm italic"
+                  />
+                ) : (
+                  <p className="text-lg sm:text-xl font-medium text-white/50 leading-relaxed italic font-serif">
+                    {profile.bio || 'Sin descripción aún...'}
+                  </p>
+                )}
+              </div>
+
               {/* Minimal Info Strips */}
-              <div className="flex flex-wrap gap-6 text-xs sm:text-sm font-medium text-white/40">
+              <div className="flex flex-wrap gap-6 text-xs sm:text-sm font-medium text-white/30 pt-1">
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-white/20" />
                   <span>{userEmail}</span>
@@ -411,26 +427,6 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-
-            {/* DESCRIPTION */}
-            <section>
-              <h2 className="text-xs font-black uppercase tracking-[0.3em] text-white/20 mb-6 flex items-center gap-2">
-                DESCRIPCIÓN
-              </h2>
-              {editing ? (
-                <textarea
-                  name="bio"
-                  value={formData.bio || ''}
-                  onChange={handleInputChange}
-                  placeholder="Escribe algo sobre ti..."
-                  className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-6 py-5 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none min-h-[160px] leading-relaxed transition-all"
-                />
-              ) : (
-                <p className="text-xl sm:text-2xl font-medium text-white/60 leading-relaxed max-w-4xl italic">
-                  "{profile.bio || 'Esta sección está esperando por tu gran historia...'}"
-                </p>
-              )}
-            </section>
 
             {/* ACADEMIC INFO */}
             <section>
