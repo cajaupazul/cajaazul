@@ -225,7 +225,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-bb-dark text-bb-text pb-12">
-      <div className="max-w-2xl mx-auto px-3 sm:px-4 pt-4 sm:pt-8 space-y-4 sm:space-y-6">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 pt-4 sm:pt-8 space-y-4 sm:space-y-6">
 
         {/* ============================================ */}
         {/* MAIN PROFILE CARD - Gaming Style             */}
@@ -487,8 +487,8 @@ export default function ProfilePage() {
               <button
                 onClick={() => setThemeMode('light')}
                 className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${themeMode === 'light'
-                    ? 'bg-blue-600/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
-                    : 'bg-white/[0.02] border-white/[0.06] text-white/30 hover:border-white/[0.12] hover:text-white/50'
+                  ? 'bg-blue-600/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
+                  : 'bg-white/[0.02] border-white/[0.06] text-white/30 hover:border-white/[0.12] hover:text-white/50'
                   }`}
               >
                 <Sun className="w-5 h-5" />
@@ -497,8 +497,8 @@ export default function ProfilePage() {
               <button
                 onClick={() => setThemeMode('dark')}
                 className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${themeMode === 'dark'
-                    ? 'bg-blue-600/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
-                    : 'bg-white/[0.02] border-white/[0.06] text-white/30 hover:border-white/[0.12] hover:text-white/50'
+                  ? 'bg-blue-600/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
+                  : 'bg-white/[0.02] border-white/[0.06] text-white/30 hover:border-white/[0.12] hover:text-white/50'
                   }`}
               >
                 <Moon className="w-5 h-5" />
