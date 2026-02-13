@@ -237,6 +237,18 @@ export default function ProfilePage() {
           className="w-full h-full object-cover"
         />
 
+        {instagramUsername && !editing && (
+          <a
+            href={profile.link_instagram?.startsWith('http') ? profile.link_instagram : `https://instagram.com/${instagramUsername}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute bottom-4 right-4 p-2 sm:p-2.5 rounded-xl bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 shadow-xl shadow-black/40 hover:scale-110 transition-all active:scale-95 z-20 border border-white/20"
+            title="Instagram"
+          >
+            <Instagram className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          </a>
+        )}
+
         {editing && !uploadingBackground && (
           <label className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2.5 sm:p-3 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 transition-all cursor-pointer z-30">
             <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
@@ -303,7 +315,7 @@ export default function ProfilePage() {
                 ) : (
                   <h1
                     className={`text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter transition-colors duration-500 ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}
-                    style={{ textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                    style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4), 0 0 2px rgba(0,0,0,1)' }}
                   >
                     {profile.nombre}
                   </h1>
@@ -334,8 +346,8 @@ export default function ProfilePage() {
                   />
                 ) : (
                   <p
-                    className={`text-base sm:text-lg md:text-xl font-medium leading-relaxed italic font-serif transition-colors duration-500 ${themeMode === 'light' ? 'text-slate-500' : 'text-white/50'}`}
-                    style={{ textShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+                    className={`text-base sm:text-lg md:text-xl font-medium leading-relaxed italic font-serif transition-colors duration-500 ${themeMode === 'light' ? 'text-slate-600' : 'text-white/70'}`}
+                    style={{ textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}
                   >
                     {profile.bio || 'Sin descripción aún...'}
                   </p>
@@ -359,19 +371,8 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Action Area: Social Icon + Buttons */}
+          {/* Action Area: Buttons */}
           <div className="flex flex-col items-center md:items-end gap-3 sm:gap-4 mb-1 sm:mb-2 shrink-0 w-full md:w-auto">
-            {instagramUsername && !editing && (
-              <a
-                href={profile.link_instagram?.startsWith('http') ? profile.link_instagram : `https://instagram.com/${instagramUsername}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 sm:p-2.5 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 shadow-lg shadow-red-500/20 hover:scale-110 transition-all active:scale-95"
-                title="Instagram"
-              >
-                <Instagram className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-              </a>
-            )}
 
             <div className="flex gap-2 sm:gap-3">
               {editing ? (
