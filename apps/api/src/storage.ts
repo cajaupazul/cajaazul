@@ -24,13 +24,19 @@ const privateAuthMiddleware = async (c: any, next: any) => {
     }
 
     const bucketName = c.req.query('bucket') || 'course-materials'
+    const method = c.req.method
 
-    // Solo aplicar auth a buckets privados
+    // REQUIRE AUTH for all mutations (Upload/Delete) regardless of bucket
+    if (method === 'PUT' || method === 'DELETE') {
+        return authMiddleware(c, next)
+    }
+
+    // REQUIRE AUTH for course-materials bucket even for GET
     if (bucketName === 'course-materials' || bucketName === 'course_materials') {
         return authMiddleware(c, next)
     }
 
-    // Para buckets públicos, continuar sin auth
+    // For other GET requests (avatars, frames, etc.), continue without auth for performance
     await next()
 }
 
