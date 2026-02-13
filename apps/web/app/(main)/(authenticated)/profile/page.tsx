@@ -30,6 +30,24 @@ import {
 } from 'lucide-react';
 import { DeleteAccountModal } from '@/components/profile/DeleteAccountModal';
 
+const FREE_AVATARS = [
+  '253c9a8cd0487a5122f258a1460cca0a.webp',
+  '3bd519875bfced605a8a122008642edf.webp',
+  '9783a6c83b1d53c32ada9e13f14c8528.png',
+  '9d5a510ff16a7f765e788807b05af374.png',
+  'b343981037001258bff31df1dab37068.png',
+  'c5f29ee9f3c14ef4bd64838e8512338c.png',
+  'fb470742d03cd388a65c4ffb20ee1771.png'
+];
+
+const DEFAULT_BACKGROUND = '/backgrounds/default_background.d35fbf.png';
+
+// Permission keys for the shop/inventory items
+const PERMISSIONS = {
+  CUSTOM_AVATAR: 'PERM_CUSTOM_AVATAR',
+  CUSTOM_BACKGROUND: 'PERM_CUSTOM_BACKGROUND'
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const { colors, themeMode, setThemeMode } = useTheme();
@@ -46,6 +64,8 @@ export default function ProfilePage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [stagedAvatarUrl, setStagedAvatarUrl] = useState<string | null>(null);
   const [stagedBackgroundUrl, setStagedBackgroundUrl] = useState<string | null>(null);
+  const [inventory, setInventory] = useState<string[]>([]);
+  const [isAvatarSelectorOpen, setIsAvatarSelectorOpen] = useState(false);
   const bgInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,12 +84,25 @@ export default function ProfilePage() {
       if (contextProfile.email) {
         setUserEmail(contextProfile.email);
       }
-      if (contextProfile.background_url) {
-        setBackgroundImage(contextProfile.background_url);
-      }
+      setBackgroundImage(contextProfile.background_url || DEFAULT_BACKGROUND);
       setLoading(false);
+      fetchInventory(contextProfile.id);
     }
   }, [contextProfile]);
+
+  const fetchInventory = async (userId: string) => {
+    const { data } = await supabase
+      .from('user_inventory')
+      .select('shop_items(frame_key)')
+      .eq('user_id', userId);
+
+    if (data) {
+      const keys = data
+        .map((item: any) => item.shop_items?.frame_key)
+        .filter(Boolean);
+      setInventory(keys);
+    }
+  };
 
   useEffect(() => {
     const fetchEquippedFrame = async () => {
@@ -96,7 +129,13 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
 
+    if (!inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND) && profile.role === 'user') {
+      alert('Debes comprar el permiso "Fondo Personalizado" en la tienda para subir tus propias imágenes.');
+      return;
+    }
+
     setUploadingBackground(true);
+    // ... rest of logic
     try {
       const { uploadFileToR2, deleteFileFromR2 } = await import('@/lib/r2-storage');
 
@@ -126,7 +165,13 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
 
+    if (!inventory.includes(PERMISSIONS.CUSTOM_AVATAR) && profile.role === 'user') {
+      alert('Debes comprar el permiso "Avatar Personalizado" en la tienda para subir tus propias imágenes.');
+      return;
+    }
+
     setUploadingAvatar(true);
+    // ... rest of logic
     try {
       const { uploadFileToR2, deleteFileFromR2 } = await import('@/lib/r2-storage');
 
@@ -260,10 +305,26 @@ export default function ProfilePage() {
         )}
 
         {editing && !uploadingBackground && (
-          <label className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2.5 sm:p-3 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 transition-all cursor-pointer z-30">
-            <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
+          <button
+            onClick={() => {
+              if (inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND) || isAdmin) {
+                bgInputRef.current?.click();
+              } else {
+                router.push('/dashboard/store');
+              }
+            }}
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2.5 sm:p-3 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 transition-all cursor-pointer z-30"
+          >
+            <div className="flex items-center gap-2">
+              <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
+              {(!inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND) && !isAdmin) && (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/20 text-amber-500 text-[8px] font-black uppercase">
+                  Tienda
+                </div>
+              )}
+            </div>
             <input ref={bgInputRef} type="file" accept="image/*" onChange={handleBackgroundUpload} className="hidden" />
-          </label>
+          </button>
         )}
       </div>
 
@@ -301,12 +362,15 @@ export default function ProfilePage() {
             </div>
 
             {editing && !uploadingAvatar && (
-              <label className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 cursor-pointer z-30">
-                <div className={`p-2 sm:p-2.5 rounded-full bg-blue-600 shadow-xl hover:bg-blue-500 transition-all border-4 ${themeMode === 'light' ? 'border-[#F8FAFC]' : 'border-[#060709]'}`}>
+              <button
+                onClick={() => setIsAvatarSelectorOpen(true)}
+                className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 cursor-pointer z-30"
+              >
+                <div className={`p-2 sm:p-2.5 rounded-full bg-blue-600 shadow-xl hover:bg-blue-500 transition-all border-4 flex items-center justify-center ${themeMode === 'light' ? 'border-[#F8FAFC]' : 'border-[#060709]'}`}>
                   <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                  <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
                 </div>
-                <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-              </label>
+              </button>
             )}
           </div>
 
@@ -540,6 +604,70 @@ export default function ProfilePage() {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
       />
+
+      {/* Free Avatar Selector Modal */}
+      {isAvatarSelectorOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className={`w-full max-w-lg rounded-3xl border p-6 shadow-2xl transition-colors duration-500 ${themeMode === 'light' ? 'bg-white border-slate-200' : 'bg-[#0F172A] border-white/10'}`}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-xl font-black tracking-tight ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>Selecciona un Avatar</h2>
+              <button onClick={() => setIsAvatarSelectorOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+                <X className="w-5 h-5 opacity-40" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 overflow-y-auto max-h-[60vh] pr-2 custom-scrollbar">
+              {FREE_AVATARS.map((avatar) => {
+                const url = `/avatars/${avatar}`;
+                const isSelected = formData.avatar_url === url;
+                return (
+                  <button
+                    key={avatar}
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, avatar_url: url }));
+                      setIsAvatarSelectorOpen(false);
+                    }}
+                    className={`relative aspect-square rounded-2xl overflow-hidden border-4 transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                  >
+                    <img src={url} alt="Avatar" className="w-full h-full object-cover" />
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-blue-500 fill-blue-500/20" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+
+              <div className="col-span-full mt-4 pt-4 border-t border-white/5">
+                <p className="text-[10px] font-bold text-bb-text-secondary uppercase tracking-widest mb-3 opacity-60">Personalización Pro</p>
+                <div
+                  onClick={() => {
+                    if (inventory.includes(PERMISSIONS.CUSTOM_AVATAR) || isAdmin) {
+                      avatarInputRef.current?.click();
+                      setIsAvatarSelectorOpen(false);
+                    } else {
+                      router.push('/dashboard/store');
+                    }
+                  }}
+                  className={`flex items-center gap-4 p-4 rounded-2xl border border-dashed transition-all cursor-pointer ${themeMode === 'light' ? 'bg-slate-50 border-slate-300 hover:bg-slate-100' : 'bg-white/5 border-white/20 hover:bg-white/10'}`}
+                >
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className={`text-sm font-black ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>Subir desde PC</p>
+                    <p className="text-[10px] font-bold text-bb-text-secondary">Necesitas permiso de tienda</p>
+                  </div>
+                  {(!inventory.includes(PERMISSIONS.CUSTOM_AVATAR) && !isAdmin) && (
+                    <ExternalLink className="w-4 h-4 opacity-30" />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
