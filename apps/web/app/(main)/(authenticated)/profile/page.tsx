@@ -98,13 +98,18 @@ export default function ProfilePage() {
 
     setUploadingBackground(true);
     try {
+      const { uploadFileToR2, deleteFileFromR2 } = await import('@/lib/r2-storage');
+
+      // Cleanup previous staged background if it exists and hasn't been saved
+      if (stagedBackgroundUrl && stagedBackgroundUrl !== profile.background_url) {
+        await deleteFileFromR2('profile-avatars', stagedBackgroundUrl);
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `bg-${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `backgrounds/${fileName}`;
 
-      await import('@/lib/r2-storage').then(({ uploadFileToR2 }) =>
-        uploadFileToR2('profile-avatars', filePath, file)
-      );
+      await uploadFileToR2('profile-avatars', filePath, file);
 
       setStagedBackgroundUrl(filePath);
       setBackgroundImage(filePath);
@@ -123,13 +128,18 @@ export default function ProfilePage() {
 
     setUploadingAvatar(true);
     try {
+      const { uploadFileToR2, deleteFileFromR2 } = await import('@/lib/r2-storage');
+
+      // Cleanup previous staged avatar if it exists and hasn't been saved
+      if (stagedAvatarUrl && stagedAvatarUrl !== profile.avatar_url) {
+        await deleteFileFromR2('profile-avatars', stagedAvatarUrl);
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      await import('@/lib/r2-storage').then(({ uploadFileToR2 }) =>
-        uploadFileToR2('profile-avatars', filePath, file)
-      );
+      await uploadFileToR2('profile-avatars', filePath, file);
 
       setStagedAvatarUrl(filePath);
       setFormData(prev => ({ ...prev, avatar_url: filePath }));
