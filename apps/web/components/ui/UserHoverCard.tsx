@@ -125,15 +125,11 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
                             <div className="w-[360px] max-w-[380px] bg-[#1a1a1a] rounded-xl border border-[#2a2a2a] shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden font-sans">
                                 {/* Cover Background */}
                                 <div className="relative h-[120px] w-full overflow-hidden bg-[#0c0c0c]">
-                                    {backgroundUrl ? (
-                                        <img
-                                            src={backgroundUrl}
-                                            alt="Cover"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-gradient-to-b from-zinc-800 to-black" />
-                                    )}
+                                    <img
+                                        src={getStorageUrl(profile.background_url, 'profile-avatars', PLACEHOLDERS.BACKGROUND)}
+                                        alt="Cover"
+                                        className="w-full h-full object-cover"
+                                    />
                                     <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/80" />
                                 </div>
 
