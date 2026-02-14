@@ -490,6 +490,33 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         }
     };
 
+    // 0. Dynamic Dimensions from Metadata
+    useEffect(() => {
+        const fetchDimensions = async () => {
+            const { data, error } = await supabase
+                .from('events')
+                .select('metadata')
+                .eq('id', eventId)
+                .single();
+
+            if (data?.metadata) {
+                // Type safety for metadata
+                const meta = data.metadata as any;
+                if (meta.width && meta.height) {
+                    setGridWidth(Number(meta.width));
+                    setGridHeight(Number(meta.height));
+
+                    // Resize pixelDataRef buffer if needed
+                    const newSize = Number(meta.width) * Number(meta.height);
+                    if (pixelDataRef.current.length !== newSize) {
+                        pixelDataRef.current = new Uint32Array(newSize).fill(0);
+                    }
+                }
+            }
+        };
+        fetchDimensions();
+    }, [eventId]);
+
     // 1. Initial Fetch and Real-time Board State (Single Source of Truth)
     useEffect(() => {
         let boardChannel: any;
@@ -521,7 +548,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         return () => {
             if (boardChannel) supabase.removeChannel(boardChannel);
         };
-    }, [eventId]);
+    }, [eventId, gridWidth, gridHeight]);
 
     // 2. Real-time Painting (Presence and Individual Pixels)
     useEffect(() => {

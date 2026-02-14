@@ -11,10 +11,13 @@ import {
   Palette,
   ArrowRight,
   Sparkles,
-  Zap
+  Zap,
+  Pencil
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
+import CreateEventModal from '@/components/events/create-event-modal';
+import { supabase } from '@/lib/supabase';
 
 // Import PixelCanvas dynamically to avoid SSR issues with Canvas/Window
 const PixelCanvas = dynamic(() => import('@/components/pixel-art/pixel-canvas'), {
@@ -33,27 +36,52 @@ export default function EventsPage() {
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [isPixelArtOpen, setIsPixelArtOpen] = useState(false);
 
+  // Admin / Event Management State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [dbEvents, setDbEvents] = useState<any[]>([]);
+
   const filters = ['Todos', 'Académicos', 'Culturales', 'Deportivos'];
 
-  const pixelArtEvent = {
-    id: 'pixel-art-2025',
-    nombre: 'Pixel Art Event 2025',
-    tipo: 'Cultural',
-    descripcion: '¡Únete al lienzo infinito! Pinta, colabora y crea arte en tiempo real con toda la universidad. Calidad "wplace".',
-    fecha: new Date(2025, 11, 15),
-    lugar: 'Online - CampusLink',
-    participantes: 1240,
-    imagen: null,
-    isSpecial: true,
+  // Fetch events from DB + fallback to hardcoded pixel art if missing
+  const fetchEvents = async () => {
+    const { data } = await supabase.from('events').select('*').order('fecha_inicio', { ascending: true });
+    if (data) {
+      setDbEvents(data);
+    }
   };
 
-  const eventos = [pixelArtEvent];
+  useEffect(() => {
+    fetchEvents();
+  }, []);
 
-  const filteredEventos = eventos.filter(evento => {
+  const handleEditEvent = (event: any) => {
+    setSelectedEvent(event);
+    setIsModalOpen(true);
+  };
+
+  // Combine DB events with fallback if DB is empty or doesn't have pixel art
+  // Ideally, migration should have inserted it.
+  const displayEvents = dbEvents.length > 0 ? dbEvents : [{
+    id: 'pixel-art-2025',
+    nombre: 'Pixel Art Event 2025', // Fallback display name logic needs to match DB column 'titulo'
+    titulo: 'Pixel Art Event 2025',
+    tipo: 'Cultural',
+    descripcion: '¡Únete al lienzo infinito! Pinta, colabora y crea arte en tiempo real con toda la universidad. Calidad "wplace".',
+    fecha_inicio: new Date(2025, 11, 15).toISOString(),
+    lugar: 'Online - CampusLink',
+    participantes: 1240,
+    imagen_url: null,
+    metadata: { is_pixel_art: true }
+  }];
+
+  const filteredEventos = displayEvents.filter(evento => {
     const matchesFilter = activeFilter === 'Todos' || evento.tipo === activeFilter;
-    const matchesSearch = evento.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (evento.titulo || evento.nombre).toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const pixelArtId = displayEvents.find(e => e.metadata?.is_pixel_art)?.id || 'pixel-art-2025';
 
   return (
     <div className="min-h-screen bg-bb-dark p-4 md:p-8 relative overflow-hidden">
@@ -68,7 +96,7 @@ export default function EventsPage() {
             className="fixed inset-0 z-[60]"
           >
             <PixelCanvas
-              eventId={pixelArtEvent.id}
+              eventId={pixelArtId}
               onClose={() => setIsPixelArtOpen(false)}
               userProfile={profile}
             />
@@ -163,17 +191,23 @@ export default function EventsPage() {
                       style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '20px 20px' }}
                     />
 
-                    <div className="text-center z-10 p-2">
-                      <div className="bg-white/10 p-2 md:p-4 rounded-xl md:rounded-2xl mb-2 md:mb-4 inline-block border border-white/10">
-                        <Palette className="w-8 h-8 md:w-14 md:h-14 text-white" />
+                    {evento.imagen_url ? (
+                      <img src={supabase.storage.from('r2-images').getPublicUrl(evento.imagen_url).data.publicUrl} alt={evento.titulo} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center z-10 p-2">
+                        <div className="bg-white/10 p-2 md:p-4 rounded-xl md:rounded-2xl mb-2 md:mb-4 inline-block border border-white/10">
+                          <Palette className="w-8 h-8 md:w-14 md:h-14 text-white" />
+                        </div>
+                        <div>
+                          {evento.metadata?.is_pixel_art && (
+                            <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 mb-1 md:mb-2 text-[8px] md:text-xs">
+                              <Zap className="w-2.5 h-2.5 md:w-3 md:h-3 mr-0.5 md:mr-1" /> EN VIVO
+                            </Badge>
+                          )}
+                          <p className="text-white font-black text-sm md:text-2xl tracking-tight">{evento.titulo}</p>
+                        </div>
                       </div>
-                      <div>
-                        <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 mb-1 md:mb-2 text-[8px] md:text-xs">
-                          <Zap className="w-2.5 h-2.5 md:w-3 md:h-3 mr-0.5 md:mr-1" /> EN VIVO
-                        </Badge>
-                        <p className="text-white font-black text-sm md:text-2xl tracking-tight">Pixel Art Live</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   <div className="p-3 md:p-6 relative">
@@ -186,7 +220,7 @@ export default function EventsPage() {
                     <div className="mb-4 md:mb-6 pt-1 md:pt-2">
                       <div className="flex items-start justify-between mb-2 md:mb-3">
                         <h3 className="text-sm md:text-2xl font-bold text-white group-hover:text-blue-400 transition-colors flex-1 leading-tight line-clamp-2">
-                          {evento.nombre}
+                          {evento.titulo}
                         </h3>
                       </div>
                       <p className="text-gray-400 leading-relaxed font-medium text-xs md:text-base line-clamp-2">{evento.descripcion}</p>
@@ -195,20 +229,33 @@ export default function EventsPage() {
                     <div className="space-y-2 md:space-y-3 mb-4 md:mb-8">
                       <div className="flex items-center gap-2 md:gap-3 text-gray-300 text-[10px] md:text-sm font-medium">
                         <div className="p-1.5 md:p-2 rounded-lg bg-blue-500/10 text-blue-400"><Calendar className="w-4 h-4 md:w-5 md:h-5" /></div>
-                        <span className="truncate">{evento.fecha.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                        <span className="truncate">{new Date(evento.fecha_inicio).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
                       </div>
                       <div className="flex items-center gap-2 md:gap-3 text-gray-300 text-[10px] md:text-sm font-medium">
                         <div className="p-1.5 md:p-2 rounded-lg bg-green-500/10 text-green-400"><Users className="w-4 h-4 md:w-5 md:h-5" /></div>
-                        <span>{evento.participantes.toLocaleString()}</span>
+                        <span>{(evento.participantes || 0).toLocaleString()}</span>
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex z-20 gap-2 items-center">
                       <span
                         className="px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-white/5 text-gray-400 border border-white/5"
                       >
                         {evento.tipo}
                       </span>
+                      {/* Admin Edit Trigger */}
+                      {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Avoid triggering card click
+                            handleEditEvent(evento);
+                          }}
+                          className="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg backdrop-blur-sm transition-all border border-white/10"
+                          title="Editar Evento (Admin)"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -216,6 +263,14 @@ export default function EventsPage() {
             </AnimatePresence>
           </div>
         )}
+
+        {/* Modal for Creating/Editing Events */}
+        <CreateEventModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onEventCreated={fetchEvents}
+          initialData={selectedEvent}
+        />
       </div>
     </div>
   );
