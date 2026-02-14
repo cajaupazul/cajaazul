@@ -67,7 +67,7 @@ export default function EventsPage() {
   // Combine DB events with fallback if DB is empty or doesn't have pixel art
   // Ideally, migration should have inserted it.
   const displayEvents = dbEvents.length > 0 ? dbEvents : [{
-    id: 'pixel-art-2025',
+    id: 'a0000000-0000-0000-0000-000000002025',
     nombre: 'Pixel Art Event 2025', // Fallback display name logic needs to match DB column 'titulo'
     titulo: 'Pixel Art Event 2025',
     tipo: 'Cultural',
@@ -85,7 +85,7 @@ export default function EventsPage() {
     return matchesFilter && matchesSearch;
   });
 
-  const pixelArtId = displayEvents.find(e => e.metadata?.is_pixel_art)?.id || 'pixel-art-2025';
+  const pixelArtId = displayEvents.find(e => e.metadata?.is_pixel_art)?.id || 'a0000000-0000-0000-0000-000000002025';
 
   return (
     <div className="min-h-screen bg-bb-dark p-4 md:p-8 relative overflow-hidden">

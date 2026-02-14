@@ -5,6 +5,8 @@ import { supabase, ShopItem, getStorageUrl } from '@/lib/supabase';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 import PixelCanvas from '@/components/pixel-art/pixel-canvas';
 
+const PIXEL_ART_EVENT_ID = 'a0000000-0000-0000-0000-000000002025';
+
 export default function EventosPixelArtPage() {
   const { profile } = useProfile();
   const [equippedFrame, setEquippedFrame] = useState<ShopItem | null>(null);
