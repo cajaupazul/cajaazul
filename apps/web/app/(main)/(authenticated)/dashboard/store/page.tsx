@@ -567,19 +567,19 @@ function StoreContent() {
                                                                 {item.description}
                                                             </p>
 
-                                                            <div className="mt-auto pt-4 border-t border-[#2b2d31]/50 flex items-center justify-between gap-4">
+                                                            <div className="mt-auto pt-4 border-t border-[#2b2d31]/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
                                                                 {/* Price */}
                                                                 {!isOwned && (
-                                                                    <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg">
-                                                                        <img src="/icons/moneda.png" alt="Coin" className="w-5 h-5 object-contain" />
-                                                                        <span className="text-[#f2f3f5] font-bold text-lg">{item.price_coins}</span>
+                                                                    <div className="flex items-center justify-center sm:justify-start gap-2 bg-black/20 px-3 py-1.5 rounded-lg min-w-fit">
+                                                                        <img src="/icons/moneda.png" alt="Coin" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
+                                                                        <span className="text-[#f2f3f5] font-bold text-base md:text-lg">{item.price_coins}</span>
                                                                     </div>
                                                                 )}
 
                                                                 {/* Action Button */}
                                                                 {isOwned ? (
                                                                     <Button
-                                                                        className="w-full bg-[#2b2d31] text-[#949ba4] hover:bg-[#313338] font-bold rounded-xl"
+                                                                        className="flex-1 bg-[#2b2d31] text-[#949ba4] hover:bg-[#313338] font-bold rounded-xl text-xs md:text-sm h-10"
                                                                         disabled
                                                                     >
                                                                         Adquirido
@@ -587,7 +587,7 @@ function StoreContent() {
                                                                 ) : (
                                                                     <Button
                                                                         onClick={() => setPreviewItem(item)}
-                                                                        className="w-full bg-[#4e5058] hover:bg-[#6d6f78] text-white font-bold rounded-xl transition-all"
+                                                                        className="flex-1 bg-[#4e5058] hover:bg-[#6d6f78] text-white font-bold rounded-xl transition-all text-xs md:text-sm h-10 px-2"
                                                                     >
                                                                         Vista Previa
                                                                     </Button>
@@ -656,19 +656,19 @@ function StoreContent() {
                                                             {item.description}
                                                         </p>
 
-                                                        <div className="mt-auto pt-4 border-t border-[#2b2d31]/50 flex items-center justify-between gap-4">
+                                                        <div className="mt-auto pt-4 border-t border-[#2b2d31]/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
                                                             {/* Price */}
                                                             {!isOwned && (
-                                                                <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg">
-                                                                    <img src="/icons/moneda.png" alt="Coin" className="w-5 h-5 object-contain" />
-                                                                    <span className="text-[#f2f3f5] font-bold text-lg">{item.price_coins}</span>
+                                                                <div className="flex items-center justify-center sm:justify-start gap-2 bg-black/20 px-3 py-1.5 rounded-lg min-w-fit">
+                                                                    <img src="/icons/moneda.png" alt="Coin" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
+                                                                    <span className="text-[#f2f3f5] font-bold text-base md:text-lg">{item.price_coins}</span>
                                                                 </div>
                                                             )}
 
                                                             {/* Action Button */}
                                                             {isOwned ? (
                                                                 <Button
-                                                                    className="w-full bg-[#2b2d31] text-[#949ba4] hover:bg-[#313338] font-bold rounded-xl"
+                                                                    className="flex-1 bg-[#2b2d31] text-[#949ba4] hover:bg-[#313338] font-bold rounded-xl text-xs md:text-sm h-10"
                                                                     disabled
                                                                 >
                                                                     Adquirido
@@ -676,7 +676,7 @@ function StoreContent() {
                                                             ) : (
                                                                 <Button
                                                                     onClick={() => setPreviewItem(item)}
-                                                                    className="w-full bg-[#4e5058] hover:bg-[#6d6f78] text-white font-bold rounded-xl transition-all"
+                                                                    className="flex-1 bg-[#4e5058] hover:bg-[#6d6f78] text-white font-bold rounded-xl transition-all text-xs md:text-sm h-10 px-2"
                                                                 >
                                                                     Vista Previa
                                                                 </Button>
