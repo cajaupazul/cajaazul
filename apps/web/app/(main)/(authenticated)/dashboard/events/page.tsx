@@ -16,7 +16,11 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import CreateEventModal from '@/components/events/create-event-modal';
+// Dynamically import CreateEventModal to reduce initial bundle size and avoid SSR issues
+const CreateEventModal = dynamic(() => import('@/components/events/create-event-modal'), {
+  ssr: false,
+  loading: () => null,
+});
 import { supabase } from '@/lib/supabase';
 
 // Import PixelCanvas dynamically to avoid SSR issues with Canvas/Window
