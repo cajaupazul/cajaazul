@@ -9,9 +9,20 @@ BEGIN
     END IF;
 END $$;
 
--- 2. Restore 'pixel_board_state' to Supabase Realtime publication
--- (Required because recreating the table removed it from the publication)
-ALTER PUBLICATION supabase_realtime ADD TABLE public.pixel_board_state;
+-- 2. Restore 'pixel_board_state' to Supabase Realtime publication (Safe Mode)
+DO $$
+BEGIN
+    -- Only add to publication if it's not already there
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime'
+        AND schemaname = 'public'
+        AND tablename = 'pixel_board_state'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.pixel_board_state;
+    END IF;
+END $$;
 
 -- 3. Set Replica Identity to FULL to support Realtime deletes and updates
 ALTER TABLE public.pixel_board_state REPLICA IDENTITY FULL;
