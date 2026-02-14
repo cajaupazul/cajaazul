@@ -243,8 +243,7 @@ button {
 
   /* Asegurar que el sidebar mobile funcione bien */
   div[class*="fixed"] {
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
+    -webkit-overflow-scrolling: touch;
   }
 }
 
