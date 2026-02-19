@@ -11,6 +11,7 @@ import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import AdminMaterialManager from './AdminMaterialManager';
 import { PLACEHOLDERS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
+import MaterialCard from './MaterialCard';
 
 type TabType = 'todos' | 'silabo' | 'presentaciones' | 'examenes' | 'enlaces' | 'otros';
 
@@ -227,161 +228,55 @@ export default function CourseDetailContent({
 
         if (viewMode === 'list') {
             return (
-                <div className="space-y-2">
-                    {mats.map((material) => {
-                        const materialType = material.tipo?.toLowerCase() || '';
-                        let icon = <LayoutPanelLeft className="w-5 h-5" />;
-                        let colorClass = 'text-blue-400';
-                        let bgClass = 'bg-blue-500/10';
-
-                        if (materialType.includes('ppt') || materialType.includes('presentacion')) {
-                            colorClass = 'text-orange-400';
-                            bgClass = 'bg-orange-500/10';
-                        } else if (materialType.includes('examen')) {
-                            icon = <FileText className="w-5 h-5" />;
-                            colorClass = 'text-red-400';
-                            bgClass = 'bg-red-500/10';
-                        } else if (materialType.includes('syllabus')) {
-                            icon = <FileText className="w-5 h-5" />;
-                            colorClass = 'text-teal-400';
-                            bgClass = 'bg-teal-500/10';
-                        } else if (materialType === 'enlace') {
-                            icon = <LayoutPanelLeft className="w-5 h-5" />;
-                            colorClass = 'text-blue-400';
-                            bgClass = 'bg-blue-500/10';
-                        }
-
-                        const handleItemClick = () => {
-                            if (materialType === 'enlace') {
-                                window.open(material.url_archivo, '_blank');
-                            } else {
-                                setViewingFile({ path: material.url_archivo, name: material.titulo });
+                <div className="space-y-4">
+                    {mats.map((material) => (
+                        <MaterialCard
+                            key={material.id}
+                            material={material}
+                            viewMode="list"
+                            onClick={() => {
+                                if (material.tipo?.toLowerCase() === 'enlace') {
+                                    window.open(material.url_archivo, '_blank');
+                                } else {
+                                    setViewingFile({ path: material.url_archivo, name: material.titulo });
+                                }
+                            }}
+                            canDelete={
+                                currentUser && (
+                                    (currentUser.role === 'admin' || currentUser.role === 'superadmin') ||
+                                    (material.user_id === currentUser.id && (new Date().getTime() - new Date(material.created_at).getTime()) / (1000 * 60 * 60) < 24)
+                                )
                             }
-                        };
-
-                        return (
-                            <div
-                                key={material.id}
-                                onClick={handleItemClick}
-                                className="flex items-center justify-between p-3 bg-bb-darker/30 hover:bg-bb-card rounded-xl border border-bb-border/50 hover:border-blue-500/30 transition-all cursor-pointer group active:scale-[0.99]"
-                            >
-                                <div className="flex items-center gap-4 min-w-0">
-                                    <div className={`p-2 rounded-lg ${bgClass} ${colorClass} group-hover:scale-110 transition-transform`}>
-                                        {icon}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-bold text-white truncate">
-                                            {material.titulo}
-                                        </p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <Badge variant="outline" className={`text-[9px] uppercase font-black py-0 px-1.5 ${colorClass} border-current opacity-70`}>
-                                                {materialType || 'material'}
-                                            </Badge>
-                                            {material.professors?.nombre && (
-                                                <span className="text-[10px] text-bb-text-secondary font-medium truncate">
-                                                    por {material.professors.nombre}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2 px-2">
-                                    {currentUser && (
-                                        (currentUser.role === 'admin' || currentUser.role === 'superadmin') ||
-                                        (material.user_id === currentUser.id && (new Date().getTime() - new Date(material.created_at).getTime()) / (1000 * 60 * 60) < 24)
-                                    ) && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteMaterial(material);
-                                                }}
-                                                className="p-2 rounded-lg hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all"
-                                                title="Eliminar material"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        )}
-                                    <Button variant="ghost" size="sm" className="hidden sm:flex text-bb-text-secondary hover:text-white h-8 px-2 text-xs font-bold">
-                                        {materialType === 'enlace' ? 'Ir al enlace' : 'Ver Documento'}
-                                    </Button>
-                                    <LayoutPanelLeft className="w-4 h-4 text-bb-text-secondary group-hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all" />
-                                </div>
-                            </div>
-                        );
-                    })}
+                            onDelete={() => handleDeleteMaterial(material)}
+                        />
+                    ))}
                 </div>
             );
         }
 
         return (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
-                {mats.map((material) => {
-                    const materialType = material.tipo?.toLowerCase() || '';
-                    let bgColor = 'bg-blue-500/10';
-                    let borderColor = 'border-blue-500/20';
-                    let textColor = 'text-blue-400';
-                    let icon = <LayoutPanelLeft className="w-6 h-6 md:w-8 md:h-8" />;
-
-                    if (materialType.includes('ppt') || materialType.includes('presentacion')) {
-                        bgColor = 'bg-orange-500/10';
-                        borderColor = 'border-orange-500/20';
-                        textColor = 'text-orange-400';
-                        icon = <LayoutPanelLeft className="w-6 h-6 md:w-8 md:h-8" />;
-                    } else if (materialType.includes('examen')) {
-                        bgColor = 'bg-red-500/10';
-                        borderColor = 'border-red-500/20';
-                        textColor = 'text-red-400';
-                        icon = <FileText className="w-6 h-6 md:w-8 md:h-8" />;
-                    } else if (materialType === 'enlace') {
-                        bgColor = 'bg-blue-500/10';
-                        borderColor = 'border-blue-500/20';
-                        textColor = 'text-blue-400';
-                        icon = <LayoutPanelLeft className="w-6 h-6 md:w-8 md:h-8" />;
-                    }
-
-                    const handleItemClick = () => {
-                        if (materialType === 'enlace') {
-                            window.open(material.url_archivo, '_blank');
-                        } else {
-                            setViewingFile({ path: material.url_archivo, name: material.titulo });
-                        }
-                    };
-
-                    return (
-                        <div
-                            key={material.id}
-                            onClick={handleItemClick}
-                            className={`relative p-3 md:p-4 ${bgColor} rounded-xl hover:bg-opacity-20 transition-all border ${borderColor} flex flex-col items-center gap-2 md:gap-3 group cursor-pointer active:scale-95`}
-                        >
-                            {currentUser && (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                {mats.map((material) => (
+                    <MaterialCard
+                        key={material.id}
+                        material={material}
+                        viewMode="grid"
+                        onClick={() => {
+                            if (material.tipo?.toLowerCase() === 'enlace') {
+                                window.open(material.url_archivo, '_blank');
+                            } else {
+                                setViewingFile({ path: material.url_archivo, name: material.titulo });
+                            }
+                        }}
+                        canDelete={
+                            currentUser && (
                                 (currentUser.role === 'admin' || currentUser.role === 'superadmin') ||
                                 (material.user_id === currentUser.id && (new Date().getTime() - new Date(material.created_at).getTime()) / (1000 * 60 * 60) < 24)
-                            ) && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteMaterial(material);
-                                        }}
-                                        className="absolute top-1.5 right-1.5 p-1 rounded-lg bg-bb-dark/90 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all opacity-0 group-hover:opacity-100 z-10"
-                                        title="Eliminar material"
-                                    >
-                                        <Trash2 className="w-3 h-3" />
-                                    </button>
-                                )}
-                            <div className={`${textColor} group-hover:scale-110 transition-transform`}>
-                                {icon}
-                            </div>
-                            <p className="text-[10px] md:text-xs font-bold text-bb-text text-center line-clamp-2 group-hover:text-white leading-tight">
-                                {material.titulo}
-                            </p>
-                            {material.professors?.nombre && (
-                                <span className="text-[8px] md:text-[9px] text-bb-text-secondary bg-bb-darker/50 px-2 py-0.5 rounded-md font-bold truncate max-w-full">
-                                    {material.professors.nombre}
-                                </span>
-                            )}
-                        </div>
-                    );
-                })}
+                            )
+                        }
+                        onDelete={() => handleDeleteMaterial(material)}
+                    />
+                ))}
             </div>
         );
     };

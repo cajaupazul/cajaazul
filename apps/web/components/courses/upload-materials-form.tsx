@@ -130,10 +130,13 @@ export default function UploadMaterialsForm({
 
                     if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
 
-                    const officeExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'];
-                    if (officeExtensions.includes(fileExt?.toLowerCase() || '')) {
+                    const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'pdf', 'jpg', 'jpeg', 'png', 'webp'];
+                    if (triggerExtensions.includes(fileExt?.toLowerCase() || '')) {
                         const { triggerFileConversion } = await import('@/lib/converter');
-                        triggerFileConversion(materialUrl.split('/course_materials/')[1] || materialUrl.replace(`${process.env.NEXT_PUBLIC_API_URL}/storage/secure-url?path=`, '').split('&')[0], 'course-materials').catch(console.error);
+                        const fileKey = materialUrl.split('&path=')[1]?.split('&')[0] || materialUrl.split('/course_materials/')[1];
+                        if (fileKey) {
+                            triggerFileConversion(decodeURIComponent(fileKey), 'course-materials').catch(console.error);
+                        }
                     }
 
                     if (materialType === 'syllabus') {

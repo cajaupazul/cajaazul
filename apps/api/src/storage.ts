@@ -10,6 +10,7 @@ type Bindings = {
     PROFILE_FRAMES: R2Bucket
     GRUPOS: R2Bucket
     COURSE_IMAGES: R2Bucket
+    THUMBNAILS: R2Bucket
     // NO R2_ACCESS_KEYS required (Native Bindings)
 }
 
@@ -231,6 +232,7 @@ storageRouter.get('/public-stream', async (c) => {
             case 'profile-avatars': bucket = c.env.PROFILE_AVATARS; break;
             case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
             case 'grupos': bucket = c.env.GRUPOS; break;
+            case 'thumbnails': bucket = c.env.THUMBNAILS; break;
             default: return c.json({ error: 'Bucket inválido' }, 400);
         }
 
@@ -285,6 +287,7 @@ storageRouter.get('/secure-url', async (c) => {
         case 'profile-avatars': bucket = c.env.PROFILE_AVATARS; break;
         case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
         case 'grupos': bucket = c.env.GRUPOS; break;
+        case 'thumbnails': bucket = c.env.THUMBNAILS; break;
         default:
             // console.log(`❌ Bucket inválido: ${bucketName}`)
             return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)

@@ -128,6 +128,7 @@ export type Material = {
   url_archivo: string;
   tipo: string;
   descargas: number;
+  thumbnail_url: string | null;
   created_at: string;
   profiles?: Profile;
   courses?: Course;

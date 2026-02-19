@@ -27,3 +27,7 @@ bucket_name = "profile-frames"
 [[r2_buckets]]
 binding = "GRUPOS"
 bucket_name = "grupos"
+
+[[r2_buckets]]
+binding = "THUMBNAILS"
+bucket_name = "thumbnails"
