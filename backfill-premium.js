@@ -52,51 +52,71 @@ async function generatePremiumThumbnail(titulo, tipo) {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Abstract Pattern (Subtle circles)
-    ctx.globalAlpha = 0.05;
+    // Dynamic Patterns based on type
+    ctx.globalAlpha = 0.08;
     ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath(); ctx.arc(W, 0, 300, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(0, H, 150, 0, Math.PI * 2); ctx.fill();
+    const isExamen = tipo.toLowerCase().includes('examen');
+
+    if (isExamen) {
+        // Subtle diagonal stripes for Exams (more subtle and vertical)
+        for (let i = -W; i < W + H; i += 60) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i + 15, 0);
+            ctx.lineTo(i + 15 - H * 0.5, H);
+            ctx.lineTo(i - H * 0.5, H);
+            ctx.fill();
+        }
+    } else {
+        // Subtle circles for other types
+        ctx.beginPath(); ctx.arc(W * 0.9, H * 0.1, 200, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(W * 0.1, H * 0.9, 100, 0, Math.PI * 2); ctx.fill();
+    }
     ctx.globalAlpha = 1.0;
 
     // Accent Bar
     ctx.fillStyle = conf.accent;
     ctx.fillRect(0, 0, 15, H);
 
-    // Label Badge
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.fillRect(40, 40, 140, 30);
-    ctx.fillStyle = conf.accent;
-    ctx.font = 'bold 14px sans-serif';
-    ctx.fillText(conf.label, 55, 60);
-
-    // Title Text
+    // Responsive Title Text
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 36px sans-serif';
 
-    // Simple text wrapping
+    // Auto-scaling font size based on title length
+    let fontSize = 42;
+    if (titulo.length > 25) fontSize = 36;
+    if (titulo.length > 50) fontSize = 30;
+    if (titulo.length > 80) fontSize = 24;
+    ctx.font = `bold ${fontSize}px sans-serif`;
+
+    const maxWidth = W - 120;
     const words = titulo.split(' ');
     let line = '';
-    let y = H / 2 - 20;
-    const maxWidth = W - 100;
+    let lines = [];
 
     for (const word of words) {
         let testLine = line + word + ' ';
-        let metrics = ctx.measureText(testLine);
-        if (metrics.width > maxWidth && line !== '') {
-            ctx.fillText(line, 55, y);
+        if (ctx.measureText(testLine).width > maxWidth && line !== '') {
+            lines.push(line);
             line = word + ' ';
-            y += 45;
         } else {
             line = testLine;
         }
     }
-    ctx.fillText(line, 55, y);
+    lines.push(line);
 
-    // Simple footer
+    // Center text vertically (no badge anymore, so we take more space)
+    const totalHeight = lines.length * fontSize * 1.2;
+    let y = (H / 2) - (totalHeight / 2) + fontSize * 0.8;
+
+    for (const l of lines) {
+        ctx.fillText(l.trim(), 60, y);
+        y += fontSize * 1.2;
+    }
+
+    // Modern footer
     ctx.globalAlpha = 0.3;
-    ctx.font = '12px sans-serif';
-    ctx.fillText('GENERATED PREVIEW', 55, H - 30);
+    ctx.font = '10px sans-serif';
+    ctx.fillText('PREVISUALIZACIÓN OPTIMIZADA', 60, H - 25);
 
     return canvas.toBuffer('image/png');
 }
