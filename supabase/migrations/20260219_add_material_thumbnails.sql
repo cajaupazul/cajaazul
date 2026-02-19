@@ -30,3 +30,4 @@ CREATE POLICY "Materials are viewable by everyone"
 ON public.materials FOR SELECT
 TO authenticated
 USING (true);
+-- Final deployment sync
