@@ -56,8 +56,6 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
                 }
                 const endpoint = `${apiUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=${bucket}`;
 
-                console.log('[SecurePptxViewer] Solicitando URL firmada:', endpoint);
-
                 const res = await fetch(endpoint, {
                     headers: {
                         'Authorization': `Bearer ${session.access_token}`
@@ -73,7 +71,6 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
 
                 // recibir la URL pública del proxy (tokenizada)
                 const streamUrl = data.url;
-                console.log('[SecurePptxViewer] Stream URL Recibida:', streamUrl);
 
                 // Construir la URL del Viewer de Microsoft
                 // src debe estar encodeado
@@ -134,13 +131,20 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
                 onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); return false; }}
             />
 
-            {/* 2. Bloqueo específico del footer IZQUIERDO (donde está "Abrir en nueva pestaña") */}
-            {/* Microsoft pone su botón a la izquierda. Lo tapamos con un div transparente que capture clics */}
+            {/* 2. Bloqueo agresivo del footer (Bloqueamos botones de los extremos) */}
+            {/* Lado izquierdo: Bloquea el botón "Abrir en nueva pestaña" y el logo de PPT */}
             <div
-                className="absolute bottom-0 left-0 w-[150px] h-10 z-[11] bg-transparent cursor-default"
+                className="absolute bottom-0 left-0 w-[260px] h-12 z-[11] bg-transparent cursor-default"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); return false; }}
+                onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            />
+            {/* Lado derecho: Bloquea botones de opciones adicionales si aparecen */}
+            <div
+                className="absolute bottom-0 right-0 w-[120px] h-12 z-[11] bg-transparent cursor-default"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
             />
 
             {/* Overlay indicators & Controls */}

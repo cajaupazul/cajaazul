@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Loader2, AlertCircle, FileText, Download, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -12,12 +12,6 @@ import SecurePptxViewer from './SecurePptxViewer';
 // Worker local para evitar problemas de CORS con CDN
 if (typeof window !== 'undefined') {
     pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-    console.log('[SecureFileViewer] PDF Worker Source set to:', pdfjs.GlobalWorkerOptions.workerSrc);
-
-    // Verificar accesibilidad del worker
-    fetch(pdfjs.GlobalWorkerOptions.workerSrc, { method: 'HEAD' })
-        .then(res => console.log(`[SecureFileViewer] Worker accessibility check: ${res.status} ${res.ok ? 'OK' : 'FAIL'}`))
-        .catch(err => console.error('[SecureFileViewer] Worker accessibility check error:', err));
 }
 
 interface SecureFileViewerProps {
@@ -34,9 +28,17 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
     const [externalViewerUrl, setExternalViewerUrl] = useState<string | null>(null);
     const [useExternalViewer, setUseExternalViewer] = useState(false);
     const [numPages, setNumPages] = useState<number | null>(null);
+    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
     const xlsxContainerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         loadContent();
@@ -107,22 +109,16 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             }
 
             const secureUrl = `${baseUrl}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`;
-            console.log('[SecureFileViewer] Fetching secure file:', secureUrl);
             const blobRes = await fetch(secureUrl, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
-            console.log(`[SecureFileViewer] Response: ${blobRes.status} ${blobRes.statusText}`);
-            console.log(`[SecureFileViewer] Content-Type: ${blobRes.headers.get('content-type')}`);
-
             if (!blobRes.ok) {
                 const errorText = await blobRes.text().catch(() => "Unknown error");
-                console.error('[SecureFileViewer] Fetch failed:', errorText);
                 throw new Error(`Error ${blobRes.status}: ${errorText}`);
             }
 
             const blob = await blobRes.blob();
-            console.log(`[SecureFileViewer] Blob received: ${blob.size} bytes, type: ${blob.type}`);
             setFileBlob(blob);
 
             const objUrl = URL.createObjectURL(blob);
@@ -207,7 +203,6 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
         );
     }
 
-    const containerRef = useRef<HTMLDivElement>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
 
     const toggleFullscreen = () => {
@@ -229,6 +224,8 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     }, []);
+
+    const pdfFile = useMemo(() => fileBlob || blobUrl, [fileBlob, blobUrl]);
 
     const handleDownload = () => {
         if (blobUrl) {
@@ -268,15 +265,14 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             {/* Content Renderers */}
             <div className={`flex-1 flex flex-col overflow-hidden relative ${isFullscreen ? 'p-0' : ''}`}>
                 {/* 1. PDF */}
-                {fileType === 'pdf' && (fileBlob || blobUrl) && (
+                {fileType === 'pdf' && pdfFile && (
                     <div className="flex-1 overflow-auto bg-gray-100/50 flex justify-center p-4 scrollbar-thin">
                         <Document
-                            file={fileBlob || blobUrl}
+                            file={pdfFile}
                             onLoadSuccess={({ numPages }) => {
-                                console.log(`[SecureFileViewer] PDF loaded successfully: ${numPages} pages`);
                                 setNumPages(numPages);
                             }}
-                            onLoadError={(error) => console.error('[SecureFileViewer] PDF Load Error:', error)}
+                            onLoadError={(error) => { }}
                             loading={<Loader2 className="animate-spin text-blue-500" />}
                             className="max-w-full"
                         >
@@ -286,10 +282,10 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                                         pageNumber={index + 1}
                                         renderTextLayer={false}
                                         renderAnnotationLayer={false}
-                                        width={isFullscreen ? (window.innerWidth - 60) : Math.min(window.innerWidth - 80, 800)}
+                                        width={isFullscreen ? (windowWidth - 60) : Math.min(windowWidth - 80, 800)}
                                         className="shadow-xl rounded-sm overflow-hidden"
                                         loading={
-                                            <div className="w-[800px] h-[1100px] bg-white animate-pulse rounded-sm border border-gray-100" />
+                                            <div className="w-full h-[1100px] bg-white animate-pulse rounded-sm border border-gray-100" style={{ width: isFullscreen ? (windowWidth - 100) : 800 }} />
                                         }
                                     />
                                     {/* Individual page protective overlay */}
