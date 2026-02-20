@@ -337,7 +337,7 @@ function StoreContent() {
                             {vipProduct && (
                                 <div className="lg:col-span-12 relative group">
                                     <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[3rem] blur opacity-25 group-hover:opacity-40 transition duration-1000" />
-                                    <div className="relative bg-[#111114] rounded-[2.5rem] border border-white/5 overflow-hidden p-8 sm:p-16 flex flex-col lg:flex-row items-center gap-16 backdrop-blur-3xl">
+                                    <div className="relative bg-[#111114] rounded-[2.5rem] border border-white/5 overflow-hidden p-6 sm:p-16 flex flex-col lg:flex-row items-center gap-8 lg:gap-16 backdrop-blur-3xl">
                                         {/* Mascot Origi - Drag & Drop for Admins */}
                                         {mascotConfig?.is_visible !== false && (
                                             <motion.div
@@ -348,7 +348,7 @@ function StoreContent() {
                                                     const newY = (mascotConfig?.y_pos || 0) + info.offset.y;
                                                     updateMascotPosition(newX, newY);
                                                 }}
-                                                className={`w-full lg:w-1/2 flex justify-center relative order-first ${profile?.role === 'admin' || profile?.role === 'superadmin' ? 'cursor-grab active:cursor-grabbing z-50' : 'z-10'}`}
+                                                className={`w-full lg:w-1/2 flex justify-center items-center relative order-first ${profile?.role === 'admin' || profile?.role === 'superadmin' ? 'cursor-grab active:cursor-grabbing z-50' : 'z-10'}`}
                                                 style={{
                                                     x: mascotConfig?.x_pos || 0,
                                                     y: mascotConfig?.y_pos || 0,
@@ -357,9 +357,9 @@ function StoreContent() {
                                             >
                                                 <div className="absolute inset-0 bg-indigo-500/25 blur-[100px] rounded-full pointer-events-none" />
                                                 <img
-                                                    src="/tienda/origi_mascot.png"
+                                                    src="/tienda/orivipp.png"
                                                     alt="Origi Mascot"
-                                                    className="w-[280px] sm:w-[500px] object-contain relative z-10 animate-float pointer-events-none select-none"
+                                                    className="w-[240px] sm:w-[500px] object-contain relative z-10 animate-float pointer-events-none select-none"
                                                 />
                                                 {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                                                     <div className="absolute -bottom-4 bg-indigo-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase italic tracking-[0.2em] shadow-lg">Arrastrar para mover</div>
@@ -367,35 +367,35 @@ function StoreContent() {
                                             </motion.div>
                                         )}
 
-                                        <div className="w-full lg:w-1/2 space-y-10 text-center lg:text-left">
-                                            <div className="space-y-6">
-                                                <h2 className="text-5xl sm:text-7xl font-[1000] text-white italic tracking-tighter uppercase leading-none">
-                                                    CONVIÉRTETE EN <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">VIP</span>
+                                        <div className="w-full lg:w-1/2 space-y-8 lg:space-y-10 text-center lg:text-left">
+                                            <div className="space-y-4 lg:space-y-6">
+                                                <h2 className="text-4xl sm:text-7xl font-[1000] text-white italic tracking-tight uppercase leading-[1.1] pb-2">
+                                                    CONVIÉRTETE EN <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent px-2">VIP</span>
                                                 </h2>
-                                                <p className="text-zinc-400 text-lg sm:text-2xl font-medium leading-relaxed">
+                                                <p className="text-zinc-400 text-base sm:text-2xl font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
                                                     Acceso total, descargas ilimitadas y estilo absoluto. Desbloquea el lado más potente de CampusLink.
                                                 </p>
                                             </div>
 
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-5">
                                                 {[
                                                     { text: 'Descargas ilimitadas', icon: Check },
                                                     { text: 'Grupos exclusivos', icon: Check },
                                                     { text: 'Insignia dorada', icon: Check },
                                                     { text: 'Soporte prioritario', icon: Check }
                                                 ].map((f, i) => (
-                                                    <div key={i} className="flex items-center gap-4 bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-md">
-                                                        <div className="p-1.5 bg-green-500/20 rounded-full shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Check className="text-green-500 w-5 h-5" /></div>
-                                                        <span className="text-white font-black uppercase text-sm italic">{f.text}</span>
+                                                    <div key={i} className="flex items-center gap-4 bg-white/5 p-4 lg:p-5 rounded-2xl lg:rounded-3xl border border-white/5 backdrop-blur-md">
+                                                        <div className="p-1.5 bg-green-500/20 rounded-full shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Check className="text-green-500 w-4 h-4 lg:w-5 lg:h-5" /></div>
+                                                        <span className="text-white font-black uppercase text-xs lg:text-sm italic">{f.text}</span>
                                                     </div>
                                                 ))}
                                             </div>
 
-                                            <div className="flex flex-col sm:flex-row items-center gap-8 pt-6">
-                                                <div className="text-6xl font-[1000] text-white tracking-tighter italic">S/ {vipProduct.price} <span className="text-sm text-zinc-500 font-bold uppercase tracking-[0.3em] block sm:inline mt-2 sm:mt-0">/ {vipProduct.amount} días</span></div>
+                                            <div className="flex flex-col sm:flex-row items-center gap-6 lg:gap-8 pt-4 lg:pt-6">
+                                                <div className="text-5xl lg:text-6xl font-[1000] text-white tracking-tighter italic">S/ {vipProduct.price} <span className="text-sm text-zinc-500 font-bold uppercase tracking-[0.3em] block sm:inline mt-2 sm:mt-0">/ {vipProduct.amount} días</span></div>
                                                 <Button
                                                     onClick={() => handlePurchase(vipProduct.id)}
-                                                    className="w-full sm:w-auto h-20 px-16 bg-white text-black hover:bg-zinc-200 text-2xl font-[1000] rounded-[1.5rem] transition-all shadow-[0_0_50px_rgba(255,255,255,0.3)] uppercase italic tracking-tighter hover:scale-105"
+                                                    className="w-full sm:w-auto h-16 lg:h-20 px-12 lg:px-16 bg-white text-black hover:bg-zinc-200 text-xl lg:text-2xl font-[1000] rounded-[1.2rem] lg:rounded-[1.5rem] transition-all shadow-[0_0_50px_rgba(255,255,255,0.3)] uppercase italic tracking-tighter hover:scale-105"
                                                 >
                                                     SUSCRIBIRSE
                                                 </Button>
