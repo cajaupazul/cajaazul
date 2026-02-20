@@ -27,12 +27,15 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [externalViewerUrl, setExternalViewerUrl] = useState<string | null>(null);
     const [useExternalViewer, setUseExternalViewer] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const [numPages, setNumPages] = useState<number | null>(null);
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
     const xlsxContainerRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    const pdfFile = useMemo(() => fileBlob || blobUrl, [fileBlob, blobUrl]);
 
     useEffect(() => {
         const handleResize = () => setWindowWidth(window.innerWidth);
@@ -46,6 +49,26 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             if (blobUrl) URL.revokeObjectURL(blobUrl);
         };
     }, [filePath]);
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
+
+    const toggleFullscreen = () => {
+        if (!containerRef.current) return;
+
+        if (!document.fullscreenElement) {
+            containerRef.current.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    };
 
     const loadContent = async () => {
         setLoading(true);
@@ -82,21 +105,12 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
 
             // 2. Strategy Selection for PPTX
             if (type === 'pptx') {
-                // PPTX is now handled by a dedicated component which manages its own loading state
                 setLoading(false);
                 return;
             }
 
-            // External viewer fallback logic for other types
+            // External viewer fallback
             if (useExternalViewer) {
-                // Logic remains for potential docx/xlsx fallbacks
-                const res = await fetch(`${baseUrl}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`, { // Use secure-url to verify access then construct viewer? No, preview-url logic was removed/changed
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                // Re-using the preview logic for DOCX/XLSX fallbacks would require updating it to use S3 signed URLs too if we want consistency, 
-                // but for now let's focus on maintaining existing behavior for them or just letting them fail gracefully if preview-url is changed.
-                // Actually, preview-url NOW returns a JSON with { url: signedUrl }, so we can adapt.
-
                 const previewRes = await fetch(`${baseUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -124,7 +138,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             const objUrl = URL.createObjectURL(blob);
             setBlobUrl(objUrl);
 
-            // Client-side rendering
+            // Client-side rendering (docx/xlsx)
             if (type === 'docx') {
                 setTimeout(async () => {
                     if (docxContainerRef.current) {
@@ -134,7 +148,6 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                                 inWrapper: true
                             });
                         } catch (e) {
-                            console.error("DOCX render failed, falling back to external");
                             setUseExternalViewer(true);
                             loadContent();
                         }
@@ -152,7 +165,6 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                             xlsxContainerRef.current.innerHTML = html;
                         }
                     } catch (e) {
-                        console.error("XLSX render failed, falling back to external");
                         setUseExternalViewer(true);
                         loadContent();
                     }
@@ -160,15 +172,24 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             }
 
         } catch (err: any) {
-            console.error("Error loading secure file:", err);
             setError(err.message || "Error cargando archivo");
         } finally {
-            if (fileType !== 'pptx') {
-                setLoading(false);
-            }
+            setLoading(false);
         }
     };
 
+    const handleDownload = () => {
+        if (blobUrl) {
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
+
+    // Render logic moved after all hooks
     if (loading && fileType !== 'pptx') {
         return (
             <div className="flex flex-col items-center justify-center p-12 space-y-4">
@@ -178,7 +199,6 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
         );
     }
 
-    // Special PPTX handling
     if (fileType === 'pptx' && !useExternalViewer) {
         return <SecurePptxViewer filePath={filePath} fileName={fileName} />;
     }
@@ -202,41 +222,6 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             </div>
         );
     }
-
-    const [isFullscreen, setIsFullscreen] = useState(false);
-
-    const toggleFullscreen = () => {
-        if (!containerRef.current) return;
-
-        if (!document.fullscreenElement) {
-            containerRef.current.requestFullscreen().catch(err => {
-                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-            });
-        } else {
-            document.exitFullscreen();
-        }
-    };
-
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement);
-        };
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    }, []);
-
-    const pdfFile = useMemo(() => fileBlob || blobUrl, [fileBlob, blobUrl]);
-
-    const handleDownload = () => {
-        if (blobUrl) {
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-    };
 
     return (
         <div
