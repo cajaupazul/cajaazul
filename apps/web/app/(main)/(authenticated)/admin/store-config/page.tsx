@@ -224,27 +224,10 @@ export default function StoreConfigPage() {
                                 </CardHeader>
                                 <CardContent className="p-6 space-y-6">
                                     <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-3">
-                                            <label className="text-sm font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                                                Eje X (Horizontal) <span className="text-indigo-400">({config.x_pos}px)</span>
-                                            </label>
-                                            <input
-                                                type="range" min="-200" max="200" step="1"
-                                                value={config.x_pos}
-                                                onChange={(e) => handleLayoutChange(config.id, 'x_pos', parseInt(e.target.value))}
-                                                className="w-full accent-indigo-500"
-                                            />
-                                        </div>
-                                        <div className="space-y-3">
-                                            <label className="text-sm font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                                                Eje Y (Vertical) <span className="text-indigo-400">({config.y_pos}px)</span>
-                                            </label>
-                                            <input
-                                                type="range" min="-200" max="200" step="1"
-                                                value={config.y_pos}
-                                                onChange={(e) => handleLayoutChange(config.id, 'y_pos', parseInt(e.target.value))}
-                                                className="w-full accent-indigo-500"
-                                            />
+                                        <div className="space-y-3 col-span-2">
+                                            <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-xl text-xs text-indigo-300 font-medium text-center">
+                                                Tip: La posición se ajusta arrastrando la mascota directamente en la página de la tienda.
+                                            </div>
                                         </div>
                                         <div className="space-y-3">
                                             <label className="text-sm font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">

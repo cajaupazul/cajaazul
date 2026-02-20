@@ -23,6 +23,7 @@ import { useSearchParams } from 'next/navigation';
 import { supabase, ShopItem, ShopCategory } from '@/lib/supabase';
 import PaymentModal from '@/components/store/PaymentModal';
 import PreviewModal from '@/components/store/PreviewModal';
+import { motion } from 'framer-motion';
 
 interface StoreProduct {
     id: string;
@@ -36,6 +37,7 @@ interface StoreProduct {
 // MercadoPago now handled via Cloudflare Worker API
 
 interface StoreLayoutConfig {
+    id: string;
     asset_key: string;
     x_pos: number;
     y_pos: number;
@@ -257,15 +259,30 @@ function StoreContent() {
 
     const mascotConfig = layoutConfig['vip_mascot_origi'];
 
+    const updateMascotPosition = async (x: number, y: number) => {
+        if (profile?.role !== 'admin' && profile?.role !== 'superadmin') return;
+
+        // Find existing config id
+        const configId = mascotConfig?.id;
+        if (!configId) return;
+
+        const { error } = await supabase
+            .from('store_layout_config')
+            .update({ x_pos: x, y_pos: y })
+            .eq('id', configId);
+
+        if (error) console.error('Error updating mascot position:', error);
+    };
+
     return (
-        <div className="relative min-h-screen bg-[#0a0a0c] overflow-hidden px-3 sm:px-8 py-8 sm:py-12">
+        <div className="relative min-h-screen bg-[#0a0a0c] overflow-hidden px-4 sm:px-8 py-8 sm:py-16">
             {/* Nitro Background Effects */}
             <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/20 blur-[120px] rounded-full animate-pulse" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[100px] rounded-full" />
             </div>
 
-            <div className="max-w-6xl mx-auto space-y-12 relative z-10">
+            <div className="max-w-6xl mx-auto space-y-16 relative z-10">
                 {/* Alert Messages */}
                 {effectiveStatus && (
                     <div className={`p-6 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 border ${effectiveStatus === 'success' ? 'bg-green-500/10 border-green-500/20' : effectiveStatus === 'failure' ? 'bg-red-500/10 border-red-500/20' : 'bg-yellow-500/10 border-yellow-500/20'}`}>
@@ -278,35 +295,35 @@ function StoreContent() {
                 )}
 
                 {/* Header Section */}
-                <div className="text-center space-y-8">
-                    <div className="space-y-4">
-                        <h1 className="text-4xl sm:text-7xl font-[1000] text-white tracking-tighter uppercase italic leading-none drop-shadow-2xl">
+                <div className="text-center space-y-10">
+                    <div className="space-y-6">
+                        <h1 className="text-5xl sm:text-7xl lg:text-9xl font-[1000] text-white tracking-[calc(-0.05em)] uppercase italic leading-none drop-shadow-2xl">
                             TIENDA <span className="bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">NITRO</span>
                         </h1>
-                        <p className="text-zinc-400 text-sm sm:text-xl font-medium max-w-2xl mx-auto">
+                        <p className="text-zinc-400 text-base sm:text-xl lg:text-2xl font-medium max-w-3xl mx-auto leading-relaxed">
                             Únete a la élite de CampusLink y personaliza tu perfil con ventajas exclusivas.
                         </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <div className="bg-black/40 backdrop-blur-xl p-1.5 rounded-2xl border border-white/10 flex items-center shadow-2xl">
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                        <div className="bg-black/40 backdrop-blur-2xl p-2 rounded-2xl border border-white/10 flex items-center shadow-2xl">
                             <button
                                 onClick={() => setActiveView('items')}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeView === 'items' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]' : 'text-zinc-400 hover:text-white'}`}
+                                className={`flex items-center gap-3 px-8 py-4 rounded-xl font-black transition-all uppercase italic tracking-wider ${activeView === 'items' ? 'bg-indigo-600 text-white shadow-[0_0_30px_rgba(79,70,229,0.5)]' : 'text-zinc-500 hover:text-white'}`}
                             >
-                                <Package size={20} /> Artículos
+                                <Package size={22} /> Artículos
                             </button>
                             <button
                                 onClick={() => setActiveView('recharge')}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeView === 'recharge' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]' : 'text-zinc-400 hover:text-white'}`}
+                                className={`flex items-center gap-3 px-8 py-4 rounded-xl font-black transition-all uppercase italic tracking-wider ${activeView === 'recharge' ? 'bg-indigo-600 text-white shadow-[0_0_30px_rgba(79,70,229,0.5)]' : 'text-zinc-500 hover:text-white'}`}
                             >
-                                <Zap size={20} /> Monedas y VIP
+                                <Zap size={22} /> Monedas y VIP
                             </button>
                         </div>
                         {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                             <Link href="/admin/store-config">
-                                <Button className="h-12 px-6 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold rounded-xl gap-2 backdrop-blur-md transition-all">
-                                    <Settings size={20} /> Configurar
+                                <Button className="h-16 px-8 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black uppercase italic rounded-2xl gap-3 backdrop-blur-md transition-all shadow-xl">
+                                    <Settings size={22} /> Configuración
                                 </Button>
                             </Link>
                         )}
@@ -315,60 +332,70 @@ function StoreContent() {
 
                 {
                     activeView === 'recharge' ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
                             {/* VIP Section - Nitro Inspired */}
                             {vipProduct && (
                                 <div className="lg:col-span-12 relative group">
-                                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[2.5rem] blur opacity-25 group-hover:opacity-40 transition duration-1000" />
-                                    <div className="relative bg-[#16161a] rounded-[2rem] border border-white/5 overflow-hidden p-6 sm:p-12 flex flex-col lg:flex-row items-center gap-12">
-                                        {/* Mascot Origi - Left side on desktop, Top on mobile */}
+                                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[3rem] blur opacity-25 group-hover:opacity-40 transition duration-1000" />
+                                    <div className="relative bg-[#111114] rounded-[2.5rem] border border-white/5 overflow-hidden p-8 sm:p-16 flex flex-col lg:flex-row items-center gap-16 backdrop-blur-3xl">
+                                        {/* Mascot Origi - Drag & Drop for Admins */}
                                         {mascotConfig?.is_visible !== false && (
-                                            <div
-                                                className="w-full lg:w-1/2 flex justify-center relative order-first"
+                                            <motion.div
+                                                drag={profile?.role === 'admin' || profile?.role === 'superadmin'}
+                                                dragMomentum={false}
+                                                onDragEnd={(_, info) => {
+                                                    const newX = (mascotConfig?.x_pos || 0) + info.offset.x;
+                                                    const newY = (mascotConfig?.y_pos || 0) + info.offset.y;
+                                                    updateMascotPosition(newX, newY);
+                                                }}
+                                                className={`w-full lg:w-1/2 flex justify-center relative order-first ${profile?.role === 'admin' || profile?.role === 'superadmin' ? 'cursor-grab active:cursor-grabbing z-50' : 'z-10'}`}
                                                 style={{
-                                                    marginLeft: mascotConfig ? `${mascotConfig.x_pos}px` : '0',
-                                                    marginTop: mascotConfig ? `${mascotConfig.y_pos}px` : '0',
-                                                    transform: mascotConfig ? `scale(${mascotConfig.scale})` : 'none'
+                                                    x: mascotConfig?.x_pos || 0,
+                                                    y: mascotConfig?.y_pos || 0,
+                                                    scale: mascotConfig?.scale || 1
                                                 }}
                                             >
-                                                <div className="absolute inset-0 bg-indigo-500/20 blur-[80px] rounded-full" />
+                                                <div className="absolute inset-0 bg-indigo-500/25 blur-[100px] rounded-full pointer-events-none" />
                                                 <img
-                                                    src="/tienda/origi (3).png"
+                                                    src="/tienda/origi_mascot.png"
                                                     alt="Origi Mascot"
-                                                    className="w-[280px] sm:w-[450px] object-contain relative z-10 animate-float"
+                                                    className="w-[280px] sm:w-[500px] object-contain relative z-10 animate-float pointer-events-none select-none"
                                                 />
-                                            </div>
+                                                {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
+                                                    <div className="absolute -bottom-4 bg-indigo-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase italic tracking-[0.2em] shadow-lg">Arrastrar para mover</div>
+                                                )}
+                                            </motion.div>
                                         )}
 
-                                        <div className="w-full lg:w-1/2 space-y-8 text-center lg:text-left">
-                                            <div className="space-y-4">
-                                                <h2 className="text-4xl sm:text-6xl font-black text-white italic tracking-tighter uppercase leading-none">
-                                                    CONVIÉRTETE EN <span className="text-yellow-400">VIP</span>
+                                        <div className="w-full lg:w-1/2 space-y-10 text-center lg:text-left">
+                                            <div className="space-y-6">
+                                                <h2 className="text-5xl sm:text-7xl font-[1000] text-white italic tracking-tighter uppercase leading-none">
+                                                    CONVIÉRTETE EN <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">VIP</span>
                                                 </h2>
-                                                <p className="text-zinc-400 text-lg sm:text-xl font-medium">
-                                                    Acceso total, descargas ilimitadas y estilo absoluto. desbloquea el lado más potente de CampusLink.
+                                                <p className="text-zinc-400 text-lg sm:text-2xl font-medium leading-relaxed">
+                                                    Acceso total, descargas ilimitadas y estilo absoluto. Desbloquea el lado más potente de CampusLink.
                                                 </p>
                                             </div>
 
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                                 {[
                                                     { text: 'Descargas ilimitadas', icon: Check },
                                                     { text: 'Grupos exclusivos', icon: Check },
                                                     { text: 'Insignia dorada', icon: Check },
                                                     { text: 'Soporte prioritario', icon: Check }
                                                 ].map((f, i) => (
-                                                    <div key={i} className="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/5">
-                                                        <div className="p-1 bg-green-500/20 rounded-full"><Check className="text-green-500 w-4 h-4" /></div>
-                                                        <span className="text-white font-bold">{f.text}</span>
+                                                    <div key={i} className="flex items-center gap-4 bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-md">
+                                                        <div className="p-1.5 bg-green-500/20 rounded-full shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Check className="text-green-500 w-5 h-5" /></div>
+                                                        <span className="text-white font-black uppercase text-sm italic">{f.text}</span>
                                                     </div>
                                                 ))}
                                             </div>
 
-                                            <div className="flex flex-col sm:flex-row items-center gap-6 pt-4">
-                                                <div className="text-5xl font-[1000] text-white">S/ {vipProduct.price} <span className="text-sm text-zinc-500 font-bold uppercase tracking-widest">/ {vipProduct.amount} días</span></div>
+                                            <div className="flex flex-col sm:flex-row items-center gap-8 pt-6">
+                                                <div className="text-6xl font-[1000] text-white tracking-tighter italic">S/ {vipProduct.price} <span className="text-sm text-zinc-500 font-bold uppercase tracking-[0.3em] block sm:inline mt-2 sm:mt-0">/ {vipProduct.amount} días</span></div>
                                                 <Button
                                                     onClick={() => handlePurchase(vipProduct.id)}
-                                                    className="w-full sm:w-auto h-16 px-12 bg-white text-black hover:bg-zinc-200 text-xl font-[900] rounded-2xl transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] uppercase italic"
+                                                    className="w-full sm:w-auto h-20 px-16 bg-white text-black hover:bg-zinc-200 text-2xl font-[1000] rounded-[1.5rem] transition-all shadow-[0_0_50px_rgba(255,255,255,0.3)] uppercase italic tracking-tighter hover:scale-105"
                                                 >
                                                     SUSCRIBIRSE
                                                 </Button>
@@ -379,41 +406,44 @@ function StoreContent() {
                             )}
 
                             {/* Coins Section */}
-                            <div className="lg:col-span-12 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-yellow-500/10 rounded-2xl border border-yellow-500/20">
-                                        <Zap className="text-yellow-400" size={32} />
+                            <div className="lg:col-span-12 space-y-12 animate-in fade-in slide-in-from-bottom-12 duration-1000">
+                                <div className="flex items-center gap-6">
+                                    <div className="p-4 bg-yellow-500/10 rounded-3xl border border-yellow-500/20 shadow-xl backdrop-blur-md">
+                                        <Zap className="text-yellow-400" size={36} />
                                     </div>
-                                    <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Paquetes de Monedas</h2>
+                                    <h2 className="text-4xl sm:text-5xl font-[1000] text-white italic uppercase tracking-tighter">Paquetes de Monedas</h2>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-2 lg:grid-cols-12 gap-5 sm:gap-8 auto-rows-fr">
                                     {coinPackages.map((pkg, idx) => {
                                         // Map specific images based on index or amount
                                         const coinImg = pkg.amount <= 100 ? '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1) 1.png' :
                                             pkg.amount <= 500 ? '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1)2.png' :
                                                 '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1) 4.png';
 
+                                        const isLarge = pkg.amount >= 1000;
+
                                         return (
                                             <div
                                                 key={pkg.id}
                                                 onClick={() => handlePurchase(pkg.id)}
-                                                className="group relative bg-[#16161a] border border-white/5 h-full rounded-[2rem] p-8 hover:bg-[#1a1a20] transition-all cursor-pointer hover:-translate-y-2 overflow-hidden shadow-2xl"
+                                                className={`group relative bg-[#131317] border border-white/5 rounded-[2.5rem] p-6 sm:p-10 hover:bg-[#18181f] transition-all cursor-pointer hover:-translate-y-3 overflow-hidden shadow-2xl flex flex-col justify-between
+                                                    ${isLarge ? 'col-span-2 lg:col-span-6' : 'col-span-1 lg:col-span-3'}`}
                                             >
-                                                <div className="absolute top-0 right-0 p-4 font-black text-white/5 text-6xl italic pointer-events-none select-none">
+                                                <div className="absolute top-0 right-0 p-6 font-[1000] text-white/[0.03] text-7xl sm:text-9xl italic pointer-events-none select-none">
                                                     {pkg.amount}
                                                 </div>
 
-                                                <div className="relative z-10 space-y-8 text-center">
-                                                    <div className="h-32 flex items-center justify-center">
-                                                        <img src={coinImg} alt="Monedas" className="h-full object-contain group-hover:scale-110 transition-transform duration-500 animate-float" style={{ animationDelay: `${idx * 0.2}s` }} />
+                                                <div className="relative z-10 space-y-6 sm:space-y-10 text-center">
+                                                    <div className={`${isLarge ? 'h-40 sm:h-56' : 'h-24 sm:h-40'} flex items-center justify-center`}>
+                                                        <img src={coinImg} alt="Monedas" className="h-full object-contain group-hover:scale-110 transition-transform duration-700 animate-float drop-shadow-[0_20px_40px_rgba(255,191,0,0.2)]" style={{ animationDelay: `${idx * 0.2}s` }} />
                                                     </div>
-                                                    <div className="space-y-2">
-                                                        <h3 className="text-2xl font-black text-white uppercase italic">{pkg.name}</h3>
-                                                        <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">{pkg.amount} Monedas de Oro</p>
+                                                    <div className="space-y-3">
+                                                        <h3 className={`${isLarge ? 'text-3xl sm:text-4xl' : 'text-lg sm:text-2xl'} font-[1000] text-white uppercase italic tracking-tighter`}>{pkg.name}</h3>
+                                                        <p className="text-zinc-500 font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs">{pkg.amount} Monedas de Oro</p>
                                                     </div>
-                                                    <div className="pt-4 border-t border-white/5">
-                                                        <div className="text-2xl font-black text-indigo-400">S/ {pkg.price}</div>
+                                                    <div className="pt-6 border-t border-white/5">
+                                                        <div className={`${isLarge ? 'text-4xl' : 'text-2xl'} font-[1000] text-indigo-400 italic`}>S/ {pkg.price}</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -421,9 +451,9 @@ function StoreContent() {
                                     })}
                                 </div>
 
-                                <div className="bg-indigo-500/10 border border-indigo-500/20 p-6 rounded-3xl flex gap-4 max-w-2xl mx-auto">
-                                    <Info className="text-indigo-400 shrink-0" size={24} />
-                                    <p className="text-sm text-indigo-200 font-medium">Las monedas se acreditan instantáneamente después de confirmar el pago a través de Mercado Pago.</p>
+                                <div className="bg-indigo-500/10 border border-indigo-500/20 p-8 rounded-[2rem] flex items-center gap-6 max-w-3xl mx-auto backdrop-blur-3xl shadow-2xl">
+                                    <div className="p-3 bg-indigo-500/20 rounded-2xl"><Info className="text-indigo-400" size={28} /></div>
+                                    <p className="text-base text-indigo-100 font-bold italic">Las monedas se acreditan instantáneamente después de confirmar el pago a través de Mercado Pago.</p>
                                 </div>
                             </div>
                         </div>
