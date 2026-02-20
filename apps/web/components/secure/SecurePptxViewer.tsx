@@ -14,7 +14,29 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
     const [iframeSrc, setIframeSrc] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const iframeRef = useRef<HTMLIFrameElement>(null);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    const toggleFullscreen = () => {
+        if (!containerRef.current) return;
+
+        if (!document.fullscreenElement) {
+            containerRef.current.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    };
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
 
     useEffect(() => {
         const generateSecureView = async () => {
@@ -89,7 +111,8 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
 
     return (
         <div
-            className="w-full h-[600px] bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 relative group"
+            ref={containerRef}
+            className={`w-full ${isFullscreen ? 'h-screen' : 'h-[600px]'} bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 relative group transition-all duration-300`}
             onContextMenu={(e) => { e.preventDefault(); return false; }}
         >
             <iframe
@@ -104,20 +127,38 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
                 allowFullScreen
             />
 
-            {/* ESCUDO DE CONTENIDO (Deja libre barra inferior) */}
-            {/* Cubre el área principal para bloquear click derecho en diapositivas */}
-            {/* Habilitamos los botones nativos de Microsoft (abajo) ajustando la altura */}
+            {/* ESCUDO DE CONTENIDO (Deja libre barra inferior de navegación pero bloquea la izquierda) */}
+            {/* 1. Bloqueo superior y central para evitar clics derechos/interacciones */}
             <div
-                className="absolute top-0 left-0 w-full h-[calc(100%-50px)] z-10 bg-transparent cursor-default"
-                onContextMenu={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }}
+                className="absolute top-0 left-0 w-full h-[calc(100%-40px)] z-10 bg-transparent cursor-default"
+                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); return false; }}
             />
 
-            <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-[10px] px-2 py-1 rounded pointer-events-none">
-                Vista Segura R2
+            {/* 2. Bloqueo específico del footer IZQUIERDO (donde está "Abrir en nueva pestaña") */}
+            {/* Microsoft pone su botón a la izquierda. Lo tapamos con un div transparente que capture clics */}
+            <div
+                className="absolute bottom-0 left-0 w-[150px] h-10 z-[11] bg-transparent cursor-default"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); return false; }}
+            />
+
+            {/* Overlay indicators & Controls */}
+            <div className="absolute top-4 right-4 z-20 flex gap-2">
+                <button
+                    onClick={toggleFullscreen}
+                    className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-lg backdrop-blur-sm transition-all flex items-center justify-center border border-white/10"
+                    title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+                >
+                    {isFullscreen ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 9L4 4m0 0l5 5m-5-5h5m-5 0v5m11 11l5 5m0 0l-5-5m5 5v-5m0 5h-5M4 15l5-5m-5 5v-5m0 5h5m11-11l-5 5m5-5h-5m5 0v5" /></svg>
+                    ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                    )}
+                </button>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-[10px] px-2 py-1 rounded-lg flex items-center border border-white/10 pointer-events-none self-center">
+                    Vista Segura R2
+                </div>
             </div>
         </div>
     );

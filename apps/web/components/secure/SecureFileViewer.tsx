@@ -207,6 +207,29 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
         );
     }
 
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    const toggleFullscreen = () => {
+        if (!containerRef.current) return;
+
+        if (!document.fullscreenElement) {
+            containerRef.current.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    };
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
+
     const handleDownload = () => {
         if (blobUrl) {
             const link = document.createElement('a');
@@ -220,17 +243,33 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
 
     return (
         <div
-            className="w-full h-full flex flex-col bg-gray-50 min-h-[500px] overflow-hidden rounded-lg relative"
+            ref={containerRef}
+            className={`w-full ${isFullscreen ? 'h-screen' : 'h-full'} flex flex-col bg-gray-50 min-h-[500px] overflow-hidden rounded-lg relative transition-all duration-300`}
             onContextMenu={(e) => { e.preventDefault(); return false; }}
         >
             {/* Prevention Overlay (Anti-Copy) */}
             <div className="absolute inset-0 z-50 pointer-events-none mix-blend-multiply" />
 
+            {/* Float Controls (Fullscreen) */}
+            <div className="absolute top-4 right-4 z-[110] flex gap-2">
+                <button
+                    onClick={toggleFullscreen}
+                    className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-lg backdrop-blur-sm transition-all flex items-center justify-center border border-white/10"
+                    title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+                >
+                    {isFullscreen ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 9L4 4m0 0l5 5m-5-5h5m-5 0v5m11 11l5 5m0 0l-5-5m5 5v-5m0 5h-5M4 15l5-5m-5 5v-5m0 5h5m11-11l-5 5m5-5h-5m5 0v5" /></svg>
+                    ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                    )}
+                </button>
+            </div>
+
             {/* Content Renderers */}
-            <div className="flex-1 flex flex-col overflow-hidden relative">
+            <div className={`flex-1 flex flex-col overflow-hidden relative ${isFullscreen ? 'p-0' : ''}`}>
                 {/* 1. PDF */}
                 {fileType === 'pdf' && (fileBlob || blobUrl) && (
-                    <div className="flex-1 overflow-auto bg-gray-100 flex justify-center p-4 scrollbar-thin">
+                    <div className="flex-1 overflow-auto bg-gray-100/50 flex justify-center p-4 scrollbar-thin">
                         <Document
                             file={fileBlob || blobUrl}
                             onLoadSuccess={({ numPages }) => {
@@ -247,7 +286,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                                         pageNumber={index + 1}
                                         renderTextLayer={false}
                                         renderAnnotationLayer={false}
-                                        width={Math.min(window.innerWidth - 80, 800)}
+                                        width={isFullscreen ? (window.innerWidth - 60) : Math.min(window.innerWidth - 80, 800)}
                                         className="shadow-xl rounded-sm overflow-hidden"
                                         loading={
                                             <div className="w-[800px] h-[1100px] bg-white animate-pulse rounded-sm border border-gray-100" />
@@ -282,7 +321,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                             <img
                                 src={blobUrl}
                                 alt={fileName}
-                                className="max-w-full h-auto selection:bg-transparent"
+                                className={`${isFullscreen ? 'h-[90vh] w-auto' : 'max-w-full h-auto'} selection:bg-transparent`}
                                 onContextMenu={(e) => e.preventDefault()}
                             />
                             <div className="absolute inset-0 z-10 bg-transparent pointer-events-none" />
