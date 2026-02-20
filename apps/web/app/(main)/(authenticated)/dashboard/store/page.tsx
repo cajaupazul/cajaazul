@@ -35,6 +35,14 @@ interface StoreProduct {
 
 // MercadoPago now handled via Cloudflare Worker API
 
+interface StoreLayoutConfig {
+    asset_key: string;
+    x_pos: number;
+    y_pos: number;
+    scale: number;
+    is_visible: boolean;
+}
+
 export default function StorePage() {
     return (
         <Suspense fallback={<div className="p-8 text-center text-bb-text-secondary animate-pulse">Cargando tienda...</div>}>
@@ -53,6 +61,7 @@ function StoreContent() {
     const [userInventory, setUserInventory] = useState<string[]>([]); // Just store item IDs
     const [purchaseMessage, setPurchaseMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [activeView, setActiveView] = useState<'items' | 'recharge'>('items');
+    const [layoutConfig, setLayoutConfig] = useState<Record<string, StoreLayoutConfig>>({});
 
     const status = searchParams.get('status');
     const paymentStatus = searchParams.get('payment');
@@ -72,6 +81,18 @@ function StoreContent() {
     // Fetch shop items, categories, and recharge products (VIP/Coins)
     useEffect(() => {
         const fetchData = async () => {
+            // Fetch Layout Config
+            const { data: layoutData } = await supabase
+                .from('store_layout_config')
+                .select('*');
+            if (layoutData) {
+                const configMap: Record<string, StoreLayoutConfig> = {};
+                layoutData.forEach((item: StoreLayoutConfig) => {
+                    configMap[item.asset_key] = item;
+                });
+                setLayoutConfig(configMap);
+            }
+
             // 1. Fetch Categories
             const { data: catData, error: catError } = await supabase
                 .from('shop_categories')
@@ -234,363 +255,230 @@ function StoreContent() {
         setPurchaseMessage({ type: 'error', text: 'Error al procesar el pago. Intenta nuevamente.' });
     };
 
+    const mascotConfig = layoutConfig['vip_mascot_origi'];
+
     return (
-        <div className="p-3 sm:p-8 max-w-6xl mx-auto space-y-8 sm:space-y-12">
-            {/* Alert Messages for Payment Status */}
-            {effectiveStatus === 'success' && (
-                <div className="bg-green-500/10 border border-green-500/20 p-6 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
-                    <CheckCircle2 className="text-green-500 flex-shrink-0" size={32} />
-                    <div>
-                        <h3 className="text-xl font-bold text-bb-text">¡Pago Exitoso!</h3>
-                        <p className="text-bb-text-secondary">Tu compra se ha procesado correctamente. Los beneficios se verán reflejados en breve.</p>
-                    </div>
-                </div>
-            )}
-
-            {effectiveStatus === 'failure' && (
-                <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
-                    <XCircle className="text-red-500 flex-shrink-0" size={32} />
-                    <div>
-                        <h3 className="text-xl font-bold text-bb-text">Hubo un error</h3>
-                        <p className="text-bb-text-secondary">No pudimos procesar tu pago. Por favor, intenta de nuevo o contacta a soporte.</p>
-                    </div>
-                </div>
-            )}
-
-            {effectiveStatus === 'pending' && (
-                <div className="bg-yellow-500/10 border border-yellow-500/20 p-6 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
-                    <AlertCircle className="text-yellow-500 flex-shrink-0" size={32} />
-                    <div>
-                        <h3 className="text-xl font-bold text-bb-text">Pago Pendiente</h3>
-                        <p className="text-bb-text-secondary">Tu pago está siendo procesado por Mercado Pago. Te avisaremos cuando se complete.</p>
-                    </div>
-                </div>
-            )}
-
-            {/* Header Section */}
-            <div className="flex flex-col items-center space-y-8 text-center">
-                <div className="space-y-2 sm:space-y-4">
-                    <h1 className="text-3xl sm:text-5xl font-black text-bb-text tracking-tight uppercase italic">
-                        Tienda <span className="text-blue-500">CampusLink</span>
-                    </h1>
-                    <p className="text-bb-text-secondary text-sm sm:text-lg max-w-xl mx-auto">
-                        Personaliza tu presencia digital y desbloquea el máximo potencial de tu perfil.
-                    </p>
-                </div>
-
-                {/* View Toggle */}
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="bg-bb-sidebar/50 p-1 rounded-2xl border border-bb-border flex items-center shadow-xl w-full sm:w-auto">
-                        <button
-                            onClick={() => setActiveView('items')}
-                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold transition-all text-sm sm:text-base ${activeView === 'items'
-                                ? 'bg-blue-600 text-white shadow-lg'
-                                : 'text-bb-text-secondary hover:text-bb-text hover:bg-bb-hover'
-                                }`}
-                        >
-                            <Package size={18} className="sm:w-5 sm:h-5" />
-                            Artículos
-                        </button>
-                        <button
-                            onClick={() => setActiveView('recharge')}
-                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold transition-all text-sm sm:text-base ${activeView === 'recharge'
-                                ? 'bg-blue-600 text-white shadow-lg'
-                                : 'text-bb-text-secondary hover:text-bb-text hover:bg-bb-hover'
-                                }`}
-                        >
-                            <Zap size={18} className="sm:w-5 sm:h-5" />
-                            Monedas y VIP
-                        </button>
-                    </div>
-
-                    {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
-                        <Link href="/admin/store-config">
-                            <Button
-                                className="w-full sm:w-auto font-bold rounded-xl gap-2 shadow-lg h-10 sm:h-12 text-xs sm:text-sm bg-bb-sidebar border border-bb-border hover:bg-bb-hover"
-                                style={{ borderColor: colors?.primary + '40' }}
-                            >
-                                <Settings size={18} className="sm:w-5 sm:h-5" />
-                                Configurar Precios
-                            </Button>
-                        </Link>
-                    )}
-                </div>
+        <div className="relative min-h-screen bg-[#0a0a0c] overflow-hidden px-3 sm:px-8 py-8 sm:py-12">
+            {/* Nitro Background Effects */}
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/20 blur-[120px] rounded-full animate-pulse" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[100px] rounded-full" />
             </div>
 
-            {
-                activeView === 'recharge' ? (
-                    /* VIP and Coins Content */
-                    <div key="recharge-view" className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 focus-visible:outline-none">
-
-                        {/* VIP Section */}
-                        {vipProduct && (
-                            <div
-                                className="relative overflow-hidden rounded-3xl border bg-bb-card p-5 sm:p-8 shadow-2xl transition-all hover:scale-[1.01]"
-                                style={{ borderColor: colors?.primary + '40' }}
-                            >
-                                <div
-                                    className="absolute top-0 right-0 p-4 opacity-10 hidden sm:block"
-                                    style={{ color: colors?.primary }}
-                                >
-                                    <Zap size={120} />
-                                </div>
-
-                                <div className="space-y-4 sm:space-y-6 relative z-10">
-                                    <div className="flex items-center gap-3">
-                                        <div
-                                            className="p-2 sm:p-3 rounded-2xl"
-                                            style={{ backgroundColor: colors?.primary + '20', color: colors?.primary }}
-                                        >
-                                            <CreditCard size={24} className="sm:w-8 sm:h-8" />
-                                        </div>
-                                        <h2 className="text-xl sm:text-3xl font-bold text-bb-text">{vipProduct.name}</h2>
-                                    </div>
-
-                                    <p className="text-bb-text-secondary">
-                                        Accede a contenido premium, descarga material ilimitado y obtén una insignia exclusiva en tu perfil.
-                                    </p>
-
-                                    <ul className="grid grid-cols-1 sm:grid-cols-1 gap-2 sm:gap-4">
-                                        {[
-                                            'Descargas ilimitadas de material',
-                                            'Acceso a grupos exclusivos',
-                                            'Insignia VIP dorada en el perfil',
-                                            'Soporte prioritario 24/7'
-                                        ].map((feature, i) => (
-                                            <li key={i} className="flex items-center gap-2 sm:gap-3 text-bb-text text-sm sm:text-base">
-                                                <CheckCircle2 className="text-green-500 flex-shrink-0" size={18} />
-                                                <span>{feature}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-
-                                    <div className="pt-2 sm:pt-6">
-                                        <div className="flex items-end gap-2 mb-4 sm:mb-6">
-                                            <span className="text-3xl sm:text-5xl font-black text-bb-text">S/ {vipProduct.price}</span>
-                                            <span className="text-bb-text-secondary text-sm mb-1 sm:mb-2">/ {vipProduct.amount} días</span>
-                                        </div>
-
-                                        <Button
-                                            className="w-full h-12 sm:h-14 text-base sm:text-lg font-bold rounded-2xl transition-all shadow-lg active:scale-95"
-                                            style={{ backgroundColor: colors?.primary, color: 'white' }}
-                                            onClick={() => handlePurchase(vipProduct.id)}
-                                            disabled={itemsLoading[vipProduct.id]}
-                                        >
-                                            {itemsLoading[vipProduct.id] ? 'Procesando...' : 'Convertirme en VIP'}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Coins Section */}
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-3">
-                                <div
-                                    className="p-2 sm:p-3 rounded-2xl"
-                                    style={{ backgroundColor: '#FFD70020', color: '#FFD700' }}
-                                >
-                                    <img src="/icons/moneda.png" alt="Coins" className="w-6 h-6 sm:w-8 sm:h-8 object-contain" />
-                                </div>
-                                <h2 className="text-xl sm:text-3xl font-bold text-bb-text">Paquetes de Monedas</h2>
-                            </div>
-
-                            <p className="text-bb-text-secondary text-sm sm:text-base">
-                                Usa monedas para comprar artículos de personalización, marcos para fotos y más.
-                            </p>
-
-                            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                                {coinPackages.map((pkg) => {
-                                    // Definir configuración visual según el monto
-                                    const getStackLayout = (amount: number) => {
-                                        if (amount <= 100) {
-                                            return (
-                                                <div className="relative w-16 h-16 animate-float">
-                                                    <img src="/icons/moneda.png" alt="Coin" className="w-12 h-12 object-contain absolute top-0 left-0 drop-shadow-lg" />
-                                                    <img src="/icons/moneda.png" alt="Coin" className="w-12 h-12 object-contain absolute bottom-0 right-0 z-10 drop-shadow-lg" />
-                                                </div>
-                                            );
-                                        }
-                                        if (amount <= 500) {
-                                            return (
-                                                <div className="relative w-20 h-16 animate-float" style={{ animationDelay: '0.5s' }}>
-                                                    <img src="/icons/moneda.png" alt="Coin" className="w-12 h-12 object-contain absolute top-0 left-0 opacity-80" />
-                                                    <img src="/icons/moneda.png" alt="Coin" className="w-12 h-12 object-contain absolute top-2 left-4 scale-105 z-10" />
-                                                    <img src="/icons/moneda.png" alt="Coin" className="w-12 h-12 object-contain absolute bottom-0 right-0 z-20 drop-shadow-lg" />
-                                                </div>
-                                            );
-                                        }
-                                        return (
-                                            <div className="relative w-24 h-20 animate-float" style={{ animationDelay: '1s' }}>
-                                                <img src="/icons/moneda.png" alt="Coin" className="w-12 h-12 object-contain absolute top-0 left-0 opacity-60" />
-                                                <img src="/icons/moneda.png" alt="Coin" className="w-12 h-12 object-contain absolute top-0 right-4 opacity-80" />
-                                                <img src="/icons/moneda.png" alt="Coin" className="w-12 h-12 object-contain absolute bottom-0 left-4 scale-110 z-20" />
-                                                <img src="/icons/moneda.png" alt="Coin" className="w-12 h-12 object-contain absolute bottom-1 right-2 scale-105 z-10" />
-                                                <img src="/icons/moneda.png" alt="Coin" className="w-12 h-12 object-contain absolute top-4 left-1/2 -translate-x-1/2 scale-125 z-30 drop-shadow-xl" />
-                                            </div>
-                                        );
-                                    };
-
-                                    return (
-                                        <div
-                                            key={pkg.id}
-                                            className={`p-4 sm:p-8 rounded-3xl border bg-bb-sidebar hover:bg-bb-hover transition-all duration-300 cursor-pointer group hover:shadow-[0_0_20px_rgba(255,215,0,0.15)] flex flex-col items-center text-center ${itemsLoading[pkg.id] ? 'opacity-70 pointer-events-none' : ''}`}
-                                            style={{ borderColor: colors?.primary + '20' }}
-                                            onClick={() => handlePurchase(pkg.id)}
-                                        >
-                                            <div className="h-16 sm:h-28 flex items-center justify-center mb-4 sm:mb-6">
-                                                {itemsLoading[pkg.id] ? (
-                                                    <div className="flex flex-col items-center gap-2">
-                                                        <div className="w-8 h-8 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin" />
-                                                        <span className="text-xs font-bold text-yellow-500">Cargando...</span>
-                                                    </div>
-                                                ) : (
-                                                    getStackLayout(pkg.amount)
-                                                )}
-                                            </div>
-
-                                            <div className="space-y-1 sm:space-y-2">
-                                                <span className="bg-bb-card px-2 py-0.5 sm:px-3 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold text-bb-text border border-bb-border">
-                                                    S/ {Number(pkg.price).toFixed(2)}
-                                                </span>
-                                                <h3 className="text-sm sm:text-2xl font-black text-bb-text line-clamp-1">{pkg.name}</h3>
-                                                <p className="text-[10px] sm:text-sm text-bb-text-secondary">{pkg.amount} Monedas</p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex gap-3">
-                                <Info className="text-blue-400 flex-shrink-0" size={20} />
-                                <p className="text-sm text-blue-200">
-                                    Las monedas se acreditan instantáneamente después de confirmar el pago.
-                                </p>
-                            </div>
+            <div className="max-w-6xl mx-auto space-y-12 relative z-10">
+                {/* Alert Messages */}
+                {effectiveStatus && (
+                    <div className={`p-6 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 border ${effectiveStatus === 'success' ? 'bg-green-500/10 border-green-500/20' : effectiveStatus === 'failure' ? 'bg-red-500/10 border-red-500/20' : 'bg-yellow-500/10 border-yellow-500/20'}`}>
+                        {effectiveStatus === 'success' ? <CheckCircle2 className="text-green-500 shrink-0" size={32} /> : effectiveStatus === 'failure' ? <XCircle className="text-red-500 shrink-0" size={32} /> : <AlertCircle className="text-yellow-500 shrink-0" size={32} />}
+                        <div>
+                            <h3 className="text-xl font-bold text-white">{effectiveStatus === 'success' ? '¡Pago Exitoso!' : effectiveStatus === 'failure' ? 'Hubo un error' : 'Pago Pendiente'}</h3>
+                            <p className="text-bb-text-secondary text-sm">{effectiveStatus === 'success' ? 'Tu compra se ha procesado correctamente.' : effectiveStatus === 'failure' ? 'No pudimos procesar tu pago.' : 'Te avisaremos cuando se complete.'}</p>
                         </div>
                     </div>
-                ) : (
-                    /* Shop Items Content */
-                    <div key="items-view" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {/* Purchase Feedback Message */}
-                        {purchaseMessage && (
-                            <div className={`p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${purchaseMessage.type === 'success'
-                                ? 'bg-green-500/10 border border-green-500/20'
-                                : 'bg-red-500/ red-500/10 border border-red-500/20'
-                                }`}>
-                                {purchaseMessage.type === 'success' ? (
-                                    <CheckCircle2 className="text-green-500" size={24} />
-                                ) : (
-                                    <XCircle className="text-red-500" size={24} />
-                                )}
-                                <p className="text-bb-text font-medium">{purchaseMessage.text}</p>
-                            </div>
-                        )}
+                )}
 
-                        {/* Grouped Content */}
-                        <div className="space-y-12 sm:space-y-16">
+                {/* Header Section */}
+                <div className="text-center space-y-8">
+                    <div className="space-y-4">
+                        <h1 className="text-4xl sm:text-7xl font-[1000] text-white tracking-tighter uppercase italic leading-none drop-shadow-2xl">
+                            TIENDA <span className="bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">NITRO</span>
+                        </h1>
+                        <p className="text-zinc-400 text-sm sm:text-xl font-medium max-w-2xl mx-auto">
+                            Únete a la élite de CampusLink y personaliza tu perfil con ventajas exclusivas.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <div className="bg-black/40 backdrop-blur-xl p-1.5 rounded-2xl border border-white/10 flex items-center shadow-2xl">
+                            <button
+                                onClick={() => setActiveView('items')}
+                                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeView === 'items' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]' : 'text-zinc-400 hover:text-white'}`}
+                            >
+                                <Package size={20} /> Artículos
+                            </button>
+                            <button
+                                onClick={() => setActiveView('recharge')}
+                                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeView === 'recharge' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]' : 'text-zinc-400 hover:text-white'}`}
+                            >
+                                <Zap size={20} /> Monedas y VIP
+                            </button>
+                        </div>
+                        {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
+                            <Link href="/admin/store-config">
+                                <Button className="h-12 px-6 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold rounded-xl gap-2 backdrop-blur-md transition-all">
+                                    <Settings size={20} /> Configurar
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
+                </div>
+
+                {
+                    activeView === 'recharge' ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                            {/* VIP Section - Nitro Inspired */}
+                            {vipProduct && (
+                                <div className="lg:col-span-12 relative group">
+                                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[2.5rem] blur opacity-25 group-hover:opacity-40 transition duration-1000" />
+                                    <div className="relative bg-[#16161a] rounded-[2rem] border border-white/5 overflow-hidden p-6 sm:p-12 flex flex-col lg:flex-row items-center gap-12">
+                                        {/* Mascot Origi - Left side on desktop, Top on mobile */}
+                                        {mascotConfig?.is_visible !== false && (
+                                            <div
+                                                className="w-full lg:w-1/2 flex justify-center relative order-first"
+                                                style={{
+                                                    marginLeft: mascotConfig ? `${mascotConfig.x_pos}px` : '0',
+                                                    marginTop: mascotConfig ? `${mascotConfig.y_pos}px` : '0',
+                                                    transform: mascotConfig ? `scale(${mascotConfig.scale})` : 'none'
+                                                }}
+                                            >
+                                                <div className="absolute inset-0 bg-indigo-500/20 blur-[80px] rounded-full" />
+                                                <img
+                                                    src="/tienda/origi (3).png"
+                                                    alt="Origi Mascot"
+                                                    className="w-[280px] sm:w-[450px] object-contain relative z-10 animate-float"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="w-full lg:w-1/2 space-y-8 text-center lg:text-left">
+                                            <div className="space-y-4">
+                                                <h2 className="text-4xl sm:text-6xl font-black text-white italic tracking-tighter uppercase leading-none">
+                                                    CONVIÉRTETE EN <span className="text-yellow-400">VIP</span>
+                                                </h2>
+                                                <p className="text-zinc-400 text-lg sm:text-xl font-medium">
+                                                    Acceso total, descargas ilimitadas y estilo absoluto. desbloquea el lado más potente de CampusLink.
+                                                </p>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {[
+                                                    { text: 'Descargas ilimitadas', icon: Check },
+                                                    { text: 'Grupos exclusivos', icon: Check },
+                                                    { text: 'Insignia dorada', icon: Check },
+                                                    { text: 'Soporte prioritario', icon: Check }
+                                                ].map((f, i) => (
+                                                    <div key={i} className="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/5">
+                                                        <div className="p-1 bg-green-500/20 rounded-full"><Check className="text-green-500 w-4 h-4" /></div>
+                                                        <span className="text-white font-bold">{f.text}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className="flex flex-col sm:flex-row items-center gap-6 pt-4">
+                                                <div className="text-5xl font-[1000] text-white">S/ {vipProduct.price} <span className="text-sm text-zinc-500 font-bold uppercase tracking-widest">/ {vipProduct.amount} días</span></div>
+                                                <Button
+                                                    onClick={() => handlePurchase(vipProduct.id)}
+                                                    className="w-full sm:w-auto h-16 px-12 bg-white text-black hover:bg-zinc-200 text-xl font-[900] rounded-2xl transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] uppercase italic"
+                                                >
+                                                    SUSCRIBIRSE
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Coins Section */}
+                            <div className="lg:col-span-12 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-yellow-500/10 rounded-2xl border border-yellow-500/20">
+                                        <Zap className="text-yellow-400" size={32} />
+                                    </div>
+                                    <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Paquetes de Monedas</h2>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {coinPackages.map((pkg, idx) => {
+                                        // Map specific images based on index or amount
+                                        const coinImg = pkg.amount <= 100 ? '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1) 1.png' :
+                                            pkg.amount <= 500 ? '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1)2.png' :
+                                                '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1) 4.png';
+
+                                        return (
+                                            <div
+                                                key={pkg.id}
+                                                onClick={() => handlePurchase(pkg.id)}
+                                                className="group relative bg-[#16161a] border border-white/5 h-full rounded-[2rem] p-8 hover:bg-[#1a1a20] transition-all cursor-pointer hover:-translate-y-2 overflow-hidden shadow-2xl"
+                                            >
+                                                <div className="absolute top-0 right-0 p-4 font-black text-white/5 text-6xl italic pointer-events-none select-none">
+                                                    {pkg.amount}
+                                                </div>
+
+                                                <div className="relative z-10 space-y-8 text-center">
+                                                    <div className="h-32 flex items-center justify-center">
+                                                        <img src={coinImg} alt="Monedas" className="h-full object-contain group-hover:scale-110 transition-transform duration-500 animate-float" style={{ animationDelay: `${idx * 0.2}s` }} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <h3 className="text-2xl font-black text-white uppercase italic">{pkg.name}</h3>
+                                                        <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">{pkg.amount} Monedas de Oro</p>
+                                                    </div>
+                                                    <div className="pt-4 border-t border-white/5">
+                                                        <div className="text-2xl font-black text-indigo-400">S/ {pkg.price}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="bg-indigo-500/10 border border-indigo-500/20 p-6 rounded-3xl flex gap-4 max-w-2xl mx-auto">
+                                    <Info className="text-indigo-400 shrink-0" size={24} />
+                                    <p className="text-sm text-indigo-200 font-medium">Las monedas se acreditan instantáneamente después de confirmar el pago a través de Mercado Pago.</p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        /* Shop Items Section */
+                        <div className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
                             {shopCategories.map((category) => {
                                 const categoryItems = shopItems.filter(item => item.category_id === category.id);
                                 if (categoryItems.length === 0) return null;
 
                                 return (
-                                    <div key={category.id} className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                            <div className="flex items-center gap-3">
-                                                <div
-                                                    className="p-2 sm:p-3 rounded-2xl"
-                                                    style={{ backgroundColor: colors?.primary + '20', color: colors?.primary }}
-                                                >
-                                                    {/* In a real app we'd map category.icon to a Lucide component */}
-                                                    <Package size={24} className="sm:w-8 sm:h-8" />
-                                                </div>
-                                                <div>
-                                                    <h2 className="text-xl sm:text-3xl font-bold text-bb-text">{category.name}</h2>
-                                                    <p className="text-bb-text-secondary text-sm sm:text-base">Colección de {category.name.toLowerCase()}</p>
-                                                </div>
+                                    <div key={category.id} className="space-y-10">
+                                        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-white/5 pb-8">
+                                            <div className="space-y-4">
+                                                <span className="text-indigo-400 font-black uppercase tracking-[0.4em] text-xs">Colección Limitada</span>
+                                                <h2 className="text-4xl sm:text-5xl font-black text-white italic tracking-tighter uppercase">{category.name}</h2>
                                             </div>
                                             {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
-                                                <Link href="/admin/shop">
-                                                    <Button
-                                                        className="w-full sm:w-auto font-bold rounded-xl gap-2 shadow-lg h-10 sm:h-11 text-xs sm:text-sm"
-                                                        style={{ backgroundColor: colors?.primary }}
-                                                    >
-                                                        <ShieldCheck size={18} className="sm:w-5 sm:h-5" />
-                                                        Administrar Tienda
-                                                    </Button>
-                                                </Link>
+                                                <Link href="/admin/shop"><Button className="rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 h-11 px-6 font-bold shadow-2xl backdrop-blur-md">Gestionar {category.name}</Button></Link>
                                             )}
                                         </div>
 
-                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                                             {categoryItems.map((item) => {
                                                 const isOwned = userInventory.includes(item.id);
-
                                                 return (
                                                     <div
                                                         key={item.id}
-                                                        className={`group relative rounded-3xl bg-[#1e1f22] border border-[#2b2d31] overflow-hidden hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl hover:shadow-black/50 ${isOwned ? 'opacity-80' : ''}`}
+                                                        className={`group relative bg-[#131317] border border-white/5 rounded-[2rem] p-6 hover:bg-[#16161c] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-hidden ${isOwned ? 'opacity-70 grayscale-[0.5]' : ''}`}
                                                     >
-                                                        {/* Gradient Bg */}
-                                                        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#2b2d31] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
 
-                                                        {/* Content Container */}
-                                                        <div className="p-6 flex flex-col h-full relative z-10">
-
-                                                            {/* Item Preview */}
-                                                            <div
-                                                                className="relative w-full aspect-square mb-6 flex items-center justify-center cursor-pointer"
-                                                                onClick={() => setPreviewItem(item)}
-                                                            >
-                                                                {/* Sparkle effect on hover */}
-                                                                <div className="absolute inset-0 bg-blue-500/5 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                                                                <img
-                                                                    src={item.image_url || ''}
-                                                                    alt={item.name}
-                                                                    className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110 drop-shadow-2xl"
-                                                                />
+                                                        <div className="relative z-10 flex flex-col h-full space-y-6">
+                                                            <div className="relative aspect-square flex items-center justify-center cursor-pointer" onClick={() => setPreviewItem(item)}>
+                                                                <div className="absolute inset-0 bg-indigo-500/10 blur-[40px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                                                                <img src={item.image_url || ''} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)]" />
                                                             </div>
 
-                                                            {/* Category Label */}
-                                                            <div className="text-xs font-bold text-[#949ba4] uppercase tracking-wider mb-2">
-                                                                {item.type === 'profile_frame' ? 'Avatar Decoration' : 'Item'}
+                                                            <div className="space-y-2">
+                                                                <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">{item.type.replace('_', ' ')}</div>
+                                                                <h3 className="text-lg font-black text-white uppercase italic leading-tight truncate">{item.name}</h3>
+                                                                <p className="text-zinc-500 text-xs font-medium line-clamp-2 leading-relaxed min-h-[40px]">{item.description}</p>
                                                             </div>
 
-                                                            {/* Title */}
-                                                            <h3 className="text-white font-bold text-lg leading-tight mb-2 truncate">
-                                                                {item.name}
-                                                            </h3>
-
-                                                            {/* Description */}
-                                                            <p className="text-[#949ba4] text-xs line-clamp-2 mb-4 leading-relaxed h-8">
-                                                                {item.description}
-                                                            </p>
-
-                                                            <div className="mt-auto pt-4 border-t border-[#2b2d31]/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
-                                                                {/* Price */}
+                                                            <div className="pt-4 border-t border-white/5 flex items-center justify-between gap-4">
                                                                 {!isOwned && (
-                                                                    <div className="flex items-center justify-center sm:justify-start gap-2 bg-black/20 px-3 py-1.5 rounded-lg min-w-fit">
-                                                                        <img src="/icons/moneda.png" alt="Coin" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
-                                                                        <span className="text-[#f2f3f5] font-bold text-base md:text-lg">{item.price_coins}</span>
+                                                                    <div className="flex items-center gap-2 bg-black px-3 py-2 rounded-xl">
+                                                                        <img src="/icons/moneda.png" alt="Coin" className="w-5 h-5 flex-shrink-0" />
+                                                                        <span className="text-white font-black">{item.price_coins}</span>
                                                                     </div>
                                                                 )}
-
-                                                                {/* Action Button */}
                                                                 {isOwned ? (
-                                                                    <Button
-                                                                        className="flex-1 bg-[#2b2d31] text-[#949ba4] hover:bg-[#313338] font-bold rounded-xl text-xs md:text-sm h-10"
-                                                                        disabled
-                                                                    >
-                                                                        Adquirido
-                                                                    </Button>
+                                                                    <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-11" disabled>ADQUIRIDO</Button>
                                                                 ) : (
-                                                                    <Button
-                                                                        onClick={() => setPreviewItem(item)}
-                                                                        className="flex-1 bg-[#4e5058] hover:bg-[#6d6f78] text-white font-bold rounded-xl transition-all text-xs md:text-sm h-10 px-2"
-                                                                    >
-                                                                        Vista Previa
-                                                                    </Button>
+                                                                    <Button onClick={() => setPreviewItem(item)} className="flex-1 rounded-xl bg-white text-black hover:bg-zinc-200 font-black h-11 italic shadow-xl">VISTA PREVIA</Button>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -604,81 +492,86 @@ function StoreContent() {
 
                             {/* Uncategorized Items (Profile Frames by default if no cat assigned yet) */}
                             {shopItems.filter(item => !item.category_id).length > 0 && (
-                                <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 sm:p-3 rounded-2xl bg-gray-500/10 text-gray-400">
-                                            <Package size={24} className="sm:w-8 sm:h-8" />
+                                <div className="space-y-10">
+                                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-white/5 pb-8">
+                                        <div className="space-y-4">
+                                            <span className="text-indigo-400 font-black uppercase tracking-[0.4em] text-xs">Colección Limitada</span>
+                                            <h2 className="text-4xl sm:text-5xl font-black text-white italic tracking-tighter uppercase">Otros Artículos</h2>
                                         </div>
-                                        <h2 className="text-xl sm:text-3xl font-bold text-bb-text">Otros Artículos</h2>
+                                        {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
+                                            <Link href="/admin/shop"><Button className="rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 h-11 px-6 font-bold shadow-2xl backdrop-blur-md">Gestionar Artículos</Button></Link>
+                                        )}
                                     </div>
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                                         {shopItems.filter(item => !item.category_id).map((item) => {
                                             const isOwned = userInventory.includes(item.id);
 
                                             return (
                                                 <div
                                                     key={item.id}
-                                                    className={`group relative rounded-3xl bg-[#1e1f22] border border-[#2b2d31] overflow-hidden hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl hover:shadow-black/50 ${isOwned ? 'opacity-80' : ''}`}
+                                                    className={`group relative bg-[#131317] border border-white/5 rounded-[2rem] p-6 hover:bg-[#16161c] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-hidden ${isOwned ? 'opacity-70 grayscale-[0.5]' : ''}`}
                                                 >
                                                     {/* Gradient Bg */}
-                                                    <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#2b2d31] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
 
                                                     {/* Content Container */}
-                                                    <div className="p-6 flex flex-col h-full relative z-10">
+                                                    <div className="relative z-10 flex flex-col h-full space-y-6">
 
                                                         {/* Item Preview */}
                                                         <div
-                                                            className="relative w-full aspect-square mb-6 flex items-center justify-center cursor-pointer"
+                                                            className="relative aspect-square flex items-center justify-center cursor-pointer"
                                                             onClick={() => setPreviewItem(item)}
                                                         >
                                                             {/* Sparkle effect on hover */}
-                                                            <div className="absolute inset-0 bg-blue-500/5 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            <div className="absolute inset-0 bg-indigo-500/10 blur-[40px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
 
                                                             <img
                                                                 src={item.image_url || ''}
                                                                 alt={item.name}
-                                                                className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110 drop-shadow-2xl"
+                                                                className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)]"
                                                             />
                                                         </div>
 
                                                         {/* Category Label */}
-                                                        <div className="text-xs font-bold text-[#949ba4] uppercase tracking-wider mb-2">
-                                                            {item.type === 'profile_frame' ? 'Avatar Decoration' : 'Item'}
+                                                        <div className="space-y-2">
+                                                            <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">
+                                                                {item.type.replace('_', ' ')}
+                                                            </div>
+
+                                                            {/* Title */}
+                                                            <h3 className="text-lg font-black text-white uppercase italic leading-tight truncate">
+                                                                {item.name}
+                                                            </h3>
+
+                                                            {/* Description */}
+                                                            <p className="text-zinc-500 text-xs font-medium line-clamp-2 leading-relaxed min-h-[40px]">
+                                                                {item.description}
+                                                            </p>
                                                         </div>
 
-                                                        {/* Title */}
-                                                        <h3 className="text-white font-bold text-lg leading-tight mb-2 truncate">
-                                                            {item.name}
-                                                        </h3>
-
-                                                        {/* Description */}
-                                                        <p className="text-[#949ba4] text-xs line-clamp-2 mb-4 leading-relaxed h-8">
-                                                            {item.description}
-                                                        </p>
-
-                                                        <div className="mt-auto pt-4 border-t border-[#2b2d31]/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+                                                        <div className="pt-4 border-t border-white/5 flex items-center justify-between gap-4">
                                                             {/* Price */}
                                                             {!isOwned && (
-                                                                <div className="flex items-center justify-center sm:justify-start gap-2 bg-black/20 px-3 py-1.5 rounded-lg min-w-fit">
-                                                                    <img src="/icons/moneda.png" alt="Coin" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
-                                                                    <span className="text-[#f2f3f5] font-bold text-base md:text-lg">{item.price_coins}</span>
+                                                                <div className="flex items-center gap-2 bg-black px-3 py-2 rounded-xl">
+                                                                    <img src="/icons/moneda.png" alt="Coin" className="w-5 h-5 flex-shrink-0" />
+                                                                    <span className="text-white font-black">{item.price_coins}</span>
                                                                 </div>
                                                             )}
 
                                                             {/* Action Button */}
                                                             {isOwned ? (
                                                                 <Button
-                                                                    className="flex-1 bg-[#2b2d31] text-[#949ba4] hover:bg-[#313338] font-bold rounded-xl text-xs md:text-sm h-10"
+                                                                    className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-11"
                                                                     disabled
                                                                 >
-                                                                    Adquirido
+                                                                    ADQUIRIDO
                                                                 </Button>
                                                             ) : (
                                                                 <Button
                                                                     onClick={() => setPreviewItem(item)}
-                                                                    className="flex-1 bg-[#4e5058] hover:bg-[#6d6f78] text-white font-bold rounded-xl transition-all text-xs md:text-sm h-10 px-2"
+                                                                    className="flex-1 rounded-xl bg-white text-black hover:bg-zinc-200 font-black h-11 italic shadow-xl"
                                                                 >
-                                                                    Vista Previa
+                                                                    VISTA PREVIA
                                                                 </Button>
                                                             )}
                                                         </div>
@@ -690,58 +583,46 @@ function StoreContent() {
                                 </div>
                             )}
                         </div>
+                    )
+                }
+            </div>
 
-                        {/* Empty State */}
-                        {shopItems.length === 0 && (
-                            <div className="text-center py-12">
-                                <Package className="w-16 h-16 mx-auto text-bb-text-secondary/50 mb-4" />
-                                <h3 className="text-xl font-bold text-bb-text mb-2">No hay artículos disponibles</h3>
-                                <p className="text-bb-text-secondary">Pronto agregaremos más artículos exclusivos</p>
-                            </div>
-                        )}
-                    </div>
-                )
-            }
-
-            {/* Trust Badges */}
-            <div className="pt-12 border-t border-bb-border flex flex-wrap justify-center gap-8 opacity-50 grayscale hover:grayscale-0 transition-all">
-                <div className="flex items-center gap-2">
-                    <ShieldCheck size={20} />
-                    <span className="text-sm font-medium">Pago Seguro</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Star size={20} />
-                    <span className="text-sm font-medium">Garantía CampusLink</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Zap size={20} />
-                    <span className="text-sm font-medium">Activación Instantánea</span>
+            {/* Nitro Style Footer Badges */}
+            <div className="max-w-6xl mx-auto pt-24 pb-12 opacity-20 hover:opacity-100 transition-all duration-1000">
+                <div className="flex flex-wrap justify-center gap-12 grayscale hover:grayscale-0 transition-all">
+                    <div className="flex items-center gap-3"><ShieldCheck className="text-indigo-400" /> <span className="text-white font-black italic uppercase tracking-wider text-sm">Transacción Encriptada</span></div>
+                    <div className="flex items-center gap-3"><Star className="text-yellow-400" /> <span className="text-white font-black italic uppercase tracking-wider text-sm">Artículos Únicos</span></div>
+                    <div className="flex items-center gap-3"><Zap className="text-blue-400" /> <span className="text-white font-black italic uppercase tracking-wider text-sm">Instante Nitro</span></div>
                 </div>
             </div>
 
-            {/* Preview Modal */}
-            <PreviewModal
-                isOpen={!!previewItem}
-                onClose={() => setPreviewItem(null)}
-                item={previewItem}
-                profile={profile}
-                onBuy={(item) => {
-                    handleBuyItem(item);
-                    setPreviewItem(null);
-                }}
-                isOwned={previewItem ? userInventory.includes(previewItem.id) : false}
-                loading={previewItem ? itemsLoading[previewItem.id] : false}
-                canAfford={previewItem ? (profile?.monedas ?? 0) >= previewItem.price_coins : false}
-            />
+            {/* Modals */}
+            {previewItem && (
+                <PreviewModal
+                    isOpen={!!previewItem}
+                    onClose={() => setPreviewItem(null)}
+                    item={previewItem}
+                    profile={profile}
+                    onBuy={(item) => { handleBuyItem(item); setPreviewItem(null); }}
+                    isOwned={userInventory.includes(previewItem.id)}
+                    loading={itemsLoading[previewItem.id]}
+                    canAfford={(profile?.monedas ?? 0) >= previewItem.price_coins}
+                />
+            )}
+            <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} product={selectedProduct} onPaymentSuccess={handlePaymentSuccess} onPaymentError={handlePaymentError} />
 
-            {/* Payment Modal */}
-            <PaymentModal
-                isOpen={isPaymentModalOpen}
-                onClose={() => setIsPaymentModalOpen(false)}
-                product={selectedProduct}
-                onPaymentSuccess={handlePaymentSuccess}
-                onPaymentError={handlePaymentError}
-            />
+            <style jsx global>{`
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-20px); }
+                }
+                .animate-float {
+                    animation: float 6s ease-in-out infinite;
+                }
+                body {
+                    background-color: #0a0a0c;
+                }
+            `}</style>
         </div>
     );
 }
