@@ -58,12 +58,12 @@ function StoreContent() {
     const { profile, refreshProfile, updateProfile } = useProfile();
     const searchParams = useSearchParams();
     const [itemsLoading, setItemsLoading] = useState<Record<string, boolean>>({});
+    const [purchaseLoading, setPurchaseLoading] = useState(false);
+    const [userInventory, setUserInventory] = useState<string[]>([]); // Just store item IDs
     const [shopItems, setShopItems] = useState<ShopItem[]>([]);
     const [previewItem, setPreviewItem] = useState<ShopItem | null>(null);
-    const [userInventory, setUserInventory] = useState<string[]>([]); // Just store item IDs
     const [purchaseMessage, setPurchaseMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [activeView, setActiveView] = useState<'items' | 'recharge'>('items');
-    const [layoutConfig, setLayoutConfig] = useState<Record<string, StoreLayoutConfig>>({});
 
     const status = searchParams.get('status');
     const paymentStatus = searchParams.get('payment');
@@ -83,18 +83,6 @@ function StoreContent() {
     // Fetch shop items, categories, and recharge products (VIP/Coins)
     useEffect(() => {
         const fetchData = async () => {
-            // Fetch Layout Config
-            const { data: layoutData } = await supabase
-                .from('store_layout_config')
-                .select('*');
-            if (layoutData) {
-                const configMap: Record<string, StoreLayoutConfig> = {};
-                layoutData.forEach((item: StoreLayoutConfig) => {
-                    configMap[item.asset_key] = item;
-                });
-                setLayoutConfig(configMap);
-            }
-
             // 1. Fetch Categories
             const { data: catData, error: catError } = await supabase
                 .from('shop_categories')
@@ -132,7 +120,7 @@ function StoreContent() {
         };
 
         fetchData();
-    }, []);
+    }, [supabase]);
 
     // Fetch user inventory
     useEffect(() => {
@@ -257,22 +245,8 @@ function StoreContent() {
         setPurchaseMessage({ type: 'error', text: 'Error al procesar el pago. Intenta nuevamente.' });
     };
 
-    const mascotConfig = layoutConfig['vip_mascot_origi'];
-
-    const updateMascotPosition = async (x: number, y: number) => {
-        if (profile?.role !== 'admin' && profile?.role !== 'superadmin') return;
-
-        // Find existing config id
-        const configId = mascotConfig?.id;
-        if (!configId) return;
-
-        const { error } = await supabase
-            .from('store_layout_config')
-            .update({ x_pos: x, y_pos: y })
-            .eq('id', configId);
-
-        if (error) console.error('Error updating mascot position:', error);
-    };
+    const bannerConfig = null;
+    const mascotConfig = null;
 
     return (
         <div className="relative min-h-screen bg-[#0a0a0c] overflow-hidden px-4 sm:px-8 py-8 sm:py-16">
@@ -295,39 +269,43 @@ function StoreContent() {
                 )}
 
                 {/* Header Section */}
-                <div className="text-center space-y-10">
-                    <div className="space-y-6">
-                        <h1 className="text-5xl sm:text-7xl lg:text-9xl font-[1000] text-white tracking-[calc(-0.05em)] uppercase italic leading-none drop-shadow-2xl">
-                            TIENDA <span className="bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">NITRO</span>
+                <div className="max-w-4xl mx-auto pt-10 pb-6 sm:pt-14 sm:pb-8 relative">
+                    <div className="space-y-4 lg:space-y-6">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
+                            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Exclusivo CampusLink</span>
+                        </div>
+                        <h1 className="text-5xl sm:text-8xl lg:text-9xl font-[1000] text-white italic tracking-tighter uppercase leading-none">
+                            TIENDA <span className="bg-gradient-to-r from-indigo-400 to-purple-600 bg-clip-text text-transparent">NITRO</span>
                         </h1>
-                        <p className="text-zinc-400 text-base sm:text-xl lg:text-2xl font-medium max-w-3xl mx-auto leading-relaxed">
+                        <p className="text-zinc-500 text-sm sm:text-xl lg:text-2xl font-black uppercase tracking-[0.2em] max-w-2xl mx-auto">
                             Únete a la élite de CampusLink y personaliza tu perfil con ventajas exclusivas.
                         </p>
                     </div>
+                </div>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                        <div className="bg-black/40 backdrop-blur-2xl p-2 rounded-2xl border border-white/10 flex items-center shadow-2xl">
-                            <button
-                                onClick={() => setActiveView('items')}
-                                className={`flex items-center gap-3 px-8 py-4 rounded-xl font-black transition-all uppercase italic tracking-wider ${activeView === 'items' ? 'bg-indigo-600 text-white shadow-[0_0_30px_rgba(79,70,229,0.5)]' : 'text-zinc-500 hover:text-white'}`}
-                            >
-                                <Package size={22} /> Artículos
-                            </button>
-                            <button
-                                onClick={() => setActiveView('recharge')}
-                                className={`flex items-center gap-3 px-8 py-4 rounded-xl font-black transition-all uppercase italic tracking-wider ${activeView === 'recharge' ? 'bg-indigo-600 text-white shadow-[0_0_30px_rgba(79,70,229,0.5)]' : 'text-zinc-500 hover:text-white'}`}
-                            >
-                                <Zap size={22} /> Monedas y VIP
-                            </button>
-                        </div>
-                        {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
-                            <Link href="/admin/store-config">
-                                <Button className="h-16 px-8 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black uppercase italic rounded-2xl gap-3 backdrop-blur-md transition-all shadow-xl">
-                                    <Settings size={22} /> Configuración
-                                </Button>
-                            </Link>
-                        )}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                    <div className="bg-black/40 backdrop-blur-2xl p-2 rounded-2xl border border-white/10 flex items-center shadow-2xl">
+                        <button
+                            onClick={() => setActiveView('items')}
+                            className={`flex items-center gap-3 px-8 py-4 rounded-xl font-black transition-all uppercase italic tracking-wider ${activeView === 'items' ? 'bg-indigo-600 text-white shadow-[0_0_30px_rgba(79,70,229,0.5)]' : 'text-zinc-500 hover:text-white'}`}
+                        >
+                            <Package size={22} /> Artículos
+                        </button>
+                        <button
+                            onClick={() => setActiveView('recharge')}
+                            className={`flex items-center gap-3 px-8 py-4 rounded-xl font-black transition-all uppercase italic tracking-wider ${activeView === 'recharge' ? 'bg-indigo-600 text-white shadow-[0_0_30px_rgba(79,70,229,0.5)]' : 'text-zinc-500 hover:text-white'}`}
+                        >
+                            <Zap size={22} /> Monedas y VIP
+                        </button>
                     </div>
+                    {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
+                        <Link href="/admin/store-config">
+                            <Button className="h-16 px-8 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black uppercase italic rounded-2xl gap-3 backdrop-blur-md transition-all shadow-xl">
+                                <Settings size={22} /> Configuración
+                            </Button>
+                        </Link>
+                    )}
                 </div>
 
                 {
@@ -338,34 +316,15 @@ function StoreContent() {
                                 <div className="lg:col-span-12 relative group">
                                     <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[3rem] blur opacity-25 group-hover:opacity-40 transition duration-1000" />
                                     <div className="relative bg-[#111114] rounded-[2.5rem] border border-white/5 overflow-visible p-4 sm:p-16 flex flex-col lg:flex-row items-center gap-4 lg:gap-16 backdrop-blur-3xl">
-                                        {/* Mascot Origi - Drag & Drop for Admins */}
-                                        {mascotConfig?.is_visible !== false && (
-                                            <motion.div
-                                                drag={profile?.role === 'admin' || profile?.role === 'superadmin'}
-                                                dragMomentum={false}
-                                                onDragEnd={(_, info) => {
-                                                    const newX = (mascotConfig?.x_pos || 0) + info.offset.x;
-                                                    const newY = (mascotConfig?.y_pos || 0) + info.offset.y;
-                                                    updateMascotPosition(newX, newY);
-                                                }}
-                                                className={`w-full lg:w-1/2 flex justify-center items-center relative order-first ${profile?.role === 'admin' || profile?.role === 'superadmin' ? 'cursor-grab active:cursor-grabbing z-50' : 'z-10'}`}
-                                                style={{
-                                                    x: mascotConfig?.x_pos || 0,
-                                                    y: mascotConfig?.y_pos || 0,
-                                                    scale: mascotConfig?.scale || 1
-                                                }}
-                                            >
-                                                <div className="absolute inset-0 bg-indigo-500/25 blur-[100px] rounded-full pointer-events-none" />
-                                                <img
-                                                    src="/tienda/orivipp.png"
-                                                    alt="Origi Mascot"
-                                                    className="w-[180px] sm:w-[500px] object-contain relative z-10 animate-float pointer-events-none select-none"
-                                                />
-                                                {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
-                                                    <div className="absolute -bottom-4 bg-indigo-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase italic tracking-[0.2em] shadow-lg">Arrastrar para mover</div>
-                                                )}
-                                            </motion.div>
-                                        )}
+                                        {/* Mascot Origi */}
+                                        <div className="w-full lg:w-1/2 flex justify-center items-center relative order-first z-10">
+                                            <div className="absolute inset-0 bg-indigo-500/25 blur-[100px] rounded-full pointer-events-none" />
+                                            <img
+                                                src="/tienda/orivipp.png"
+                                                alt="Origi Mascot"
+                                                className="w-[180px] sm:w-[500px] object-contain relative z-10 animate-float pointer-events-none select-none"
+                                            />
+                                        </div>
 
                                         <div className="w-full lg:w-1/2 space-y-6 lg:space-y-10 text-center lg:text-left">
                                             <div className="space-y-2 lg:space-y-6">
@@ -472,7 +431,11 @@ function StoreContent() {
                                                 <h2 className="text-4xl sm:text-5xl font-black text-white italic tracking-tighter uppercase">{category.name}</h2>
                                             </div>
                                             {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
-                                                <Link href="/admin/shop"><Button className="rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 h-11 px-6 font-bold shadow-2xl backdrop-blur-md">Gestionar {category.name}</Button></Link>
+                                                <Link href="/admin/shop">
+                                                    <Button className="rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 h-11 px-6 font-bold shadow-2xl backdrop-blur-md">
+                                                        Gestionar {category.name}
+                                                    </Button>
+                                                </Link>
                                             )}
                                         </div>
 
@@ -519,110 +482,26 @@ function StoreContent() {
                                     </div>
                                 );
                             })}
-
-                            {/* Uncategorized Items (Profile Frames by default if no cat assigned yet) */}
-                            {shopItems.filter(item => !item.category_id).length > 0 && (
-                                <div className="space-y-10">
-                                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-white/5 pb-8">
-                                        <div className="space-y-4">
-                                            <span className="text-indigo-400 font-black uppercase tracking-[0.4em] text-xs">Colección Limitada</span>
-                                            <h2 className="text-4xl sm:text-5xl font-black text-white italic tracking-tighter uppercase">Otros Artículos</h2>
-                                        </div>
-                                        {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
-                                            <Link href="/admin/shop"><Button className="rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 h-11 px-6 font-bold shadow-2xl backdrop-blur-md">Gestionar Artículos</Button></Link>
-                                        )}
-                                    </div>
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                                        {shopItems.filter(item => !item.category_id).map((item) => {
-                                            const isOwned = userInventory.includes(item.id);
-
-                                            return (
-                                                <div
-                                                    key={item.id}
-                                                    className={`group relative bg-[#131317] border border-white/5 rounded-[2rem] p-6 hover:bg-[#16161c] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-hidden ${isOwned ? 'opacity-70 grayscale-[0.5]' : ''}`}
-                                                >
-                                                    {/* Gradient Bg */}
-                                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
-
-                                                    {/* Content Container */}
-                                                    <div className="relative z-10 flex flex-col h-full space-y-6">
-
-                                                        {/* Item Preview */}
-                                                        <div
-                                                            className="relative aspect-square flex items-center justify-center cursor-pointer"
-                                                            onClick={() => setPreviewItem(item)}
-                                                        >
-                                                            {/* Sparkle effect on hover */}
-                                                            <div className="absolute inset-0 bg-indigo-500/10 blur-[40px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-
-                                                            <img
-                                                                src={item.image_url || ''}
-                                                                alt={item.name}
-                                                                className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)]"
-                                                            />
-                                                        </div>
-
-                                                        {/* Category Label */}
-                                                        <div className="space-y-2">
-                                                            <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">
-                                                                {item.type.replace('_', ' ')}
-                                                            </div>
-
-                                                            {/* Title */}
-                                                            <h3 className="text-lg font-black text-white uppercase italic leading-tight truncate">
-                                                                {item.name}
-                                                            </h3>
-
-                                                            {/* Description */}
-                                                            <p className="text-zinc-500 text-xs font-medium line-clamp-2 leading-relaxed min-h-[40px]">
-                                                                {item.description}
-                                                            </p>
-                                                        </div>
-
-                                                        <div className="pt-4 border-t border-white/5 flex items-center justify-between gap-4">
-                                                            {/* Price */}
-                                                            {!isOwned && (
-                                                                <div className="flex items-center gap-2 bg-black px-3 py-2 rounded-xl">
-                                                                    <img src="/icons/moneda.png" alt="Coin" className="w-5 h-5 flex-shrink-0" />
-                                                                    <span className="text-white font-black">{item.price_coins}</span>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Action Button */}
-                                                            {isOwned ? (
-                                                                <Button
-                                                                    className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-11"
-                                                                    disabled
-                                                                >
-                                                                    ADQUIRIDO
-                                                                </Button>
-                                                            ) : (
-                                                                <Button
-                                                                    onClick={() => setPreviewItem(item)}
-                                                                    className="flex-1 rounded-xl bg-white text-black hover:bg-zinc-200 font-black h-11 italic shadow-xl"
-                                                                >
-                                                                    VISTA PREVIA
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
                         </div>
-                    )
-                }
-            </div>
+                    )}
 
-            {/* Nitro Style Footer Badges */}
-            <div className="max-w-6xl mx-auto pt-24 pb-12 opacity-20 hover:opacity-100 transition-all duration-1000">
-                <div className="flex flex-wrap justify-center gap-12 grayscale hover:grayscale-0 transition-all">
-                    <div className="flex items-center gap-3"><ShieldCheck className="text-indigo-400" /> <span className="text-white font-black italic uppercase tracking-wider text-sm">Transacción Encriptada</span></div>
-                    <div className="flex items-center gap-3"><Star className="text-yellow-400" /> <span className="text-white font-black italic uppercase tracking-wider text-sm">Artículos Únicos</span></div>
-                    <div className="flex items-center gap-3"><Zap className="text-blue-400" /> <span className="text-white font-black italic uppercase tracking-wider text-sm">Instante Nitro</span></div>
+                {/* Purchase Notification */}
+                {purchaseMessage && (
+                    <div className={`fixed bottom-8 right-8 p-6 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-right-8 ${purchaseMessage.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                        <div className="flex items-center gap-3 font-bold italic uppercase tracking-wider">
+                            {purchaseMessage.type === 'success' ? <CheckCircle2 size={24} /> : <XCircle size={24} />}
+                            {purchaseMessage.text}
+                        </div>
+                    </div>
+                )}
+
+                {/* Nitro Style Footer Badges */}
+                <div className="max-w-6xl mx-auto pt-24 pb-12 opacity-20 hover:opacity-100 transition-all duration-1000">
+                    <div className="flex flex-wrap justify-center gap-12 grayscale hover:grayscale-0 transition-all">
+                        <div className="flex items-center gap-3"><ShieldCheck className="text-indigo-400" /> <span className="text-white font-black italic uppercase tracking-wider text-sm">Transacción Encriptada</span></div>
+                        <div className="flex items-center gap-3"><Star className="text-yellow-400" /> <span className="text-white font-black italic uppercase tracking-wider text-sm">Artículos Únicos</span></div>
+                        <div className="flex items-center gap-3"><Zap className="text-blue-400" /> <span className="text-white font-black italic uppercase tracking-wider text-sm">Instante Nitro</span></div>
+                    </div>
                 </div>
             </div>
 
@@ -639,7 +518,13 @@ function StoreContent() {
                     canAfford={(profile?.monedas ?? 0) >= previewItem.price_coins}
                 />
             )}
-            <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} product={selectedProduct} onPaymentSuccess={handlePaymentSuccess} onPaymentError={handlePaymentError} />
+            <PaymentModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                product={selectedProduct}
+                onPaymentSuccess={handlePaymentSuccess}
+                onPaymentError={handlePaymentError}
+            />
 
             <style jsx global>{`
                 @keyframes float {
