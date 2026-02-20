@@ -337,7 +337,7 @@ function StoreContent() {
                             {vipProduct && (
                                 <div className="lg:col-span-12 relative group">
                                     <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[3rem] blur opacity-25 group-hover:opacity-40 transition duration-1000" />
-                                    <div className="relative bg-[#111114] rounded-[2.5rem] border border-white/5 overflow-hidden p-6 sm:p-16 flex flex-col lg:flex-row items-center gap-8 lg:gap-16 backdrop-blur-3xl">
+                                    <div className="relative bg-[#111114] rounded-[2.5rem] border border-white/5 overflow-visible p-4 sm:p-16 flex flex-col lg:flex-row items-center gap-4 lg:gap-16 backdrop-blur-3xl">
                                         {/* Mascot Origi - Drag & Drop for Admins */}
                                         {mascotConfig?.is_visible !== false && (
                                             <motion.div
@@ -359,7 +359,7 @@ function StoreContent() {
                                                 <img
                                                     src="/tienda/orivipp.png"
                                                     alt="Origi Mascot"
-                                                    className="w-[240px] sm:w-[500px] object-contain relative z-10 animate-float pointer-events-none select-none"
+                                                    className="w-[180px] sm:w-[500px] object-contain relative z-10 animate-float pointer-events-none select-none"
                                                 />
                                                 {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                                                     <div className="absolute -bottom-4 bg-indigo-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase italic tracking-[0.2em] shadow-lg">Arrastrar para mover</div>
@@ -367,35 +367,35 @@ function StoreContent() {
                                             </motion.div>
                                         )}
 
-                                        <div className="w-full lg:w-1/2 space-y-8 lg:space-y-10 text-center lg:text-left">
-                                            <div className="space-y-4 lg:space-y-6">
-                                                <h2 className="text-4xl sm:text-7xl font-[1000] text-white italic tracking-tight uppercase leading-[1.1] pb-2">
-                                                    CONVIÉRTETE EN <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent px-2">VIP</span>
+                                        <div className="w-full lg:w-1/2 space-y-6 lg:space-y-10 text-center lg:text-left">
+                                            <div className="space-y-2 lg:space-y-6">
+                                                <h2 className="text-3xl sm:text-7xl font-[1000] text-white italic tracking-tight uppercase leading-[1.1] pb-1 lg:pb-2">
+                                                    CONVIÉRTETE EN <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent px-1 lg:px-2">VIP</span>
                                                 </h2>
-                                                <p className="text-zinc-400 text-base sm:text-2xl font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
+                                                <p className="text-zinc-400 text-sm sm:text-2xl font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
                                                     Acceso total, descargas ilimitadas y estilo absoluto. Desbloquea el lado más potente de CampusLink.
                                                 </p>
                                             </div>
 
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-5">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-5">
                                                 {[
                                                     { text: 'Descargas ilimitadas', icon: Check },
                                                     { text: 'Grupos exclusivos', icon: Check },
                                                     { text: 'Insignia dorada', icon: Check },
                                                     { text: 'Soporte prioritario', icon: Check }
                                                 ].map((f, i) => (
-                                                    <div key={i} className="flex items-center gap-4 bg-white/5 p-4 lg:p-5 rounded-2xl lg:rounded-3xl border border-white/5 backdrop-blur-md">
-                                                        <div className="p-1.5 bg-green-500/20 rounded-full shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Check className="text-green-500 w-4 h-4 lg:w-5 lg:h-5" /></div>
-                                                        <span className="text-white font-black uppercase text-xs lg:text-sm italic">{f.text}</span>
+                                                    <div key={i} className="flex items-center gap-3 lg:gap-4 bg-white/5 p-3 lg:p-5 rounded-xl lg:rounded-3xl border border-white/5 backdrop-blur-md">
+                                                        <div className="p-1 lg:p-1.5 bg-green-500/20 rounded-full shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Check className="text-green-500 w-3.5 h-3.5 lg:w-5 lg:h-5" /></div>
+                                                        <span className="text-white font-black uppercase text-[10px] lg:text-sm italic">{f.text}</span>
                                                     </div>
                                                 ))}
                                             </div>
 
-                                            <div className="flex flex-col sm:flex-row items-center gap-6 lg:gap-8 pt-4 lg:pt-6">
-                                                <div className="text-5xl lg:text-6xl font-[1000] text-white tracking-tighter italic">S/ {vipProduct.price} <span className="text-sm text-zinc-500 font-bold uppercase tracking-[0.3em] block sm:inline mt-2 sm:mt-0">/ {vipProduct.amount} días</span></div>
+                                            <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-8 pt-2 lg:pt-6">
+                                                <div className="text-4xl lg:text-6xl font-[1000] text-white tracking-tighter italic">S/ {vipProduct.price} <span className="text-xs text-zinc-500 font-bold uppercase tracking-[0.3em] block sm:inline mt-1 sm:mt-0">/ {vipProduct.amount} días</span></div>
                                                 <Button
                                                     onClick={() => handlePurchase(vipProduct.id)}
-                                                    className="w-full sm:w-auto h-16 lg:h-20 px-12 lg:px-16 bg-white text-black hover:bg-zinc-200 text-xl lg:text-2xl font-[1000] rounded-[1.2rem] lg:rounded-[1.5rem] transition-all shadow-[0_0_50px_rgba(255,255,255,0.3)] uppercase italic tracking-tighter hover:scale-105"
+                                                    className="w-full sm:w-auto h-14 lg:h-20 px-10 lg:px-16 bg-white text-black hover:bg-zinc-200 text-lg lg:text-2xl font-[1000] rounded-xl lg:rounded-[1.5rem] transition-all shadow-[0_0_50px_rgba(255,255,255,0.3)] uppercase italic tracking-tighter hover:scale-105"
                                                 >
                                                     SUSCRIBIRSE
                                                 </Button>
@@ -406,15 +406,15 @@ function StoreContent() {
                             )}
 
                             {/* Coins Section */}
-                            <div className="lg:col-span-12 space-y-12 animate-in fade-in slide-in-from-bottom-12 duration-1000">
-                                <div className="flex items-center gap-6">
-                                    <div className="p-4 bg-yellow-500/10 rounded-3xl border border-yellow-500/20 shadow-xl backdrop-blur-md">
-                                        <Zap className="text-yellow-400" size={36} />
+                            <div className="lg:col-span-12 space-y-8 lg:space-y-12 animate-in fade-in slide-in-from-bottom-12 duration-1000">
+                                <div className="flex items-center gap-4 lg:gap-6">
+                                    <div className="p-3 lg:p-4 bg-yellow-500/10 rounded-2xl lg:rounded-3xl border border-yellow-500/20 shadow-xl backdrop-blur-md">
+                                        <Zap className="text-yellow-400 w-7 h-7 lg:w-9 lg:h-9" />
                                     </div>
-                                    <h2 className="text-4xl sm:text-5xl font-[1000] text-white italic uppercase tracking-tighter">Paquetes de Monedas</h2>
+                                    <h2 className="text-2xl sm:text-5xl font-[1000] text-white italic uppercase tracking-tighter">Paquetes de Monedas</h2>
                                 </div>
 
-                                <div className="grid grid-cols-2 lg:grid-cols-12 gap-5 sm:gap-8 auto-rows-fr">
+                                <div className="grid grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-8 auto-rows-fr">
                                     {coinPackages.map((pkg, idx) => {
                                         // Map specific images based on index or amount
                                         const coinImg = pkg.amount <= 100 ? '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1) 1.png' :
@@ -427,23 +427,23 @@ function StoreContent() {
                                             <div
                                                 key={pkg.id}
                                                 onClick={() => handlePurchase(pkg.id)}
-                                                className={`group relative bg-[#131317] border border-white/5 rounded-[2.5rem] p-6 sm:p-10 hover:bg-[#18181f] transition-all cursor-pointer hover:-translate-y-3 overflow-hidden shadow-2xl flex flex-col justify-between
+                                                className={`group relative bg-[#131317] border border-white/5 rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-10 hover:bg-[#18181f] transition-all cursor-pointer hover:-translate-y-3 overflow-hidden shadow-2xl flex flex-col justify-between
                                                     ${isLarge ? 'col-span-2 lg:col-span-6' : 'col-span-1 lg:col-span-3'}`}
                                             >
-                                                <div className="absolute top-0 right-0 p-6 font-[1000] text-white/[0.03] text-7xl sm:text-9xl italic pointer-events-none select-none">
+                                                <div className="absolute top-0 right-0 p-4 sm:p-6 font-[1000] text-white/[0.03] text-5xl sm:text-9xl italic pointer-events-none select-none">
                                                     {pkg.amount}
                                                 </div>
 
-                                                <div className="relative z-10 space-y-6 sm:space-y-10 text-center">
-                                                    <div className={`${isLarge ? 'h-40 sm:h-56' : 'h-24 sm:h-40'} flex items-center justify-center`}>
+                                                <div className="relative z-10 space-y-4 sm:space-y-10 text-center">
+                                                    <div className={`${isLarge ? 'h-24 sm:h-56' : 'h-16 sm:h-40'} flex items-center justify-center`}>
                                                         <img src={coinImg} alt="Monedas" className="h-full object-contain group-hover:scale-110 transition-transform duration-700 animate-float drop-shadow-[0_20px_40px_rgba(255,191,0,0.2)]" style={{ animationDelay: `${idx * 0.2}s` }} />
                                                     </div>
-                                                    <div className="space-y-3">
-                                                        <h3 className={`${isLarge ? 'text-3xl sm:text-4xl' : 'text-lg sm:text-2xl'} font-[1000] text-white uppercase italic tracking-tighter`}>{pkg.name}</h3>
-                                                        <p className="text-zinc-500 font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs">{pkg.amount} Monedas de Oro</p>
+                                                    <div className="space-y-1 sm:space-y-3">
+                                                        <h3 className={`${isLarge ? 'text-xl sm:text-4xl' : 'text-xs sm:text-2xl'} font-[1000] text-white uppercase italic tracking-tighter`}>{pkg.name}</h3>
+                                                        <p className="text-zinc-500 font-black uppercase tracking-[0.1em] text-[8px] sm:text-xs">{pkg.amount} Monedas</p>
                                                     </div>
-                                                    <div className="pt-6 border-t border-white/5">
-                                                        <div className={`${isLarge ? 'text-4xl' : 'text-2xl'} font-[1000] text-indigo-400 italic`}>S/ {pkg.price}</div>
+                                                    <div className="pt-3 sm:pt-6 border-t border-white/5">
+                                                        <div className={`${isLarge ? 'text-2xl sm:text-4xl' : 'text-sm sm:text-2xl'} font-[1000] text-indigo-400 italic`}>S/ {pkg.price}</div>
                                                     </div>
                                                 </div>
                                             </div>
