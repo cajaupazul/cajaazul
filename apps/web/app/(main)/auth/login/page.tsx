@@ -150,6 +150,46 @@ function LoginContent() {
     }
   };
 
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Por favor ingresa tu correo primero');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const emailTrimmed = email.trim().toLowerCase();
+      if (!validateInstitutionalEmail(emailTrimmed)) {
+        setError(AUTH_CONFIG.messages.domainError);
+        setLoading(false);
+        return;
+      }
+
+      const { error: magicError } = await supabase.auth.signInWithOtp({
+        email: emailTrimmed,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        },
+      });
+
+      if (magicError) {
+        setError(magicError.message);
+        setLoading(false);
+        return;
+      }
+
+      setError('¡Enlace enviado! Revisa tu correo para entrar sin contraseña.');
+      setLoading(false);
+    } catch (err: any) {
+      console.error('[MAGIC_LINK_EXCEPTION]', err);
+      setError('Error al enviar el enlace mágico.');
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50">
       {/* Left Side - Image (Desktop) / Top Section (Mobile) */}
@@ -229,7 +269,7 @@ function LoginContent() {
                 <Label htmlFor="password" className="text-slate-700 font-semibold text-sm">
                   Contraseña
                 </Label>
-                <Link href="#" className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors">
+                <Link href="/auth/forgot-password" title="Recuperar contraseña" className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors">
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
@@ -285,6 +325,17 @@ function LoginContent() {
               ) : (
                 'Ingresar ahora'
               )}
+            </Button>
+
+            {/* Magic Link Button */}
+            <Button
+              type="button"
+              onClick={handleMagicLink}
+              disabled={loading}
+              variant="outline"
+              className="w-full border-slate-200 text-slate-700 font-bold h-12 py-3 rounded-xl transition-all hover:bg-slate-50 active:scale-[0.98]"
+            >
+              {loading ? 'Procesando...' : 'Entrar con Enlace Mágico'}
             </Button>
 
             <div className="relative my-6">

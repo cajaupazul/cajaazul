@@ -39,6 +39,7 @@ function RegisterContent() {
   const router = useRouter();
   const { session, loading: profileLoading } = useProfile();
   const [loading, setLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -154,6 +155,7 @@ function RegisterContent() {
 
       if (authData.user) {
         console.log('[REGISTER_SUCCESS] User created. Database triggers will handle profile creation.');
+        setIsSubmitted(true);
       }
     } catch (err: any) {
       console.error('[REGISTER_EXCEPTION]', err);
@@ -206,158 +208,181 @@ function RegisterContent() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleRegister} className="space-y-4">
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-medium animate-in fade-in slide-in-from-top-2">
-                {error}
+          {isSubmitted ? (
+            <div className="text-center space-y-6 py-8 animate-in fade-in zoom-in duration-500">
+              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                </svg>
               </div>
-            )}
-
-            {/* Nombre Completo */}
-            <div className="space-y-1.5">
-              <Label htmlFor="nombre" className="text-slate-700 font-semibold text-sm ml-1">
-                Nombre Completo
-              </Label>
-              <Input
-                id="nombre"
-                type="text"
-                value={formData.nombre}
-                onChange={(e) => setFormData({ ...formData, nombre: e.target.value.toUpperCase() })}
-                placeholder="Juan Carlos Pérez Gómez"
-                className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all"
-                required
-              />
+              <h2 className="text-2xl font-black text-slate-900">¡Casi listo!</h2>
+              <p className="text-slate-600 font-medium text-balance">
+                Hemos enviado un correo de confirmación a <span className="text-slate-900 font-bold">{formData.email}</span>.
+              </p>
+              <p className="text-slate-500 text-sm">
+                Por favor, revisa tu bandeja de entrada (y la carpeta de spam) para activar tu cuenta.
+              </p>
+              <Button
+                onClick={() => router.push('/auth/login')}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 rounded-xl mt-6 px-12"
+              >
+                Ir al Inicio de Sesión
+              </Button>
             </div>
+          ) : (
+            <form onSubmit={handleRegister} className="space-y-4">
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-medium animate-in fade-in slide-in-from-top-2">
+                  {error}
+                </div>
+              )}
 
-            {/* Email */}
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-slate-700 font-semibold text-sm ml-1">
-                Email Universitario
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="tu@up.edu.pe"
-                className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all"
-                required
-              />
-            </div>
-
-            {/* Password */}
-            <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-slate-700 font-semibold text-sm ml-1">
-                Contraseña
-              </Label>
-              <div className="relative group">
+              {/* Nombre Completo */}
+              <div className="space-y-1.5">
+                <Label htmlFor="nombre" className="text-slate-700 font-semibold text-sm ml-1">
+                  Nombre Completo
+                </Label>
                 <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Mínimo 6 caracteres"
-                  className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all pr-12"
+                  id="nombre"
+                  type="text"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value.toUpperCase() })}
+                  placeholder="Juan Carlos Pérez Gómez"
+                  className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-0 top-0 h-full px-4 text-slate-400 hover:text-blue-600 transition-colors"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
               </div>
-            </div>
 
-            {/* Confirm Password */}
-            <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword" className="text-slate-700 font-semibold text-sm ml-1">
-                Repite tu Contraseña
-              </Label>
-              <div className="relative group">
+              {/* Email */}
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-slate-700 font-semibold text-sm ml-1">
+                  Email Universitario
+                </Label>
                 <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  placeholder="Repite tu contraseña"
-                  className={`h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all pr-12 ${formData.confirmPassword && formData.password !== formData.confirmPassword
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="tu@up.edu.pe"
+                  className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all"
+                  required
+                />
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-slate-700 font-semibold text-sm ml-1">
+                  Contraseña
+                </Label>
+                <div className="relative group">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Mínimo 6 caracteres"
+                    className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all pr-12"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-0 top-0 h-full px-4 text-slate-400 hover:text-blue-600 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword" className="text-slate-700 font-semibold text-sm ml-1">
+                  Repite tu Contraseña
+                </Label>
+                <div className="relative group">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    placeholder="Repite tu contraseña"
+                    className={`h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all pr-12 ${formData.confirmPassword && formData.password !== formData.confirmPassword
                       ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                       : formData.confirmPassword && formData.password === formData.confirmPassword
                         ? 'border-green-300 focus:border-green-500 focus:ring-green-500'
                         : ''
-                    }`}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-0 top-0 h-full px-4 text-slate-400 hover:text-blue-600 transition-colors"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                <p className="text-red-500 text-xs ml-1 font-medium">Las contraseñas no coinciden</p>
-              )}
-            </div>
-
-            {/* Facultad */}
-            <div className="space-y-1.5">
-              <Label htmlFor="carrera" className="text-slate-700 font-semibold text-sm ml-1">
-                Facultad
-              </Label>
-              <Select value={formData.carrera} onValueChange={(value) => setFormData({ ...formData, carrera: value })}>
-                <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all bg-white">
-                  <SelectValue placeholder="Selecciona tu facultad" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-slate-200 shadow-xl">
-                  {FACULTADES.map((fac) => (
-                    <SelectItem key={fac} value={fac} className="rounded-lg focus:bg-slate-50">
-                      {fac}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Sign Up Button */}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 py-3 rounded-xl shadow-xl shadow-slate-200 transition-all hover:scale-[1.01] active:scale-[0.98] mt-4"
-            >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Creando...</span>
+                      }`}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-0 top-0 h-full px-4 text-slate-400 hover:text-blue-600 transition-colors"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
                 </div>
-              ) : (
-                'Crear Cuenta'
-              )}
-            </Button>
-
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-100"></div>
+                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                  <p className="text-red-500 text-xs ml-1 font-medium">Las contraseñas no coinciden</p>
+                )}
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-slate-400 font-medium">O continúa con</span>
-              </div>
-            </div>
 
-            <GoogleButton text="Registrarse con Google" />
-          </form>
+              {/* Facultad */}
+              <div className="space-y-1.5">
+                <Label htmlFor="carrera" className="text-slate-700 font-semibold text-sm ml-1">
+                  Facultad
+                </Label>
+                <Select value={formData.carrera} onValueChange={(value) => setFormData({ ...formData, carrera: value })}>
+                  <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all bg-white">
+                    <SelectValue placeholder="Selecciona tu facultad" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-200 shadow-xl">
+                    {FACULTADES.map((fac) => (
+                      <SelectItem key={fac} value={fac} className="rounded-lg focus:bg-slate-50">
+                        {fac}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Sign Up Button */}
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 py-3 rounded-xl shadow-xl shadow-slate-200 transition-all hover:scale-[1.01] active:scale-[0.98] mt-4"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Creando...</span>
+                  </div>
+                ) : (
+                  'Crear Cuenta'
+                )}
+              </Button>
+
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-100"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-slate-400 font-medium">O continúa con</span>
+                </div>
+              </div>
+
+              <GoogleButton text="Registrarse con Google" />
+            </form>
+          )}
 
           {/* Login Link */}
           <div className="mt-8 text-center text-sm bg-slate-50 py-4 rounded-2xl border border-slate-100">
