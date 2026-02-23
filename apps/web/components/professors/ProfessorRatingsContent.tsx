@@ -191,7 +191,8 @@ const CommentItem = ({
     onReply,
     isReply = false,
     hasReplies = false,
-    reactions = { counts: {}, userReaction: null }
+    reactions = { counts: {}, userReaction: null },
+    depth = 0
 }: {
     comment: ProfessorComment;
     profile: Profile | null;
