@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -30,6 +31,7 @@ interface ProfessorComment {
     likes: number;
     created_at: string;
     profiles?: {
+        id?: string;
         nombre: string;
         avatar_url: string | null;
         active_frame_key?: string | null;
@@ -40,6 +42,15 @@ interface ProfessorComment {
         es_vip?: boolean;
     };
 }
+
+const REACTIONS = [
+    { type: 'like', label: 'Me gusta', emoji: '👍', color: 'text-blue-400', bgColor: 'bg-blue-400' },
+    { type: 'love', label: 'Me encanta', emoji: '❤️', color: 'text-red-400', bgColor: 'bg-red-400' },
+    { type: 'haha', label: 'Me divierte', emoji: '😆', color: 'text-yellow-400', bgColor: 'bg-yellow-400' },
+    { type: 'wow', label: 'Me asombra', emoji: '😮', color: 'text-yellow-400', bgColor: 'bg-yellow-400' },
+    { type: 'sad', label: 'Me entristece', emoji: '😢', color: 'text-blue-300', bgColor: 'bg-blue-300' },
+    { type: 'angry', label: 'Me enoja', emoji: '😡', color: 'text-orange-600', bgColor: 'bg-orange-600' }
+];
 
 interface Rating {
     id: string;
@@ -136,22 +147,42 @@ const CommentItem = ({
     comment,
     profile,
     frameMap,
-    onLike,
+    onReaction,
     onDelete,
     onReply,
     isReply = false,
-    hasReplies = false
+    hasReplies = false,
+    reactions = { counts: {}, userReaction: null }
 }: {
     comment: ProfessorComment;
     profile: Profile | null;
     frameMap: Record<string, any>;
-    onLike: (id: string, current: number) => void;
+    onReaction: (id: string, type: string) => void;
     onDelete: (id: string) => void;
     onReply: () => void;
     isReply?: boolean;
     hasReplies?: boolean;
+    reactions?: { counts: Record<string, number>, userReaction: string | null };
 }) => {
     const isOwner = profile?.id === comment.user_id || profile?.role === 'admin';
+    const [showReactions, setShowReactions] = useState(false);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const handleMouseEnter = () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        setShowReactions(true);
+    };
+
+    const handleMouseLeave = () => {
+        timeoutRef.current = setTimeout(() => setShowReactions(false), 500);
+    };
+
+    const currentReaction = REACTIONS.find(r => r.type === reactions.userReaction);
+    const sortedReactions = Object.entries(reactions.counts)
+        .filter(([_, count]) => count > 0)
+        .sort(([_, a], [__, b]) => b - a);
+
+    const totalReactions = Object.values(reactions.counts).reduce((a, b) => a + b, 0);
 
     return (
         <motion.div
@@ -159,21 +190,22 @@ const CommentItem = ({
             animate={{ opacity: 1, y: 0 }}
             className={cn(
                 "relative group transition-all duration-300",
-                !isReply && "pl-[4.5rem] md:pl-20 mb-10",
-                isReply && "pl-12 md:pl-16 mt-6 first:mt-8"
+                !isReply && "pl-14 md:pl-20 mb-8",
+                isReply && "pl-12 md:pl-16 mt-4 first:mt-6"
             )}
         >
-            {/* Threading Line Connectors */}
-            {!isReply && (hasReplies || true) && (
-                <div className="absolute left-6 md:left-9 top-14 bottom-0 w-[1.5px] bg-white/10 group-hover:bg-blue-500/30 transition-colors" />
+            {/* Threading Line Connectors (Refined) */}
+            {!isReply && hasReplies && (
+                <div className="absolute left-6 md:left-8 top-12 bottom-[-1.5rem] w-[2px] bg-white/5 group-hover:bg-blue-500/20 transition-colors z-0" />
             )}
 
             {isReply && (
-                <div className="absolute left-[-2rem] top-[-1rem] w-8 h-10 border-l-[1.5px] border-b-[1.5px] border-white/10 opacity-50 rounded-bl-2xl" />
+                <div className="absolute left-[-2.5rem] md:left-[-3rem] top-[-2rem] w-12 h-12 border-l-2 border-b-2 border-white/5 opacity-50 rounded-bl-[24px] z-0" />
             )}
 
             <div className="absolute left-0 top-0 z-20">
                 <UserHoverCard profile={{
+                    id: comment.user_id,
                     nombre: comment.profiles?.nombre || 'Usuario',
                     avatar_url: comment.profiles?.avatar_url,
                     background_url: comment.profiles?.background_url,
@@ -190,40 +222,28 @@ const CommentItem = ({
                         frameScale={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.scale : 1}
                         offsetX={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.x : 0}
                         offsetY={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.y : 0}
-                        size={isReply ? "sm" : "md"}
+                        size={isReply ? "xs" : "sm"}
                         className="ring-2 ring-bb-dark shadow-xl"
                     />
                 </UserHoverCard>
             </div>
 
-            <div className="flex flex-col">
-                <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex flex-col bg-white/[0.02] border border-white/5 p-4 rounded-3xl group-hover:bg-white/[0.04] transition-colors relative z-10">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
                     <div className="flex items-center gap-2">
-                        <UserHoverCard profile={{
-                            id: comment.user_id,
-                            nombre: comment.profiles?.nombre || 'Usuario',
-                            avatar_url: comment.profiles?.avatar_url,
-                            background_url: comment.profiles?.background_url,
-                            bio: comment.profiles?.bio,
-                            created_at: comment.profiles?.created_at,
-                            puntos: comment.profiles?.puntos,
-                            es_vip: comment.profiles?.es_vip,
-                            role: 'user'
-                        }}>
-                            <p className="font-bold text-white text-sm md:text-base hover:text-blue-400 cursor-pointer transition-colors tracking-tight">
-                                {comment.profiles?.nombre}
-                            </p>
-                        </UserHoverCard>
-                        <span className="text-bb-text-secondary opacity-40 text-xs">•</span>
-                        <p className="text-[10px] md:text-xs font-medium text-bb-text-secondary opacity-60">
-                            {new Date(comment.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}
+                        <p className="font-black text-white text-sm hover:text-blue-400 cursor-pointer transition-colors tracking-tight uppercase">
+                            {comment.profiles?.nombre}
+                        </p>
+                        <span className="text-bb-text-secondary opacity-30 text-[10px]">•</span>
+                        <p className="text-[10px] font-bold text-bb-text-secondary opacity-50 uppercase tracking-tighter">
+                            {new Date(comment.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                         </p>
                     </div>
 
                     {isOwner && (
                         <button
                             onClick={() => onDelete(comment.id)}
-                            className="text-bb-text-secondary hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-500/10 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                            className="text-bb-text-secondary hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-500/10 opacity-0 group-hover:opacity-100"
                             title="Eliminar"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -232,36 +252,91 @@ const CommentItem = ({
                 </div>
 
                 <div className={cn(
-                    "text-bb-text leading-relaxed whitespace-pre-wrap font-medium kerning-normal",
-                    isReply ? "text-sm opacity-90" : "text-[15px] md:text-base"
+                    "text-bb-text leading-relaxed whitespace-pre-wrap font-medium",
+                    isReply ? "text-xs opacity-90" : "text-sm md:text-base"
                 )}>
                     {comment.contenido}
                 </div>
 
-                <div className="flex items-center gap-6 mt-4 opacity-70 hover:opacity-100 transition-opacity">
+                {/* Reactions Display (Stacked) */}
+                {totalReactions > 0 && (
+                    <div className="absolute -bottom-3 right-4 flex items-center bg-[#1a1a20] border border-white/10 rounded-full px-1.5 py-0.5 shadow-xl scale-90 md:scale-100 origin-right">
+                        <div className="flex -space-x-1.5 mr-1.5">
+                            {sortedReactions.slice(0, 3).map(([type]) => (
+                                <span key={type} className="text-sm drop-shadow-md">
+                                    {REACTIONS.find(r => r.type === type)?.emoji}
+                                </span>
+                            ))}
+                        </div>
+                        <span className="text-[10px] font-black text-white/70">{totalReactions}</span>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex items-center gap-4 mt-2 ml-2">
+                <div
+                    className="relative"
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
+                >
                     <button
-                        onClick={() => onLike(comment.id, comment.likes || 0)}
-                        className="flex items-center gap-1.5 text-bb-text-secondary hover:text-blue-400 transition-all text-[11px] font-bold uppercase tracking-tight group/btn"
+                        onClick={() => onReaction(comment.id, reactions.userReaction === 'like' ? 'none' : 'like')}
+                        className={cn(
+                            "flex items-center gap-1.5 transition-all text-[10px] font-black uppercase tracking-widest",
+                            currentReaction ? currentReaction.color : "text-bb-text-secondary hover:text-white"
+                        )}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M7 10v12" /><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
-                        </svg>
-                        Me gusta
-                        {(comment.likes || 0) > 0 && <span className="text-blue-400 ml-0.5">{comment.likes}</span>}
+                        {currentReaction ? (
+                            <span className="scale-125">{currentReaction.emoji}</span>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M7 10v12" /><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
+                            </svg>
+                        )}
+                        {currentReaction ? currentReaction.label : "Me gusta"}
                     </button>
 
-                    {!isReply && (
-                        <button
-                            onClick={onReply}
-                            className="flex items-center gap-1.5 text-bb-text-secondary hover:text-blue-400 transition-all text-[11px] font-bold uppercase tracking-tight group/btn"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-                            </svg>
-                            Responder
-                        </button>
-                    )}
+                    {/* Reactions Bar (Facebook style) */}
+                    <AnimatePresence>
+                        {showReactions && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                                animate={{ opacity: 1, y: -45, scale: 1 }}
+                                exit={{ opacity: 0, y: 10, scale: 0.8 }}
+                                className="absolute left-0 bottom-full mb-2 bg-[#1a1a20] border border-white/10 rounded-full p-1.5 flex items-center gap-1 shadow-2xl z-50 ring-1 ring-white/10"
+                            >
+                                {REACTIONS.map((r) => (
+                                    <button
+                                        key={r.type}
+                                        onClick={() => {
+                                            onReaction(comment.id, r.type);
+                                            setShowReactions(false);
+                                        }}
+                                        className="w-8 h-8 flex items-center justify-center hover:scale-150 transition-transform duration-200 text-lg group/emoji relative"
+                                        title={r.label}
+                                    >
+                                        {r.emoji}
+                                        <span className="absolute -top-10 bg-black text-white text-[10px] px-2 py-0.5 rounded opacity-0 group-hover/emoji:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-bold uppercase tracking-widest border border-white/10">
+                                            {r.label}
+                                        </span>
+                                    </button>
+                                ))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
+
+                {!isReply && (
+                    <button
+                        onClick={onReply}
+                        className="flex items-center gap-1.5 text-bb-text-secondary hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+                        </svg>
+                        Responder
+                    </button>
+                )}
             </div>
         </motion.div>
     );
@@ -298,6 +373,10 @@ export default function ProfessorRatingsContent({
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [commentReactions, setCommentReactions] = useState<Record<string, {
+        counts: Record<string, number>,
+        userReaction: string | null
+    }>>({});
 
     // Sync state with props when Server Component re-renders
     useEffect(() => {
@@ -382,6 +461,40 @@ export default function ProfessorRatingsContent({
             supabase.removeChannel(channel);
         };
     }, [professor.id]);
+
+    // Fetch reactions for all comments
+    useEffect(() => {
+        const fetchReactions = async () => {
+            if (comments.length === 0) return;
+
+            const commentIds = comments.map(c => c.id);
+            const { data: reactionData, error } = await supabase
+                .from('professor_comment_reactions')
+                .select('comment_id, user_id, reaction_type')
+                .in('comment_id', commentIds);
+
+            if (!error && reactionData) {
+                const grouped: typeof commentReactions = {};
+
+                commentIds.forEach(id => {
+                    grouped[id] = { counts: {}, userReaction: null };
+                    REACTIONS.forEach(r => grouped[id].counts[r.type] = 0);
+                });
+
+                reactionData.forEach(r => {
+                    if (!grouped[r.comment_id]) return;
+                    grouped[r.comment_id].counts[r.reaction_type] = (grouped[r.comment_id].counts[r.reaction_type] || 0) + 1;
+                    if (r.user_id === profile?.id) {
+                        grouped[r.comment_id].userReaction = r.reaction_type;
+                    }
+                });
+
+                setCommentReactions(grouped);
+            }
+        };
+
+        fetchReactions();
+    }, [comments, profile?.id]);
 
     // Pre-fill rating if user has already rated
     useEffect(() => {
@@ -500,14 +613,49 @@ export default function ProfessorRatingsContent({
         }
     };
 
-    const handleLikeComment = async (commentId: string, currentLikes: number) => {
-        const { error } = await supabase
-            .from('professor_comments')
-            .update({ likes: currentLikes + 1 })
-            .eq('id', commentId);
+    const handleReactionComment = async (commentId: string, reactionType: string) => {
+        if (!profile) return;
 
-        if (!error) {
-            router.refresh();
+        const currentReaction = commentReactions[commentId]?.userReaction;
+
+        // Optimistic update
+        setCommentReactions(prev => {
+            const next = { ...prev };
+            const commentData = { ...next[commentId] } || { counts: {}, userReaction: null };
+
+            // Remove old reaction if exists
+            if (currentReaction) {
+                commentData.counts[currentReaction] = Math.max(0, (commentData.counts[currentReaction] || 0) - 1);
+            }
+
+            // Add new reaction if not turning off
+            if (reactionType !== 'none' && reactionType !== currentReaction) {
+                commentData.counts[reactionType] = (commentData.counts[reactionType] || 0) + 1;
+                commentData.userReaction = reactionType;
+            } else {
+                commentData.userReaction = null;
+            }
+
+            next[commentId] = commentData;
+            return next;
+        });
+
+        if (reactionType === 'none' || reactionType === currentReaction) {
+            // Remove reaction
+            await supabase
+                .from('professor_comment_reactions')
+                .delete()
+                .eq('comment_id', commentId)
+                .eq('user_id', profile.id);
+        } else {
+            // Upsert reaction
+            await supabase
+                .from('professor_comment_reactions')
+                .upsert({
+                    comment_id: commentId,
+                    user_id: profile.id,
+                    reaction_type: reactionType
+                }, { onConflict: 'comment_id,user_id' });
         }
     };
 
@@ -924,49 +1072,55 @@ export default function ProfessorRatingsContent({
                             </h2>
                         </div>
 
-                        {/* New Comment Input Box - Social Style (Polished) */}
-                        <div className="bg-bb-darker/30 border border-white/5 rounded-[32px] p-4 md:p-6 mb-12 hover:bg-bb-darker/50 transition-all group/input shadow-xl">
-                            <div className="flex flex-col sm:flex-row gap-4 md:gap-6">
-                                <div className="shrink-0 pt-1 flex justify-center sm:block">
-                                    <AvatarWithFrame
-                                        avatarUrl={profile?.avatar_url || PLACEHOLDERS.AVATAR}
-                                        name={profile?.nombre || 'Usuario'}
-                                        frameUrl={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.image_url : null}
-                                        frameScale={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.scale : 1}
-                                        offsetX={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.x : 0}
-                                        offsetY={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.y : 0}
-                                        size="md"
-                                        className="ring-4 ring-bb-dark shadow-2xl transition-transform group-hover/input:scale-105"
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <form onSubmit={handleSubmitComment}>
-                                        <Textarea
-                                            value={commentText}
-                                            onChange={(e) => setCommentText(e.target.value)}
-                                            placeholder="Comparte tu opinión o haz una pregunta sobre este profesor..."
-                                            className="bg-transparent border-none text-bb-text min-h-[140px] rounded-none resize-none focus:ring-0 text-base md:text-lg placeholder:text-bb-text/30 p-0 shadow-none scrollbar-hide font-medium leading-relaxed"
+                        {/* New Comment Input Box - Facebook style redesign */}
+                        <div className="bg-[#1a1a20]/80 border border-white/5 rounded-[40px] p-4 md:p-8 mb-12 hover:bg-[#1a1a20] transition-all group/input shadow-2xl relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
+                            <div className="flex flex-col gap-6 relative z-10">
+                                <div className="flex gap-4 md:gap-6">
+                                    <div className="shrink-0 pt-1">
+                                        <AvatarWithFrame
+                                            avatarUrl={profile?.avatar_url || PLACEHOLDERS.AVATAR}
+                                            name={profile?.nombre || 'Usuario'}
+                                            frameUrl={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.image_url : null}
+                                            frameScale={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.scale : 1}
+                                            offsetX={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.x : 0}
+                                            offsetY={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.y : 0}
+                                            size="sm"
+                                            className="ring-4 ring-bb-dark shadow-2xl transition-transform group-hover/input:scale-105"
                                         />
-                                        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-white/5 mt-4 pt-4 gap-4 sm:gap-0">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-bb-text/20 group-hover/input:text-bb-text/40 transition-colors">
-                                                Tu opinión importa
-                                            </p>
-                                            <Button
-                                                type="submit"
-                                                disabled={isSubmittingComment || !commentText.trim()}
-                                                className="bg-blue-600 hover:bg-blue-500 text-white font-black px-10 h-10 rounded-full shadow-lg shadow-blue-500/10 active:scale-95 transition-all flex items-center gap-2.5 text-xs uppercase tracking-wider"
-                                            >
-                                                {isSubmittingComment ? (
-                                                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                                ) : (
-                                                    <>
-                                                        Publicar
-                                                        <ArrowRight className="w-4 h-4" />
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </div>
-                                    </form>
+                                    </div>
+                                    <div className="flex-1">
+                                        <form onSubmit={handleSubmitComment}>
+                                            <Textarea
+                                                value={commentText}
+                                                onChange={(e) => setCommentText(e.target.value)}
+                                                placeholder="Comparte tu opinión o haz una pregunta sobre este profesor..."
+                                                className="bg-transparent border-none text-bb-text min-h-[140px] rounded-none resize-none focus:ring-0 text-base md:text-lg placeholder:text-bb-text/20 p-0 shadow-none scrollbar-hide font-medium leading-relaxed tracking-tight"
+                                            />
+                                            <div className="flex items-center justify-between border-t border-white/5 mt-6 pt-6">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-bb-text/40 group-hover/input:text-blue-400 transition-colors">
+                                                        Tu opinión importa
+                                                    </p>
+                                                </div>
+                                                <Button
+                                                    type="submit"
+                                                    disabled={isSubmittingComment || !commentText.trim()}
+                                                    className="bg-blue-600 hover:bg-blue-500 text-white font-black px-12 h-12 rounded-full shadow-2xl shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-3 text-xs uppercase tracking-[0.15em] italic"
+                                                >
+                                                    {isSubmittingComment ? (
+                                                        <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                                    ) : (
+                                                        <>
+                                                            Publicar
+                                                            <ArrowRight className="w-4 h-4" />
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1017,26 +1171,27 @@ export default function ProfessorRatingsContent({
                                                     comment={comment}
                                                     profile={profile}
                                                     frameMap={frameMap}
-                                                    onLike={handleLikeComment}
+                                                    onReaction={handleReactionComment}
                                                     onDelete={handleDeleteComment}
                                                     onReply={() => setReplyToId(comment.id)}
                                                     isReply={false}
                                                     hasReplies={replies.length > 0}
+                                                    reactions={commentReactions[comment.id]}
                                                 />
 
                                                 {replyToId === comment.id && (
-                                                    <div className="ml-14 md:ml-20 mt-4 mb-10">
-                                                        <div className="bg-bb-darker border border-white/5 rounded-3xl p-5 shadow-2xl relative overflow-hidden">
-                                                            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/30" />
+                                                    <div className="ml-16 md:ml-20 mt-2 mb-8">
+                                                        <div className="bg-[#1a1a20] border border-white/5 rounded-3xl p-5 shadow-2xl relative overflow-hidden">
+                                                            <div className="absolute top-0 left-0 w-1 h-full bg-blue-600/30" />
                                                             <form onSubmit={(e) => handleSubmitComment(e, comment.id)} className="space-y-4">
                                                                 <Textarea
                                                                     value={replyText}
                                                                     onChange={(e) => setReplyText(e.target.value)}
                                                                     placeholder="Escribe una respuesta amable..."
-                                                                    className="bg-transparent border-none text-bb-text min-h-[100px] rounded-none resize-none focus:ring-0 p-0 text-sm md:text-base placeholder:text-bb-text/20 shadow-none font-medium"
+                                                                    className="bg-transparent border-none text-bb-text min-h-[80px] rounded-none resize-none focus:ring-0 p-0 text-sm md:text-base placeholder:text-bb-text/20 shadow-none font-medium leading-relaxed"
                                                                     autoFocus
                                                                 />
-                                                                <div className="flex justify-end gap-3 pt-2 border-t border-white/5">
+                                                                <div className="flex justify-end gap-3 pt-3 border-t border-white/5">
                                                                     <Button
                                                                         type="button"
                                                                         variant="ghost"
@@ -1044,16 +1199,16 @@ export default function ProfessorRatingsContent({
                                                                             setReplyToId(null);
                                                                             setReplyText('');
                                                                         }}
-                                                                        className="text-bb-text-secondary h-9 px-6 rounded-full hover:bg-white/5 transition-colors font-bold text-xs"
+                                                                        className="text-bb-text-secondary h-8 px-5 rounded-full hover:bg-white/5 transition-colors font-black text-[10px] uppercase tracking-wider"
                                                                     >
                                                                         Cancelar
                                                                     </Button>
                                                                     <Button
                                                                         type="submit"
                                                                         disabled={isSubmittingReply || !replyText.trim()}
-                                                                        className="bg-blue-600 hover:bg-blue-500 text-white font-black h-9 px-8 rounded-full shadow-lg active:scale-95 transition-all text-xs uppercase tracking-wider"
+                                                                        className="bg-blue-600 hover:bg-blue-500 text-white font-black h-8 px-8 rounded-full shadow-lg active:scale-95 transition-all text-[10px] uppercase tracking-[0.15em] italic"
                                                                     >
-                                                                        {isSubmittingReply ? 'Enviando...' : 'Responder'}
+                                                                        {isSubmittingReply ? 'Enviando...' : 'Publicar'}
                                                                     </Button>
                                                                 </div>
                                                             </form>
@@ -1062,18 +1217,19 @@ export default function ProfessorRatingsContent({
                                                 )}
 
                                                 {replies.length > 0 && (
-                                                    <div className="ml-14 md:ml-20 space-y-2">
+                                                    <div className="space-y-1">
                                                         {replies.map((reply) => (
                                                             <CommentItem
                                                                 key={reply.id}
                                                                 comment={reply}
                                                                 profile={profile}
                                                                 frameMap={frameMap}
-                                                                onLike={handleLikeComment}
+                                                                onReaction={handleReactionComment}
                                                                 onDelete={handleDeleteComment}
                                                                 onReply={() => setReplyToId(reply.id)}
                                                                 isReply={true}
                                                                 hasReplies={false}
+                                                                reactions={commentReactions[reply.id]}
                                                             />
                                                         ))}
                                                     </div>
