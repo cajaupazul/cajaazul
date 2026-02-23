@@ -342,8 +342,6 @@ const CommentItem = ({
     );
 };
 
-// Add cn helper if not present or just use a simple one
-const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
 
 export default function ProfessorRatingsContent({
     professor,
