@@ -282,7 +282,7 @@ const CommentItem = ({
                             frameScale={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.scale : 1}
                             offsetX={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.x : 0}
                             offsetY={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.y : 0}
-                            size={depth > 0 ? "xs" : "sm"}
+                            size="sm"
                         />
                     </div>
                 </UserHoverCard>
@@ -398,7 +398,7 @@ const CommentItem = ({
                     </AnimatePresence>
                 </div>
 
-                {!isReply && (
+                {depth < 2 && (
                     <button
                         onClick={onReply}
                         className="flex items-center gap-1.5 text-bb-text-secondary opacity-60 hover:opacity-100 transition-all text-[11px] font-bold"
@@ -1323,7 +1323,7 @@ export default function ProfessorRatingsContent({
                                                             </div>
                                                         )}
 
-                                                        {replies.length > 0 && (
+                                                        {replies.length > 0 && depth < 2 && (
                                                             <div className="space-y-1">
                                                                 {depth === 0 ? (
                                                                     <ReplyToggler
