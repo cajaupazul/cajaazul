@@ -241,24 +241,26 @@ const CommentItem = ({
             className={cn(
                 "relative group transition-all duration-300",
                 depth === 0 && "mb-8",
-                depth > 0 && "mt-4 first:mt-6",
-                // Indentation logic based on depth
-                depth === 0 ? "pl-14 md:pl-16" : "pl-10 md:pl-12"
+                depth > 0 && "mt-4",
+                "pl-10 md:pl-12"
             )}
-            style={{ marginLeft: depth > 0 ? `${Math.min(depth * 30, 120)}px` : 0 }}
+            style={{
+                marginLeft: depth === 0 ? 0 : `${depth * 28}px`,
+                paddingLeft: depth === 0 ? "4rem" : "3.1rem"
+            }}
         >
-            {/* Threading Line Connectors (Refined for Multi-Level) */}
+            {/* Threading Line Connectors (Perfectly Aligned) */}
             {hasReplies && (
-                <div className="absolute left-4 md:left-5 top-12 bottom-0 w-[1.5px] bg-white/10 group-hover:bg-blue-500/30 transition-colors z-0" />
+                <div className="absolute left-[1.15rem] md:left-[1.4rem] top-12 bottom-0 w-[1.5px] bg-white/10 group-hover:bg-blue-500/30 transition-colors z-0" />
             )}
 
             {depth > 0 && (
                 <div
-                    className="absolute top-[-2rem] border-l-[1.5px] border-b-[1.5px] border-white/10 opacity-50 rounded-bl-xl z-0"
+                    className="absolute top-[-2.5rem] border-l-[1.5px] border-b-[1.5px] border-white/10 opacity-50 rounded-bl-xl z-0"
                     style={{
-                        left: "-2rem",
-                        width: "1.5rem",
-                        height: "3rem"
+                        left: "-1.75rem",
+                        width: "1.75rem",
+                        height: "4rem"
                     }}
                 />
             )}
