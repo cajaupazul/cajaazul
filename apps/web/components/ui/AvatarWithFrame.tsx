@@ -9,7 +9,7 @@ interface AvatarWithFrameProps {
     avatarUrl?: string | null;
     frameUrl?: string | null;
     name?: string | null;
-    size?: 'sm' | 'md' | 'lg' | 'xl' | number;
+    size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number;
     frameScale?: number;
     offsetX?: number;
     offsetY?: number;
@@ -33,6 +33,7 @@ export function AvatarWithFrame({
 }: AvatarWithFrameProps) {
     // Mapeo de tamaños predefinidos
     const sizeMap = {
+        xs: 32,   // 32x32 - reply
         sm: 40,   // 40x40 - navbar
         md: 56,   // 56x56 - sidebar/card
         lg: 96,   // 96x96 - card grande
