@@ -461,17 +461,17 @@ function StoreContent() {
                                                                 <p className="text-zinc-500 text-[10px] sm:text-xs font-medium line-clamp-2 leading-relaxed min-h-[30px] sm:min-h-[40px]">{item.description}</p>
                                                             </div>
 
-                                                            <div className="pt-3 sm:pt-4 border-t border-white/5 flex items-center justify-between gap-2 sm:gap-4">
+                                                            <div className="pt-3 sm:pt-4 border-t border-white/5 flex items-center justify-between gap-1 sm:gap-4">
                                                                 {!isOwned && (
-                                                                    <div className="flex items-center gap-1.5 sm:gap-2 bg-black px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl">
-                                                                        <img src="/icons/moneda.png" alt="Coin" className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                                                                        <span className="text-white font-black text-xs sm:text-base">{item.price_coins}</span>
+                                                                    <div className="flex-shrink-0 flex items-center gap-1 sm:gap-2 bg-black px-1.5 py-1 sm:px-3 sm:py-2 rounded-xl">
+                                                                        <img src="/icons/moneda.png" alt="Coin" className="w-3.5 h-3.5 sm:w-5 sm:h-5 flex-shrink-0" />
+                                                                        <span className="text-white font-black text-[10px] sm:text-base tracking-tighter">{item.price_coins}</span>
                                                                     </div>
                                                                 )}
                                                                 {isOwned ? (
-                                                                    <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-9 sm:h-11 text-[10px] sm:text-sm" disabled>ADQUIRIDO</Button>
+                                                                    <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-9 sm:h-11 text-[9px] sm:text-sm px-1" disabled>ADQUIRIDO</Button>
                                                                 ) : (
-                                                                    <Button onClick={() => setPreviewItem(item)} className="flex-1 rounded-xl bg-white text-black hover:bg-zinc-200 font-black h-9 sm:h-11 text-[10px] sm:text-sm italic shadow-xl tracking-tight">VISTA PREVIA</Button>
+                                                                    <Button onClick={() => setPreviewItem(item)} className="flex-1 rounded-xl bg-white text-black hover:bg-zinc-200 font-black h-9 sm:h-11 text-[9px] sm:text-sm italic shadow-xl tracking-tighter px-1">VISTA PREVIA</Button>
                                                                 )}
                                                             </div>
                                                         </div>
