@@ -445,33 +445,33 @@ function StoreContent() {
                                                 return (
                                                     <div
                                                         key={item.id}
-                                                        className={`group relative bg-[#131317] border border-white/5 rounded-[2rem] p-6 hover:bg-[#16161c] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-hidden ${isOwned ? 'opacity-70 grayscale-[0.5]' : ''}`}
+                                                        className={`group relative bg-[#131317] border border-white/5 rounded-[2rem] p-4 sm:p-6 hover:bg-[#16161c] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-hidden ${isOwned ? 'opacity-70 grayscale-[0.5]' : ''}`}
                                                     >
                                                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
 
-                                                        <div className="relative z-10 flex flex-col h-full space-y-6">
+                                                        <div className="relative z-10 flex flex-col h-full space-y-4 sm:space-y-6">
                                                             <div className="relative aspect-square flex items-center justify-center cursor-pointer" onClick={() => setPreviewItem(item)}>
                                                                 <div className="absolute inset-0 bg-indigo-500/10 blur-[40px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
                                                                 <img src={item.image_url || ''} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)]" />
                                                             </div>
 
-                                                            <div className="space-y-2">
+                                                            <div className="space-y-1 sm:space-y-2">
                                                                 <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">{item.type.replace('_', ' ')}</div>
-                                                                <h3 className="text-lg font-black text-white uppercase italic leading-tight truncate">{item.name}</h3>
-                                                                <p className="text-zinc-500 text-xs font-medium line-clamp-2 leading-relaxed min-h-[40px]">{item.description}</p>
+                                                                <h3 className="text-sm sm:text-lg font-black text-white uppercase italic leading-tight truncate tracking-tight">{item.name}</h3>
+                                                                <p className="text-zinc-500 text-[10px] sm:text-xs font-medium line-clamp-2 leading-relaxed min-h-[30px] sm:min-h-[40px]">{item.description}</p>
                                                             </div>
 
-                                                            <div className="pt-4 border-t border-white/5 flex items-center justify-between gap-4">
+                                                            <div className="pt-3 sm:pt-4 border-t border-white/5 flex items-center justify-between gap-2 sm:gap-4">
                                                                 {!isOwned && (
-                                                                    <div className="flex items-center gap-2 bg-black px-3 py-2 rounded-xl">
-                                                                        <img src="/icons/moneda.png" alt="Coin" className="w-5 h-5 flex-shrink-0" />
-                                                                        <span className="text-white font-black">{item.price_coins}</span>
+                                                                    <div className="flex items-center gap-1.5 sm:gap-2 bg-black px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl">
+                                                                        <img src="/icons/moneda.png" alt="Coin" className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                                                                        <span className="text-white font-black text-xs sm:text-base">{item.price_coins}</span>
                                                                     </div>
                                                                 )}
                                                                 {isOwned ? (
-                                                                    <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-11" disabled>ADQUIRIDO</Button>
+                                                                    <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-9 sm:h-11 text-[10px] sm:text-sm" disabled>ADQUIRIDO</Button>
                                                                 ) : (
-                                                                    <Button onClick={() => setPreviewItem(item)} className="flex-1 rounded-xl bg-white text-black hover:bg-zinc-200 font-black h-11 italic shadow-xl">VISTA PREVIA</Button>
+                                                                    <Button onClick={() => setPreviewItem(item)} className="flex-1 rounded-xl bg-white text-black hover:bg-zinc-200 font-black h-9 sm:h-11 text-[10px] sm:text-sm italic shadow-xl tracking-tight">VISTA PREVIA</Button>
                                                                 )}
                                                             </div>
                                                         </div>
