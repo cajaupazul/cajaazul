@@ -619,7 +619,10 @@ export default function ProfessorRatingsContent({
         // Optimistic update
         setCommentReactions(prev => {
             const next = { ...prev };
-            const commentData = { ...next[commentId] } || { counts: {}, userReaction: null };
+            const existingData = next[commentId];
+            const commentData = existingData
+                ? { ...existingData, counts: { ...existingData.counts } }
+                : { counts: {}, userReaction: null };
 
             // Remove old reaction if exists
             if (currentReaction) {
