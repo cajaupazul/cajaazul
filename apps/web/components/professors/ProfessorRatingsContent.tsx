@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Star, MessageCircle, TrendingUp, ArrowLeft, Trophy, Sparkles, Share2, Instagram, User, Info, ArrowRight, Upload, Trash2 } from 'lucide-react';
+import { Star, MessageCircle, TrendingUp, ArrowLeft, Trophy, Sparkles, Share2, Instagram, User, Info, ArrowRight, Upload, Trash2, Bold, Italic, Underline, Strikethrough, Quote, Eye, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
@@ -143,6 +143,45 @@ interface ProfessorRatingsContentProps {
     frameMap?: Record<string, any>;
 }
 
+const ReplyToggler = ({ count, children, onToggle }: { count: number; children: React.ReactNode; onToggle: (show: boolean) => void }) => {
+    const [isVisible, setIsVisible] = useState(false);
+
+    return (
+        <div className="space-y-2">
+            {!isVisible && (
+                <button
+                    onClick={() => {
+                        setIsVisible(true);
+                        onToggle(true);
+                    }}
+                    className="flex items-center gap-2 text-bb-text-secondary hover:text-white transition-colors ml-2 mt-2 group"
+                >
+                    <div className="w-5 h-5 rounded-full border border-white/20 flex items-center justify-center group-hover:border-blue-500/50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-white/40 group-hover:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M5 12h14m-7-7v14" />
+                        </svg>
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider opacity-60 group-hover:opacity-100">Ver mas respuestas ({count})</span>
+                </button>
+            )}
+            {isVisible && (
+                <>
+                    {children}
+                    <button
+                        onClick={() => {
+                            setIsVisible(false);
+                            onToggle(false);
+                        }}
+                        className="text-[10px] font-bold text-white/20 hover:text-white/40 transition-colors ml-14 md:ml-20 mt-2 uppercase tracking-tighter"
+                    >
+                        Contraer respuestas
+                    </button>
+                </>
+            )}
+        </div>
+    );
+};
+
 const CommentItem = ({
     comment,
     profile,
@@ -183,6 +222,15 @@ const CommentItem = ({
         .sort(([_, a], [__, b]) => b - a);
 
     const totalReactions = Object.values(reactions.counts).reduce((a, b) => a + b, 0);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const [isTruncated, setIsTruncated] = useState(false);
+
+    useEffect(() => {
+        if (contentRef.current && contentRef.current.scrollHeight > 150) {
+            setIsTruncated(true);
+        }
+    }, [comment.contenido]);
 
     return (
         <motion.div
@@ -190,17 +238,17 @@ const CommentItem = ({
             animate={{ opacity: 1, y: 0 }}
             className={cn(
                 "relative group transition-all duration-300",
-                !isReply && "pl-14 md:pl-20 mb-8",
-                isReply && "pl-12 md:pl-16 mt-4 first:mt-6"
+                !isReply && "pl-14 md:pl-16 mb-6",
+                isReply && "pl-12 md:pl-14 mt-4 first:mt-6"
             )}
         >
-            {/* Threading Line Connectors (Refined) */}
+            {/* Threading Line Connectors (Refined for Crunchyroll Style) */}
             {!isReply && hasReplies && (
-                <div className="absolute left-6 md:left-8 top-12 bottom-[-1.5rem] w-[2px] bg-white/5 group-hover:bg-blue-500/20 transition-colors z-0" />
+                <div className="absolute left-4 md:left-5 top-12 bottom-0 w-[1.5px] bg-white/10 group-hover:bg-blue-500/30 transition-colors z-0" />
             )}
 
             {isReply && (
-                <div className="absolute left-[-2.5rem] md:left-[-3rem] top-[-2rem] w-12 h-12 border-l-2 border-b-2 border-white/5 opacity-50 rounded-bl-[24px] z-0" />
+                <div className="absolute left-[-2.3rem] md:left-[-2.8rem] top-[-2.5rem] w-8 md:w-10 h-14 border-l-[1.5px] border-b-[1.5px] border-white/10 opacity-50 rounded-bl-xl z-0" />
             )}
 
             <div className="absolute left-0 top-0 z-20">
@@ -215,28 +263,29 @@ const CommentItem = ({
                     es_vip: comment.profiles?.es_vip,
                     role: 'user'
                 }}>
-                    <AvatarWithFrame
-                        avatarUrl={comment.profiles?.avatar_url || PLACEHOLDERS.AVATAR}
-                        name={comment.profiles?.nombre || 'Usuario'}
-                        frameUrl={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.image_url : null}
-                        frameScale={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.scale : 1}
-                        offsetX={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.x : 0}
-                        offsetY={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.y : 0}
-                        size={isReply ? "xs" : "sm"}
-                        className="ring-2 ring-bb-dark shadow-xl"
-                    />
+                    <div className="transition-transform group-hover:scale-110 duration-300">
+                        <AvatarWithFrame
+                            avatarUrl={comment.profiles?.avatar_url || PLACEHOLDERS.AVATAR}
+                            name={comment.profiles?.nombre || 'Usuario'}
+                            frameUrl={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.image_url : null}
+                            frameScale={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.scale : 1}
+                            offsetX={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.x : 0}
+                            offsetY={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.y : 0}
+                            size={isReply ? "xs" : "sm"}
+                            className="ring-1 ring-white/10"
+                        />
+                    </div>
                 </UserHoverCard>
             </div>
 
-            <div className="flex flex-col bg-white/[0.02] border border-white/5 p-4 rounded-3xl group-hover:bg-white/[0.04] transition-colors relative z-10">
-                <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-2">
-                        <p className="font-black text-white text-sm hover:text-blue-400 cursor-pointer transition-colors tracking-tight uppercase">
+            <div className="flex flex-col relative z-10 pl-2">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1">
+                        <p className="font-bold text-white text-[13px] md:text-sm hover:text-blue-400 cursor-pointer transition-colors tracking-tight">
                             {comment.profiles?.nombre}
                         </p>
-                        <span className="text-bb-text-secondary opacity-30 text-[10px]">•</span>
-                        <p className="text-[10px] font-bold text-bb-text-secondary opacity-50 uppercase tracking-tighter">
-                            {new Date(comment.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                        <p className="text-[10px] font-medium text-white/30 uppercase tracking-tighter">
+                            hace {new Date(comment.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                         </p>
                     </div>
 
@@ -251,24 +300,41 @@ const CommentItem = ({
                     )}
                 </div>
 
-                <div className={cn(
-                    "text-bb-text leading-relaxed whitespace-pre-wrap font-medium",
-                    isReply ? "text-xs opacity-90" : "text-sm md:text-base"
-                )}>
+                <div
+                    ref={contentRef}
+                    className={cn(
+                        "text-bb-text leading-relaxed whitespace-pre-wrap font-medium overflow-hidden transition-all duration-500",
+                        isReply ? "text-xs opacity-90" : "text-sm md:text-base opacity-80",
+                        isTruncated && !isExpanded && "max-h-[150px] relative"
+                    )}
+                >
                     {comment.contenido}
+                    {isTruncated && !isExpanded && (
+                        <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-[#0a0a0f] to-transparent" />
+                    )}
                 </div>
 
-                {/* Reactions Display (Stacked) */}
+                {isTruncated && (
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="text-[11px] font-bold text-blue-400 hover:text-blue-300 transition-colors mt-2 flex items-center gap-1 group/expand"
+                    >
+                        {isExpanded ? 'Ver menos' : 'Expandir Comentario'}
+                        <ArrowRight className={cn("w-3 h-3 transition-transform", isExpanded ? "rotate-90" : "group-hover:translate-x-1")} />
+                    </button>
+                )}
+
+                {/* Reactions Display (Stacked) - Repositioned for Flat Style */}
                 {totalReactions > 0 && (
-                    <div className="absolute -bottom-3 right-4 flex items-center bg-[#1a1a20] border border-white/10 rounded-full px-1.5 py-0.5 shadow-xl scale-90 md:scale-100 origin-right">
-                        <div className="flex -space-x-1.5 mr-1.5">
+                    <div className="flex items-center gap-2 mt-4 pt-1">
+                        <div className="flex -space-x-1">
                             {sortedReactions.slice(0, 3).map(([type]) => (
-                                <span key={type} className="text-sm drop-shadow-md">
+                                <span key={type} className="text-sm transition-transform hover:scale-125 hover:z-10 cursor-default">
                                     {REACTIONS.find(r => r.type === type)?.emoji}
                                 </span>
                             ))}
                         </div>
-                        <span className="text-[10px] font-black text-white/70">{totalReactions}</span>
+                        <span className="text-[10px] font-bold text-white/30 tracking-tight">{totalReactions}</span>
                     </div>
                 )}
             </div>
@@ -282,17 +348,13 @@ const CommentItem = ({
                     <button
                         onClick={() => onReaction(comment.id, reactions.userReaction === 'like' ? 'none' : 'like')}
                         className={cn(
-                            "flex items-center gap-1.5 transition-all text-[10px] font-black uppercase tracking-widest",
-                            currentReaction ? currentReaction.color : "text-bb-text-secondary hover:text-white"
+                            "flex items-center gap-1.5 transition-all text-[11px] font-bold opacity-60 hover:opacity-100",
+                            currentReaction ? currentReaction.color + " opacity-100" : "text-bb-text-secondary"
                         )}
                     >
-                        {currentReaction ? (
-                            <span className="scale-125">{currentReaction.emoji}</span>
-                        ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M7 10v12" /><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
-                            </svg>
-                        )}
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M7 10v12" /><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
+                        </svg>
                         {currentReaction ? currentReaction.label : "Me gusta"}
                     </button>
 
@@ -329,9 +391,9 @@ const CommentItem = ({
                 {!isReply && (
                     <button
                         onClick={onReply}
-                        className="flex items-center gap-1.5 text-bb-text-secondary hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
+                        className="flex items-center gap-1.5 text-bb-text-secondary opacity-60 hover:opacity-100 transition-all text-[11px] font-bold"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
                         </svg>
                         Responder
@@ -1073,57 +1135,65 @@ export default function ProfessorRatingsContent({
                             </h2>
                         </div>
 
-                        {/* New Comment Input Box - Facebook style redesign */}
-                        <div className="bg-[#1a1a20]/80 border border-white/5 rounded-[40px] p-4 md:p-8 mb-12 hover:bg-[#1a1a20] transition-all group/input shadow-2xl relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
-                            <div className="flex flex-col gap-6 relative z-10">
-                                <div className="flex gap-4 md:gap-6">
-                                    <div className="shrink-0 pt-1">
-                                        <AvatarWithFrame
-                                            avatarUrl={profile?.avatar_url || PLACEHOLDERS.AVATAR}
-                                            name={profile?.nombre || 'Usuario'}
-                                            frameUrl={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.image_url : null}
-                                            frameScale={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.scale : 1}
-                                            offsetX={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.x : 0}
-                                            offsetY={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.y : 0}
-                                            size="sm"
-                                            className="ring-4 ring-bb-dark shadow-2xl transition-transform group-hover/input:scale-105"
-                                        />
-                                    </div>
-                                    <div className="flex-1">
-                                        <form onSubmit={handleSubmitComment}>
+                        {/* New Comment Input Box - Crunchyroll style redesign */}
+                        <div className="bg-[#1a1a20] border border-white/5 rounded-lg overflow-hidden mb-12 shadow-xl">
+                            <form onSubmit={handleSubmitComment}>
+                                <div className="p-4 md:p-6">
+                                    <div className="flex gap-4">
+                                        <div className="shrink-0">
+                                            <AvatarWithFrame
+                                                avatarUrl={profile?.avatar_url || PLACEHOLDERS.AVATAR}
+                                                name={profile?.nombre || 'Usuario'}
+                                                frameUrl={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.image_url : null}
+                                                frameScale={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.scale : 1}
+                                                offsetX={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.x : 0}
+                                                offsetY={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.y : 0}
+                                                size="xs"
+                                                className="ring-2 ring-bb-dark"
+                                            />
+                                        </div>
+                                        <div className="flex-1">
                                             <Textarea
                                                 value={commentText}
                                                 onChange={(e) => setCommentText(e.target.value)}
-                                                placeholder="Comparte tu opinión o haz una pregunta sobre este profesor..."
-                                                className="bg-transparent border-none text-bb-text min-h-[140px] rounded-none resize-none focus:ring-0 text-base md:text-lg placeholder:text-bb-text/20 p-0 shadow-none scrollbar-hide font-medium leading-relaxed tracking-tight"
+                                                placeholder="Escribe algo..."
+                                                className="bg-transparent border-none text-bb-text min-h-[100px] rounded-none resize-none focus:ring-0 text-sm md:text-base placeholder:text-white/20 p-0 shadow-none font-medium"
                                             />
-                                            <div className="flex items-center justify-between border-t border-white/5 mt-6 pt-6">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-bb-text/40 group-hover/input:text-blue-400 transition-colors">
-                                                        Tu opinión importa
-                                                    </p>
-                                                </div>
-                                                <Button
-                                                    type="submit"
-                                                    disabled={isSubmittingComment || !commentText.trim()}
-                                                    className="bg-blue-600 hover:bg-blue-500 text-white font-black px-12 h-12 rounded-full shadow-2xl shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-3 text-xs uppercase tracking-[0.15em] italic"
-                                                >
-                                                    {isSubmittingComment ? (
-                                                        <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                                    ) : (
-                                                        <>
-                                                            Publicar
-                                                            <ArrowRight className="w-4 h-4" />
-                                                        </>
-                                                    )}
-                                                </Button>
-                                            </div>
-                                        </form>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+
+                                {/* Toolbar footer */}
+                                <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-t border-white/5">
+                                    <div className="flex items-center gap-1 md:gap-4">
+                                        {[
+                                            { icon: Bold, label: 'Negrita' },
+                                            { icon: Italic, label: 'Cursiva' },
+                                            { icon: Underline, label: 'Subrayado' },
+                                            { icon: Strikethrough, label: 'Tachado' },
+                                            { icon: Quote, label: 'Cita' },
+                                            { icon: Eye, label: 'Vista previa' },
+                                            { icon: ImageIcon, label: 'Imagen' }
+                                        ].map((tool, i) => (
+                                            <button
+                                                key={i}
+                                                type="button"
+                                                className="p-1.5 text-white/40 hover:text-white hover:bg-white/5 rounded transition-all"
+                                                title={tool.label}
+                                            >
+                                                <tool.icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <Button
+                                        type="submit"
+                                        disabled={isSubmittingComment || !commentText.trim()}
+                                        className="bg-[#3b3b4f] hover:bg-[#4a4a6a] text-white/70 hover:text-white font-bold px-6 h-8 rounded text-[11px] uppercase tracking-wider transition-all"
+                                    >
+                                        {isSubmittingComment ? '...' : 'Responder'}
+                                    </Button>
+                                </div>
+                            </form>
                         </div>
 
                         {/* Delete Confirmation Modal */}
@@ -1181,36 +1251,45 @@ export default function ProfessorRatingsContent({
                                                 />
 
                                                 {replyToId === comment.id && (
-                                                    <div className="ml-16 md:ml-20 mt-2 mb-8">
-                                                        <div className="bg-[#1a1a20] border border-white/5 rounded-3xl p-5 shadow-2xl relative overflow-hidden">
-                                                            <div className="absolute top-0 left-0 w-1 h-full bg-blue-600/30" />
-                                                            <form onSubmit={(e) => handleSubmitComment(e, comment.id)} className="space-y-4">
-                                                                <Textarea
-                                                                    value={replyText}
-                                                                    onChange={(e) => setReplyText(e.target.value)}
-                                                                    placeholder="Escribe una respuesta amable..."
-                                                                    className="bg-transparent border-none text-bb-text min-h-[80px] rounded-none resize-none focus:ring-0 p-0 text-sm md:text-base placeholder:text-bb-text/20 shadow-none font-medium leading-relaxed"
-                                                                    autoFocus
-                                                                />
-                                                                <div className="flex justify-end gap-3 pt-3 border-t border-white/5">
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="ghost"
-                                                                        onClick={() => {
-                                                                            setReplyToId(null);
-                                                                            setReplyText('');
-                                                                        }}
-                                                                        className="text-bb-text-secondary h-8 px-5 rounded-full hover:bg-white/5 transition-colors font-black text-[10px] uppercase tracking-wider"
-                                                                    >
-                                                                        Cancelar
-                                                                    </Button>
-                                                                    <Button
-                                                                        type="submit"
-                                                                        disabled={isSubmittingReply || !replyText.trim()}
-                                                                        className="bg-blue-600 hover:bg-blue-500 text-white font-black h-8 px-8 rounded-full shadow-lg active:scale-95 transition-all text-[10px] uppercase tracking-[0.15em] italic"
-                                                                    >
-                                                                        {isSubmittingReply ? 'Enviando...' : 'Publicar'}
-                                                                    </Button>
+                                                    <div className="ml-14 md:ml-20 mt-2 mb-8 pr-4">
+                                                        <div className="bg-[#1a1a20] border border-white/5 rounded-lg overflow-hidden shadow-2xl">
+                                                            <form onSubmit={(e) => handleSubmitComment(e, comment.id)}>
+                                                                <div className="p-4">
+                                                                    <Textarea
+                                                                        value={replyText}
+                                                                        onChange={(e) => setReplyText(e.target.value)}
+                                                                        placeholder="Escribe algo..."
+                                                                        className="bg-transparent border-none text-bb-text min-h-[80px] rounded-none resize-none focus:ring-0 p-0 text-xs md:text-sm placeholder:text-white/20 shadow-none font-medium"
+                                                                        autoFocus
+                                                                    />
+                                                                </div>
+                                                                <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-t border-white/5">
+                                                                    <div className="flex items-center gap-2">
+                                                                        {[Bold, Italic, Quote, ImageIcon].map((Icon, i) => (
+                                                                            <button key={i} type="button" className="p-1 text-white/30 hover:text-white transition-colors">
+                                                                                <Icon className="w-3 h-3" />
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setReplyToId(null);
+                                                                                setReplyText('');
+                                                                            }}
+                                                                            className="text-white/40 hover:text-white text-[10px] font-bold uppercase transition-colors px-2"
+                                                                        >
+                                                                            Cancelar
+                                                                        </button>
+                                                                        <Button
+                                                                            type="submit"
+                                                                            disabled={isSubmittingReply || !replyText.trim()}
+                                                                            className="bg-[#3b3b4f] hover:bg-[#4a4a6a] text-white/70 hover:text-white font-bold px-5 h-7 rounded text-[10px] uppercase tracking-wider transition-all"
+                                                                        >
+                                                                            {isSubmittingReply ? '...' : 'Responder'}
+                                                                        </Button>
+                                                                    </div>
                                                                 </div>
                                                             </form>
                                                         </div>
@@ -1219,20 +1298,25 @@ export default function ProfessorRatingsContent({
 
                                                 {replies.length > 0 && (
                                                     <div className="space-y-1">
-                                                        {replies.map((reply) => (
-                                                            <CommentItem
-                                                                key={reply.id}
-                                                                comment={reply}
-                                                                profile={profile}
-                                                                frameMap={frameMap}
-                                                                onReaction={handleReactionComment}
-                                                                onDelete={handleDeleteComment}
-                                                                onReply={() => setReplyToId(reply.id)}
-                                                                isReply={true}
-                                                                hasReplies={false}
-                                                                reactions={commentReactions[reply.id]}
-                                                            />
-                                                        ))}
+                                                        <ReplyToggler
+                                                            count={replies.length}
+                                                            onToggle={(show: boolean) => { }} // Handle visibility if needed
+                                                        >
+                                                            {replies.map((reply) => (
+                                                                <CommentItem
+                                                                    key={reply.id}
+                                                                    comment={reply}
+                                                                    profile={profile}
+                                                                    frameMap={frameMap}
+                                                                    onReaction={handleReactionComment}
+                                                                    onDelete={handleDeleteComment}
+                                                                    onReply={() => setReplyToId(reply.id)}
+                                                                    isReply={true}
+                                                                    hasReplies={false}
+                                                                    reactions={commentReactions[reply.id]}
+                                                                />
+                                                            ))}
+                                                        </ReplyToggler>
                                                     </div>
                                                 )}
                                             </div>
