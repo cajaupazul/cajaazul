@@ -202,6 +202,7 @@ const CommentItem = ({
     isReply?: boolean;
     hasReplies?: boolean;
     reactions?: { counts: Record<string, number>, userReaction: string | null };
+    depth?: number;
 }) => {
     const isOwner = profile?.id === comment.user_id || profile?.role === 'admin';
     const [showReactions, setShowReactions] = useState(false);
@@ -238,17 +239,27 @@ const CommentItem = ({
             animate={{ opacity: 1, y: 0 }}
             className={cn(
                 "relative group transition-all duration-300",
-                !isReply && "pl-14 md:pl-16 mb-6",
-                isReply && "pl-12 md:pl-14 mt-4 first:mt-6"
+                depth === 0 && "mb-8",
+                depth > 0 && "mt-4 first:mt-6",
+                // Indentation logic based on depth
+                depth === 0 ? "pl-14 md:pl-16" : "pl-10 md:pl-12"
             )}
+            style={{ marginLeft: depth > 0 ? `${Math.min(depth * 30, 120)}px` : 0 }}
         >
-            {/* Threading Line Connectors (Refined for Crunchyroll Style) */}
-            {!isReply && hasReplies && (
+            {/* Threading Line Connectors (Refined for Multi-Level) */}
+            {hasReplies && (
                 <div className="absolute left-4 md:left-5 top-12 bottom-0 w-[1.5px] bg-white/10 group-hover:bg-blue-500/30 transition-colors z-0" />
             )}
 
-            {isReply && (
-                <div className="absolute left-[-2.3rem] md:left-[-2.8rem] top-[-2.5rem] w-8 md:w-10 h-14 border-l-[1.5px] border-b-[1.5px] border-white/10 opacity-50 rounded-bl-xl z-0" />
+            {depth > 0 && (
+                <div
+                    className="absolute top-[-2rem] border-l-[1.5px] border-b-[1.5px] border-white/10 opacity-50 rounded-bl-xl z-0"
+                    style={{
+                        left: "-2rem",
+                        width: "1.5rem",
+                        height: "3rem"
+                    }}
+                />
             )}
 
             <div className="absolute left-0 top-0 z-20">
@@ -271,8 +282,7 @@ const CommentItem = ({
                             frameScale={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.scale : 1}
                             offsetX={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.x : 0}
                             offsetY={comment.profiles?.active_frame_key ? frameMap[comment.profiles.active_frame_key]?.frame_settings?.profile?.y : 0}
-                            size={isReply ? "xs" : "sm"}
-                            className="ring-1 ring-white/10"
+                            size={depth > 0 ? "xs" : "sm"}
                         />
                     </div>
                 </UserHoverCard>
@@ -1232,96 +1242,96 @@ export default function ProfessorRatingsContent({
                         {/* Social Wall Style Comments (Cleaned) */}
                         {comments.length > 0 ? (
                             <div className="space-y-4">
-                                {comments
-                                    .filter(c => !c.parent_id)
-                                    .map((comment) => {
-                                        const replies = comments.filter(r => r.parent_id === comment.id);
-                                        return (
-                                            <div key={comment.id} className="relative group/parent">
-                                                <CommentItem
-                                                    comment={comment}
-                                                    profile={profile}
-                                                    frameMap={frameMap}
-                                                    onReaction={handleReactionComment}
-                                                    onDelete={handleDeleteComment}
-                                                    onReply={() => setReplyToId(comment.id)}
-                                                    isReply={false}
-                                                    hasReplies={replies.length > 0}
-                                                    reactions={commentReactions[comment.id]}
-                                                />
+                                {(() => {
+                                    const renderCommentTree = (parentId: string | null = null, depth = 0) => {
+                                        return comments
+                                            .filter(c => c.parent_id === parentId)
+                                            .map((comment) => {
+                                                const replies = comments.filter(r => r.parent_id === comment.id);
+                                                return (
+                                                    <div key={comment.id} className="relative group/parent">
+                                                        <CommentItem
+                                                            comment={comment}
+                                                            profile={profile}
+                                                            frameMap={frameMap}
+                                                            onReaction={handleReactionComment}
+                                                            onDelete={handleDeleteComment}
+                                                            onReply={() => setReplyToId(comment.id)}
+                                                            isReply={depth > 0}
+                                                            hasReplies={replies.length > 0}
+                                                            reactions={commentReactions[comment.id]}
+                                                            depth={depth}
+                                                        />
 
-                                                {replyToId === comment.id && (
-                                                    <div className="ml-14 md:ml-20 mt-2 mb-8 pr-4">
-                                                        <div className="bg-[#1a1a20] border border-white/5 rounded-lg overflow-hidden shadow-2xl">
-                                                            <form onSubmit={(e) => handleSubmitComment(e, comment.id)}>
-                                                                <div className="p-4">
-                                                                    <Textarea
-                                                                        value={replyText}
-                                                                        onChange={(e) => setReplyText(e.target.value)}
-                                                                        placeholder="Escribe algo..."
-                                                                        className="bg-transparent border-none text-bb-text min-h-[80px] rounded-none resize-none focus:ring-0 p-0 text-xs md:text-sm placeholder:text-white/20 shadow-none font-medium"
-                                                                        autoFocus
-                                                                    />
+                                                        {replyToId === comment.id && (
+                                                            <div
+                                                                className="mt-2 mb-8 pr-4"
+                                                                style={{ marginLeft: `${(depth + 1) * 30}px` }}
+                                                            >
+                                                                <div className="bg-[#1a1a20] border border-white/5 rounded-lg overflow-hidden shadow-2xl">
+                                                                    <form onSubmit={(e) => handleSubmitComment(e, comment.id)}>
+                                                                        <div className="p-4">
+                                                                            <Textarea
+                                                                                value={replyText}
+                                                                                onChange={(e) => setReplyText(e.target.value)}
+                                                                                placeholder="Escribe algo..."
+                                                                                className="bg-transparent border-none text-bb-text min-h-[80px] rounded-none resize-none focus:ring-0 p-0 text-xs md:text-sm placeholder:text-white/20 shadow-none font-medium"
+                                                                                autoFocus
+                                                                            />
+                                                                        </div>
+                                                                        <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-t border-white/5">
+                                                                            <div className="flex items-center gap-2">
+                                                                                {[Bold, Italic, Quote, ImageIcon].map((Icon, i) => (
+                                                                                    <button key={i} type="button" className="p-1 text-white/30 hover:text-white transition-colors">
+                                                                                        <Icon className="w-3 h-3" />
+                                                                                    </button>
+                                                                                ))}
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setReplyToId(null);
+                                                                                        setReplyText('');
+                                                                                    }}
+                                                                                    className="text-white/40 hover:text-white text-[10px] font-bold uppercase transition-colors px-2"
+                                                                                >
+                                                                                    Cancelar
+                                                                                </button>
+                                                                                <Button
+                                                                                    type="submit"
+                                                                                    disabled={isSubmittingReply || !replyText.trim()}
+                                                                                    className="bg-[#3b3b4f] hover:bg-[#4a4a6a] text-white/70 hover:text-white font-bold px-5 h-7 rounded text-[10px] uppercase tracking-wider transition-all"
+                                                                                >
+                                                                                    {isSubmittingReply ? '...' : 'Responder'}
+                                                                                </Button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </form>
                                                                 </div>
-                                                                <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-t border-white/5">
-                                                                    <div className="flex items-center gap-2">
-                                                                        {[Bold, Italic, Quote, ImageIcon].map((Icon, i) => (
-                                                                            <button key={i} type="button" className="p-1 text-white/30 hover:text-white transition-colors">
-                                                                                <Icon className="w-3 h-3" />
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => {
-                                                                                setReplyToId(null);
-                                                                                setReplyText('');
-                                                                            }}
-                                                                            className="text-white/40 hover:text-white text-[10px] font-bold uppercase transition-colors px-2"
-                                                                        >
-                                                                            Cancelar
-                                                                        </button>
-                                                                        <Button
-                                                                            type="submit"
-                                                                            disabled={isSubmittingReply || !replyText.trim()}
-                                                                            className="bg-[#3b3b4f] hover:bg-[#4a4a6a] text-white/70 hover:text-white font-bold px-5 h-7 rounded text-[10px] uppercase tracking-wider transition-all"
-                                                                        >
-                                                                            {isSubmittingReply ? '...' : 'Responder'}
-                                                                        </Button>
-                                                                    </div>
-                                                                </div>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                            </div>
+                                                        )}
 
-                                                {replies.length > 0 && (
-                                                    <div className="space-y-1">
-                                                        <ReplyToggler
-                                                            count={replies.length}
-                                                            onToggle={(show: boolean) => { }} // Handle visibility if needed
-                                                        >
-                                                            {replies.map((reply) => (
-                                                                <CommentItem
-                                                                    key={reply.id}
-                                                                    comment={reply}
-                                                                    profile={profile}
-                                                                    frameMap={frameMap}
-                                                                    onReaction={handleReactionComment}
-                                                                    onDelete={handleDeleteComment}
-                                                                    onReply={() => setReplyToId(reply.id)}
-                                                                    isReply={true}
-                                                                    hasReplies={false}
-                                                                    reactions={commentReactions[reply.id]}
-                                                                />
-                                                            ))}
-                                                        </ReplyToggler>
+                                                        {replies.length > 0 && (
+                                                            <div className="space-y-1">
+                                                                {depth === 0 ? (
+                                                                    <ReplyToggler
+                                                                        count={replies.length}
+                                                                        onToggle={(show: boolean) => { }}
+                                                                    >
+                                                                        {renderCommentTree(comment.id, depth + 1)}
+                                                                    </ReplyToggler>
+                                                                ) : (
+                                                                    renderCommentTree(comment.id, depth + 1)
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                                                );
+                                            });
+                                    };
+                                    return renderCommentTree();
+                                })()}
                             </div>
                         ) : (
                             <div className="text-center py-20 bg-bb-card/30 rounded-[40px] border-2 border-dashed border-bb-border/50 group hover:border-blue-500/30 transition-all">

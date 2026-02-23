@@ -49,10 +49,10 @@ export function AvatarWithFrame({
             style={{ width: actualSize, height: actualSize }}
         >
             {/* 1. Contenedor del Avatar (Aplica el recorte circular) */}
-            <div className="w-full h-full rounded-full overflow-hidden relative z-10 border-2 border-bb-border/50 bg-bb-sidebar">
-                <Avatar className="w-full h-full rounded-none">
+            <div className="w-full h-full rounded-full overflow-hidden relative z-10 bg-bb-sidebar">
+                <Avatar className="w-full h-full rounded-full">
                     <AvatarImage src={getStorageUrl(avatarUrl, 'profile-avatars', PLACEHOLDERS.AVATAR)} className="object-cover w-full h-full" />
-                    <AvatarFallback className="text-white font-bold rounded-none" style={{ fontSize: actualSize * 0.4 }}>
+                    <AvatarFallback className="text-white font-bold rounded-full" style={{ fontSize: actualSize * 0.4 }}>
                         {fallbackChar}
                     </AvatarFallback>
                 </Avatar>
