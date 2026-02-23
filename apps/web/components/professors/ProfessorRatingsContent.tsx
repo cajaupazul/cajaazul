@@ -245,27 +245,24 @@ const CommentItem = ({
                 "pl-10 md:pl-12"
             )}
             style={{
-                marginLeft: depth === 0 ? 0 : `${depth * 40}px`,
+                marginLeft: depth === 0 ? 0 : `${depth * 56}px`,
                 paddingLeft: depth === 0 ? "4.5rem" : "3.5rem"
             }}
         >
-            {/* Threading Line Connectors (Perfectly Aligned) */}
-            {hasReplies && (
-                <div className="absolute left-[1.25rem] md:left-[1.25rem] top-12 bottom-0 w-[1.5px] bg-white/10 group-hover:bg-blue-500/30 transition-colors z-0" />
-            )}
-
+            {/* Branch Connector (Perfectly Aligned with Continuous Parent Line) */}
             {depth > 0 && (
                 <div
-                    className="absolute top-[-3.5rem] border-l-[1.5px] border-b-[1.5px] border-white/10 opacity-50 rounded-bl-xl z-0"
+                    className="absolute border-l-[1.5px] border-b-[1.5px] border-white/10 opacity-50 rounded-bl-xl z-0"
                     style={{
-                        left: "-1.25rem", // Indent(40px) - ParentLine(20px) = 20px (1.25rem)
-                        width: "1.25rem",
-                        height: "5rem"
+                        top: "-2.5rem",
+                        left: "-2.25rem", // Indent(56px) - LineX(20px) = 36px (2.25rem)
+                        width: "2.25rem",
+                        height: "4rem"
                     }}
                 />
             )}
 
-            <div className="absolute left-0 top-0 z-20">
+            <div className="absolute top-0 z-20" style={{ left: depth > 0 ? "4px" : "0" }}>
                 <UserHoverCard profile={{
                     id: comment.user_id,
                     nombre: comment.profiles?.nombre || 'Usuario',
@@ -1253,6 +1250,17 @@ export default function ProfessorRatingsContent({
                                                 const replies = comments.filter(r => r.parent_id === comment.id);
                                                 return (
                                                     <div key={comment.id} className="relative group/parent">
+                                                        {/* Continuous Vertical Line for Threads */}
+                                                        {replies.length > 0 && (
+                                                            <div
+                                                                className="absolute bg-white/10 w-[1.5px] z-0"
+                                                                style={{
+                                                                    left: `${depth * 56 + 20}px`,
+                                                                    top: '40px',
+                                                                    bottom: '20px'
+                                                                }}
+                                                            />
+                                                        )}
                                                         <CommentItem
                                                             comment={comment}
                                                             profile={profile}
@@ -1269,7 +1277,7 @@ export default function ProfessorRatingsContent({
                                                         {replyToId === comment.id && (
                                                             <div
                                                                 className="mt-2 mb-8 pr-4"
-                                                                style={{ marginLeft: `${(depth + 1) * 30}px` }}
+                                                                style={{ marginLeft: `${(depth + 1) * 56}px` }}
                                                             >
                                                                 <div className="bg-[#1a1a20] border border-white/5 rounded-lg overflow-hidden shadow-2xl">
                                                                     <form onSubmit={(e) => handleSubmitComment(e, comment.id)}>
