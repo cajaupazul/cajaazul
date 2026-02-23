@@ -245,22 +245,22 @@ const CommentItem = ({
                 "pl-10 md:pl-12"
             )}
             style={{
-                marginLeft: depth === 0 ? 0 : `${depth * 28}px`,
-                paddingLeft: depth === 0 ? "4rem" : "3.1rem"
+                marginLeft: depth === 0 ? 0 : `${depth * 40}px`,
+                paddingLeft: depth === 0 ? "4.5rem" : "3.5rem"
             }}
         >
             {/* Threading Line Connectors (Perfectly Aligned) */}
             {hasReplies && (
-                <div className="absolute left-[1.15rem] md:left-[1.4rem] top-12 bottom-0 w-[1.5px] bg-white/10 group-hover:bg-blue-500/30 transition-colors z-0" />
+                <div className="absolute left-[1.25rem] md:left-[1.25rem] top-12 bottom-0 w-[1.5px] bg-white/10 group-hover:bg-blue-500/30 transition-colors z-0" />
             )}
 
             {depth > 0 && (
                 <div
-                    className="absolute top-[-2.5rem] border-l-[1.5px] border-b-[1.5px] border-white/10 opacity-50 rounded-bl-xl z-0"
+                    className="absolute top-[-3.5rem] border-l-[1.5px] border-b-[1.5px] border-white/10 opacity-50 rounded-bl-xl z-0"
                     style={{
-                        left: "-1.75rem",
-                        width: "1.75rem",
-                        height: "4rem"
+                        left: "-1.25rem", // Indent(40px) - ParentLine(20px) = 20px (1.25rem)
+                        width: "1.25rem",
+                        height: "5rem"
                     }}
                 />
             )}
