@@ -1298,7 +1298,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                             <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Libre</span>
                                         )}
                                         {selectedPixel.owner?.es_vip && (
-                                            <span className="text-[10px] font-black text-white bg-gradient-to-r from-amber-400 to-orange-500 px-2 py-0.5 rounded-full shadow-sm shadow-orange-200">VIP</span>
+                                            <img src="/vip-icon.png" alt="VIP" className="w-5 h-5 object-contain" />
                                         )}
                                     </div>
                                     <p className="text-slate-400 text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-2 mt-1">
@@ -1400,6 +1400,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                                 name={userProfile.nombre}
                                             />
                                             <span className="text-xs font-bold text-slate-800">{userProfile.nombre?.split(' ')[0]}</span>
+                                            {userProfile.es_vip && (
+                                                <img src="/vip-icon.png" alt="VIP" className="w-4 h-4 object-contain" />
+                                            )}
                                         </div>
                                     )}
                                 </div>

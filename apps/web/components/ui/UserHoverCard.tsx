@@ -64,7 +64,7 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
             return { label: 'Admin', color: 'bg-red-600 border-red-600 text-white' };
         }
         if (profile.es_vip) {
-            return { label: 'VIP', color: 'bg-purple-600 border-purple-600 text-white' };
+            return { label: 'VIP', color: 'transparent', isVip: true };
         }
         return { label: 'Colaborador', color: 'bg-zinc-600 border-zinc-600 text-white' };
     }, [profile]);
@@ -169,9 +169,13 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
                                             <h3 className="font-semibold text-white text-lg tracking-tight truncate shadow-black drop-shadow-sm">
                                                 {profile.nombre}
                                             </h3>
-                                            <span className={`px-2 py-[1px] rounded text-[10px] uppercase font-bold tracking-wide border ${badgeConfig.color}`}>
-                                                {badgeConfig.label}
-                                            </span>
+                                            {profile.es_vip ? (
+                                                <img src="/vip-icon.png" alt="VIP" className="w-6 h-6 object-contain" />
+                                            ) : (
+                                                <span className={`px-2 py-[1px] rounded text-[10px] uppercase font-bold tracking-wide border ${badgeConfig.color}`}>
+                                                    {badgeConfig.label}
+                                                </span>
+                                            )}
                                         </div>
                                         {profile.bio && (
                                             <p className="text-gray-400 text-sm line-clamp-1">

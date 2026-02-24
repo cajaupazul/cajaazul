@@ -263,6 +263,9 @@ export default function AuthenticatedLayout({
               <div className="text-left min-w-0">
                 <div className="flex items-center gap-1.5">
                   <p className="text-sm font-semibold text-bb-text truncate">{profile?.nombre || 'Usuario'}</p>
+                  {profile?.es_vip && (
+                    <img src="/vip-icon.png" alt="VIP" className="w-4 h-4 object-contain shadow-sm" />
+                  )}
                   {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                     <ShieldCheck className="w-3.5 h-3.5 text-blue-400 fill-blue-400/10" />
                   )}

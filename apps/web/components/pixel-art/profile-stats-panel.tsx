@@ -60,11 +60,16 @@ export const ProfileStatsPanel: React.FC<ProfileStatsPanelProps> = ({
                         )}
                     </div>
                     <div>
-                        <h5 className="font-bold text-slate-800 text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
-                            {userProfile?.nombre || 'Usuario'}
-                        </h5>
+                        <div className="flex items-center gap-1.5">
+                            <h5 className="font-bold text-slate-800 text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
+                                {userProfile?.nombre || 'Usuario'}
+                            </h5>
+                            {userProfile?.es_vip && (
+                                <img src="/vip-icon.png" alt="VIP" className="w-4 h-4 object-contain shadow-sm" />
+                            )}
+                        </div>
                         <p className="text-[10px] text-slate-400 uppercase tracking-wide">
-                            Nivel {userProfile?.es_vip ? 'VIP' : '3'}
+                            Nivel {userProfile?.es_vip ? '99' : '3'}
                         </p>
                     </div>
                 </div>

@@ -400,10 +400,7 @@ export default function ProfilePage() {
                     <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 fill-blue-500/10" />
                   )}
                   {isVip && (
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-600/20 border border-amber-500/20 text-amber-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
-                      <Crown className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
-                      VIP Account
-                    </div>
+                    <img src="/vip-icon.png" alt="VIP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-lg" />
                   )}
                 </div>
               </div>

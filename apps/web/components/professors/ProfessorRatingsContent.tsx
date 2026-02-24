@@ -294,6 +294,9 @@ const CommentItem = ({
                         <p className="font-bold text-white text-[13px] md:text-sm hover:text-blue-400 cursor-pointer transition-colors tracking-tight">
                             {comment.profiles?.nombre}
                         </p>
+                        {comment.profiles?.es_vip && (
+                            <img src="/vip-icon.png" alt="VIP" className="w-5 h-5 object-contain" />
+                        )}
                         <p className="text-[10px] font-medium text-white/30 uppercase tracking-tighter">
                             hace {new Date(comment.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                         </p>
