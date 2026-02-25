@@ -54,35 +54,65 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
         try {
             const periodo = periodoOverride || parsedData.periodo;
 
-            // Delete existing data for this periodo to avoid duplicates
-            await supabase
-                .from('oferta_academica')
-                .delete()
-                .eq('periodo', periodo);
+            // 1. Extract Unique Courses (Normalized)
+            const coursesMap = new Map<string, any>();
+            parsedData.ofertas.forEach(o => {
+                if (!coursesMap.has(o.codigo_curso)) {
+                    coursesMap.set(o.codigo_curso, {
+                        id: o.codigo_curso,
+                        name: o.nombre_curso,
+                        credits: o.creditos
+                    });
+                }
+            });
+            const courseRows = Array.from(coursesMap.values());
 
-            // Insert in batches of 500
-            const batchSize = 500;
-            const rows = parsedData.ofertas.map(o => ({
-                periodo,
-                codigo_curso: o.codigo_curso,
-                nombre_curso: o.nombre_curso,
-                seccion: o.seccion,
-                profesor: o.profesor || null,
-                creditos: o.creditos,
-                tipo: o.tipo,
-                dia: o.dia,
-                hora_inicio: o.hora_inicio,
-                hora_fin: o.hora_fin,
-                duracion: o.duracion,
-                cupos: o.cupos,
-                aula: o.aula || null,
-                uploaded_by: profile.id,
+            // 2. Extract Unique Sections (Normalized)
+            const sectionsMap = new Map<string, any>();
+            parsedData.ofertas.forEach(o => {
+                const sectionId = `${o.codigo_curso}-${o.seccion}`;
+                if (!sectionsMap.has(sectionId)) {
+                    sectionsMap.set(sectionId, {
+                        id: sectionId,
+                        course_id: o.codigo_curso,
+                        letter: o.seccion,
+                        teacher: o.profesor || 'Sin profesor',
+                        periodo: periodo
+                    });
+                }
+            });
+            const sectionRows = Array.from(sectionsMap.values());
+
+            // 3. Extract Schedule Blocks
+            const blockRows = parsedData.ofertas.map(o => ({
+                section_id: `${o.codigo_curso}-${o.seccion}`,
+                type: o.tipo,
+                day: o.dia,
+                start_time: o.hora_inicio,
+                end_time: o.hora_fin,
+                classroom: o.aula || null
             }));
 
-            for (let i = 0; i < rows.length; i += batchSize) {
-                const batch = rows.slice(i, i + batchSize);
-                const { error } = await supabase.from('oferta_academica').insert(batch);
-                if (error) throw error;
+            // PERSISTENCE (The Shield)
+            // A. Upsert Courses
+            const { error: cErr } = await supabase.from('sche_courses').upsert(courseRows);
+            if (cErr) throw cErr;
+
+            // B. Clean current periodo for sections (cascades to blocks)
+            // We do this to ensure we don't have stale sections if the PDF changed
+            const { error: dErr } = await supabase.from('sche_sections').delete().eq('periodo', periodo);
+            if (dErr) throw dErr;
+
+            // C. Insert Sections
+            const { error: sErr } = await supabase.from('sche_sections').insert(sectionRows);
+            if (sErr) throw sErr;
+
+            // D. Insert Blocks (Batched)
+            const batchSize = 500;
+            for (let i = 0; i < blockRows.length; i += batchSize) {
+                const batch = blockRows.slice(i, i + batchSize);
+                const { error: bErr } = await supabase.from('sche_schedule_blocks').insert(batch);
+                if (bErr) throw bErr;
             }
 
             setStep('done');
@@ -91,6 +121,7 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                 handleReset();
             }, 1500);
         } catch (err: any) {
+            console.error('[OFERTA_UPLOAD] Persistence error:', err);
             alert('Error al subir: ' + err.message);
         } finally {
             setUploading(false);

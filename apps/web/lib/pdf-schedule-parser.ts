@@ -10,13 +10,14 @@ export type ParsedOferta = {
     seccion: string;
     profesor: string;
     creditos: number;
-    tipo: string;       // CLASE, FINAL, PARCIAL
+    tipo: string;       // CLASE, FINAL, PARCIAL, PRACTICA
     dia: string;        // LUN, MAR, MIE, JUE, VIE, SAB, DOM
     hora_inicio: string; // HH:MM
     hora_fin: string;    // HH:MM
     duracion: number;
     cupos: number;
     aula: string;
+    section_id?: string; // codigo_curso-seccion
 };
 
 const DIAS_VALIDOS = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'];
@@ -168,26 +169,30 @@ function parseLines(allLines: string[]): {
     let currentSeccion = '';
     let currentProfesor = '';
 
-    // Robust Regex patterns
-    const profPattern = /[A-ZÀ-ÿ]{4,}\s+[A-ZÀ-ÿ\s]{2,},\s+[A-ZÀ-ÿ\s]{2,}/i; // matches "APELLIDO, Nombre"
-    const sectionPattern = /^[A-Z0-9]{1,2}$/; // matches "A", "B", "11", etc.
+    // State Mapping for preventing duplicates (The Shield)
+    const sectionsSeen = new Set<string>(); // "Course-Letter"
+    const blocksSeen = new Set<string>();   // "Course-Letter-Type-Day-Start-End"
+
+    // Robust Regex patterns for anchors
+    const courseHeaderPattern = /^(\d{6})\s*[-–]\s*(.+)/;
+    const sectionAnchorPattern = /^[A-Z]\s{2,}/; // Matches "A  " at start of line
     const diaRegex = new RegExp(`\\b(${DIAS_VALIDOS.join('|')})\\b`, 'i');
     const tipoRegex = new RegExp(`\\b(${TIPOS_VALIDOS.join('|')})\\b`, 'i');
 
     for (const line of uniqueLines) {
         const columns = line.split('\t').map(p => p.trim());
-        if (columns.length === 0 || !columns.some(c => c)) continue;
+        const rawLine = line.trim();
+        if (!rawLine) continue;
 
         // Skip noise
-        if (columns.some(p => /^(Secc|Tipo|Docentes|Cred|Teoría|Día|Horario|Duración|Cupos|Aula|Horarios Ofertados)$/i.test(p))) continue;
-        if (line.includes('Se sugiere revisar') || line.includes('Dirección de Asuntos')) continue;
+        if (rawLine.includes('Se sugiere revisar') || rawLine.includes('Dirección de Asuntos')) continue;
 
-        // 1. Course Header Detection
-        const courseHeaderMatch = line.match(/(\d{6})\s*[-–]\s*(.+)/);
+        // 1. Course Header Detection (Anchor: ^\d{6} - )
+        const courseHeaderMatch = rawLine.match(courseHeaderPattern);
         if (courseHeaderMatch) {
             currentCodigo = courseHeaderMatch[1];
             let namePart = courseHeaderMatch[2].trim();
-            const creditMatch = line.match(/(\d+[.,]\d+)\s*$/);
+            const creditMatch = rawLine.match(/(\d+[.,]\d+)\s*$/);
             if (creditMatch) {
                 currentCreditos = parseFloat(creditMatch[1].replace(',', '.'));
                 namePart = namePart.replace(creditMatch[0], '').trim();
@@ -200,65 +205,69 @@ function parseLines(allLines: string[]): {
 
         if (!currentCodigo) continue;
 
-        // 2. Section detection (Anchor: first column is a section code)
+        // 2. Section Detection (Anchor: ^[A-Z]  )
+        // Check both the raw line start AND the first column
+        const startsWithSection = sectionAnchorPattern.test(rawLine);
         const firstCol = columns[0];
-        if (firstCol && sectionPattern.test(firstCol)) {
-            const nextSec = firstCol.toUpperCase();
-            if (nextSec !== currentSeccion) {
-                currentSeccion = nextSec;
-                currentProfesor = 'Sin profesor';
+        const isSectionLine = startsWithSection || (firstCol && /^[A-Z]$/.test(firstCol));
+
+        if (isSectionLine) {
+            const letter = (startsWithSection ? rawLine[0] : firstCol).toUpperCase();
+            const sectionId = `${currentCodigo}-${letter}`;
+
+            // State Logic: If it's a new course-letter combination
+            if (!sectionsSeen.has(sectionId)) {
+                sectionsSeen.add(sectionId);
+                currentSeccion = letter;
+
+                // Extract teacher if present in this line
+                const profMatch = rawLine.match(/[A-ZÀ-ÿ]{4,}\s+[A-ZÀ-ÿ\s]{2,},\s+[A-ZÀ-ÿ\s]{2,}/i);
+                if (profMatch) {
+                    let prof = profMatch[0].trim();
+                    const cleaners = [...DIAS_VALIDOS, ...TIPOS_VALIDOS];
+                    prof = prof.replace(new RegExp(`\\s(${cleaners.join('|')})(\\s|$)`, 'i'), '').trim();
+                    currentProfesor = prof;
+                } else {
+                    currentProfesor = 'Sin profesor';
+                }
+            } else {
+                // Return state for continuation lines (page breaks)
+                currentSeccion = letter;
             }
         }
 
-        // 3. Professor detection (fuzzy regex match + cleaning)
-        const profMatch = line.match(profPattern);
-        if (profMatch) {
-            let prof = profMatch[0].trim();
-            // Clean trailings: Day or Type keywords sometimes merge into the name
-            const cleaners = [...DIAS_VALIDOS, ...TIPOS_VALIDOS];
-            const cleanRegex = new RegExp(`\\s(${cleaners.join('|')})(\\s|$)`, 'i');
-            prof = prof.replace(cleanRegex, '').trim();
-
-            // Re-verify if it's a real name (should have comma and multiple parts)
-            if (prof.includes(',') && prof.length > 5) {
-                currentProfesor = prof;
-            }
-        }
-
-        // 4. Schedule Entry Detection (Regex on the whole line for max resilience)
-        const diaMatch = line.match(diaRegex);
-        const timeMatch = line.match(TIME_REGEX);
+        // 3. Schedule Block Detection (Anchor: Time + Day)
+        const diaMatch = rawLine.match(diaRegex);
+        const timeMatch = rawLine.match(TIME_REGEX);
 
         if (diaMatch && timeMatch && currentSeccion) {
             const dia = diaMatch[1].toUpperCase();
-            const timeStr = timeMatch[0];
             const startStr = timeMatch[1];
             const endStr = timeMatch[2];
 
-            // Determine Type
             let tipo = 'CLASE';
-            const typeMatch = line.match(tipoRegex);
-            if (typeMatch) tipo = typeMatch[1].toUpperCase();
+            const typeMatch = rawLine.match(tipoRegex);
+            if (typeMatch) {
+                const rawTipo = typeMatch[1].toUpperCase();
+                if (rawTipo === 'PRACDIRIGI' || rawTipo === 'PRACCALIFI' || rawTipo === 'PRÁCTICA') {
+                    tipo = 'PRACTICA';
+                } else if (['FINAL', 'PARCIAL'].includes(rawTipo)) {
+                    tipo = rawTipo;
+                }
+            }
+
+            // The Shield: In-memory duplicate prevention
+            const blockKey = `${currentCodigo}-${currentSeccion}-${tipo}-${dia}-${startStr}-${endStr}`;
+            if (blocksSeen.has(blockKey)) continue;
+            blocksSeen.add(blockKey);
 
             const [h1, m1] = startStr.split(':').map(Number);
             const [h2, m2] = endStr.split(':').map(Number);
             const duracion = (h2 * 60 + m2) - (h1 * 60 + m1);
 
-            // Cupos and Aula (usually trailing numbers and code)
-            let cupos = 0;
-            let aula = '';
-            const afterTime = line.split(timeStr)[1] || '';
-            const afterParts = afterTime.split(/[\t ]+/).filter(Boolean);
-
-            const cuposPart = afterParts.find(p => /^\d+$/.test(p));
-            if (cuposPart) cupos = parseInt(cuposPart);
-
-            const aulaPart = afterParts.find(p => /([A-Z]-?\d{3}|[A-Z]-?PEND|X\s*-\d{3})/i.test(p));
-            if (aulaPart) {
-                aula = aulaPart.replace(/\s+/g, '');
-            } else if (line.includes('A-PEND')) {
-                aula = 'PEND';
-            }
+            let aula = 'PEND';
+            const aulaPart = rawLine.match(/([A-Z]-?\d{3}|[A-Z]-?PEND|X\s*-\d{3})/i);
+            if (aulaPart) aula = aulaPart[0].replace(/\s+/g, '');
 
             rawOfertas.push({
                 codigo_curso: currentCodigo,
@@ -266,25 +275,19 @@ function parseLines(allLines: string[]): {
                 seccion: currentSeccion,
                 profesor: currentProfesor,
                 creditos: currentCreditos,
-                tipo: (tipo === 'PRACDIRIGI' || tipo === 'PRACCALIFI') ? 'CLASE' : tipo,
+                tipo,
                 dia,
                 hora_inicio: startStr,
                 hora_fin: endStr,
                 duracion: duracion > 0 ? duracion : 0,
-                cupos,
-                aula: aula || 'PEND',
+                cupos: 0,
+                aula,
             });
         }
     }
 
-    // De-duplicate final results (same course, section, day, time, type)
-    const seen = new Set<string>();
-    const ofertas = rawOfertas.filter(o => {
-        const key = `${o.codigo_curso}|${o.seccion}|${o.dia}|${o.hora_inicio}|${o.hora_fin}|${o.tipo}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    });
+    const ofertas = rawOfertas;
+
 
     if (ofertas.length === 0) {
         errors.push('No se encontraron horarios en el archivo. Verifica que el formato sea correcto.');

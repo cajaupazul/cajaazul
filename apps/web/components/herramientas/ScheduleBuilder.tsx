@@ -43,9 +43,9 @@ export default function ScheduleBuilder() {
     useEffect(() => {
         const fetchPeriodos = async () => {
             const { data } = await supabase
-                .from('oferta_academica')
+                .from('sche_sections')
                 .select('periodo')
-                .order('created_at', { ascending: false });
+                .order('periodo', { ascending: false });
 
             if (data) {
                 const unique = [...new Set(data.map(d => d.periodo))];
@@ -57,18 +57,50 @@ export default function ScheduleBuilder() {
         fetchPeriodos();
     }, []);
 
-    // Fetch ofertas for selected periodo
+    // Fetch ofertas for selected periodo (Normalized Join)
     useEffect(() => {
         if (!selectedPeriodo) return;
         const fetchOfertas = async () => {
             setLoading(true);
-            const { data } = await supabase
-                .from('oferta_academica')
-                .select('*')
-                .eq('periodo', selectedPeriodo)
-                .order('nombre_curso');
 
-            if (data) setOfertas(data);
+            // 1. Fetch courses
+            const { data: courses } = await supabase.from('sche_courses').select('*');
+            // 2. Fetch sections and their schedule blocks
+            const { data: sections } = await supabase
+                .from('sche_sections')
+                .select('*, sche_schedule_blocks(*)')
+                .eq('periodo', selectedPeriodo);
+
+            if (sections) {
+                // Flatten to maintain compatibility with existing UI components
+                const flat: OfertaAcademica[] = [];
+                sections.forEach(sec => {
+                    const course = courses?.find(c => c.id === sec.course_id);
+                    const blocks = (sec as any).sche_schedule_blocks || [];
+
+                    blocks.forEach((block: any) => {
+                        flat.push({
+                            id: block.id,
+                            periodo: sec.periodo,
+                            codigo_curso: sec.course_id,
+                            nombre_curso: course?.name || 'Curso Desconocido',
+                            seccion: sec.letter,
+                            profesor: sec.teacher,
+                            creditos: Number(course?.credits || 0),
+                            tipo: block.type,
+                            dia: block.day,
+                            hora_inicio: block.start_time,
+                            hora_fin: block.end_time,
+                            duracion: 0,
+                            cupos: 0,
+                            aula: block.classroom || 'PEND',
+                            // Add metadata for section-based selection
+                            section_id: sec.id
+                        } as any);
+                    });
+                });
+                setOfertas(flat);
+            }
             setLoading(false);
         };
         fetchOfertas();
@@ -97,19 +129,19 @@ export default function ScheduleBuilder() {
 
     const loadSchedule = (schedule: UserSchedule) => {
         setActiveScheduleId(schedule.id);
-        const sectionIds = schedule.secciones || [];
+        const sectionIds = schedule.secciones || []; // Now expects Course-Section IDs
 
-        // Reconstruct selectedCourses and selectedSections from IDs
         const newCourses = new Set<string>();
         const newSections = new Map<string, Set<string>>();
 
         for (const oferta of ofertas) {
-            if (sectionIds.includes(oferta.id)) {
-                newCourses.add(oferta.codigo_curso);
-                if (!newSections.has(oferta.codigo_curso)) {
-                    newSections.set(oferta.codigo_curso, new Set());
+            const o = oferta as any;
+            if (sectionIds.includes(o.section_id)) {
+                newCourses.add(o.codigo_curso);
+                if (!newSections.has(o.codigo_curso)) {
+                    newSections.set(o.codigo_curso, new Set());
                 }
-                newSections.get(oferta.codigo_curso)!.add(oferta.seccion);
+                newSections.get(o.codigo_curso)!.add(o.seccion);
             }
         }
 
@@ -240,8 +272,8 @@ export default function ScheduleBuilder() {
         setSaving(true);
 
         try {
-            // Collect all selected oferta IDs
-            const sectionIds: string[] = allSelectedOfertas.map(o => o.id);
+            // Collect unique section IDs (The Shield: we save by section, not by block)
+            const sectionIds = Array.from(new Set(allSelectedOfertas.map(o => (o as any).section_id))).filter(Boolean);
 
             if (activeScheduleId) {
                 // Update existing

@@ -1,91 +1,65 @@
 -- ============================================
--- Schedule Builder: oferta_academica + user_schedules
--- Run this in your Supabase SQL Editor
+-- Schedule Builder: Normalized Schema (The Shield)
+-- Tables: sche_courses, sche_sections, sche_schedule_blocks
 -- ============================================
 
--- 1. Tabla principal: Oferta Académica (datos parseados del PDF)
-CREATE TABLE IF NOT EXISTS public.oferta_academica (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  periodo text NOT NULL,                    -- ej: "2026-I PERIODO-PRE"
-  codigo_curso text NOT NULL,               -- ej: "120266"
-  nombre_curso text NOT NULL,               -- ej: "Antiguo Perú, Arqueología..."
-  seccion text NOT NULL DEFAULT 'A',        -- ej: "A", "B"
-  profesor text,                            -- nombre del docente
-  creditos numeric DEFAULT 0,
-  tipo text DEFAULT 'CLASE',                -- CLASE, FINAL, PARCIAL
-  dia text NOT NULL,                        -- LUN, MAR, MIE, JUE, VIE, SAB, DOM
-  hora_inicio time NOT NULL,
-  hora_fin time NOT NULL,
-  duracion integer DEFAULT 0,               -- minutos
-  cupos integer DEFAULT 0,
-  aula text,
-  uploaded_by uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
-  created_at timestamptz DEFAULT now()
+-- 1. Courses Table
+CREATE TABLE IF NOT EXISTS public.sche_courses (
+  id TEXT PRIMARY KEY, -- ej: "120133" (Course Code)
+  name TEXT NOT NULL,
+  credits NUMERIC NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 2. Tabla de horarios guardados por usuarios
-CREATE TABLE IF NOT EXISTS public.user_schedules (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  periodo text NOT NULL,
-  nombre text NOT NULL DEFAULT 'Horario 1',
-  secciones jsonb DEFAULT '[]'::jsonb,      -- array de IDs de oferta_academica
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
+-- 2. Sections Table
+CREATE TABLE IF NOT EXISTS public.sche_sections (
+  id TEXT PRIMARY KEY, -- ej: "120133-A" (Composite Key)
+  course_id TEXT REFERENCES public.sche_courses(id) ON DELETE CASCADE,
+  letter TEXT NOT NULL,
+  teacher TEXT NOT NULL,
+  periodo TEXT NOT NULL,
+  UNIQUE(course_id, letter, periodo) -- The Shield: prevents duplicate sections in same period
 );
 
--- 3. Índices para performance
-CREATE INDEX IF NOT EXISTS idx_oferta_periodo ON public.oferta_academica(periodo);
-CREATE INDEX IF NOT EXISTS idx_oferta_codigo ON public.oferta_academica(codigo_curso);
-CREATE INDEX IF NOT EXISTS idx_oferta_nombre ON public.oferta_academica(nombre_curso);
-CREATE INDEX IF NOT EXISTS idx_user_schedules_user ON public.user_schedules(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_schedules_periodo ON public.user_schedules(periodo);
+-- 3. Schedule Blocks Table
+CREATE TABLE IF NOT EXISTS public.sche_schedule_blocks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  section_id TEXT REFERENCES public.sche_sections(id) ON DELETE CASCADE,
+  type TEXT CHECK (type IN ('CLASE','PARCIAL','FINAL','PRACTICA')),
+  day TEXT NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  classroom TEXT,
+  UNIQUE(section_id, type, day, start_time, end_time) -- The Shield: prevents duplicate schedule lines
+);
 
--- 4. RLS Policies
-ALTER TABLE public.oferta_academica ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_schedules ENABLE ROW LEVEL SECURITY;
+-- RLS
+ALTER TABLE public.sche_courses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sche_sections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sche_schedule_blocks ENABLE ROW LEVEL SECURITY;
 
--- oferta_academica: todos los autenticados pueden leer
-CREATE POLICY "oferta_academica_select" ON public.oferta_academica
-  FOR SELECT TO authenticated USING (true);
+-- Select policies
+DROP POLICY IF EXISTS "sche_courses_select" ON public.sche_courses;
+CREATE POLICY "sche_courses_select" ON public.sche_courses FOR SELECT TO authenticated USING (true);
 
--- oferta_academica: solo admin/superadmin pueden insertar
-CREATE POLICY "oferta_academica_insert" ON public.oferta_academica
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role IN ('admin', 'superadmin')
-    )
-  );
+DROP POLICY IF EXISTS "sche_sections_select" ON public.sche_sections;
+CREATE POLICY "sche_sections_select" ON public.sche_sections FOR SELECT TO authenticated USING (true);
 
--- oferta_academica: solo admin/superadmin pueden eliminar
-CREATE POLICY "oferta_academica_delete" ON public.oferta_academica
-  FOR DELETE TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role IN ('admin', 'superadmin')
-    )
-  );
+DROP POLICY IF EXISTS "sche_schedule_blocks_select" ON public.sche_schedule_blocks;
+CREATE POLICY "sche_schedule_blocks_select" ON public.sche_schedule_blocks FOR SELECT TO authenticated USING (true);
 
--- user_schedules: usuarios solo ven sus propios horarios
-CREATE POLICY "user_schedules_select" ON public.user_schedules
-  FOR SELECT TO authenticated
-  USING (user_id = auth.uid());
+-- Admin policies
+DROP POLICY IF EXISTS "sche_admin_all_courses" ON public.sche_courses;
+CREATE POLICY "sche_admin_all_courses" ON public.sche_courses FOR ALL TO authenticated 
+USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'superadmin')));
 
--- user_schedules: usuarios solo crean sus propios horarios
-CREATE POLICY "user_schedules_insert" ON public.user_schedules
-  FOR INSERT TO authenticated
-  WITH CHECK (user_id = auth.uid());
+DROP POLICY IF EXISTS "sche_admin_all_sections" ON public.sche_sections;
+CREATE POLICY "sche_admin_all_sections" ON public.sche_sections FOR ALL TO authenticated 
+USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'superadmin')));
 
--- user_schedules: usuarios solo editan sus propios horarios
-CREATE POLICY "user_schedules_update" ON public.user_schedules
-  FOR UPDATE TO authenticated
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
+DROP POLICY IF EXISTS "sche_admin_all_blocks" ON public.sche_schedule_blocks;
+CREATE POLICY "sche_admin_all_blocks" ON public.sche_schedule_blocks FOR ALL TO authenticated 
+USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'superadmin')));
 
--- user_schedules: usuarios solo eliminan sus propios horarios
-CREATE POLICY "user_schedules_delete" ON public.user_schedules
-  FOR DELETE TO authenticated
-  USING (user_id = auth.uid());
+-- Index for period filtering
+CREATE INDEX IF NOT EXISTS idx_sche_sections_periodo ON public.sche_sections(periodo);
