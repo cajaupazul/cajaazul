@@ -213,17 +213,16 @@ function parseLines(allLines: string[]): {
 
         if (!currentCodigo) continue;
 
-        // 2. Section Detection (Anchor: ^[A-Z]  )
-        // Detects: "A   CHAVEZ SARMIENTO..." or "B   OLANO CRUCES..."
-        const startsWithSectionCell = sectionAnchorPattern.test(rawLine);
-        const firstCol = columns[0];
-        const isSectionIndicator = startsWithSectionCell || (firstCol && /^[A-Z]$/.test(firstCol));
+        // 2. Section Detection
+        // We ensure the section code is a standalone word of 1-3 chars to avoid hijacking (e.g., CLASE -> CLA)
+        const firstWord = rawLine.split(/\s+/)[0];
+        const seccionMatch = rawLine.match(/^([A-Z0-9]{1,3})\s+/);
+        const isStandaloneTag = seccionMatch && seccionMatch[1].length === firstWord.length;
+        const isKeyword = TIPOS_VALIDOS.concat(['FINAL', 'PARCIAL']).some(k => k.toUpperCase() === firstWord.toUpperCase());
 
-        if (isSectionIndicator) {
-            const letter = (startsWithSectionCell ? rawLine[0] : firstCol).toUpperCase();
+        if (isStandaloneTag && !isKeyword) {
+            const letter = seccionMatch![1].toUpperCase();
             const sectionId = `${currentCodigo}-${letter}`;
-
-            // Sticky Section State
             currentSeccion = letter;
 
             // If we've never seen this section, extract the teacher
@@ -286,24 +285,18 @@ function parseLines(allLines: string[]): {
                     const bestType = typesBefore.length > 0 ? typesBefore[typesBefore.length - 1][1] : typeMatches[0][1];
                     const rawTipo = bestType.toUpperCase();
 
-                    // Filter 1: Ignore Exams for now (FINAL/PARCIAL)
-                    if (['FINAL', 'PARCIAL'].includes(rawTipo)) {
-                        continue;
-                    }
+                    // Filter 1: Ignore Exams
+                    if (['FINAL', 'PARCIAL'].includes(rawTipo)) continue;
 
                     // Filter 2: Practice Logic
-                    // PRACCALIFI is usually just an exam, skip it.
-                    // PRACDIRIGI or generic PRÁCTICA are regular classes.
-                    if (rawTipo === 'PRACCALIFI') {
-                        continue;
-                    }
+                    if (rawTipo === 'PRACCALIFI') continue;
 
                     if (rawTipo === 'PRACDIRIGI' || rawTipo.includes('PRÁCTICA')) {
                         tipo = 'PRACTICA';
                     } else if (rawTipo === 'CLASE') {
                         tipo = 'CLASE';
                     } else {
-                        tipo = rawTipo; // TALLER, LABORATORIO, etc.
+                        tipo = rawTipo;
                     }
                 }
 
