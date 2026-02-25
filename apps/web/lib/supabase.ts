@@ -195,6 +195,35 @@ export type ProfessorRating = {
   profiles?: Profile;
 };
 
+export type OfertaAcademica = {
+  id: string;
+  periodo: string;
+  codigo_curso: string;
+  nombre_curso: string;
+  seccion: string;
+  profesor: string | null;
+  creditos: number;
+  tipo: string;
+  dia: string;
+  hora_inicio: string;
+  hora_fin: string;
+  duracion: number;
+  cupos: number;
+  aula: string | null;
+  uploaded_by: string | null;
+  created_at: string;
+};
+
+export type UserSchedule = {
+  id: string;
+  user_id: string;
+  periodo: string;
+  nombre: string;
+  secciones: string[];
+  created_at: string;
+  updated_at: string;
+};
+
 // Funciones helper para obtener profesores de un curso
 export async function getProfessorsForCourse(courseId: string) {
   const { data, error } = await supabase
