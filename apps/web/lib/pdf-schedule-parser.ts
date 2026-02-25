@@ -118,9 +118,17 @@ function parseLines(allLines: string[]): {
 } {
     let periodo = '';
 
+    // De-duplicate raw lines to handle PDF extraction artifacts (layered text)
+    const uniqueLines: string[] = [];
+    for (let i = 0; i < allLines.length; i++) {
+        if (i === 0 || allLines[i] !== allLines[i - 1]) {
+            uniqueLines.push(allLines[i]);
+        }
+    }
+
     // Try to extract periodo from header lines
-    for (const line of allLines.slice(0, 15)) {
-        const periodoMatch = line.match(/Horarios\s+ofertados:\s*(.+)/i);
+    for (const line of uniqueLines.slice(0, 20)) {
+        const periodoMatch = line.match(/Horarios\s+ofertados:\s*(.+)/i) || line.match(/Horarios\s+Ofertados:\s*(.+)/i);
         if (periodoMatch) {
             periodo = periodoMatch[1].trim();
             break;
@@ -136,7 +144,7 @@ function parseLines(allLines: string[]): {
         periodo = 'Periodo sin identificar';
     }
 
-    const ofertas: ParsedOferta[] = [];
+    const rawOfertas: ParsedOferta[] = [];
     const errors: string[] = [];
 
     let currentCodigo = '';
@@ -145,15 +153,15 @@ function parseLines(allLines: string[]): {
     let currentSeccion = '';
     let currentProfesor = '';
 
-    for (const line of allLines) {
+    for (const line of uniqueLines) {
         const parts = line.split(/[\t]+/).map(p => p.trim()).filter(Boolean);
         if (parts.length === 0) continue;
 
-        // Skip header lines
-        if (parts.some(p => /^(Secc|Tipo|Docentes|Cred|Teoría|Día|Horario|Duración|Cupos|Aula)$/i.test(p))) {
+        // Skip header/footer noise
+        if (parts.some(p => /^(Secc|Tipo|Docentes|Cred|Teoría|Día|Horario|Duración|Cupos|Aula|Horarios Ofertados)$/i.test(p))) {
             continue;
         }
-        if (parts.some(p => /^(CURSOS ACAD|Dirección de|Horarios ofertados)/i.test(p))) {
+        if (parts.some(p => /^(CURSOS ACAD|Dirección de|Horas Tot|Periodo Acad|Se sugiere revisar)/i.test(p))) {
             continue;
         }
         if (parts.some(p => /^PREREQUISITO/i.test(p))) {
@@ -185,13 +193,21 @@ function parseLines(allLines: string[]): {
             continue;
         }
 
-        // Detect section line: single letter (A, B, C...) possibly followed by professor name
-        const sectionMatch = parts[0].match(/^([A-Z])$/);
-        if (sectionMatch && currentCodigo) {
-            currentSeccion = sectionMatch[1];
+        // Detect section line: single letter/alphanumeric code possibly followed by professor name
+        // Pattern: [Letter] usually at start. Sometimes "Sección X"
+        const possibleSeccion = parts[0].length <= 2 ? parts[0] : null;
+        if (possibleSeccion && /^[A-Z0-9]$/.test(possibleSeccion) && currentCodigo) {
+            // If it's the same section, don't clear professor unless we find a new one
+            if (currentSeccion !== possibleSeccion) {
+                currentSeccion = possibleSeccion;
+                currentProfesor = ''; // New section starts
+            }
+
             if (parts.length > 1) {
                 const possibleProf = parts.slice(1).join(' ');
-                if (!TIPOS_VALIDOS.includes(possibleProf.toUpperCase()) && !DIAS_VALIDOS.includes(possibleProf.toUpperCase())) {
+                // Only treat as professor if it doesn't look like a scheduled day/time/type
+                if (!TIPOS_VALIDOS.includes(possibleProf.toUpperCase()) &&
+                    !DIAS_VALIDOS.some(d => possibleProf.toUpperCase().includes(d))) {
                     currentProfesor = possibleProf;
                 }
             }
@@ -220,12 +236,12 @@ function parseLines(allLines: string[]): {
                     cupos = parseInt(numericParts[0]) || 0;
                 }
 
-                const aulaMatch = line.match(/([A-Z]-?\d{3}|[A-Z]-?PEND)/i);
+                const aulaMatch = line.match(/([A-Z]-?\d{3}|[A-Z]-?PEND|X\s*-\d{3})/i);
                 if (aulaMatch) {
-                    aula = aulaMatch[1];
+                    aula = aulaMatch[1].replace(/\s+/g, '');
                 }
 
-                ofertas.push({
+                rawOfertas.push({
                     codigo_curso: currentCodigo,
                     nombre_curso: currentNombre,
                     seccion: currentSeccion || 'A',
@@ -242,6 +258,15 @@ function parseLines(allLines: string[]): {
             }
         }
     }
+
+    // De-duplicate final results (same course, section, day, time, type)
+    const seen = new Set<string>();
+    const ofertas = rawOfertas.filter(o => {
+        const key = `${o.codigo_curso}|${o.seccion}|${o.dia}|${o.hora_inicio}|${o.hora_fin}|${o.tipo}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
 
     if (ofertas.length === 0) {
         errors.push('No se encontraron horarios en el archivo. Verifica que el formato sea correcto.');
