@@ -92,10 +92,10 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
             // 2. Extract Unique Sections (Normalized)
             const sectionsMap = new Map<string, any>();
             parsedData.ofertas.forEach(o => {
-                const sectionId = `${o.codigo_curso}-${o.seccion}`;
-                if (!sectionsMap.has(sectionId)) {
-                    sectionsMap.set(sectionId, {
-                        id: sectionId,
+                const section_id = `${periodo}-${o.codigo_curso}-${o.seccion}`;
+                if (!sectionsMap.has(section_id)) {
+                    sectionsMap.set(section_id, {
+                        id: section_id,
                         course_id: o.codigo_curso,
                         letter: o.seccion,
                         teacher: o.profesor || 'Sin profesor',
@@ -107,7 +107,7 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
 
             // 3. Extract Schedule Blocks
             const blockRows = parsedData.ofertas.map(o => ({
-                section_id: `${o.codigo_curso}-${o.seccion}`,
+                section_id: `${periodo}-${o.codigo_curso}-${o.seccion}`,
                 type: o.tipo,
                 day: o.dia,
                 start_time: o.hora_inicio,

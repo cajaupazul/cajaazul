@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CalendarDays, Upload, ArrowRight } from 'lucide-react';
+import { CalendarDays, Upload, ArrowRight, Trash2, AlertTriangle } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
 import { useProfile } from '@/lib/profile-context';
+import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import UploadOfertaModal from '@/components/herramientas/upload-oferta-modal';
 
@@ -11,7 +12,33 @@ export default function HerramientasPage() {
     const { colors } = useTheme();
     const { profile } = useProfile();
     const [showUploadModal, setShowUploadModal] = useState(false);
+    const [clearing, setClearing] = useState(false);
     const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
+
+    const handleClearAll = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!confirm('¿Estás SEGURO de que quieres BORRAR TODA LA BASE DE DATOS de horarios? (Cursos, Secciones y Bloques). Esta acción es irreversible.')) {
+            return;
+        }
+
+        setClearing(true);
+        try {
+            // Delete all sections (cascades to blocks)
+            const { error: sErr } = await supabase.from('sche_sections').delete().neq('id', 'dummy');
+            // Delete all courses
+            const { error: cErr } = await supabase.from('sche_courses').delete().neq('id', 'dummy');
+
+            if (sErr || cErr) throw sErr || cErr;
+            alert('Base de datos de horarios limpiada con éxito.');
+        } catch (err: any) {
+            console.error('[CLEANUP] Error:', err);
+            alert('Error al limpiar: ' + err.message);
+        } finally {
+            setClearing(false);
+        }
+    };
 
     return (
         <div className="p-6 sm:p-8 max-w-7xl mx-auto">
@@ -66,10 +93,25 @@ export default function HerramientasPage() {
                         </p>
 
                         <div
-                            className="flex items-center gap-1.5 text-sm font-semibold transition-all group-hover:gap-2.5"
-                            style={{ color: colors?.primary }}
+                            className="flex items-center justify-between"
                         >
-                            Comenzar <ArrowRight className="w-4 h-4" />
+                            <div
+                                className="flex items-center gap-1.5 text-sm font-semibold transition-all group-hover:gap-2.5"
+                                style={{ color: colors?.primary }}
+                            >
+                                Comenzar <ArrowRight className="w-4 h-4" />
+                            </div>
+
+                            {isAdmin && (
+                                <button
+                                    onClick={handleClearAll}
+                                    disabled={clearing}
+                                    className="p-2 rounded-lg hover:bg-red-500/10 text-bb-text-secondary hover:text-red-400 transition-colors relative z-20"
+                                    title="Limpiar toda la base de datos"
+                                >
+                                    {clearing ? <div className="w-4 h-4 border-2 border-red-400 border-t-transparent animate-spin rounded-full" /> : <Trash2 className="w-4 h-4" />}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </Link>
