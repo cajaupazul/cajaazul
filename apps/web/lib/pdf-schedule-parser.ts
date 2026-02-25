@@ -168,16 +168,19 @@ function parseLines(allLines: string[]): {
     let currentSeccion = '';
     let currentProfesor = '';
 
+    // Regex patterns
+    const profPattern = /[A-Z]{3,}\s+[A-Z\s]{2,},\s+[A-Z\s]{2,}/i; // matches "APELLIDO, Nombre"
+    const sectionPattern = /^[A-Z0-9]{1,2}$/; // matches "A", "B", "11", etc.
+
     for (const line of uniqueLines) {
-        // Use tabs as primary column delimiter to respect the table structure
         const columns = line.split('\t').map(p => p.trim());
         if (columns.length === 0 || !columns.some(c => c)) continue;
 
-        // Skip header/footer noise
+        // Skip noise
         if (columns.some(p => /^(Secc|Tipo|Docentes|Cred|Teoría|Día|Horario|Duración|Cupos|Aula|Horarios Ofertados)$/i.test(p))) continue;
-        if (columns.some(p => /^(CURSOS ACAD|Dirección de|Horas Tot|Periodo Acad|Se sugiere revisar)/i.test(p))) continue;
+        if (line.includes('Se sugiere revisar')) continue;
 
-        // Course Header Detection (6 digits - Name)
+        // 1. Course Header Detection
         const courseHeaderMatch = line.match(/(\d{6})\s*[-–]\s*(.+)/);
         if (courseHeaderMatch) {
             currentCodigo = courseHeaderMatch[1];
@@ -195,40 +198,47 @@ function parseLines(allLines: string[]): {
 
         if (!currentCodigo) continue;
 
-        // Structured Parsing based on column positions from user's image
-        // [0] Sec | [1] Empty | [2] Professor | [3] Type | [4] Day | [5] Time | ...
+        // 2. Section & Professor State Management
+        // Look for a potential section code in the first few columns
+        const firstCol = columns[0];
+        const secondCol = columns[1];
 
-        // 1. Check for New Section in Column 0
-        const potentialSec = columns[0];
-        if (potentialSec && /^[A-Z0-9]{1,2}$/.test(potentialSec) && columns.length > 2) {
-            currentSeccion = potentialSec;
-            // Professor is usually in Column 2 on the same line as the Section code
-            const profCol = columns[2];
-            if (profCol && profCol.includes(',') && /[A-Z]/.test(profCol)) {
-                currentProfesor = profCol;
-            } else {
-                currentProfesor = 'Sin profesor';
+        // Check if the line starts with a NEW section code
+        if (firstCol && sectionPattern.test(firstCol) && columns.length > 2) {
+            const nextSec = firstCol.toUpperCase();
+            if (nextSec !== currentSeccion) {
+                currentSeccion = nextSec;
+                currentProfesor = 'Sin profesor'; // Reset for new section
             }
         }
 
-        // 2. Schedule Detection
-        // Look for Day and Time regex. We check all columns to be resilient if things shift.
+        // Search for Professor name in the line (APELLIDO, Nombre)
+        const profMatch = line.match(profPattern);
+        if (profMatch) {
+            const potentialProf = profMatch[0].trim();
+            // Professors are usually on the left/middle side of the line
+            if (line.indexOf(potentialProf) < line.length / 2) {
+                currentProfesor = potentialProf;
+            }
+        }
+
+        // 3. Schedule Entry Detection
         const diaIndex = columns.findIndex(c => DIAS_VALIDOS.includes(c.toUpperCase()));
         const timeIndex = columns.findIndex(c => TIME_REGEX.test(c));
 
-        if (diaIndex !== -1 && timeIndex !== -1) {
+        if (diaIndex !== -1 && timeIndex !== -1 && currentSeccion) {
             const dia = columns[diaIndex].toUpperCase();
             const timeStr = columns[timeIndex];
             const timeMatch = timeStr.match(TIME_REGEX);
 
             if (timeMatch) {
-                // Determine Type: It's usually just before the Day
                 let tipo = 'CLASE';
-                const potentialType = columns[diaIndex - 1]?.toUpperCase();
-                if (potentialType && TIPOS_VALIDOS.includes(potentialType)) {
-                    tipo = potentialType;
+                // Type is usually in a column before Day
+                const potentialType = columns.find((c, i) => i < diaIndex && TIPOS_VALIDOS.includes(c.toUpperCase()));
+                if (potentialType) {
+                    tipo = potentialType.toUpperCase();
                 } else {
-                    // Fallback
+                    // Fallback to searching the whole line for known type keywords
                     const foundType = TIPOS_VALIDOS.find(t => line.toUpperCase().includes(t));
                     if (foundType) tipo = foundType;
                 }
@@ -255,10 +265,10 @@ function parseLines(allLines: string[]): {
                 rawOfertas.push({
                     codigo_curso: currentCodigo,
                     nombre_curso: currentNombre,
-                    seccion: currentSeccion || 'A',
-                    profesor: currentProfesor || 'Sin profesor',
+                    seccion: currentSeccion,
+                    profesor: currentProfesor,
                     creditos: currentCreditos,
-                    tipo: tipo === 'PRACDIRIGI' ? 'CLASE' : tipo,
+                    tipo: (tipo === 'PRACDIRIGI' || tipo === 'PRACCALIFI') ? 'CLASE' : tipo,
                     dia,
                     hora_inicio,
                     hora_fin,
