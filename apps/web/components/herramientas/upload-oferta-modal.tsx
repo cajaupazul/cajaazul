@@ -32,12 +32,16 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
         setParsing(true);
 
         try {
+            console.log('[OFERTA_UPLOAD] Parsing file:', f.name, 'type:', ext);
             const result = await parseOfertaFile(f);
+            console.log('[OFERTA_UPLOAD] Parse result:', result.ofertas.length, 'ofertas,', result.errors.length, 'errors');
             setParsedData(result);
             setPeriodoOverride(result.periodo);
             setStep('preview');
         } catch (err: any) {
+            console.error('[OFERTA_UPLOAD] Parse error:', err);
             setParsedData({ periodo: '', ofertas: [], errors: [`Error al parsear: ${err.message}`] });
+            setStep('preview');
         } finally {
             setParsing(false);
         }
