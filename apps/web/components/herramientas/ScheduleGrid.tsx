@@ -8,6 +8,7 @@ type Props = {
     selectedOfertas: OfertaAcademica[];
     selectedCourses: Set<string>;
     onRemoveSection: (codigo: string, seccion: string) => void;
+    viewMode: 'clases' | 'examenes';
 };
 
 const DAYS = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'];
@@ -55,7 +56,7 @@ function generateTimeSlots() {
     return slots;
 }
 
-export default function ScheduleGrid({ selectedOfertas, selectedCourses, onRemoveSection }: Props) {
+export default function ScheduleGrid({ selectedOfertas, selectedCourses, onRemoveSection, viewMode }: Props) {
     const timeSlots = useMemo(() => generateTimeSlots(), []);
     const gridStartMin = START_HOUR * 60 + START_MIN;
     const gridEndMin = END_HOUR * 60 + END_MIN;
@@ -68,20 +69,25 @@ export default function ScheduleGrid({ selectedOfertas, selectedCourses, onRemov
         return COURSE_COLORS[idx % COURSE_COLORS.length];
     };
 
-    // Only show CLASE type entries on the grid
-    const classOfertas = selectedOfertas.filter(o => o.tipo === 'CLASE');
+    // Filter based on viewMode
+    const filteredOfertas = useMemo(() => {
+        return selectedOfertas.filter(o => {
+            const isExam = o.tipo === 'FINAL' || o.tipo === 'PARCIAL';
+            return viewMode === 'clases' ? !isExam : isExam;
+        });
+    }, [selectedOfertas, viewMode]);
 
     // Group blocks by day
     const blocksByDay = useMemo(() => {
         const map = new Map<string, OfertaAcademica[]>();
         for (const day of DAYS) map.set(day, []);
-        for (const o of classOfertas) {
+        for (const o of filteredOfertas) {
             const existing = map.get(o.dia) || [];
             existing.push(o);
             map.set(o.dia, existing);
         }
         return map;
-    }, [classOfertas]);
+    }, [filteredOfertas]);
 
     return (
         <div className="w-full overflow-x-auto">
@@ -109,7 +115,7 @@ export default function ScheduleGrid({ selectedOfertas, selectedCourses, onRemov
                 </div>
 
                 {/* Time grid */}
-                <div className="relative">
+                <div className="relative overflow-hidden" style={{ minHeight: '600px' }}>
                     {/* Time slot rows */}
                     {timeSlots.map((slot, idx) => {
                         const nextSlot = timeSlots[idx + 1];
@@ -157,24 +163,26 @@ export default function ScheduleGrid({ selectedOfertas, selectedCourses, onRemov
                             const topPercent = (startMin / totalMinutes) * 100;
                             const heightPercent = ((endMin - startMin) / totalMinutes) * 100;
 
-                            // Calculate left position: 80px for time col + day column
-                            // Each day col = (100% - 80px) / 7
                             const colWidth = `calc((100% - 80px) / 7)`;
                             const left = `calc(80px + ${dayIdx} * ${colWidth})`;
 
                             return (
                                 <div
-                                    key={`${oferta.id || bIdx}-${day}-${oferta.hora_inicio}`}
+                                    key={`${oferta.id || bIdx}-${day}-${oferta.hora_inicio}-${oferta.tipo}`}
                                     className="absolute rounded-md overflow-hidden group cursor-pointer transition-all hover:z-20 hover:shadow-lg"
                                     style={{
                                         top: `${topPercent}%`,
                                         height: `${heightPercent}%`,
                                         left,
-                                        width: colWidth,
+                                        width: `calc(${colWidth} - 2px)`,
                                         backgroundColor: color.bg,
                                         borderLeft: `3px solid ${color.border}`,
+                                        borderTop: `1px solid ${color.border}20`,
+                                        borderBottom: `1px solid ${color.border}20`,
+                                        borderRight: `1px solid ${color.border}20`,
                                         padding: '2px 4px',
                                         zIndex: 10,
+                                        margin: '0 1px',
                                     }}
                                 >
                                     {/* Remove button */}
@@ -188,12 +196,20 @@ export default function ScheduleGrid({ selectedOfertas, selectedCourses, onRemov
                                         <X className="w-2.5 h-2.5 text-white" />
                                     </button>
 
-                                    <p className="text-[10px] font-bold leading-tight" style={{ color: color.text }}>
-                                        {oferta.hora_inicio} - {oferta.hora_fin}
-                                    </p>
-                                    <p className="text-[9px] leading-tight mt-0.5 truncate" style={{ color: color.text + 'cc' }}>
-                                        {oferta.nombre_curso}
-                                    </p>
+                                    <div className="flex flex-col h-full">
+                                        <p className="text-[9px] font-bold leading-tight" style={{ color: color.text }}>
+                                            {oferta.tipo} | {oferta.hora_inicio} - {oferta.hora_fin}
+                                        </p>
+                                        <p className="text-[10px] font-bold leading-tight mt-0.5" style={{ color: color.text }}>
+                                            {oferta.codigo_curso}
+                                        </p>
+                                        <p className="text-[9px] leading-tight mt-0.5 line-clamp-2" style={{ color: color.text + 'cc' }}>
+                                            {oferta.nombre_curso}
+                                        </p>
+                                        <p className="text-[8px] mt-auto font-medium" style={{ color: color.text + '99' }}>
+                                            {oferta.aula}
+                                        </p>
+                                    </div>
                                 </div>
                             );
                         });

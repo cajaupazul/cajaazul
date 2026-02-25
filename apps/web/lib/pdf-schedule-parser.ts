@@ -20,7 +20,7 @@ export type ParsedOferta = {
 };
 
 const DIAS_VALIDOS = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'];
-const TIPOS_VALIDOS = ['CLASE', 'FINAL', 'PARCIAL', 'LABORATORIO', 'TALLER', 'PRÁCTICA'];
+const TIPOS_VALIDOS = ['CLASE', 'FINAL', 'PARCIAL', 'LABORATORIO', 'TALLER', 'PRÁCTICA', 'PRACCALIFI', 'PRACDIRIGI'];
 const TIME_REGEX = /(\d{1,2}:\d{2})\s+(\d{1,2}:\d{2})/;
 
 /**
@@ -69,8 +69,9 @@ async function parseFromPDF(file: File): Promise<{
 
         for (const item of textContent.items) {
             if ('str' in item && item.str.trim()) {
-                const y = Math.round((item as any).transform[5]);
-                const x = Math.round((item as any).transform[4]);
+                const transform = (item as any).transform;
+                const y = Math.round(transform[5]);
+                const x = Math.round(transform[4]);
                 if (!lineMap.has(y)) lineMap.set(y, []);
                 lineMap.get(y)!.push({ x, text: item.str.trim() });
             }
@@ -79,7 +80,22 @@ async function parseFromPDF(file: File): Promise<{
         const sortedYs = Array.from(lineMap.keys()).sort((a, b) => b - a);
         for (const y of sortedYs) {
             const items = lineMap.get(y)!.sort((a, b) => a.x - b.x);
-            const lineText = items.map(i => i.text).join('\t');
+
+            let lineText = '';
+            for (let j = 0; j < items.length; j++) {
+                if (j > 0) {
+                    const prev = items[j - 1];
+                    const curr = items[j];
+                    // Use a heuristic: if items are close, use space; if far, use tab
+                    const gap = curr.x - (prev.x + prev.text.length * 4); // rough estimate of width
+                    if (gap > 20) {
+                        lineText += '\t';
+                    } else {
+                        lineText += ' ';
+                    }
+                }
+                lineText += items[j].text;
+            }
             allLines.push(lineText);
         }
     }
@@ -154,7 +170,7 @@ function parseLines(allLines: string[]): {
     let currentProfesor = '';
 
     for (const line of uniqueLines) {
-        const parts = line.split(/[\t]+/).map(p => p.trim()).filter(Boolean);
+        const parts = line.split('\t').map(p => p.trim()).filter(Boolean);
         if (parts.length === 0) continue;
 
         // Skip header/footer noise
@@ -193,28 +209,32 @@ function parseLines(allLines: string[]): {
             continue;
         }
 
-        // Detect section line: single letter/alphanumeric code possibly followed by professor name
-        // Pattern: [Letter] usually at start. Sometimes "Sección X"
-        const possibleSeccion = parts[0].length <= 2 ? parts[0] : null;
-        if (possibleSeccion && /^[A-Z0-9]$/.test(possibleSeccion) && currentCodigo) {
-            // If it's the same section, don't clear professor unless we find a new one
-            if (currentSeccion !== possibleSeccion) {
-                currentSeccion = possibleSeccion;
-                currentProfesor = ''; // New section starts
+        // Section Detection: starts with section letter (usually col 0 or 1)
+        const firstPart = parts[0];
+        const isSectionStart = /^[A-Z0-9]$/.test(firstPart);
+
+        if (isSectionStart && currentCodigo) {
+            if (currentSeccion !== firstPart) {
+                currentSeccion = firstPart;
+                currentProfesor = ''; // Reset for new section
             }
 
-            if (parts.length > 1) {
-                const possibleProf = parts.slice(1).join(' ');
-                // Only treat as professor if it doesn't look like a scheduled day/time/type
-                if (!TIPOS_VALIDOS.includes(possibleProf.toUpperCase()) &&
-                    !DIAS_VALIDOS.some(d => possibleProf.toUpperCase().includes(d))) {
-                    currentProfesor = possibleProf;
+            // Try to find professor in the line
+            // It's usually the part that doesn't have numbers or schedule types
+            for (let i = 1; i < parts.length; i++) {
+                const part = parts[i];
+                if (!TIPOS_VALIDOS.includes(part.toUpperCase()) &&
+                    !DIAS_VALIDOS.some(d => part.toUpperCase().includes(d)) &&
+                    !TIME_REGEX.test(part) &&
+                    part.length > 5 && // Name usually reasonably long
+                    /[A-Z]/.test(part)) {
+                    currentProfesor = part;
+                    break;
                 }
             }
-            continue;
         }
 
-        // Detect schedule line: contains DIA + HORARIO
+        // Schedule Detection
         if (currentCodigo) {
             const tipo = parts.find(p => TIPOS_VALIDOS.includes(p.toUpperCase()));
             const dia = parts.find(p => DIAS_VALIDOS.includes(p.toUpperCase()));
@@ -231,21 +251,22 @@ function parseLines(allLines: string[]): {
                 let cupos = 0;
                 let aula = '';
 
-                const numericParts = parts.filter(p => /^\d+$/.test(p));
-                if (numericParts.length > 0) {
-                    cupos = parseInt(numericParts[0]) || 0;
-                }
+                // Look for cupos and aula after the time
+                const timeIndex = parts.findIndex(p => p.includes(hora_inicio) || p.includes(hora_fin));
+                if (timeIndex !== -1) {
+                    const remaining = parts.slice(timeIndex + 1);
+                    const cuposPart = remaining.find(p => /^\d+$/.test(p));
+                    if (cuposPart) cupos = parseInt(cuposPart);
 
-                const aulaMatch = line.match(/([A-Z]-?\d{3}|[A-Z]-?PEND|X\s*-\d{3})/i);
-                if (aulaMatch) {
-                    aula = aulaMatch[1].replace(/\s+/g, '');
+                    const aulaPart = remaining.find(p => /([A-Z]-?\d{3}|[A-Z]-?PEND|X\s*-\d{3})/i.test(p));
+                    if (aulaPart) aula = aulaPart.replace(/\s+/g, '');
                 }
 
                 rawOfertas.push({
                     codigo_curso: currentCodigo,
                     nombre_curso: currentNombre,
                     seccion: currentSeccion || 'A',
-                    profesor: currentProfesor,
+                    profesor: currentProfesor || 'Sin profesor',
                     creditos: currentCreditos,
                     tipo: (tipo || 'CLASE').toUpperCase(),
                     dia: dia.toUpperCase(),

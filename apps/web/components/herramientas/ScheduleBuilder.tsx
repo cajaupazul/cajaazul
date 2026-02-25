@@ -37,6 +37,7 @@ export default function ScheduleBuilder() {
     const [activeScheduleId, setActiveScheduleId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [showScheduleMenu, setShowScheduleMenu] = useState(false);
+    const [viewMode, setViewMode] = useState<'clases' | 'examenes'>('clases'); // clases vs examenes filter
 
     // Fetch periodos
     useEffect(() => {
@@ -142,7 +143,11 @@ export default function ScheduleBuilder() {
     }, [allSelectedOfertas]);
 
     const freeDays = useMemo(() => {
-        const busyDays = new Set(allSelectedOfertas.filter(o => o.tipo === 'CLASE').map(o => o.dia));
+        const busyDays = new Set(
+            allSelectedOfertas
+                .filter(o => o.tipo !== 'FINAL' && o.tipo !== 'PARCIAL')
+                .map(o => o.dia)
+        );
         return DIAS_LIBRES_ALL.filter(d => !busyDays.has(d));
     }, [allSelectedOfertas]);
 
@@ -152,7 +157,7 @@ export default function ScheduleBuilder() {
         const byDay = new Map<string, number[]>();
 
         for (const o of allSelectedOfertas) {
-            if (o.tipo !== 'CLASE') continue;
+            if (o.tipo === 'FINAL' || o.tipo === 'PARCIAL') continue;
             if (!byDay.has(o.dia)) byDay.set(o.dia, []);
             const start = timeToMin(o.hora_inicio);
             const end = timeToMin(o.hora_fin);
@@ -422,18 +427,37 @@ export default function ScheduleBuilder() {
                 </button>
             </div>
 
-            {/* Periodo selector (if multiple) */}
-            {periodos.length > 1 && (
-                <select
-                    value={selectedPeriodo}
-                    onChange={e => setSelectedPeriodo(e.target.value)}
-                    className="bg-bb-card border border-bb-border rounded-xl px-4 py-2 text-sm text-bb-text w-fit"
-                >
-                    {periodos.map(p => (
-                        <option key={p} value={p}>{p}</option>
-                    ))}
-                </select>
-            )}
+            {/* Periodo and Mode selector */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2 bg-bb-card border border-bb-border rounded-xl p-1">
+                    <button
+                        onClick={() => setViewMode('clases')}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${viewMode === 'clases' ? 'bg-white text-black shadow-sm' : 'text-bb-text-secondary hover:text-bb-text'
+                            }`}
+                    >
+                        Clases
+                    </button>
+                    <button
+                        onClick={() => setViewMode('examenes')}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${viewMode === 'examenes' ? 'bg-white text-black shadow-sm' : 'text-bb-text-secondary hover:text-bb-text'
+                            }`}
+                    >
+                        Exámenes
+                    </button>
+                </div>
+
+                {periodos.length > 1 && (
+                    <select
+                        value={selectedPeriodo}
+                        onChange={e => setSelectedPeriodo(e.target.value)}
+                        className="bg-bb-card border border-bb-border rounded-xl px-4 py-2 text-sm text-bb-text"
+                    >
+                        {periodos.map(p => (
+                            <option key={p} value={p}>{p}</option>
+                        ))}
+                    </select>
+                )}
+            </div>
 
             {/* Main 2-column layout: Course selector + Section list */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-4">
@@ -456,6 +480,7 @@ export default function ScheduleBuilder() {
                         selectedSections={selectedSections}
                         onToggleSection={handleToggleSection}
                         allSelected={allSelectedOfertas}
+                        viewMode={viewMode}
                     />
                 </div>
             </div>
@@ -466,6 +491,7 @@ export default function ScheduleBuilder() {
                     selectedOfertas={allSelectedOfertas}
                     selectedCourses={selectedCourses}
                     onRemoveSection={handleRemoveSection}
+                    viewMode={viewMode}
                 />
             </div>
         </div>

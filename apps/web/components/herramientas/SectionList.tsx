@@ -17,6 +17,7 @@ type Props = {
     selectedSections: Map<string, Set<string>>; // codigo -> Set of secciones
     onToggleSection: (codigo: string, seccion: string) => void;
     allSelected: OfertaAcademica[]; // all selected ofertas for conflict detection
+    viewMode: 'clases' | 'examenes';
 };
 
 const DIAS_ORDER: Record<string, number> = {
@@ -29,6 +30,7 @@ export default function SectionList({
     selectedSections,
     onToggleSection,
     allSelected,
+    viewMode,
 }: Props) {
     const { colors } = useTheme();
 
@@ -120,9 +122,12 @@ export default function SectionList({
                                 const isSelected = selectedSections.get(activeCourse)?.has(section.seccion) || false;
                                 const conflict = !isSelected && hasConflict(section);
 
-                                // Group horarios by tipo for display
-                                const clasesHorarios = section.horarios
-                                    .filter(h => h.tipo === 'CLASE')
+                                // Group horarios by viewMode for display
+                                const filteredHorarios = section.horarios
+                                    .filter(h => {
+                                        const isExam = h.tipo === 'FINAL' || h.tipo === 'PARCIAL';
+                                        return viewMode === 'clases' ? !isExam : isExam;
+                                    })
                                     .sort((a, b) => (DIAS_ORDER[a.dia] ?? 7) - (DIAS_ORDER[b.dia] ?? 7));
 
                                 return (
@@ -135,11 +140,14 @@ export default function SectionList({
                                         </td>
                                         <td className="px-3 py-2.5 text-bb-text-secondary">{section.profesor}</td>
                                         <td className="px-3 py-2.5">
-                                            {clasesHorarios.map((h, i) => (
+                                            {filteredHorarios.length > 0 ? filteredHorarios.map((h, i) => (
                                                 <span key={i} className="text-bb-text block leading-relaxed">
+                                                    <span className="text-[10px] text-bb-text-secondary mr-1">{h.tipo}:</span>
                                                     {h.dia} {h.hora_inicio}–{h.hora_fin}
                                                 </span>
-                                            ))}
+                                            )) : (
+                                                <span className="text-bb-text-secondary italic">Sin horario</span>
+                                            )}
                                         </td>
                                         <td className="px-3 py-2.5 text-center">
                                             {conflict ? (
