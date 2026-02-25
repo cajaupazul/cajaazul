@@ -26,7 +26,8 @@ import {
   Package,
   ShieldCheck,
   ChevronDown,
-  LayoutDashboard
+  LayoutDashboard,
+  Wrench
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -131,6 +132,7 @@ export default function AuthenticatedLayout({
     { label: 'Inicio', href: '/dashboard', icon: Home },
     { label: 'Cursos', href: '/dashboard/courses', icon: BookOpen },
     { label: 'Profesores', href: '/dashboard/professors', icon: Users },
+    { label: 'Herramientas', href: '/dashboard/herramientas', icon: Wrench },
     { label: 'Tienda', href: '/dashboard/store', icon: ShoppingBag },
     ...(profile?.role === 'admin' || profile?.role === 'superadmin'
       ? [
