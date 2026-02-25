@@ -169,9 +169,10 @@ function parseLines(allLines: string[]): {
     let currentSeccion = '';
     let currentProfesor = '';
 
-    // State Mapping for preventing duplicates (The Shield)
-    const sectionsSeen = new Set<string>(); // "Course-Letter"
-    const blocksSeen = new Set<string>();   // "Course-Letter-Type-Day-Start-End"
+    // State Mapping for preventing duplicates & maintaining state (The Shield)
+    const sectionsSeen = new Set<string>();     // "Course-Letter"
+    const blocksSeen = new Set<string>();       // "Course-Letter-Type-Day-Start-End"
+    const teacherBySection = new Map<string, string>(); // "Course-Letter" -> Teacher Name
 
     // Robust Regex patterns for anchors
     const courseHeaderPattern = /^(\d{6})\s*[-–]\s*(.+)/;
@@ -190,23 +191,28 @@ function parseLines(allLines: string[]): {
         // 1. Course Header Detection (Anchor: ^\d{6} - )
         const courseHeaderMatch = rawLine.match(courseHeaderPattern);
         if (courseHeaderMatch) {
-            currentCodigo = courseHeaderMatch[1];
-            let namePart = courseHeaderMatch[2].trim();
-            const creditMatch = rawLine.match(/(\d+[.,]\d+)\s*$/);
-            if (creditMatch) {
-                currentCreditos = parseFloat(creditMatch[1].replace(',', '.'));
-                namePart = namePart.replace(creditMatch[0], '').trim();
+            const nextCodigo = courseHeaderMatch[1];
+
+            // CONTINUITY: Only reset everything if it's a DIFFERENT course
+            // If it's the same (page break header), keep currentSeccion and currentProfesor
+            if (nextCodigo !== currentCodigo) {
+                currentCodigo = nextCodigo;
+                let namePart = courseHeaderMatch[2].trim();
+                const creditMatch = rawLine.match(/(\d+[.,]\d+)\s*$/);
+                if (creditMatch) {
+                    currentCreditos = parseFloat(creditMatch[1].replace(',', '.'));
+                    namePart = namePart.replace(creditMatch[0], '').trim();
+                }
+                currentNombre = namePart;
+                currentSeccion = '';
+                currentProfesor = '';
             }
-            currentNombre = namePart;
-            currentSeccion = '';
-            currentProfesor = '';
             continue;
         }
 
         if (!currentCodigo) continue;
 
         // 2. Section Detection (Anchor: ^[A-Z]  )
-        // Check both the raw line start AND the first column
         const startsWithSection = sectionAnchorPattern.test(rawLine);
         const firstCol = columns[0];
         const isSectionLine = startsWithSection || (firstCol && /^[A-Z]$/.test(firstCol));
@@ -215,10 +221,12 @@ function parseLines(allLines: string[]): {
             const letter = (startsWithSection ? rawLine[0] : firstCol).toUpperCase();
             const sectionId = `${currentCodigo}-${letter}`;
 
-            // State Logic: If it's a new course-letter combination
+            // Set current state
+            currentSeccion = letter;
+
+            // If it's the first time we see this section letter for this course, extract teacher
             if (!sectionsSeen.has(sectionId)) {
                 sectionsSeen.add(sectionId);
-                currentSeccion = letter;
 
                 // Extract teacher if present in this line
                 const profMatch = rawLine.match(/[A-ZÀ-ÿ]{4,}\s+[A-ZÀ-ÿ\s]{2,},\s+[A-ZÀ-ÿ\s]{2,}/i);
@@ -227,12 +235,14 @@ function parseLines(allLines: string[]): {
                     const cleaners = [...DIAS_VALIDOS, ...TIPOS_VALIDOS];
                     prof = prof.replace(new RegExp(`\\s(${cleaners.join('|')})(\\s|$)`, 'i'), '').trim();
                     currentProfesor = prof;
+                    teacherBySection.set(sectionId, prof);
                 } else {
                     currentProfesor = 'Sin profesor';
+                    teacherBySection.set(sectionId, 'Sin profesor');
                 }
             } else {
-                // Return state for continuation lines (page breaks)
-                currentSeccion = letter;
+                // Recovery: It's a continuation of a previously seen section
+                currentProfesor = teacherBySection.get(sectionId) || 'Sin profesor';
             }
         }
 
