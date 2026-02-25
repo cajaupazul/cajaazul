@@ -285,10 +285,25 @@ function parseLines(allLines: string[]): {
                     const typesBefore = typeMatches.filter(m => (m.index || 0) < timePos);
                     const bestType = typesBefore.length > 0 ? typesBefore[typesBefore.length - 1][1] : typeMatches[0][1];
                     const rawTipo = bestType.toUpperCase();
-                    if (rawTipo === 'PRACDIRIGI' || rawTipo === 'PRACCALIFI' || rawTipo.includes('PRÁCTICA')) {
+
+                    // Filter 1: Ignore Exams for now (FINAL/PARCIAL)
+                    if (['FINAL', 'PARCIAL'].includes(rawTipo)) {
+                        continue;
+                    }
+
+                    // Filter 2: Practice Logic
+                    // PRACCALIFI is usually just an exam, skip it.
+                    // PRACDIRIGI or generic PRÁCTICA are regular classes.
+                    if (rawTipo === 'PRACCALIFI') {
+                        continue;
+                    }
+
+                    if (rawTipo === 'PRACDIRIGI' || rawTipo.includes('PRÁCTICA')) {
                         tipo = 'PRACTICA';
-                    } else if (['FINAL', 'PARCIAL'].includes(rawTipo)) {
-                        tipo = rawTipo;
+                    } else if (rawTipo === 'CLASE') {
+                        tipo = 'CLASE';
+                    } else {
+                        tipo = rawTipo; // TALLER, LABORATORIO, etc.
                     }
                 }
 
