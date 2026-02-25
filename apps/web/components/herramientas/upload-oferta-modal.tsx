@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { X, Upload, FileText, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
-import { parseOfertaFile, ParsedOferta } from '@/lib/pdf-schedule-parser';
+import { parseOfertaFile, parseOfertaText, ParsedOferta } from '@/lib/pdf-schedule-parser';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
 import { useTheme } from '@/lib/theme-context';
@@ -21,6 +21,8 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
     const [uploading, setUploading] = useState(false);
     const [parsedData, setParsedData] = useState<{ periodo: string; ofertas: ParsedOferta[]; errors: string[] } | null>(null);
     const [periodoOverride, setPeriodoOverride] = useState('');
+    const [isPasteMode, setIsPasteMode] = useState(false);
+    const [pastedText, setPastedText] = useState('');
     const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload');
 
     const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,6 +48,22 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
             setParsing(false);
         }
     }, []);
+
+    const handleTextParse = useCallback(async () => {
+        if (!pastedText.trim()) return;
+        setParsing(true);
+        try {
+            const result = await parseOfertaText(pastedText);
+            setParsedData(result);
+            setPeriodoOverride(result.periodo);
+            setStep('preview');
+        } catch (err: any) {
+            setParsedData({ periodo: '', ofertas: [], errors: [`Error: ${err.message}`] });
+            setStep('preview');
+        } finally {
+            setParsing(false);
+        }
+    }, [pastedText]);
 
     const handleClearPeriod = async () => {
         const periodo = periodoOverride || parsedData?.periodo;
@@ -152,9 +170,11 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
 
     const handleReset = () => {
         setFile(null);
+        setPastedText('');
         setParsedData(null);
         setPeriodoOverride('');
         setStep('upload');
+        setIsPasteMode(false);
         onClose();
     };
 
@@ -181,34 +201,71 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6">
                     {step === 'upload' && (
-                        <div className="flex flex-col items-center gap-6 py-10">
-                            <div className="w-20 h-20 rounded-2xl flex items-center justify-center bg-bb-hover">
-                                <FileText className="w-10 h-10 text-bb-text-secondary" />
+                        <div className="flex flex-col items-center gap-4 py-4">
+                            <div className="flex bg-bb-hover p-1 rounded-xl w-full max-w-sm mb-4">
+                                <button
+                                    onClick={() => setIsPasteMode(false)}
+                                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${!isPasteMode ? 'bg-bb-card text-bb-text shadow-sm' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                >
+                                    Subir Archivo
+                                </button>
+                                <button
+                                    onClick={() => setIsPasteMode(true)}
+                                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${isPasteMode ? 'bg-bb-card text-bb-text shadow-sm' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                >
+                                    Pegar Texto
+                                </button>
                             </div>
 
-                            {parsing ? (
-                                <div className="flex items-center gap-3 text-bb-text">
-                                    <Loader2 className="w-5 h-5 animate-spin" style={{ color: colors?.primary }} />
-                                    <span>Analizando archivo...</span>
-                                </div>
-                            ) : (
-                                <>
-                                    <p className="text-bb-text-secondary text-center text-sm max-w-md">
-                                        Sube el PDF o Word (.docx) de la oferta académica. El sistema leerá automáticamente los cursos, secciones, horarios y profesores.
-                                    </p>
-                                    <label
-                                        className="cursor-pointer px-6 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
+                            {isPasteMode ? (
+                                <div className="w-full flex flex-col gap-4">
+                                    <textarea
+                                        value={pastedText}
+                                        onChange={e => setPastedText(e.target.value)}
+                                        placeholder="Pega aquí el contenido copiado del PDF o Word..."
+                                        className="w-full h-64 bg-bb-dark border border-bb-border rounded-xl px-4 py-3 text-bb-text text-sm focus:outline-none focus:ring-2 resize-none"
+                                        style={{ focusRingColor: colors?.primary } as any}
+                                    />
+                                    <button
+                                        onClick={handleTextParse}
+                                        disabled={parsing || !pastedText.trim()}
+                                        className="w-full py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 flex items-center justify-center gap-2"
                                         style={{ backgroundColor: colors?.primary }}
                                     >
-                                        Seleccionar PDF o Word
-                                        <input
-                                            type="file"
-                                            accept=".pdf,.docx,.doc"
-                                            className="hidden"
-                                            onChange={handleFileSelect}
-                                        />
-                                    </label>
-                                </>
+                                        {parsing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Analizar Texto'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center gap-6 py-6 w-full">
+                                    <div className="w-20 h-20 rounded-2xl flex items-center justify-center bg-bb-hover">
+                                        <FileText className="w-10 h-10 text-bb-text-secondary" />
+                                    </div>
+
+                                    {parsing ? (
+                                        <div className="flex items-center gap-3 text-bb-text">
+                                            <Loader2 className="w-5 h-5 animate-spin" style={{ color: colors?.primary }} />
+                                            <span>Analizando archivo...</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <p className="text-bb-text-secondary text-center text-sm max-w-md">
+                                                Sube el PDF o Word (.docx) de la oferta académica. El sistema leerá automáticamente los cursos, secciones, horarios y profesores.
+                                            </p>
+                                            <label
+                                                className="cursor-pointer px-6 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
+                                                style={{ backgroundColor: colors?.primary }}
+                                            >
+                                                Seleccionar PDF o Word
+                                                <input
+                                                    type="file"
+                                                    accept=".pdf,.docx,.doc"
+                                                    className="hidden"
+                                                    onChange={handleFileSelect}
+                                                />
+                                            </label>
+                                        </>
+                                    )}
+                                </div>
                             )}
                         </div>
                     )}

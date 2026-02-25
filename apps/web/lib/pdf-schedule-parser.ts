@@ -44,6 +44,18 @@ export async function parseOfertaFile(file: File): Promise<{
 }
 
 /**
+ * Direct text parsing entry point.
+ */
+export async function parseOfertaText(text: string): Promise<{
+    periodo: string;
+    ofertas: ParsedOferta[];
+    errors: string[];
+}> {
+    const allLines = text.split('\n');
+    return parseLines(allLines);
+}
+
+/**
  * Parse from PDF using pdfjs-dist
  */
 async function parseFromPDF(file: File): Promise<{
