@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { X, Upload, FileText, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
-import { parseOfertaPDF, ParsedOferta } from '@/lib/pdf-schedule-parser';
+import { parseOfertaFile, ParsedOferta } from '@/lib/pdf-schedule-parser';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
 import { useTheme } from '@/lib/theme-context';
@@ -25,12 +25,14 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
 
     const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         const f = e.target.files?.[0];
-        if (!f || !f.name.endsWith('.pdf')) return;
+        if (!f) return;
+        const ext = f.name.split('.').pop()?.toLowerCase();
+        if (!['pdf', 'docx', 'doc'].includes(ext || '')) return;
         setFile(f);
         setParsing(true);
 
         try {
-            const result = await parseOfertaPDF(f);
+            const result = await parseOfertaFile(f);
             setParsedData(result);
             setPeriodoOverride(result.periodo);
             setStep('preview');
@@ -130,21 +132,21 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                             {parsing ? (
                                 <div className="flex items-center gap-3 text-bb-text">
                                     <Loader2 className="w-5 h-5 animate-spin" style={{ color: colors?.primary }} />
-                                    <span>Analizando PDF...</span>
+                                    <span>Analizando archivo...</span>
                                 </div>
                             ) : (
                                 <>
                                     <p className="text-bb-text-secondary text-center text-sm max-w-md">
-                                        Sube el PDF de la oferta académica. El sistema leerá automáticamente los cursos, secciones, horarios y profesores.
+                                        Sube el PDF o Word (.docx) de la oferta académica. El sistema leerá automáticamente los cursos, secciones, horarios y profesores.
                                     </p>
                                     <label
                                         className="cursor-pointer px-6 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
                                         style={{ backgroundColor: colors?.primary }}
                                     >
-                                        Seleccionar PDF
+                                        Seleccionar PDF o Word
                                         <input
                                             type="file"
-                                            accept=".pdf"
+                                            accept=".pdf,.docx,.doc"
                                             className="hidden"
                                             onChange={handleFileSelect}
                                         />
