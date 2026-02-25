@@ -168,9 +168,11 @@ function parseLines(allLines: string[]): {
     let currentSeccion = '';
     let currentProfesor = '';
 
-    // Regex patterns
-    const profPattern = /[A-Z]{3,}\s+[A-Z\s]{2,},\s+[A-Z\s]{2,}/i; // matches "APELLIDO, Nombre"
+    // Robust Regex patterns
+    const profPattern = /[A-ZÀ-ÿ]{4,}\s+[A-ZÀ-ÿ\s]{2,},\s+[A-ZÀ-ÿ\s]{2,}/i; // matches "APELLIDO, Nombre"
     const sectionPattern = /^[A-Z0-9]{1,2}$/; // matches "A", "B", "11", etc.
+    const diaRegex = new RegExp(`\\b(${DIAS_VALIDOS.join('|')})\\b`, 'i');
+    const tipoRegex = new RegExp(`\\b(${TIPOS_VALIDOS.join('|')})\\b`, 'i');
 
     for (const line of uniqueLines) {
         const columns = line.split('\t').map(p => p.trim());
@@ -178,7 +180,7 @@ function parseLines(allLines: string[]): {
 
         // Skip noise
         if (columns.some(p => /^(Secc|Tipo|Docentes|Cred|Teoría|Día|Horario|Duración|Cupos|Aula|Horarios Ofertados)$/i.test(p))) continue;
-        if (line.includes('Se sugiere revisar')) continue;
+        if (line.includes('Se sugiere revisar') || line.includes('Dirección de Asuntos')) continue;
 
         // 1. Course Header Detection
         const courseHeaderMatch = line.match(/(\d{6})\s*[-–]\s*(.+)/);
@@ -198,85 +200,80 @@ function parseLines(allLines: string[]): {
 
         if (!currentCodigo) continue;
 
-        // 2. Section & Professor State Management
-        // Look for a potential section code in the first few columns
+        // 2. Section detection (Anchor: first column is a section code)
         const firstCol = columns[0];
-        const secondCol = columns[1];
-
-        // Check if the line starts with a NEW section code
-        if (firstCol && sectionPattern.test(firstCol) && columns.length > 2) {
+        if (firstCol && sectionPattern.test(firstCol)) {
             const nextSec = firstCol.toUpperCase();
             if (nextSec !== currentSeccion) {
                 currentSeccion = nextSec;
-                currentProfesor = 'Sin profesor'; // Reset for new section
+                currentProfesor = 'Sin profesor';
             }
         }
 
-        // Search for Professor name in the line (APELLIDO, Nombre)
+        // 3. Professor detection (fuzzy regex match + cleaning)
         const profMatch = line.match(profPattern);
         if (profMatch) {
-            const potentialProf = profMatch[0].trim();
-            // Professors are usually on the left/middle side of the line
-            if (line.indexOf(potentialProf) < line.length / 2) {
-                currentProfesor = potentialProf;
+            let prof = profMatch[0].trim();
+            // Clean trailings: Day or Type keywords sometimes merge into the name
+            const cleaners = [...DIAS_VALIDOS, ...TIPOS_VALIDOS];
+            const cleanRegex = new RegExp(`\\s(${cleaners.join('|')})(\\s|$)`, 'i');
+            prof = prof.replace(cleanRegex, '').trim();
+
+            // Re-verify if it's a real name (should have comma and multiple parts)
+            if (prof.includes(',') && prof.length > 5) {
+                currentProfesor = prof;
             }
         }
 
-        // 3. Schedule Entry Detection
-        const diaIndex = columns.findIndex(c => DIAS_VALIDOS.includes(c.toUpperCase()));
-        const timeIndex = columns.findIndex(c => TIME_REGEX.test(c));
+        // 4. Schedule Entry Detection (Regex on the whole line for max resilience)
+        const diaMatch = line.match(diaRegex);
+        const timeMatch = line.match(TIME_REGEX);
 
-        if (diaIndex !== -1 && timeIndex !== -1 && currentSeccion) {
-            const dia = columns[diaIndex].toUpperCase();
-            const timeStr = columns[timeIndex];
-            const timeMatch = timeStr.match(TIME_REGEX);
+        if (diaMatch && timeMatch && currentSeccion) {
+            const dia = diaMatch[1].toUpperCase();
+            const timeStr = timeMatch[0];
+            const startStr = timeMatch[1];
+            const endStr = timeMatch[2];
 
-            if (timeMatch) {
-                let tipo = 'CLASE';
-                // Type is usually in a column before Day
-                const potentialType = columns.find((c, i) => i < diaIndex && TIPOS_VALIDOS.includes(c.toUpperCase()));
-                if (potentialType) {
-                    tipo = potentialType.toUpperCase();
-                } else {
-                    // Fallback to searching the whole line for known type keywords
-                    const foundType = TIPOS_VALIDOS.find(t => line.toUpperCase().includes(t));
-                    if (foundType) tipo = foundType;
-                }
+            // Determine Type
+            let tipo = 'CLASE';
+            const typeMatch = line.match(tipoRegex);
+            if (typeMatch) tipo = typeMatch[1].toUpperCase();
 
-                const hora_inicio = timeMatch[1];
-                const hora_fin = timeMatch[2];
-                const [h1, m1] = hora_inicio.split(':').map(Number);
-                const [h2, m2] = hora_fin.split(':').map(Number);
-                const duracion = (h2 * 60 + m2) - (h1 * 60 + m1);
+            const [h1, m1] = startStr.split(':').map(Number);
+            const [h2, m2] = endStr.split(':').map(Number);
+            const duracion = (h2 * 60 + m2) - (h1 * 60 + m1);
 
-                // Cupos and Aula
-                let cupos = 0;
-                let aula = '';
-                const cuposPart = columns.find((c, i) => i > timeIndex && /^\d+$/.test(c));
-                if (cuposPart) cupos = parseInt(cuposPart);
+            // Cupos and Aula (usually trailing numbers and code)
+            let cupos = 0;
+            let aula = '';
+            const afterTime = line.split(timeStr)[1] || '';
+            const afterParts = afterTime.split(/[\t ]+/).filter(Boolean);
 
-                const aulaPart = columns.find((c, i) => i > timeIndex && /([A-Z]-?\d{3}|[A-Z]-?PEND|X\s*-\d{3})/i.test(c));
-                if (aulaPart) {
-                    aula = aulaPart.replace(/\s+/g, '');
-                } else if (line.includes('A-PEND')) {
-                    aula = 'PEND';
-                }
+            const cuposPart = afterParts.find(p => /^\d+$/.test(p));
+            if (cuposPart) cupos = parseInt(cuposPart);
 
-                rawOfertas.push({
-                    codigo_curso: currentCodigo,
-                    nombre_curso: currentNombre,
-                    seccion: currentSeccion,
-                    profesor: currentProfesor,
-                    creditos: currentCreditos,
-                    tipo: (tipo === 'PRACDIRIGI' || tipo === 'PRACCALIFI') ? 'CLASE' : tipo,
-                    dia,
-                    hora_inicio,
-                    hora_fin,
-                    duracion: duracion > 0 ? duracion : 0,
-                    cupos,
-                    aula: aula || 'PEND',
-                });
+            const aulaPart = afterParts.find(p => /([A-Z]-?\d{3}|[A-Z]-?PEND|X\s*-\d{3})/i.test(p));
+            if (aulaPart) {
+                aula = aulaPart.replace(/\s+/g, '');
+            } else if (line.includes('A-PEND')) {
+                aula = 'PEND';
             }
+
+            rawOfertas.push({
+                codigo_curso: currentCodigo,
+                nombre_curso: currentNombre,
+                seccion: currentSeccion,
+                profesor: currentProfesor,
+                creditos: currentCreditos,
+                tipo: (tipo === 'PRACDIRIGI' || tipo === 'PRACCALIFI') ? 'CLASE' : tipo,
+                dia,
+                hora_inicio: startStr,
+                hora_fin: endStr,
+                duracion: duracion > 0 ? duracion : 0,
+                cupos,
+                aula: aula || 'PEND',
+            });
         }
     }
 
