@@ -168,20 +168,16 @@ function parseLines(allLines: string[]): {
     let currentSeccion = '';
     let currentProfesor = '';
 
-    // Regex for schedule indicators with word boundaries to be bullet-proof
-    const tipoRegex = new RegExp(`\\b(${TIPOS_VALIDOS.join('|')})\\b`, 'i');
-    const diaRegex = new RegExp(`\\b(${DIAS_VALIDOS.join('|')})\\b`, 'i');
-
     for (const line of uniqueLines) {
-        // Normalization: treat multiple spaces or tabs as column separators
-        const parts = line.split(/[\t]+| {3,}/).map(p => p.trim()).filter(Boolean);
-        if (parts.length === 0) continue;
+        // Use tabs as primary column delimiter to respect the table structure
+        const columns = line.split('\t').map(p => p.trim());
+        if (columns.length === 0 || !columns.some(c => c)) continue;
 
         // Skip header/footer noise
-        if (parts.some(p => /^(Secc|Tipo|Docentes|Cred|Teoría|Día|Horario|Duración|Cupos|Aula|Horarios Ofertados)$/i.test(p))) continue;
-        if (parts.some(p => /^(CURSOS ACAD|Dirección de|Horas Tot|Periodo Acad|Se sugiere revisar)/i.test(p))) continue;
+        if (columns.some(p => /^(Secc|Tipo|Docentes|Cred|Teoría|Día|Horario|Duración|Cupos|Aula|Horarios Ofertados)$/i.test(p))) continue;
+        if (columns.some(p => /^(CURSOS ACAD|Dirección de|Horas Tot|Periodo Acad|Se sugiere revisar)/i.test(p))) continue;
 
-        // Course Header Detection
+        // Course Header Detection (6 digits - Name)
         const courseHeaderMatch = line.match(/(\d{6})\s*[-–]\s*(.+)/);
         if (courseHeaderMatch) {
             currentCodigo = courseHeaderMatch[1];
@@ -197,67 +193,80 @@ function parseLines(allLines: string[]): {
             continue;
         }
 
-        // Section Detection
-        // Look for standalone single char at the beginning or after a tab
-        const sectionMatch = line.match(/(?:^|[\t])\s*([A-Z0-9])\s*[\t ]/);
-        if (sectionMatch && currentCodigo) {
-            const potentialSec = sectionMatch[1];
-            if (currentSeccion !== potentialSec) {
-                currentSeccion = potentialSec;
-                currentProfesor = '';
+        if (!currentCodigo) continue;
+
+        // Structured Parsing based on column positions from user's image
+        // [0] Sec | [1] Empty | [2] Professor | [3] Type | [4] Day | [5] Time | ...
+
+        // 1. Check for New Section in Column 0
+        const potentialSec = columns[0];
+        if (potentialSec && /^[A-Z0-9]{1,2}$/.test(potentialSec) && columns.length > 2) {
+            currentSeccion = potentialSec;
+            // Professor is usually in Column 2 on the same line as the Section code
+            const profCol = columns[2];
+            if (profCol && profCol.includes(',') && /[A-Z]/.test(profCol)) {
+                currentProfesor = profCol;
+            } else {
+                currentProfesor = 'Sin profesor';
             }
         }
 
-        // Professor Detection (resilient to column merging)
-        // If the line has many words but no dia/time, it's likely a professor
-        if (currentCodigo && !diaRegex.test(line) && !TIME_REGEX.test(line)) {
-            const cleanedLine = line.replace(/^[A-Z0-9]\s+/, '').trim(); // Remove leading section if any
-            if (cleanedLine.length > 8 && /[A-Z]/.test(cleanedLine) && !cleanedLine.includes('PREREQUISITO')) {
-                currentProfesor = cleanedLine;
+        // 2. Schedule Detection
+        // Look for Day and Time regex. We check all columns to be resilient if things shift.
+        const diaIndex = columns.findIndex(c => DIAS_VALIDOS.includes(c.toUpperCase()));
+        const timeIndex = columns.findIndex(c => TIME_REGEX.test(c));
+
+        if (diaIndex !== -1 && timeIndex !== -1) {
+            const dia = columns[diaIndex].toUpperCase();
+            const timeStr = columns[timeIndex];
+            const timeMatch = timeStr.match(TIME_REGEX);
+
+            if (timeMatch) {
+                // Determine Type: It's usually just before the Day
+                let tipo = 'CLASE';
+                const potentialType = columns[diaIndex - 1]?.toUpperCase();
+                if (potentialType && TIPOS_VALIDOS.includes(potentialType)) {
+                    tipo = potentialType;
+                } else {
+                    // Fallback
+                    const foundType = TIPOS_VALIDOS.find(t => line.toUpperCase().includes(t));
+                    if (foundType) tipo = foundType;
+                }
+
+                const hora_inicio = timeMatch[1];
+                const hora_fin = timeMatch[2];
+                const [h1, m1] = hora_inicio.split(':').map(Number);
+                const [h2, m2] = hora_fin.split(':').map(Number);
+                const duracion = (h2 * 60 + m2) - (h1 * 60 + m1);
+
+                // Cupos and Aula
+                let cupos = 0;
+                let aula = '';
+                const cuposPart = columns.find((c, i) => i > timeIndex && /^\d+$/.test(c));
+                if (cuposPart) cupos = parseInt(cuposPart);
+
+                const aulaPart = columns.find((c, i) => i > timeIndex && /([A-Z]-?\d{3}|[A-Z]-?PEND|X\s*-\d{3})/i.test(c));
+                if (aulaPart) {
+                    aula = aulaPart.replace(/\s+/g, '');
+                } else if (line.includes('A-PEND')) {
+                    aula = 'PEND';
+                }
+
+                rawOfertas.push({
+                    codigo_curso: currentCodigo,
+                    nombre_curso: currentNombre,
+                    seccion: currentSeccion || 'A',
+                    profesor: currentProfesor || 'Sin profesor',
+                    creditos: currentCreditos,
+                    tipo: tipo === 'PRACDIRIGI' ? 'CLASE' : tipo,
+                    dia,
+                    hora_inicio,
+                    hora_fin,
+                    duracion: duracion > 0 ? duracion : 0,
+                    cupos,
+                    aula: aula || 'PEND',
+                });
             }
-        }
-
-        // Schedule Detection
-        const timeMatch = line.match(TIME_REGEX);
-        const diaMatch = line.match(diaRegex);
-
-        if (currentCodigo && diaMatch && timeMatch) {
-            const dia = diaMatch[1].toUpperCase();
-            const tipoMatch = line.match(tipoRegex);
-            const tipo = tipoMatch ? tipoMatch[1].toUpperCase() : 'CLASE';
-
-            const hora_inicio = timeMatch[1];
-            const hora_fin = timeMatch[2];
-            const [h1, m1] = hora_inicio.split(':').map(Number);
-            const [h2, m2] = hora_fin.split(':').map(Number);
-            const duracion = (h2 * 60 + m2) - (h1 * 60 + m1);
-
-            // Resilient cupos/aula extraction
-            let cupos = 0;
-            let aula = '';
-            const afterTime = line.split(timeMatch[0])[1] || '';
-            const afterParts = afterTime.split(/[\t ]+/).filter(Boolean);
-
-            const cuposPart = afterParts.find(p => /^\d+$/.test(p));
-            if (cuposPart) cupos = parseInt(cuposPart);
-
-            const aulaPart = afterParts.find(p => /([A-Z]-?\d{3}|[A-Z]-?PEND|X\s*-\d{3})/i.test(p));
-            if (aulaPart) aula = aulaPart.replace(/\s+/g, '');
-
-            rawOfertas.push({
-                codigo_curso: currentCodigo,
-                nombre_curso: currentNombre,
-                seccion: currentSeccion || 'A',
-                profesor: currentProfesor || 'Sin profesor',
-                creditos: currentCreditos,
-                tipo,
-                dia,
-                hora_inicio,
-                hora_fin,
-                duracion: duracion > 0 ? duracion : 0,
-                cupos,
-                aula: aula || 'PEND',
-            });
         }
     }
 
