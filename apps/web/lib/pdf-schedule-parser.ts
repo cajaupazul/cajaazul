@@ -22,7 +22,7 @@ export type ParsedOferta = {
 
 const DIAS_VALIDOS = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'];
 const TIPOS_VALIDOS = ['CLASE', 'FINAL', 'PARCIAL', 'LABORATORIO', 'TALLER', 'PRÁCTICA', 'PRACCALIFI', 'PRACDIRIGI'];
-const TIME_REGEX = /(\d{1,2}:\d{2})\s+(\d{1,2}:\d{2})/;
+const TIME_REGEX = /(\d{1,2}:\d{2})\s+(\d{1,2}:\d{2})/g;
 
 /**
  * Main entry point: auto-detects file type and parses accordingly.
@@ -250,57 +250,84 @@ function parseLines(allLines: string[]): {
         }
 
         // 3. Schedule Block Detection (Anchor: Time + Day)
-        // Detects: "CLASE VIE 09:30:00-11:20:00"
-        const diaMatch = rawLine.match(diaRegex);
-        const timeMatch = rawLine.match(TIME_REGEX);
+        // We find ALL days and ALL times on this line using global matching
+        const diaMatches = Array.from(rawLine.matchAll(new RegExp(`\\b(${DIAS_VALIDOS.join('|')})\\b`, 'gi')));
+        const timeMatches = Array.from(rawLine.matchAll(TIME_REGEX));
 
         // We only parse the block if we have an ACTIVE course and section
-        if (diaMatch && timeMatch && currentCodigo && currentSeccion) {
-            const dia = diaMatch[1].toUpperCase();
-            const startStr = timeMatch[1];
-            const endStr = timeMatch[2];
+        if (timeMatches.length > 0 && currentCodigo && currentSeccion) {
+            for (let i = 0; i < timeMatches.length; i++) {
+                const timeMatch = timeMatches[i];
 
-            let tipo = 'CLASE';
-            const typeMatch = rawLine.match(tipoRegex);
-            if (typeMatch) {
-                const rawTipo = typeMatch[1].toUpperCase();
-                // Map UP types to our normalized schema
-                if (rawTipo === 'PRACDIRIGI' || rawTipo === 'PRACCALIFI' || rawTipo.includes('PRÁCTICA')) {
-                    tipo = 'PRACTICA';
-                } else if (['FINAL', 'PARCIAL'].includes(rawTipo)) {
-                    tipo = rawTipo;
+                // Which day belongs to this time match? 
+                // We pick the closest day BEFORE this time, or the i-th day if positions are unclear.
+                let dia = 'LUN'; // Default if none found
+                if (diaMatches.length > 0) {
+                    // Find the last day that starts before this time match
+                    const timePos = timeMatch.index || 0;
+                    const matchesBefore = diaMatches.filter(m => (m.index || 0) < timePos);
+                    if (matchesBefore.length > 0) {
+                        dia = matchesBefore[matchesBefore.length - 1][1].toUpperCase();
+                    } else {
+                        // fallback to i-th day if any
+                        dia = diaMatches[Math.min(i, diaMatches.length - 1)][1].toUpperCase();
+                    }
                 }
+
+                const startStr = timeMatch[1];
+                const endStr = timeMatch[2];
+
+                let tipo = 'CLASE';
+                // Find tipo nearest to this block
+                const typeMatches = Array.from(rawLine.matchAll(new RegExp(`\\b(${TIPOS_VALIDOS.join('|')})\\b`, 'gi')));
+                if (typeMatches.length > 0) {
+                    const timePos = timeMatch.index || 0;
+                    const typesBefore = typeMatches.filter(m => (m.index || 0) < timePos);
+                    const bestType = typesBefore.length > 0 ? typesBefore[typesBefore.length - 1][1] : typeMatches[0][1];
+                    const rawTipo = bestType.toUpperCase();
+                    if (rawTipo === 'PRACDIRIGI' || rawTipo === 'PRACCALIFI' || rawTipo.includes('PRÁCTICA')) {
+                        tipo = 'PRACTICA';
+                    } else if (['FINAL', 'PARCIAL'].includes(rawTipo)) {
+                        tipo = rawTipo;
+                    }
+                }
+
+                // Deduplication (The Shield)
+                const blockKey = `${currentCodigo}-${currentSeccion}-${tipo}-${dia}-${startStr}-${endStr}`;
+                if (blocksSeen.has(blockKey)) continue;
+                blocksSeen.add(blockKey);
+
+                // Duration
+                const [h1, m1] = startStr.split(':').map(Number);
+                const [h2, m2] = endStr.split(':').map(Number);
+                const duracion = (h2 * 60 + m2) - (h1 * 60 + m1);
+
+                // Classroom
+                let aula = 'PEND';
+                const aulaMatches = Array.from(rawLine.matchAll(/([A-Z]-?\d{3}|[A-Z]-?PEND|X\s*-\d{3})/gi));
+                if (aulaMatches.length > 0) {
+                    const timePos = timeMatch.index || 0;
+                    // Find closest aula to this block (usually after)
+                    const matchesAfter = aulaMatches.filter(m => (m.index || 0) > timePos);
+                    const bestAula = matchesAfter.length > 0 ? matchesAfter[0][0] : aulaMatches[aulaMatches.length - 1][0];
+                    aula = bestAula.replace(/\s+/g, '').toUpperCase();
+                }
+
+                rawOfertas.push({
+                    codigo_curso: currentCodigo,
+                    nombre_curso: currentNombre,
+                    seccion: currentSeccion,
+                    profesor: currentProfesor,
+                    creditos: currentCreditos,
+                    tipo,
+                    dia,
+                    hora_inicio: startStr,
+                    hora_fin: endStr,
+                    duracion: duracion > 0 ? duracion : 0,
+                    cupos: 0,
+                    aula,
+                });
             }
-
-            // Deduplication (The Shield): ensures multi-page repeats don't clutter the DB
-            const blockKey = `${currentCodigo}-${currentSeccion}-${tipo}-${dia}-${startStr}-${endStr}`;
-            if (blocksSeen.has(blockKey)) continue;
-            blocksSeen.add(blockKey);
-
-            // Duration calculation
-            const [h1, m1] = startStr.split(':').map(Number);
-            const [h2, m2] = endStr.split(':').map(Number);
-            const duracion = (h2 * 60 + m2) - (h1 * 60 + m1);
-
-            // Classroom detection (e.g., "A-302", "B-PEND", "X-101")
-            let aula = 'PEND';
-            const aulaMatch = rawLine.match(/([A-Z]-?\d{3}|[A-Z]-?PEND|X\s*-\d{3})/i);
-            if (aulaMatch) aula = aulaMatch[0].replace(/\s+/g, '').toUpperCase();
-
-            rawOfertas.push({
-                codigo_curso: currentCodigo,
-                nombre_curso: currentNombre,
-                seccion: currentSeccion,
-                profesor: currentProfesor,
-                creditos: currentCreditos,
-                tipo,
-                dia,
-                hora_inicio: startStr,
-                hora_fin: endStr,
-                duracion: duracion > 0 ? duracion : 0,
-                cupos: 0,
-                aula,
-            });
         }
     }
 

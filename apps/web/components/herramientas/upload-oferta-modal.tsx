@@ -47,6 +47,28 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
         }
     }, []);
 
+    const handleClearPeriod = async () => {
+        const periodo = periodoOverride || parsedData?.periodo;
+        if (!periodo) return;
+
+        if (!confirm(`¿Estás SEGURO de que quieres BORRAR TODA la oferta del periodo ${periodo}? Esta acción es irreversible.`)) {
+            return;
+        }
+
+        setUploading(true);
+        try {
+            const { error } = await supabase.from('sche_sections').delete().eq('periodo', periodo);
+            if (error) throw error;
+            alert(`Toda la oferta del periodo ${periodo} ha sido borrada.`);
+            onSuccess();
+        } catch (err: any) {
+            console.error('[OFERTA_UPLOAD] Clear error:', err);
+            alert('Error al borrar: ' + err.message);
+        } finally {
+            setUploading(false);
+        }
+    };
+
     const handleConfirmUpload = async () => {
         if (!parsedData || !profile) return;
         setUploading(true);
@@ -284,22 +306,34 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
 
                 {/* Footer */}
                 {step === 'preview' && parsedData && parsedData.ofertas.length > 0 && (
-                    <div className="border-t border-bb-border px-6 py-4 flex items-center justify-end gap-3">
-                        <button
-                            onClick={handleReset}
-                            className="px-4 py-2 rounded-xl text-sm text-bb-text-secondary hover:text-bb-text border border-bb-border hover:bg-bb-hover transition-all"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            onClick={handleConfirmUpload}
-                            disabled={uploading}
-                            className="px-6 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
-                            style={{ backgroundColor: colors?.primary }}
-                        >
-                            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                            {uploading ? 'Subiendo...' : `Confirmar (${parsedData.ofertas.length} registros)`}
-                        </button>
+                    <div className="px-6 py-4">
+                        <div className="flex items-center justify-between gap-3 pt-4 border-t border-bb-border">
+                            <button
+                                onClick={handleClearPeriod}
+                                disabled={uploading}
+                                className="px-6 py-2.5 rounded-xl font-semibold border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-all flex items-center gap-2"
+                            >
+                                <AlertTriangle className="w-4 h-4" />
+                                Limpiar Base de Datos
+                            </button>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={handleReset}
+                                    className="px-6 py-2.5 rounded-xl font-semibold text-bb-text-secondary hover:bg-bb-hover transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleConfirmUpload}
+                                    disabled={uploading}
+                                    className="px-10 py-2.5 rounded-xl font-semibold text-white transition-all hover:opacity-90 flex items-center gap-2"
+                                    style={{ backgroundColor: colors?.primary }}
+                                >
+                                    {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirmar y Subir'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
