@@ -232,12 +232,12 @@ export default function AuthenticatedLayout({
                 console.log('Cerrando sidebar desde botón X');
                 setSidebarOpen(false);
               }}
-              className="p-3 rounded-xl text-bb-text hover:bg-bb-hover cursor-pointer relative z-[110] bg-bb-card border border-bb-border active:opacity-75 touch-manipulation shadow-sm"
+              className="p-2 text-bb-text-secondary hover:text-white cursor-pointer relative z-[110] active:scale-95 touch-manipulation transition-all"
               aria-label="Cerrar panel lateral"
               type="button"
               style={{ pointerEvents: 'auto' }}
             >
-              <X className="h-6 w-6 pointer-events-none" />
+              <X className="h-5 w-5 pointer-events-none" />
             </button>
           </div>
 
@@ -386,20 +386,6 @@ export default function AuthenticatedLayout({
             className="border-t px-0 py-3 flex-shrink-0"
             style={{ borderColor: colors?.primary + '40' }}
           >
-
-
-            <Link
-              href="/settings"
-              className="flex items-center gap-3 px-6 py-3 text-bb-text-secondary hover:text-bb-text group relative transition-all duration-200"
-              style={{ textDecoration: 'none', fontSize: '0.875rem' }}
-            >
-              <Settings style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
-              <span>Configuración</span>
-              <div
-                className="absolute left-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                style={{ backgroundColor: colors?.primary }}
-              />
-            </Link>
             <button
               onClick={handleLogoutClick}
               className="w-full flex items-center gap-3 px-6 py-3 text-bb-text-secondary hover:text-red-400 group relative transition-all duration-200"

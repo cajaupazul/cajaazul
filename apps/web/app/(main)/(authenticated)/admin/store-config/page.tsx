@@ -34,20 +34,11 @@ interface StoreProduct {
     created_at?: string;
 }
 
-interface StoreLayoutConfig {
-    id: string;
-    asset_key: string;
-    x_pos: number;
-    y_pos: number;
-    scale: number;
-    is_visible: boolean;
-}
 
 export default function StoreConfigPage() {
     const { colors } = useTheme();
     const { profile } = useProfile();
     const [products, setProducts] = useState<StoreProduct[]>([]);
-    const [layoutConfigs, setLayoutConfigs] = useState<StoreLayoutConfig[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -55,7 +46,6 @@ export default function StoreConfigPage() {
 
     useEffect(() => {
         fetchProducts();
-        fetchLayoutConfigs();
     }, []);
 
     const fetchProducts = async () => {
@@ -73,23 +63,11 @@ export default function StoreConfigPage() {
         setLoading(false);
     };
 
-    const fetchLayoutConfigs = async () => {
-        const { data, error } = await supabase
-            .from('store_layout_config')
-            .select('*');
-
-        if (!error && data) {
-            setLayoutConfigs(data);
-        }
-    };
 
     const handleUpdateChange = (id: string, field: keyof StoreProduct, value: any) => {
         setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
     };
 
-    const handleLayoutChange = (id: string, field: keyof StoreLayoutConfig, value: any) => {
-        setLayoutConfigs(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
-    };
 
     const handleSave = async (product: StoreProduct) => {
         setSaving(product.id);
@@ -115,29 +93,6 @@ export default function StoreConfigPage() {
         setSaving(null);
     };
 
-    const handleSaveLayout = async (config: StoreLayoutConfig) => {
-        setSaving(config.id);
-        setError(null);
-        setSuccess(null);
-
-        const { error } = await supabase
-            .from('store_layout_config')
-            .update({
-                x_pos: config.x_pos,
-                y_pos: config.y_pos,
-                scale: config.scale,
-                is_visible: config.is_visible
-            })
-            .eq('id', config.id);
-
-        if (error) {
-            setError(`Error al guardar diseño: ${error.message}`);
-        } else {
-            setSuccess(`Diseño de ${config.asset_key} actualizado`);
-            setTimeout(() => setSuccess(null), 3000);
-        }
-        setSaving(null);
-    };
 
     const toggleActive = async (product: StoreProduct) => {
         const newStatus = !product.active;
@@ -174,7 +129,7 @@ export default function StoreConfigPage() {
                     <p className="text-bb-text-secondary mt-1 font-medium">Gestiona precios y el diseño visual de la tienda.</p>
                 </div>
                 <Button
-                    onClick={() => { fetchProducts(); fetchLayoutConfigs(); }}
+                    onClick={() => { fetchProducts(); }}
                     variant="outline"
                     className="border-bb-border"
                 >
@@ -198,65 +153,6 @@ export default function StoreConfigPage() {
             )}
 
             <div className="space-y-12">
-                {/* Visual Layout Management Section */}
-                <section className="space-y-6">
-                    <div className="flex items-center gap-3 border-b border-bb-border pb-4">
-                        <Maximize className="text-indigo-500" size={24} />
-                        <h2 className="text-2xl font-bold text-bb-text">Diseño Visual y Mascotas</h2>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {layoutConfigs.map((config) => (
-                            <Card key={config.id} className="bg-bb-card border-bb-border overflow-hidden">
-                                <CardHeader className="bg-bb-sidebar/30 py-4">
-                                    <div className="flex items-center justify-between">
-                                        <CardTitle className="text-lg text-bb-text uppercase italic tracking-wider">
-                                            🎨 Layout: {config.asset_key.replace(/_/g, ' ')}
-                                        </CardTitle>
-                                        <button
-                                            onClick={() => handleLayoutChange(config.id, 'is_visible', !config.is_visible)}
-                                            className={`flex items-center gap-2 transition-colors ${config.is_visible ? 'text-green-500' : 'text-zinc-500'}`}
-                                        >
-                                            {config.is_visible ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
-                                            <span className="text-xs font-bold uppercase">{config.is_visible ? 'Visible' : 'Oculto'}</span>
-                                        </button>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="p-6 space-y-6">
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-3 col-span-2">
-                                            <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-xl text-xs text-indigo-300 font-medium text-center">
-                                                Tip: La posición se ajusta arrastrando la mascota directamente en la página de la tienda.
-                                            </div>
-                                        </div>
-                                        <div className="space-y-3">
-                                            <label className="text-sm font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                                                Escala (Tamaño) <span className="text-indigo-400">({config.scale})</span>
-                                            </label>
-                                            <input
-                                                type="range" min="0.5" max="2.5" step="0.1"
-                                                value={config.scale}
-                                                onChange={(e) => handleLayoutChange(config.id, 'scale', parseFloat(e.target.value))}
-                                                className="w-full accent-indigo-500"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <Button
-                                        onClick={() => handleSaveLayout(config)}
-                                        disabled={saving === config.id}
-                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black italic rounded-xl h-12"
-                                    >
-                                        {saving === config.id ? <RefreshCw className="w-5 h-5 animate-spin" /> : 'APLICAR CAMBIOS DE DISEÑO'}
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </section>
-
-                <hr className="border-bb-border" />
-
                 {/* Price Management Section */}
                 <section className="space-y-6">
                     <div className="flex items-center gap-3 border-b border-bb-border pb-4">

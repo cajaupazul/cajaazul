@@ -113,31 +113,33 @@ export default function InventoryPage() {
 
             {/* Inventory Grid */}
             {inventory.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
                     {inventory.map((invItem) => {
                         const item = invItem.shop_items;
                         if (!item) return null;
 
-                        const isEquipped = invItem.is_equipped;
+                        const isEquipped = profile?.active_frame_key === item.frame_key;
                         const isLoading = equipLoading === invItem.id;
 
                         return (
                             <div
                                 key={invItem.id}
-                                className={`relative rounded-2xl border bg-bb-card p-6 transition-all hover:shadow-lg ${isEquipped ? 'ring-2 ring-blue-500 shadow-blue-500/20' : 'border-bb-border'
+                                className={`relative rounded-2xl border bg-bb-card p-3 sm:p-6 transition-all hover:shadow-lg flex flex-col ${isEquipped ? 'ring-2 ring-blue-500 shadow-blue-500/20' : 'border-bb-border'
                                     }`}
                             >
                                 {/* Equipped Badge */}
                                 {isEquipped && (
-                                    <div className="absolute top-3 right-3 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 animate-pulse z-30">
-                                        <Zap size={14} />
-                                        Equipado
+                                    <div className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-blue-500 text-white px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1 animate-pulse z-30">
+                                        <Zap size={12} className="sm:hidden" />
+                                        <Zap size={14} className="hidden sm:block" />
+                                        <span className="hidden sm:inline">Equipado</span>
+                                        <span className="sm:hidden">Activo</span>
                                     </div>
                                 )}
 
-                                <div className="w-full aspect-square rounded-xl overflow-hidden bg-bb-sidebar flex items-center justify-center relative mb-4">
+                                <div className="w-full aspect-square rounded-xl overflow-hidden bg-bb-sidebar flex items-center justify-center relative mb-3 sm:mb-4">
                                     {/* Dummy Avatar behind for context */}
-                                    <div className="w-24 h-24 rounded-full bg-bb-dark flex items-center justify-center border border-bb-border overflow-hidden opacity-50">
+                                    <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-bb-dark flex items-center justify-center border border-bb-border overflow-hidden opacity-50 relative z-0">
                                         <div className="w-full h-full bg-gradient-to-br from-bb-sidebar to-bb-dark" />
                                     </div>
 
@@ -145,37 +147,38 @@ export default function InventoryPage() {
                                         <img
                                             src={item.image_url}
                                             alt={item.name}
-                                            className="w-full h-full object-contain absolute inset-0 z-10"
+                                            className="w-[120%] h-[120%] object-contain absolute inset-[-10%] z-10 pointer-events-none"
                                             loading="lazy"
                                         />
                                     ) : (
-                                        <div className="w-24 h-24 rounded-full border-4 border-bb-border absolute inset-0 m-auto">
+                                        <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-4 border-bb-border absolute inset-0 m-auto pointer-events-none">
                                             <div className="w-full h-full rounded-full bg-bb-text-secondary/20" />
                                         </div>
                                     )}
                                 </div>
 
                                 {/* Item Info */}
-                                <div className="space-y-3">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-bb-text">{item.name}</h3>
-                                        <p className="text-sm text-bb-text-secondary line-clamp-2">{item.description}</p>
+                                <div className="space-y-2 sm:space-y-3 flex-1 flex flex-col justify-end">
+                                    <div className="mb-1 sm:mb-0">
+                                        <h3 className="text-sm sm:text-xl font-bold text-bb-text leading-tight">{item.name}</h3>
+                                        <p className="text-[10px] sm:text-sm text-bb-text-secondary line-clamp-2 mt-0.5 sm:mt-1">{item.description}</p>
                                     </div>
 
-                                    {/* Equip Button */}
                                     <Button
-                                        onClick={() => handleEquipFrame(invItem.item_id, item.name)}
+                                        onClick={() => handleEquipFrame(item.id, item.name)}
                                         disabled={isEquipped || isLoading}
-                                        className={`w-full font-bold rounded-xl ${isEquipped
+                                        size="sm"
+                                        className={`w-full font-bold rounded-lg sm:rounded-xl text-xs sm:text-sm h-8 sm:h-10 mt-auto ${isEquipped
                                             ? 'bg-bb-hover text-bb-text-secondary cursor-not-allowed'
-                                            : 'text-white hover:opacity-90'
+                                            : 'text-white hover:opacity-90 transition-opacity'
                                             }`}
                                         style={!isEquipped && !isLoading ? { backgroundColor: colors?.primary } : undefined}
                                     >
-                                        {isLoading ? 'Equipando...' : isEquipped ? (
-                                            <span className="flex items-center gap-2 justify-center">
-                                                <Check size={16} />
-                                                Activo
+                                        {isLoading ? '...' : isEquipped ? (
+                                            <span className="flex items-center gap-1 sm:gap-2 justify-center">
+                                                <Check size={14} className="sm:w-4 sm:h-4" />
+                                                <span className="hidden sm:inline">Equipado</span>
+                                                <span className="sm:hidden">Activo</span>
                                             </span>
                                         ) : 'Equipar'}
                                     </Button>
