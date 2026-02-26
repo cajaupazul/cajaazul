@@ -31,7 +31,7 @@ function CourseDetailWrapper() {
         ] = await Promise.all([
           supabase.from('courses').select('*').eq('id', courseId).single(),
           supabase.from('materials')
-            .select('*, professors(nombre)')
+            .select('*, professors(nombre), profiles(*)')
             .eq('course_id', courseId)
             .order('created_at', { ascending: false })
         ]);
