@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { X } from 'lucide-react';
+import { X, BookOpen, FlaskConical } from 'lucide-react';
 import { OfertaAcademica } from '@/lib/supabase';
 
 type Props = {
@@ -69,6 +69,12 @@ export default function ScheduleGrid({ selectedOfertas, selectedCourses, onRemov
         return COURSE_COLORS[idx % COURSE_COLORS.length];
     };
 
+    // Exam-type specific colors
+    const EXAM_COLORS: Record<string, { bg: string; border: string; text: string; badge: string; badgeText: string }> = {
+        FINAL: { bg: '#ef444420', border: '#ef4444', text: '#fca5a5', badge: '#ef4444', badgeText: '#fff' },
+        PARCIAL: { bg: '#f59e0b20', border: '#f59e0b', text: '#fcd34d', badge: '#f59e0b', badgeText: '#fff' },
+    };
+
     // Filter based on viewMode
     const filteredOfertas = useMemo(() => {
         return selectedOfertas.filter(o => {
@@ -76,6 +82,21 @@ export default function ScheduleGrid({ selectedOfertas, selectedCourses, onRemov
             return viewMode === 'clases' ? !isExam : isExam;
         });
     }, [selectedOfertas, viewMode]);
+
+    // Group exams by course for the exam list summary
+    const examsByCourse = useMemo(() => {
+        if (viewMode !== 'examenes') return new Map();
+        const map = new Map<string, { nombre: string; finals: OfertaAcademica[]; parciales: OfertaAcademica[] }>();
+        for (const o of filteredOfertas) {
+            if (!map.has(o.codigo_curso)) {
+                map.set(o.codigo_curso, { nombre: o.nombre_curso, finals: [], parciales: [] });
+            }
+            const entry = map.get(o.codigo_curso)!;
+            if (o.tipo === 'FINAL') entry.finals.push(o);
+            else if (o.tipo === 'PARCIAL') entry.parciales.push(o);
+        }
+        return map;
+    }, [filteredOfertas, viewMode]);
 
     // Group blocks by day
     const blocksByDay = useMemo(() => {
@@ -88,6 +109,65 @@ export default function ScheduleGrid({ selectedOfertas, selectedCourses, onRemov
         }
         return map;
     }, [filteredOfertas]);
+
+    // Dedicated exam list view
+    if (viewMode === 'examenes') {
+        if (filteredOfertas.length === 0) {
+            return (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <BookOpen className="w-10 h-10 text-bb-text-secondary mb-3 opacity-40" />
+                    <p className="text-bb-text-secondary text-sm">No hay exámenes para los cursos seleccionados.</p>
+                    <p className="text-bb-text-secondary text-xs mt-1 opacity-70">Selecciona cursos en el Paso 1.</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className="p-4 space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                    <FlaskConical className="w-5 h-5 text-red-400" />
+                    <h3 className="text-sm font-bold text-bb-text uppercase tracking-wider">Fechas de Exámenes</h3>
+                    <div className="flex gap-2 ml-auto">
+                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">● FINAL</span>
+                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">● PARCIAL</span>
+                    </div>
+                </div>
+
+                {Array.from(examsByCourse.entries()).map(([codigo, data]) => (
+                    <div key={codigo} className="bg-bb-darker/40 rounded-xl border border-bb-border/60 overflow-hidden">
+                        {/* Course header */}
+                        <div className="px-4 py-2.5 border-b border-bb-border/40 flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: EXAM_COLORS['FINAL'].border }} />
+                            <span className="text-[11px] font-black text-bb-text-secondary uppercase tracking-widest">{codigo}</span>
+                            <span className="text-sm font-semibold text-bb-text truncate">{data.nombre}</span>
+                        </div>
+
+                        {/* Exam slots */}
+                        <div className="divide-y divide-bb-border/30">
+                            {data.finals.map((exam: OfertaAcademica, i: number) => (
+                                <div key={`f-${i}`} className="flex items-center gap-3 px-4 py-2.5">
+                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: EXAM_COLORS['FINAL'].badge, color: EXAM_COLORS['FINAL'].badgeText }}>FINAL</span>
+                                    <div className="flex flex-col flex-1 min-w-0">
+                                        <span className="text-xs font-bold text-bb-text">{exam.dia} · {exam.hora_inicio} – {exam.hora_fin}</span>
+                                        {exam.aula && exam.aula !== 'PEND' && <span className="text-[10px] text-bb-text-secondary">{exam.aula}</span>}
+                                    </div>
+                                </div>
+                            ))}
+                            {data.parciales.map((exam: OfertaAcademica, i: number) => (
+                                <div key={`p-${i}`} className="flex items-center gap-3 px-4 py-2.5">
+                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: EXAM_COLORS['PARCIAL'].badge, color: EXAM_COLORS['PARCIAL'].badgeText }}>PARCIAL</span>
+                                    <div className="flex flex-col flex-1 min-w-0">
+                                        <span className="text-xs font-bold text-bb-text">{exam.dia} · {exam.hora_inicio} – {exam.hora_fin}</span>
+                                        {exam.aula && exam.aula !== 'PEND' && <span className="text-[10px] text-bb-text-secondary">{exam.aula}</span>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
 
     return (
         <div className="w-full overflow-x-auto">
