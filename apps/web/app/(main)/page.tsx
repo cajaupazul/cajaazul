@@ -65,55 +65,66 @@ export default function HomePage() {
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-6 py-24 md:py-32 relative">
         {/* Intro Section */}
-        <div className="text-center mb-20 md:mb-32 max-w-4xl mx-auto space-y-8">
-          <div className="inline-block px-5 py-2 bg-blue-50 text-blue-700 text-[11px] font-black rounded-full uppercase tracking-[0.25em] mb-4">
-            Comunidad Universitaria Colaborativa
+        <div className="text-center mb-16 md:mb-24 max-w-4xl mx-auto space-y-6">
+          <div className="inline-block border border-gray-200 text-gray-500 text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-widest mb-4">
+            De alumnos para alumnos
           </div>
-          <h2 className="text-4xl md:text-6xl font-black text-[#002d5a] leading-tight tracking-tight italic uppercase">
-            Todo lo que necesitas <br />
-            <span className="text-blue-600">para tu éxito.</span>
+          <h2 className="text-4xl md:text-5xl font-bold text-[#111] leading-tight tracking-tight">
+            Nuestra propia red académica.
           </h2>
-          <p className="text-lg md:text-xl text-gray-500 font-medium leading-relaxed">
-            CampusLink es una plataforma independiente impulsada por estudiantes.
-            Aquí compartimos material, calificamos nuestra experiencia académica
-            y construimos una red de apoyo mutuo profesional.
+          <p className="text-lg md:text-xl text-gray-500 font-normal leading-relaxed max-w-3xl mx-auto">
+            Un espacio donde recopilamos material de ciclos pasados, calificamos profesores basados en la experiencia real
+            y nos ayudamos mutuamente durante la carrera universitaria.
           </p>
         </div>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 lg:gap-14">
-          {[
-            { icon: BookOpen, title: 'Materiales', desc: 'Accede a apuntes detallados, exámenes pasados y guías compartidas por tu comunidad.', color: 'blue' },
-            { icon: Star, title: 'Profesores', desc: 'Encuentra y comparte valoraciones reales sobre metodologías y experiencias de clase.', color: 'blue' },
-            { icon: Calendar, title: 'Eventos', desc: 'Organización centralizada de fechas críticas, talleres y conferencias estudiantiles.', color: 'blue' },
-            { icon: Users, title: 'Comunidad', desc: 'Conecta con otros estudiantes para resolver dudas y colaborar en proyectos.', color: 'blue' },
-            { icon: TrendingUp, title: 'Progreso', desc: 'Herramientas interactivas para seguir tu avance académico de forma efectiva.', color: 'blue' },
-            { icon: Award, title: 'Prestigio', desc: 'Gana reconocimiento y beneficios únicos por tus contribuciones valiosas.', color: 'blue' },
-          ].map((feature, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1, duration: 0.5 }}
-            >
-              <Card className="group h-full border-none shadow-2xl shadow-gray-200/50 hover:shadow-blue-300/30 transition-all duration-700 rounded-[32px] overflow-hidden bg-white p-4">
-                <CardHeader className="space-y-6 flex flex-col items-center sm:items-start text-center sm:text-left">
-                  <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center transition-all duration-700 group-hover:bg-blue-600 group-hover:text-white group-hover:-translate-y-2 group-hover:rotate-[10deg] shadow-lg shadow-blue-100/50">
-                    <feature.icon size={36} strokeWidth={2.5} />
-                  </div>
-                  <div className="space-y-3">
-                    <CardTitle className="text-2xl font-black text-[#002d5a] italic uppercase tracking-tight">
-                      {feature.title}
-                    </CardTitle>
-                    <CardDescription className="text-gray-500 font-bold leading-relaxed text-sm">
-                      {feature.desc}
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-              </Card>
-            </motion.div>
-          ))}
+        {/* Minimalist Features Grid */}
+        <div className="mx-auto max-w-5xl border-t border-gray-100 pt-16 md:pt-24 mt-8 md:mt-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 lg:gap-x-24 gap-y-16">
+            {[
+              {
+                icon: BookOpen,
+                title: 'Material Académico',
+                desc: 'Únete a nuestro repositorio colaborativo para compartir y acceder a apuntes, manuales, guías y exámenes pasados.'
+              },
+              {
+                icon: Star,
+                title: 'Reseñas de Profesores',
+                desc: 'Lee calificaciones honestas sobre metodologías, dificultad y carga de trabajo para matricularte con seguridad.'
+              },
+              {
+                icon: Calendar,
+                title: 'Eventos del Campus',
+                desc: 'Mantente al día con foros, talleres estudiantiles, congresos y fechas críticas que no nos podemos perder.'
+              },
+              {
+                icon: Users,
+                title: 'Red de Apoyo',
+                desc: 'Conéctate con estudiantes de distintas carreras para resolver dudas, armar grupos de estudio y colaborar.'
+              },
+            ].map((feature, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+                className="flex items-start gap-5 group"
+              >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border border-gray-100 bg-gray-50 text-blue-800 transition-colors group-hover:border-blue-200 group-hover:bg-blue-50/50">
+                  <feature.icon size={22} strokeWidth={2} />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-[#111] tracking-tight">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-500 leading-relaxed text-[15px]">
+                    {feature.desc}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </main>
 
