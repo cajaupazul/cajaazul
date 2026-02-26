@@ -289,7 +289,7 @@ export default function CourseDetailContent({
                 ) : (
                     <div className="w-full h-full bg-gradient-to-br from-blue-600/20 via-bb-darker to-teal-600/20" />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-bb-dark/60 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-bb-dark/80 via-bb-dark/20 to-transparent" />
                 <Button
                     variant="outline"
                     size="icon"
@@ -321,7 +321,7 @@ export default function CourseDetailContent({
                                     <p className="text-xs md:text-sm font-black text-blue-400 uppercase tracking-[0.2em]">
                                         {course.codigo}
                                     </p>
-                                    <h1 className="text-3xl md:text-5xl font-black text-white leading-tight tracking-tighter uppercase">{course.nombre}</h1>
+                                    <h1 className="text-3xl md:text-5xl font-bold text-bb-text leading-tight uppercase">{course.nombre}</h1>
                                 </div>
                                 <div className="flex flex-col items-end gap-5 shrink-0 pt-2">
                                     <Badge className="bg-green-500/10 text-green-400 border border-green-500/20 font-black px-4 py-1.5 uppercase tracking-widest text-[10px]">Abierto</Badge>
@@ -342,14 +342,14 @@ export default function CourseDetailContent({
                                 <div className="p-1.5 bg-blue-500/10 rounded-lg">
                                     <Filter className="w-4 h-4 text-blue-400" />
                                 </div>
-                                <h4 className="text-xs font-black text-white uppercase tracking-wider">Filtrar por profesor</h4>
+                                <h4 className="text-xs font-bold text-bb-text-secondary uppercase tracking-wider">Filtrar por profesor</h4>
                             </div>
                             <div className="flex flex-nowrap gap-2 overflow-x-auto pb-4 no-scrollbar -mx-1 px-1 overscroll-contain">
                                 <button
                                     onClick={() => setSelectedProfessorId('all')}
                                     className={`px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all shrink-0 border ${selectedProfessorId === 'all'
                                         ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/30 active:scale-95'
-                                        : 'bg-bb-card text-bb-text-secondary border-bb-border hover:border-bb-text/30 hover:text-bb-text'
+                                        : 'bg-bb-card text-bb-text-secondary border-bb-border hover:border-blue-500/20 hover:text-bb-text'
                                         }`}
                                 >
                                     Todos los materiales
@@ -360,7 +360,7 @@ export default function CourseDetailContent({
                                         onClick={() => setSelectedProfessorId(prof.id)}
                                         className={`px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all shrink-0 border flex items-center gap-2 ${selectedProfessorId === prof.id
                                             ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/30 active:scale-95'
-                                            : 'bg-bb-card text-bb-text-secondary border-bb-border hover:border-bb-text/30 hover:text-bb-text'
+                                            : 'bg-bb-card text-bb-text-secondary border-bb-border hover:border-blue-500/20 hover:text-bb-text'
                                             }`}
                                     >
                                         <div className={`w-1.5 h-1.5 rounded-full ${selectedProfessorId === prof.id ? 'bg-white' : 'bg-bb-border'}`} />
@@ -413,13 +413,13 @@ export default function CourseDetailContent({
                                     className="inline-flex items-center justify-center rounded-xl text-xs md:text-sm font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 h-11 px-6 shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap"
                                 >
                                     <div className="flex items-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>
                                         Subir Material
                                     </div>
                                 </Link>
                             </div>
 
-                            <div className="bg-bb-card p-4 md:p-6 rounded-2xl border border-bb-border shadow-2xl shadow-black/40">
+                            <div className="bg-bb-card p-4 md:p-6 rounded-2xl border border-bb-border shadow-sm">
                                 {renderMaterialGrid(filteredMaterials)}
                             </div>
                         </div>

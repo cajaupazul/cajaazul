@@ -91,7 +91,7 @@ export default function MaterialCard({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={onClick}
-                className="flex items-center justify-between p-3 bg-bb-darker/40 hover:bg-bb-card rounded-2xl border border-bb-border/50 hover:border-blue-500/30 transition-all cursor-pointer group active:scale-[0.99]"
+                className="flex items-center justify-between p-3 bg-bb-darker/20 hover:bg-bb-card rounded-xl border border-bb-border/50 transition-all cursor-pointer group active:scale-[0.99]"
             >
                 <div className="flex items-center gap-4 min-w-0">
                     <div className={`p-2 rounded-xl ${config.bg} ${config.color} group-hover:scale-110 transition-transform flex-shrink-0`}>
@@ -100,7 +100,7 @@ export default function MaterialCard({
                         ) : config.icon}
                     </div>
                     <div className="min-w-0">
-                        <p className="text-sm font-bold text-white truncate">
+                        <p className="text-sm font-bold text-bb-text truncate">
                             {material.titulo}
                         </p>
                         <div className="flex items-center gap-3 mt-1 text-[10px] text-bb-text-secondary font-medium">
@@ -141,11 +141,11 @@ export default function MaterialCard({
     return (
         <motion.div
             layout
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ y: -4, scale: 1.02 }}
+            whileHover={{ y: -4 }}
             onClick={onClick}
-            className="flex flex-col bg-bb-darker/40 rounded-3xl overflow-hidden border border-bb-border/50 hover:border-blue-500/40 hover:shadow-2xl hover:shadow-blue-500/10 transition-all cursor-pointer group active:scale-[0.98]"
+            className="flex flex-col bg-bb-darker/20 rounded-2xl overflow-hidden border border-bb-border/50 hover:border-blue-500/20 shadow-sm transition-all cursor-pointer group active:scale-[0.98]"
         >
             {/* Thumbnail Area */}
             <div className={`h-32 md:h-40 relative flex items-center justify-center overflow-hidden ${config.bg}`}>
@@ -153,49 +153,47 @@ export default function MaterialCard({
                     <img
                         src={thumbnailUrl}
                         alt={material.titulo}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
                     />
                 ) : (
-                    <div className={`${config.color} opacity-40 group-hover:scale-125 group-hover:opacity-80 transition-all duration-500 transform`}>
+                    <div className={`${config.color} opacity-30 group-hover:scale-110 group-hover:opacity-60 transition-all duration-500 transform`}>
                         {config.icon}
                     </div>
                 )}
 
                 {/* Overlay with Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-40" />
 
                 {/* Type Badge */}
                 <div className="absolute top-3 left-3">
-                    <Badge className={`${config.bg} ${config.color} border-${config.color.split('-')[1]}-500/30 backdrop-blur-md font-black text-[9px] uppercase tracking-widest`}>
+                    <Badge className={`${config.bg} ${config.color} border-current/20 backdrop-blur-md font-bold text-[9px] uppercase tracking-wider`}>
                         {config.label}
                     </Badge>
                 </div>
             </div>
 
             {/* Content Area */}
-            <div className="p-4 bg-black/40 backdrop-blur-sm border-t border-white/5 space-y-3">
-                <p className="text-xs md:text-[13px] font-bold text-white line-clamp-2 leading-snug min-h-[2.5rem] group-hover:text-blue-400 transition-colors">
+            <div className="p-4 bg-bb-card border-t border-bb-border/50 space-y-3">
+                <p className="text-sm font-bold text-bb-text line-clamp-2 leading-snug min-h-[2.5rem] group-hover:text-blue-400 transition-colors">
                     {material.titulo}
                 </p>
 
-                <div className="flex flex-col gap-2 pt-1 border-t border-white/5">
+                <div className="flex flex-col gap-2 pt-1 border-t border-bb-border/30">
                     {material.professors?.nombre && (
-                        <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary font-bold truncate">
-                            <div className="w-5 h-5 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                                <User className="w-3 h-3" />
-                            </div>
+                        <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary font-medium truncate">
+                            <User className="w-3 h-3" />
                             {material.professors.nombre}
                         </div>
                     )}
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[10px] text-bb-text/40 font-bold uppercase tracking-tighter">
+                        <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary opacity-60 font-medium uppercase">
                             <Calendar className="w-3 h-3" />
                             {format(new Date(material.created_at), 'd MMM, yyyy', { locale: es })}
                         </div>
 
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="p-1 px-2 rounded-lg bg-blue-500/10 text-blue-400 text-[10px] font-black uppercase">
+                            <div className="p-1 px-2 rounded-lg bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase">
                                 Ver
                             </div>
                         </div>
@@ -210,7 +208,7 @@ export default function MaterialCard({
                         e.stopPropagation();
                         onDelete();
                     }}
-                    className="absolute top-2 right-2 p-2 rounded-xl bg-red-500/20 text-red-500 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-90"
+                    className="absolute top-2 right-2 p-2 rounded-xl bg-red-500/10 text-red-500 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/20"
                 >
                     <LayoutPanelLeft className="w-3.5 h-3.5 rotate-45" />
                 </button>
