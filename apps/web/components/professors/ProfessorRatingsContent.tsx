@@ -269,6 +269,7 @@ const CommentItem = ({
                     created_at: comment.profiles?.created_at,
                     puntos: comment.profiles?.puntos,
                     es_vip: comment.profiles?.es_vip,
+                    active_frame_key: comment.profiles?.active_frame_key,
                     role: 'user'
                 }}>
                     <div className="transition-transform group-hover:scale-110 duration-300">
@@ -288,9 +289,22 @@ const CommentItem = ({
             <div className="flex flex-col relative z-10 pl-2">
                 <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="flex items-center gap-2 mb-1">
-                        <p className="font-bold text-white text-[13px] md:text-sm hover:text-blue-400 cursor-pointer transition-colors tracking-tight">
-                            {comment.profiles?.nombre}
-                        </p>
+                        <UserHoverCard profile={{
+                            id: comment.user_id,
+                            nombre: comment.profiles?.nombre || 'Usuario',
+                            avatar_url: comment.profiles?.avatar_url,
+                            background_url: comment.profiles?.background_url,
+                            bio: comment.profiles?.bio,
+                            created_at: comment.profiles?.created_at,
+                            puntos: comment.profiles?.puntos,
+                            es_vip: comment.profiles?.es_vip,
+                            active_frame_key: comment.profiles?.active_frame_key,
+                            role: 'user'
+                        }}>
+                            <p className="font-bold text-white text-[13px] md:text-sm hover:text-blue-400 cursor-pointer transition-colors tracking-tight">
+                                {comment.profiles?.nombre}
+                            </p>
+                        </UserHoverCard>
                         {comment.profiles?.es_vip && (
                             <img src="/vip-icon.png" alt="VIP" className="w-5 h-5 object-contain" />
                         )}
