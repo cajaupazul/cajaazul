@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     GraduationCap, Clock, CalendarDays, Save, Plus, Trash2, Loader2,
-    FileText, ChevronDown
+    FileText, ChevronDown, Edit2
 } from 'lucide-react';
 import { supabase, OfertaAcademica, UserSchedule } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
@@ -38,6 +38,10 @@ export default function ScheduleBuilder() {
     const [saving, setSaving] = useState(false);
     const [showScheduleMenu, setShowScheduleMenu] = useState(false);
     const [viewMode, setViewMode] = useState<'clases' | 'examenes'>('clases'); // clases vs examenes filter
+
+    // Rename state
+    const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+    const [editingScheduleName, setEditingScheduleName] = useState('');
 
     // Fetch periodos
     useEffect(() => {
@@ -183,32 +187,6 @@ export default function ScheduleBuilder() {
         return DIAS_LIBRES_ALL.filter(d => !busyDays.has(d));
     }, [allSelectedOfertas]);
 
-    const gapHours = useMemo(() => {
-        // Calculate gap hours between classes per day
-        let totalGap = 0;
-        const byDay = new Map<string, number[]>();
-
-        for (const o of allSelectedOfertas) {
-            if (o.tipo === 'FINAL' || o.tipo === 'PARCIAL') continue;
-            if (!byDay.has(o.dia)) byDay.set(o.dia, []);
-            const start = timeToMin(o.hora_inicio);
-            const end = timeToMin(o.hora_fin);
-            byDay.get(o.dia)!.push(start, end);
-        }
-
-        for (const [, times] of byDay) {
-            if (times.length < 4) continue;
-            times.sort((a, b) => a - b);
-            // Times are: start1, end1, start2, end2, ...
-            for (let i = 1; i < times.length - 1; i += 2) {
-                const gap = times[i + 1] - times[i];
-                if (gap > 0) totalGap += gap;
-            }
-        }
-
-        return Math.round(totalGap / 60 * 10) / 10;
-    }, [allSelectedOfertas]);
-
     const handleToggleCourse = useCallback((codigo: string) => {
         setSelectedCourses(prev => {
             const next = new Set(prev);
@@ -312,6 +290,8 @@ export default function ScheduleBuilder() {
 
     const handleNewSchedule = async () => {
         if (!profile?.id) return;
+        if (savedSchedules.length >= 3) return; // MAX 3 LIMIT
+
         const nombre = `Horario ${savedSchedules.length + 1}`;
         const { data } = await supabase
             .from('user_schedules')
@@ -343,6 +323,18 @@ export default function ScheduleBuilder() {
             setSelectedSections(new Map());
         }
         setShowScheduleMenu(false);
+    };
+
+    const handleRenameSchedule = async (id: string, newName: string) => {
+        if (!newName.trim()) return;
+
+        await supabase
+            .from('user_schedules')
+            .update({ nombre: newName.trim() })
+            .eq('id', id);
+
+        setSavedSchedules(prev => prev.map(s => s.id === id ? { ...s, nombre: newName.trim() } : s));
+        setEditingScheduleId(null);
     };
 
     if (loading && ofertas.length === 0) {
@@ -380,23 +372,14 @@ export default function ScheduleBuilder() {
                     </div>
                 </div>
 
-                {/* Free days */}
+                {/* Free days / Study days */}
                 <div className="flex items-center gap-2 bg-bb-card border border-bb-border rounded-xl px-4 py-2.5">
-                    <CalendarDays className="w-5 h-5 text-green-400" />
+                    <CalendarDays className="w-5 h-5 text-blue-400" />
                     <div>
-                        <p className="text-[10px] text-bb-text-secondary uppercase font-medium">Días Libres</p>
+                        <p className="text-[10px] text-bb-text-secondary uppercase font-medium">Días de Estudio</p>
                         <p className="text-sm font-bold text-bb-text leading-none">
-                            {freeDays.length > 0 ? freeDays.map(d => DIA_LABELS[d]).join(', ') : 'Ninguno'}
+                            {freeDays.length > 0 ? freeDays.map(d => DIA_LABELS[d]).join(', ') : 'Todos ocupados'}
                         </p>
-                    </div>
-                </div>
-
-                {/* Gap hours */}
-                <div className="flex items-center gap-2 bg-bb-card border border-bb-border rounded-xl px-4 py-2.5">
-                    <Clock className="w-5 h-5 text-yellow-400" />
-                    <div>
-                        <p className="text-[10px] text-bb-text-secondary uppercase font-medium">Horas Hueco</p>
-                        <p className="text-lg font-bold text-bb-text leading-none">{gapHours}h</p>
                     </div>
                 </div>
 
@@ -415,34 +398,75 @@ export default function ScheduleBuilder() {
                     </button>
 
                     {showScheduleMenu && (
-                        <div className="absolute right-0 top-full mt-1 w-56 bg-bb-card border border-bb-border rounded-xl shadow-xl z-30 overflow-hidden">
+                        <div className="absolute right-0 top-full mt-1 w-64 bg-bb-card border border-bb-border rounded-xl shadow-xl z-30 overflow-hidden">
                             {savedSchedules.map(s => (
                                 <div
                                     key={s.id}
                                     className="flex items-center justify-between px-4 py-2.5 hover:bg-bb-hover cursor-pointer transition-all"
                                     onClick={() => {
-                                        loadSchedule(s);
-                                        setShowScheduleMenu(false);
+                                        if (editingScheduleId !== s.id) {
+                                            loadSchedule(s);
+                                            setShowScheduleMenu(false);
+                                        }
                                     }}
                                 >
-                                    <span className={`text-sm ${s.id === activeScheduleId ? 'font-bold text-bb-text' : 'text-bb-text-secondary'}`}>
-                                        {s.nombre}
-                                    </span>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteSchedule(s.id); }}
-                                        className="p-1 text-bb-text-secondary hover:text-red-400 transition-colors"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                                    {editingScheduleId === s.id ? (
+                                        <input
+                                            autoFocus
+                                            className="bg-bb-bg border border-bb-border rounded px-2 py-1 w-full text-sm text-bb-text mr-2 focus:outline-none focus:border-blue-500"
+                                            value={editingScheduleName}
+                                            onChange={e => setEditingScheduleName(e.target.value)}
+                                            onBlur={() => handleRenameSchedule(s.id, editingScheduleName)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') handleRenameSchedule(s.id, editingScheduleName);
+                                                if (e.key === 'Escape') setEditingScheduleId(null);
+                                            }}
+                                            onClick={e => e.stopPropagation()}
+                                        />
+                                    ) : (
+                                        <span className={`text-sm flex-1 truncate mr-2 ${s.id === activeScheduleId ? 'font-bold text-bb-text' : 'text-bb-text-secondary'}`}>
+                                            {s.nombre}
+                                        </span>
+                                    )}
+
+                                    {editingScheduleId !== s.id && (
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditingScheduleId(s.id);
+                                                    setEditingScheduleName(s.nombre);
+                                                }}
+                                                className="p-1 text-bb-text-secondary hover:text-blue-400 transition-colors"
+                                                title="Renombrar"
+                                            >
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteSchedule(s.id); }}
+                                                className="p-1 text-bb-text-secondary hover:text-red-400 transition-colors"
+                                                title="Eliminar"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
-                            <button
-                                onClick={handleNewSchedule}
-                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm border-t border-bb-border hover:bg-bb-hover transition-all"
-                                style={{ color: colors?.primary }}
-                            >
-                                <Plus className="w-4 h-4" /> Nuevo horario
-                            </button>
+                            {savedSchedules.length < 3 && (
+                                <button
+                                    onClick={handleNewSchedule}
+                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm border-t border-bb-border hover:bg-bb-hover transition-all"
+                                    style={{ color: colors?.primary }}
+                                >
+                                    <Plus className="w-4 h-4" /> Nuevo horario
+                                </button>
+                            )}
+                            {savedSchedules.length >= 3 && (
+                                <div className="px-4 py-2.5 text-xs text-center text-bb-text-secondary border-t border-bb-border bg-bb-bg/50">
+                                    Límite de 3 horarios alcanzado
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
