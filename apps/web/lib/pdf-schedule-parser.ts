@@ -192,15 +192,19 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             if (codigo !== currentCodigo) {
                 flushProfessorBuffer();
                 currentCodigo = codigo;
+                currentCreditos = 0; // Reset for new course!
                 let namePart = courseMatch[2].trim();
-                // Extract credits from end: "4,00" or "4.00"
+
+                // 1. Strip PREREQUISITO suffix FIRST, so it doesn't block the credit regex at the end of the line
+                namePart = namePart.replace(/\s+PREREQUISITO[:\s].*/i, '').trim();
+
+                // 2. Extract credits from end: "4,00" or "4.00"
                 const creditMatch = namePart.match(/(\d+[.,]\d+)\s*$/);
                 if (creditMatch) {
                     currentCreditos = parseFloat(creditMatch[1].replace(',', '.'));
                     namePart = namePart.slice(0, creditMatch.index).trim();
                 }
-                // Strip PREREQUISITO suffix
-                namePart = namePart.replace(/\s+PREREQUISITO[:\s].*/i, '').trim();
+
                 currentNombre = namePart;
                 currentSeccion = '';
                 currentProfesor = '';
