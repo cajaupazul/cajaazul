@@ -1249,7 +1249,7 @@ export default function ProfessorRatingsContent({
 
                         {/* Social Wall Style Comments (Cleaned) */}
                         {comments.length > 0 ? (
-                            <div className="space-y-4">
+                            <div className="space-y-4 pb-12">
                                 {(() => {
                                     const renderCommentTree = (parentId: string | null = null, depth = 0) => {
                                         return comments
@@ -1261,7 +1261,7 @@ export default function ProfessorRatingsContent({
                                                         {/* Continuous Vertical Line for Threads */}
                                                         {replies.length > 0 && (
                                                             <div
-                                                                className="absolute bg-black w-[1px] z-0"
+                                                                className="absolute bg-bb-text/30 w-[1px] z-0"
                                                                 style={{
                                                                     left: `${depth * 56 + 20}px`,
                                                                     top: '40px',
