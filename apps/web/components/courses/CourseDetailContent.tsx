@@ -330,7 +330,6 @@ export default function CourseDetailContent({
 
                             <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs md:text-sm text-bb-text-secondary mb-10 font-medium">
                                 <div><span className="text-bb-text/50">Facultad:</span> {course.facultad}</div>
-                                <div><span className="text-bb-text/50">Carrera:</span> {course.carrera}</div>
                                 <div><span className="text-bb-text/50">Ciclo:</span> {course.ciclo}</div>
                             </div>
 
@@ -429,7 +428,7 @@ export default function CourseDetailContent({
                         <div className="sticky top-8 space-y-6">
                             {allProfessors.length > 0 ? (
                                 <div className="space-y-4">
-                                    <h4 className="font-bold text-white mb-2 flex items-center gap-2 px-1">
+                                    <h4 className="font-bold text-bb-text mb-2 flex items-center gap-2 px-1">
                                         <Users className="w-4 h-4 text-blue-400" /> Profesores del curso
                                     </h4>
                                     <div className="grid grid-cols-1 gap-3">
