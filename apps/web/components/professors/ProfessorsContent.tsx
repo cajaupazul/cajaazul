@@ -1,10 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Star, Search, Plus, GraduationCap, Trophy, Trash2 } from 'lucide-react';
 import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -74,23 +81,52 @@ export default function ProfessorsContent({
     const { removeProfessor } = useDashboardData();
     const [professors, setProfessors] = useState<any[]>(initialProfessors);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCourse, setSelectedCourse] = useState('all');
+    const [sortBy, setSortBy] = useState('best');
     const [savedProfessors, setSavedProfessors] = useState<Set<string>>(new Set(initialSavedProfessors));
+
+    // Extract unique courses across all professors
+    const uniqueCourses = useMemo(() => {
+        const coursesSet = new Set<string>();
+        initialProfessors.forEach(prof => {
+            if (prof.courses && Array.isArray(prof.courses)) {
+                prof.courses.forEach((c: string) => coursesSet.add(c));
+            } else if (prof.especialidad) {
+                coursesSet.add(prof.especialidad);
+            }
+        });
+        return Array.from(coursesSet).sort();
+    }, [initialProfessors]);
 
     // Sync local state when global state changes (e.g. from props)
     useEffect(() => {
         setProfessors(initialProfessors);
     }, [initialProfessors]);
 
-    const filteredProfessors = professors.filter((professor) => {
-        if (!searchQuery) return true;
+    const filteredAndSortedProfessors = useMemo(() => {
+        let result = professors.filter((professor) => {
+            const query = searchQuery.toLowerCase().trim();
+            const nameMatch = !query || professor.nombre.toLowerCase().includes(query);
+            const specialtyMatch = !query || professor.especialidad?.toLowerCase().includes(query);
+            const otherCoursesMatch = !query || (professor.courses || []).some((course: string) => course.toLowerCase().includes(query));
 
-        const query = searchQuery.toLowerCase().trim();
-        const nameMatch = professor.nombre.toLowerCase().includes(query);
-        const specialtyMatch = professor.especialidad?.toLowerCase().includes(query);
-        const otherCoursesMatch = (professor.courses || []).some((course: string) => course.toLowerCase().includes(query));
+            const courseMatch = selectedCourse === 'all' ||
+                (professor.courses || []).includes(selectedCourse) ||
+                professor.especialidad === selectedCourse;
 
-        return nameMatch || specialtyMatch || otherCoursesMatch;
-    });
+            return (nameMatch || specialtyMatch || otherCoursesMatch) && courseMatch;
+        });
+
+        // Sorting
+        return result.sort((a, b) => {
+            const ratingA = a.averageRating || 0;
+            const ratingB = b.averageRating || 0;
+
+            if (sortBy === 'best') return ratingB - ratingA;
+            if (sortBy === 'worst') return ratingA - ratingB;
+            return 0;
+        });
+    }, [professors, searchQuery, selectedCourse, sortBy]);
 
     return (
         <div className="min-h-screen bg-bb-dark p-4 md:p-8 relative transition-colors duration-300">
@@ -106,32 +142,54 @@ export default function ProfessorsContent({
                         <p className="text-sm md:text-base text-bb-text-secondary font-medium ml-1">Descubre a los mejores mentores de tu facultad</p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                        <div className="relative group flex-1 md:w-80">
+                    <div className="flex flex-col sm:grid sm:grid-cols-2 lg:flex lg:flex-row gap-3 w-full lg:w-auto">
+                        <div className="relative group w-full lg:w-72">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <Search className="h-5 w-5 text-gray-500" />
                             </div>
                             <Input
-                                placeholder="Buscar por nombre o materia..."
+                                placeholder="Buscar profesor..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10 h-12 bg-bb-card border-bb-border text-bb-text placeholder:text-gray-500 rounded-xl"
+                                className="pl-10 h-11 bg-bb-card border-bb-border text-bb-text placeholder:text-gray-500 rounded-xl"
                             />
                         </div>
 
+                        <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+                            <SelectTrigger className="h-11 bg-bb-card border-bb-border text-bb-text rounded-xl w-full lg:w-48">
+                                <SelectValue placeholder="Curso" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-bb-card border-bb-border">
+                                <SelectItem value="all">Todos los cursos</SelectItem>
+                                {uniqueCourses.map(course => (
+                                    <SelectItem key={course} value={course}>{course}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <Select value={sortBy} onValueChange={setSortBy}>
+                            <SelectTrigger className="h-11 bg-bb-card border-bb-border text-bb-text rounded-xl w-full lg:w-48">
+                                <SelectValue placeholder="Ordenar por" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-bb-card border-bb-border text-bb-text">
+                                <SelectItem value="best">Mejor Calificados</SelectItem>
+                                <SelectItem value="worst">Menor Calificados</SelectItem>
+                            </SelectContent>
+                        </Select>
+
                         <Button
                             onClick={() => router.push('/dashboard/professors/nuevo')}
-                            className="h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl w-full sm:w-auto"
+                            className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl w-full lg:w-auto"
                         >
-                            <Plus className="h-5 w-5 mr-2" />
-                            Agregar Profesor
+                            <Plus className="h-5 w-5 mr-1" />
+                            Agregar
                         </Button>
                     </div>
                 </div>
 
-                {filteredProfessors.length > 0 ? (
+                {filteredAndSortedProfessors.length > 0 ? (
                     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
-                        {filteredProfessors.map((professor) => {
+                        {filteredAndSortedProfessors.map((professor) => {
                             const isTopRated = (professor.averageRating || 0) >= 4.5;
 
                             return (
