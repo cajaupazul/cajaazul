@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Maximize, Minimize } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface SecurePptxViewerProps {
@@ -155,9 +155,9 @@ export default function SecurePptxViewer({ filePath, bucket = 'course-materials'
                     title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
                 >
                     {isFullscreen ? (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 9L4 4m0 0l5 5m-5-5h5m-5 0v5m11 11l5 5m0 0l-5-5m5 5v-5m0 5h-5M4 15l5-5m-5 5v-5m0 5h5m11-11l-5 5m5-5h-5m5 0v5" /></svg>
+                        <Minimize className="w-4 h-4" strokeWidth={2} />
                     ) : (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                        <Maximize className="w-4 h-4" strokeWidth={2} />
                     )}
                 </button>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-[10px] px-2 py-1 rounded-lg flex items-center border border-white/10 pointer-events-none self-center">

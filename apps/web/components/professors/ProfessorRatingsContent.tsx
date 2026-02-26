@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Star, MessageCircle, TrendingUp, ArrowLeft, Trophy, Sparkles, Share2, Instagram, User, Info, ArrowRight, Upload, Trash2, Bold, Italic, Underline, Strikethrough, Quote, Eye, Image as ImageIcon } from 'lucide-react';
+import { Star, MessageCircle, TrendingUp, ArrowLeft, Trophy, Sparkles, Share2, Instagram, User, Info, ArrowRight, Upload, Trash2, Bold, Italic, Underline, Strikethrough, Quote, Eye, Image as ImageIcon, Plus, ThumbsUp, MessageSquare, FileText, LayoutPanelLeft, FolderRoot } from 'lucide-react';
 import Link from 'next/link';
 import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
@@ -20,7 +20,6 @@ import { StickerCanvas } from '@/components/ui/StickerCanvas';
 import { PLACEHOLDERS, getDiversifiedProfessorBackground, getStringHash } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
-import { FileText, LayoutPanelLeft, FolderRoot } from 'lucide-react';
 
 interface ProfessorComment {
     id: string;
@@ -157,9 +156,7 @@ const ReplyToggler = ({ count, children, onToggle }: { count: number; children: 
                     className="flex items-center gap-2 text-bb-text-secondary hover:text-white transition-colors ml-2 mt-2 group"
                 >
                     <div className="w-5 h-5 rounded-full border border-bb-border flex items-center justify-center group-hover:border-blue-500/50 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-bb-text-secondary group-hover:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M5 12h14m-7-7v14" />
-                        </svg>
+                        <Plus className="w-3 h-3 text-bb-text-secondary group-hover:text-blue-400" />
                     </div>
                     <span className="text-[11px] font-bold uppercase tracking-wider opacity-60 group-hover:opacity-100">Ver mas respuestas ({count})</span>
                 </button>
@@ -365,9 +362,7 @@ const CommentItem = ({
                             currentReaction ? currentReaction.color + " opacity-100" : "text-bb-text-secondary"
                         )}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M7 10v12" /><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
-                        </svg>
+                        <ThumbsUp className="w-3.5 h-3.5" />
                         {currentReaction ? currentReaction.label : "Me gusta"}
                     </button>
 
@@ -406,9 +401,7 @@ const CommentItem = ({
                         onClick={onReply}
                         className="flex items-center gap-1.5 text-bb-text-secondary opacity-60 hover:opacity-100 transition-all text-[11px] font-bold"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-                        </svg>
+                        <MessageSquare className="w-3.5 h-3.5" />
                         Responder
                     </button>
                 )}
