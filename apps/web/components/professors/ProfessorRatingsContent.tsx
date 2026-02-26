@@ -117,7 +117,7 @@ const ProfessorBackground = ({ url, name, specialty }: { url: string | null; nam
                 onError={handleError}
             />
             <div
-                className={`absolute inset-0 bg-cover bg-center transition-all duration-1000 ${isLoaded ? 'opacity-80 scale-100' : 'opacity-0 scale-110 blur-sm'}`}
+                className={`absolute inset-0 bg-cover bg-center transition-all duration-1000 ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110 blur-sm'}`}
                 style={{ backgroundImage: `url("${currentUrl}")` }}
             />
         </>
@@ -252,7 +252,7 @@ const CommentItem = ({
             {/* Branch Connector (Perfectly Aligned with Continuous Parent Line) */}
             {depth > 0 && (
                 <div
-                    className="absolute border-l-[1.5px] border-b-[1.5px] border-bb-border rounded-bl-xl z-0"
+                    className="absolute border-l-[1.5px] border-b-[1.5px] border-black rounded-bl-xl z-0"
                     style={{
                         top: "-2.5rem",
                         left: "-2.25rem", // Indent(56px) - LineX(20px) = 36px (2.25rem)
@@ -766,9 +766,8 @@ export default function ProfessorRatingsContent({
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-bb-darker to-teal-900/30" />
                 )}
-                {/* Cinematic gradient overlays */}
-                <div className="absolute inset-0 bg-gradient-to-t from-bb-dark via-bb-dark/40 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-bb-dark/60 via-transparent to-transparent" />
+                {/* Subtle Cinematic gradient only at the very bottom for name readability if needed, but keeping it minimal as requested */}
+                <div className="absolute inset-0 bg-gradient-to-t from-bb-dark/40 to-transparent" />
 
                 {/* Back Button on banner */}
                 <Button
@@ -1169,7 +1168,7 @@ export default function ProfessorRatingsContent({
                                                 value={commentText}
                                                 onChange={(e) => setCommentText(e.target.value)}
                                                 placeholder="Escribe algo..."
-                                                className="bg-transparent border-none text-bb-text min-h-[100px] rounded-none resize-none focus:ring-0 text-sm md:text-base placeholder:text-bb-text-secondary/40 p-0 shadow-none font-medium"
+                                                className="bg-transparent border-none text-bb-text min-h-[100px] rounded-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 text-sm md:text-base placeholder:text-bb-text-secondary/40 p-0 shadow-none font-medium"
                                             />
                                         </div>
                                     </div>
@@ -1255,7 +1254,7 @@ export default function ProfessorRatingsContent({
                                                         {/* Continuous Vertical Line for Threads */}
                                                         {replies.length > 0 && (
                                                             <div
-                                                                className="absolute bg-bb-border w-[1px] z-0"
+                                                                className="absolute bg-black w-[1px] z-0"
                                                                 style={{
                                                                     left: `${depth * 56 + 20}px`,
                                                                     top: '40px',
@@ -1288,7 +1287,7 @@ export default function ProfessorRatingsContent({
                                                                                 value={replyText}
                                                                                 onChange={(e) => setReplyText(e.target.value)}
                                                                                 placeholder="Escribe algo..."
-                                                                                className="bg-transparent border-none text-bb-text min-h-[80px] rounded-none resize-none focus:ring-0 p-0 text-xs md:text-sm placeholder:text-bb-text-secondary/40 shadow-none font-medium"
+                                                                                className="bg-transparent border-none text-bb-text min-h-[80px] rounded-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 text-xs md:text-sm placeholder:text-bb-text-secondary/40 shadow-none font-medium"
                                                                                 autoFocus
                                                                             />
                                                                         </div>
