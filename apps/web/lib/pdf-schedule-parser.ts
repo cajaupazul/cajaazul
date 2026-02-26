@@ -66,7 +66,7 @@ async function parseFromPDF(file: File): Promise<{
     const pdfjsLib = await import('pdfjs-dist');
 
     if (typeof window !== 'undefined') {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -297,13 +297,12 @@ function parseLines(allLines: string[]): {
                     const bestType = typesBefore.length > 0 ? typesBefore[typesBefore.length - 1][1] : typeMatches[0][1];
                     const rawTipo = bestType.toUpperCase();
 
-                    // Filter 1: Ignore Exams
-                    if (['FINAL', 'PARCIAL'].includes(rawTipo)) continue;
-
-                    // Filter 2: Practice Logic
+                    // Normalize tipo
                     if (rawTipo === 'PRACCALIFI') continue;
 
-                    if (rawTipo === 'PRACDIRIGI' || rawTipo.includes('PRÁCTICA')) {
+                    if (['FINAL', 'PARCIAL'].includes(rawTipo)) {
+                        tipo = rawTipo; // Keep as FINAL or PARCIAL
+                    } else if (rawTipo === 'PRACDIRIGI' || rawTipo.includes('PRÁCTICA')) {
                         tipo = 'PRACTICA';
                     } else if (rawTipo === 'CLASE') {
                         tipo = 'CLASE';
