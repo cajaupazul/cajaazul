@@ -79,8 +79,8 @@ export default function HomePage() {
         </div>
 
         {/* Minimalist Features Grid */}
-        <div className="mx-auto max-w-5xl border-t border-gray-100 pt-16 md:pt-24 mt-8 md:mt-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 lg:gap-x-24 gap-y-16">
+        <div className="mx-auto max-w-6xl border-t border-gray-100 pt-16 md:pt-24 mt-8 md:mt-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 md:gap-x-16 lg:gap-x-24 gap-y-12 md:gap-y-20 px-4 sm:px-0">
             {[
               {
                 icon: BookOpen,
@@ -109,16 +109,16 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1, duration: 0.5 }}
-                className="flex items-start gap-5 group"
+                className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-5 sm:gap-6 group"
               >
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border border-gray-100 bg-gray-50 text-blue-800 transition-colors group-hover:border-blue-200 group-hover:bg-blue-50/50">
-                  <feature.icon size={22} strokeWidth={2} />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[1.5rem] flex items-center justify-center shrink-0 border border-gray-100 bg-gray-50 text-blue-800 transition-colors group-hover:border-blue-200 group-hover:bg-blue-50/50">
+                  <feature.icon className="w-8 h-8 sm:w-10 sm:h-10" strokeWidth={1.5} />
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-[#111] tracking-tight">
+                <div className="space-y-3">
+                  <h3 className="text-xl sm:text-2xl font-black text-[#111] tracking-tight">
                     {feature.title}
                   </h3>
-                  <p className="text-gray-500 leading-relaxed text-[15px]">
+                  <p className="text-gray-500 leading-relaxed text-[15px] sm:text-[17px]">
                     {feature.desc}
                   </p>
                 </div>
