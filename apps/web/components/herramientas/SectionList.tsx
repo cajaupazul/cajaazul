@@ -58,14 +58,20 @@ export default function SectionList({
         return Array.from(map.values());
     }, [ofertas, activeCourse]);
 
-    // Check if a section has conflicts with already selected sections
-    const hasConflict = (section: SectionGroup): boolean => {
+    // Check if a section conflicts with already-selected sections
+    // Checks both CLASE and FINAL/PARCIAL clashes separately
+    const getConflict = (section: SectionGroup): { conflict: boolean; examConflict: boolean } => {
+        let conflict = false;
+        let examConflict = false;
+
         for (const horario of section.horarios) {
-            if (horario.tipo !== 'CLASE') continue;
+            const isExam = horario.tipo === 'FINAL' || horario.tipo === 'PARCIAL';
             for (const sel of allSelected) {
                 if (sel.codigo_curso === activeCourse) continue;
-                if (sel.tipo !== 'CLASE') continue;
                 if (sel.dia !== horario.dia) continue;
+                const selIsExam = sel.tipo === 'FINAL' || sel.tipo === 'PARCIAL';
+                // Only compare same categories
+                if (isExam !== selIsExam) continue;
 
                 const selStart = timeToMinutes(sel.hora_inicio);
                 const selEnd = timeToMinutes(sel.hora_fin);
@@ -73,11 +79,12 @@ export default function SectionList({
                 const horEnd = timeToMinutes(horario.hora_fin);
 
                 if (horStart < selEnd && horEnd > selStart) {
-                    return true;
+                    if (isExam) examConflict = true;
+                    else conflict = true;
                 }
             }
         }
-        return false;
+        return { conflict: conflict || examConflict, examConflict };
     };
 
     const courseName = activeCourse
@@ -120,7 +127,7 @@ export default function SectionList({
                         <tbody>
                             {sections.map(section => {
                                 const isSelected = selectedSections.get(activeCourse)?.has(section.seccion) || false;
-                                const conflict = !isSelected && hasConflict(section);
+                                const { conflict, examConflict } = !isSelected ? getConflict(section) : { conflict: false, examConflict: false };
 
                                 // Group horarios by viewMode for display
                                 const filteredHorarios = section.horarios
@@ -151,8 +158,11 @@ export default function SectionList({
                                         </td>
                                         <td className="px-3 py-2.5 text-center">
                                             {conflict ? (
-                                                <span className="inline-flex items-center gap-1 text-red-400 text-[10px] font-medium">
-                                                    <AlertTriangle className="w-3 h-3" /> Conflicto
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-medium">
+                                                    <AlertTriangle className="w-3 h-3" />
+                                                    <span className={examConflict && !conflict ? 'text-yellow-400' : 'text-red-400'}>
+                                                        {examConflict && !conflict ? 'Conflicto examen' : 'Conflicto'}
+                                                    </span>
                                                 </span>
                                             ) : isSelected ? (
                                                 <button

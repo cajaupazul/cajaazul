@@ -218,22 +218,31 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                             </div>
 
                             {isPasteMode ? (
-                                <div className="w-full flex flex-col gap-4">
+                                <div className="w-full flex flex-col gap-3">
+                                    <div className="bg-bb-hover/60 border border-bb-border/60 rounded-xl px-4 py-2.5 text-xs text-bb-text-secondary space-y-1">
+                                        <p className="font-semibold text-bb-text mb-1">📋 Cómo pegar correctamente:</p>
+                                        <p>1. Abre el PDF de la oferta académica en tu navegador</p>
+                                        <p>2. Selecciona TODO el texto (Ctrl+A) y cópialo (Ctrl+C)</p>
+                                        <p>3. Pégalo aquí. El sistema detectará automáticamente cursos, secciones, CLASES, FINALES y PARCIALES.</p>
+                                    </div>
                                     <textarea
                                         value={pastedText}
                                         onChange={e => setPastedText(e.target.value)}
-                                        placeholder="Pega aquí el contenido copiado del PDF o Word..."
-                                        className="w-full h-64 bg-bb-dark border border-bb-border rounded-xl px-4 py-3 text-bb-text text-sm focus:outline-none focus:ring-2 resize-none"
+                                        placeholder="Pega aquí el texto completo copiado del PDF o Word de la oferta académica..."
+                                        className="w-full h-52 bg-bb-dark border border-bb-border rounded-xl px-4 py-3 text-bb-text text-sm focus:outline-none focus:ring-2 resize-none font-mono"
                                         style={{ focusRingColor: colors?.primary } as any}
                                     />
-                                    <button
-                                        onClick={handleTextParse}
-                                        disabled={parsing || !pastedText.trim()}
-                                        className="w-full py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 flex items-center justify-center gap-2"
-                                        style={{ backgroundColor: colors?.primary }}
-                                    >
-                                        {parsing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Analizar Texto'}
-                                    </button>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs text-bb-text-secondary flex-1">{pastedText.trim() ? `${pastedText.trim().split('\n').length} líneas` : 'Sin texto'}</span>
+                                        <button
+                                            onClick={handleTextParse}
+                                            disabled={parsing || !pastedText.trim()}
+                                            className="flex-1 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 flex items-center justify-center gap-2"
+                                            style={{ backgroundColor: colors?.primary }}
+                                        >
+                                            {parsing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Analizar Texto'}
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center gap-6 py-6 w-full">
@@ -330,12 +339,18 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                                         </thead>
                                         <tbody>
                                             {parsedData.ofertas.slice(0, 50).map((o, i) => (
-                                                <tr key={i} className="border-t border-bb-border/50 hover:bg-bb-hover/50">
-                                                    <td className="px-3 py-1.5 text-bb-text">{o.codigo_curso}</td>
-                                                    <td className="px-3 py-1.5 text-bb-text truncate max-w-[150px]">{o.nombre_curso}</td>
-                                                    <td className="px-3 py-1.5 text-bb-text">{o.seccion}</td>
+                                                <tr key={i} className={`border-t border-bb-border/50 hover:bg-bb-hover/50 ${o.tipo === 'FINAL' ? 'bg-red-500/5' : o.tipo === 'PARCIAL' ? 'bg-yellow-500/5' : ''}`}>
+                                                    <td className="px-3 py-1.5 text-bb-text font-mono text-[10px]">{o.codigo_curso}</td>
+                                                    <td className="px-3 py-1.5 text-bb-text truncate max-w-[140px]">{o.nombre_curso}</td>
+                                                    <td className="px-3 py-1.5 text-bb-text font-bold">{o.seccion}</td>
                                                     <td className="px-3 py-1.5 text-bb-text-secondary truncate max-w-[120px]">{o.profesor || '—'}</td>
-                                                    <td className="px-3 py-1.5 text-bb-text-secondary">{o.tipo}</td>
+                                                    <td className="px-3 py-1.5">
+                                                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${o.tipo === 'FINAL' ? 'bg-red-500 text-white' :
+                                                                o.tipo === 'PARCIAL' ? 'bg-yellow-500 text-white' :
+                                                                    o.tipo === 'PRACTICA' ? 'bg-purple-500/70 text-white' :
+                                                                        'bg-blue-500/40 text-blue-200'
+                                                            }`}>{o.tipo}</span>
+                                                    </td>
                                                     <td className="px-3 py-1.5 text-bb-text">{o.dia}</td>
                                                     <td className="px-3 py-1.5 text-bb-text">{o.hora_inicio}–{o.hora_fin}</td>
                                                     <td className="px-3 py-1.5 text-bb-text-secondary">{o.aula || '—'}</td>
