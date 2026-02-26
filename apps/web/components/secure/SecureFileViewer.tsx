@@ -257,7 +257,12 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
                             onLoadSuccess={({ numPages }) => {
                                 setNumPages(numPages);
                             }}
-                            onLoadError={(error) => { }}
+                            onLoadError={(error) => {
+                                console.error("PDF Load Error:", error);
+                                if (error instanceof Error) {
+                                    console.error("Error Message:", error.message);
+                                }
+                            }}
                             loading={<Loader2 className="animate-spin text-blue-500" />}
                             className="max-w-full"
                         >

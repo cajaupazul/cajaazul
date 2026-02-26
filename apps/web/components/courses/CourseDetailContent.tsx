@@ -413,7 +413,7 @@ export default function CourseDetailContent({
                                     className="inline-flex items-center justify-center rounded-xl text-xs md:text-sm font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 h-11 px-6 shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap"
                                 >
                                     <div className="flex items-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-upload"><path d="M21 15v4a2 2 0 0 1 -2 2H5a2 0 0 1 -2 -2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>
                                         Subir Material
                                     </div>
                                 </Link>
