@@ -360,142 +360,156 @@ export default function ScheduleBuilder() {
     const activeScheduleName = savedSchedules.find(s => s.id === activeScheduleId)?.nombre || 'Nuevo Horario';
 
     return (
-        <div className="flex flex-col gap-4">
-            {/* Stats Bar */}
-            <div className="flex flex-wrap items-center gap-3">
-                {/* Credits */}
-                <div className="flex items-center gap-2 bg-bb-card border border-bb-border rounded-xl px-4 py-2.5">
-                    <GraduationCap className="w-5 h-5" style={{ color: colors?.primary }} />
-                    <div>
-                        <p className="text-[10px] text-bb-text-secondary uppercase font-medium">Créditos</p>
-                        <p className="text-lg font-bold text-bb-text leading-none">{totalCredits}</p>
-                    </div>
-                </div>
-
-                {/* Free days / Study days */}
-                <div className="flex items-center gap-2 bg-bb-card border border-bb-border rounded-xl px-4 py-2.5">
-                    <CalendarDays className="w-5 h-5 text-blue-400" />
-                    <div>
-                        <p className="text-[10px] text-bb-text-secondary uppercase font-medium">Días de Estudio</p>
-                        <p className="text-sm font-bold text-bb-text leading-none">
-                            {freeDays.length > 0 ? freeDays.map(d => DIA_LABELS[d]).join(', ') : 'Todos ocupados'}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Schedule selector */}
-                <div className="relative ml-auto">
-                    <button
-                        onClick={() => setShowScheduleMenu(!showScheduleMenu)}
-                        className="flex items-center gap-2 bg-bb-card border border-bb-border rounded-xl px-4 py-2.5 hover:bg-bb-hover transition-all"
-                    >
-                        <FileText className="w-5 h-5 text-bb-text-secondary" />
-                        <div className="text-left">
-                            <p className="text-[10px] text-bb-text-secondary uppercase font-medium">HORARIOS</p>
-                            <p className="text-sm font-semibold text-bb-text">{activeScheduleName}</p>
+        <div className="flex flex-col gap-4 sm:gap-6">
+            {/* Stats Bar & Actions */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                {/* Stats Group */}
+                <div className="flex gap-3">
+                    {/* Credits */}
+                    <div className="flex-1 sm:flex-none flex items-center gap-2 sm:gap-3 bg-bb-card border border-bb-border rounded-xl px-3 py-2 sm:px-4 sm:py-2.5">
+                        <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" style={{ color: colors?.primary }} />
+                        <div className="min-w-0">
+                            <p className="text-[9px] sm:text-[10px] text-bb-text-secondary uppercase font-bold tracking-wider truncate">Créditos</p>
+                            <p className="text-base sm:text-lg font-black text-bb-text leading-none">{totalCredits}</p>
                         </div>
-                        <ChevronDown className="w-4 h-4 text-bb-text-secondary" />
-                    </button>
+                    </div>
 
-                    {showScheduleMenu && (
-                        <div className="absolute right-0 top-full mt-1 w-64 bg-bb-card border border-bb-border rounded-xl shadow-xl z-30 overflow-hidden">
-                            {savedSchedules.map(s => (
-                                <div
-                                    key={s.id}
-                                    className="flex items-center justify-between px-4 py-2.5 hover:bg-bb-hover cursor-pointer transition-all"
-                                    onClick={() => {
-                                        if (editingScheduleId !== s.id) {
-                                            loadSchedule(s);
-                                            setShowScheduleMenu(false);
-                                        }
-                                    }}
-                                >
-                                    {editingScheduleId === s.id ? (
-                                        <input
-                                            autoFocus
-                                            className="bg-bb-bg border border-bb-border rounded px-2 py-1 w-full text-sm text-bb-text mr-2 focus:outline-none focus:border-blue-500"
-                                            value={editingScheduleName}
-                                            onChange={e => setEditingScheduleName(e.target.value)}
-                                            onBlur={() => handleRenameSchedule(s.id, editingScheduleName)}
-                                            onKeyDown={e => {
-                                                if (e.key === 'Enter') handleRenameSchedule(s.id, editingScheduleName);
-                                                if (e.key === 'Escape') setEditingScheduleId(null);
-                                            }}
-                                            onClick={e => e.stopPropagation()}
-                                        />
-                                    ) : (
-                                        <span className={`text-sm flex-1 truncate mr-2 ${s.id === activeScheduleId ? 'font-bold text-bb-text' : 'text-bb-text-secondary'}`}>
-                                            {s.nombre}
-                                        </span>
-                                    )}
+                    {/* Free days / Study days */}
+                    <div className="flex-[2] sm:flex-none flex items-center gap-2 sm:gap-3 bg-bb-card border border-bb-border rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 overflow-hidden">
+                        <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[9px] sm:text-[10px] text-bb-text-secondary uppercase font-bold tracking-wider truncate">Días Estudio</p>
+                            <p className="text-xs sm:text-sm font-bold text-bb-text leading-none truncate">
+                                {freeDays.length > 0 ? freeDays.map(d => DIA_LABELS[d]).join(', ') : 'Todos ocupados'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
-                                    {editingScheduleId !== s.id && (
-                                        <div className="flex items-center gap-1">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setEditingScheduleId(s.id);
-                                                    setEditingScheduleName(s.nombre);
+                {/* Actions Group */}
+                <div className="flex gap-3 w-full sm:w-auto sm:ml-auto">
+                    {/* Schedule selector */}
+                    <div className="relative flex-1 sm:flex-none">
+                        <button
+                            onClick={() => setShowScheduleMenu(!showScheduleMenu)}
+                            className="w-full flex items-center justify-between sm:justify-start gap-2 bg-bb-card border border-bb-border rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 hover:bg-bb-hover transition-all"
+                        >
+                            <div className="flex items-center gap-2 min-w-0">
+                                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-bb-text-secondary shrink-0" />
+                                <div className="text-left min-w-0">
+                                    <p className="text-[9px] sm:text-[10px] text-bb-text-secondary uppercase font-bold tracking-wider truncate">Horarios</p>
+                                    <p className="text-xs sm:text-sm font-bold text-bb-text truncate max-w-[120px] sm:max-w-xs">{activeScheduleName}</p>
+                                </div>
+                            </div>
+                            <ChevronDown className="w-4 h-4 text-bb-text-secondary shrink-0" />
+                        </button>
+
+                        {showScheduleMenu && (
+                            <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-full sm:w-64 bg-bb-card border border-bb-border rounded-xl shadow-xl z-30 overflow-hidden">
+                                {savedSchedules.map(s => (
+                                    <div
+                                        key={s.id}
+                                        className="flex items-center justify-between px-4 py-3 sm:py-2.5 hover:bg-bb-hover cursor-pointer transition-all border-b border-bb-border/50 last:border-0"
+                                        onClick={() => {
+                                            if (editingScheduleId !== s.id) {
+                                                loadSchedule(s);
+                                                setShowScheduleMenu(false);
+                                            }
+                                        }}
+                                    >
+                                        {editingScheduleId === s.id ? (
+                                            <input
+                                                autoFocus
+                                                className="bg-bb-bg border border-bb-border rounded px-2 py-1 w-full text-sm text-bb-text mr-2 focus:outline-none focus:border-blue-500"
+                                                value={editingScheduleName}
+                                                onChange={e => setEditingScheduleName(e.target.value)}
+                                                onBlur={() => handleRenameSchedule(s.id, editingScheduleName)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter') handleRenameSchedule(s.id, editingScheduleName);
+                                                    if (e.key === 'Escape') setEditingScheduleId(null);
                                                 }}
-                                                className="p-1 text-bb-text-secondary hover:text-blue-400 transition-colors"
-                                                title="Renombrar"
-                                            >
-                                                <Edit2 className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleDeleteSchedule(s.id); }}
-                                                className="p-1 text-bb-text-secondary hover:text-red-400 transition-colors"
-                                                title="Eliminar"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                            {savedSchedules.length < 3 && (
-                                <button
-                                    onClick={handleNewSchedule}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm border-t border-bb-border hover:bg-bb-hover transition-all"
-                                    style={{ color: colors?.primary }}
-                                >
-                                    <Plus className="w-4 h-4" /> Nuevo horario
-                                </button>
-                            )}
-                            {savedSchedules.length >= 3 && (
-                                <div className="px-4 py-2.5 text-xs text-center text-bb-text-secondary border-t border-bb-border bg-bb-bg/50">
-                                    Límite de 3 horarios alcanzado
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
+                                                onClick={e => e.stopPropagation()}
+                                            />
+                                        ) : (
+                                            <span className={`text-sm flex-1 truncate mr-2 ${s.id === activeScheduleId ? 'font-bold text-bb-text' : 'text-bb-text-secondary'}`}>
+                                                {s.nombre}
+                                            </span>
+                                        )}
 
-                {/* Save button */}
-                <button
-                    onClick={handleSaveSchedule}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
-                    style={{ backgroundColor: colors?.primary }}
-                >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Guardar
-                </button>
+                                        {editingScheduleId !== s.id && (
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setEditingScheduleId(s.id);
+                                                        setEditingScheduleName(s.nombre);
+                                                    }}
+                                                    className="p-1.5 text-bb-text-secondary hover:text-blue-400 hover:bg-blue-500/10 rounded-md transition-colors"
+                                                    title="Renombrar"
+                                                >
+                                                    <Edit2 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteSchedule(s.id); }}
+                                                    className="p-1.5 text-bb-text-secondary hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
+                                                    title="Eliminar"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                {savedSchedules.length < 3 && (
+                                    <button
+                                        onClick={handleNewSchedule}
+                                        className="w-full flex items-center gap-2 px-4 py-3 sm:py-2.5 text-sm font-bold border-t border-bb-border hover:bg-bb-hover transition-all justify-center"
+                                        style={{ color: colors?.primary }}
+                                    >
+                                        <Plus className="w-4 h-4" /> Nuevo horario
+                                    </button>
+                                )}
+                                {savedSchedules.length >= 3 && (
+                                    <div className="px-4 py-3 sm:py-2.5 text-xs text-center font-bold text-bb-text-secondary border-t border-bb-border bg-bb-bg/50">
+                                        Límite de 3 alcanzado
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Save button */}
+                    <button
+                        onClick={handleSaveSchedule}
+                        disabled={saving}
+                        className="flex items-center justify-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-50 shrink-0"
+                        style={{ backgroundColor: colors?.primary }}
+                    >
+                        {saving ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                            <>
+                                <Save className="w-5 h-5" />
+                                <span className="hidden sm:inline">Guardar</span>
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* Periodo and Mode selector */}
             <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-2 bg-bb-card border border-bb-border rounded-xl p-1">
+                <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2 bg-bb-card border border-bb-border rounded-xl p-1">
                     <button
                         onClick={() => setViewMode('clases')}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${viewMode === 'clases' ? 'bg-white text-black shadow-sm' : 'text-bb-text-secondary hover:text-bb-text'
+                        className={`flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-lg text-sm sm:text-base font-bold transition-all ${viewMode === 'clases' ? 'bg-white text-black shadow-sm' : 'text-bb-text-secondary hover:text-bb-text'
                             }`}
                     >
                         Clases
                     </button>
                     <button
                         onClick={() => setViewMode('examenes')}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${viewMode === 'examenes' ? 'bg-white text-black shadow-sm' : 'text-bb-text-secondary hover:text-bb-text'
+                        className={`flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-lg text-sm sm:text-base font-bold transition-all ${viewMode === 'examenes' ? 'bg-white text-black shadow-sm' : 'text-bb-text-secondary hover:text-bb-text'
                             }`}
                     >
                         Exámenes
