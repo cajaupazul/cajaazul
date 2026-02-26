@@ -156,8 +156,8 @@ const ReplyToggler = ({ count, children, onToggle }: { count: number; children: 
                     }}
                     className="flex items-center gap-2 text-bb-text-secondary hover:text-white transition-colors ml-2 mt-2 group"
                 >
-                    <div className="w-5 h-5 rounded-full border border-white/20 flex items-center justify-center group-hover:border-blue-500/50 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-white/40 group-hover:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <div className="w-5 h-5 rounded-full border border-bb-border flex items-center justify-center group-hover:border-blue-500/50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-bb-text-secondary group-hover:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M5 12h14m-7-7v14" />
                         </svg>
                     </div>
@@ -172,7 +172,7 @@ const ReplyToggler = ({ count, children, onToggle }: { count: number; children: 
                             setIsVisible(false);
                             onToggle(false);
                         }}
-                        className="text-[10px] font-bold text-white/20 hover:text-white/40 transition-colors ml-14 md:ml-20 mt-2 uppercase tracking-tighter"
+                        className="text-[10px] font-bold text-bb-text-secondary hover:text-bb-text transition-colors ml-14 md:ml-20 mt-2 uppercase tracking-tighter"
                     >
                         Contraer respuestas
                     </button>
@@ -252,7 +252,7 @@ const CommentItem = ({
             {/* Branch Connector (Perfectly Aligned with Continuous Parent Line) */}
             {depth > 0 && (
                 <div
-                    className="absolute border-l-[1.5px] border-b-[1.5px] border-white/10 opacity-50 rounded-bl-xl z-0"
+                    className="absolute border-l-[1.5px] border-b-[1.5px] border-bb-border rounded-bl-xl z-0"
                     style={{
                         top: "-2.5rem",
                         left: "-2.25rem", // Indent(56px) - LineX(20px) = 36px (2.25rem)
@@ -297,7 +297,7 @@ const CommentItem = ({
                         {comment.profiles?.es_vip && (
                             <img src="/vip-icon.png" alt="VIP" className="w-5 h-5 object-contain" />
                         )}
-                        <p className="text-[10px] font-medium text-white/30 uppercase tracking-tighter">
+                        <p className="text-[10px] font-medium text-bb-text-secondary uppercase tracking-tighter">
                             hace {new Date(comment.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                         </p>
                     </div>
@@ -347,7 +347,7 @@ const CommentItem = ({
                                 </span>
                             ))}
                         </div>
-                        <span className="text-[10px] font-bold text-white/30 tracking-tight">{totalReactions}</span>
+                        <span className="text-[10px] font-bold text-bb-text-secondary tracking-tight">{totalReactions}</span>
                     </div>
                 )}
             </div>
@@ -378,7 +378,7 @@ const CommentItem = ({
                                 initial={{ opacity: 0, y: 10, scale: 0.8 }}
                                 animate={{ opacity: 1, y: -45, scale: 1 }}
                                 exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                                className="absolute left-0 bottom-full mb-2 bg-[#1a1a20] border border-white/10 rounded-full p-1.5 flex items-center gap-1 shadow-2xl z-50 ring-1 ring-white/10"
+                                className="absolute left-0 bottom-full mb-2 bg-bb-sidebar border border-bb-border rounded-full p-1.5 flex items-center gap-1 shadow-2xl z-50 ring-1 ring-bb-border/50"
                             >
                                 {REACTIONS.map((r) => (
                                     <button
@@ -752,7 +752,6 @@ export default function ProfessorRatingsContent({
 
     return (
         <div className="min-h-screen bg-bb-dark relative overflow-hidden transition-colors duration-300">
-            <BouncingBalls />
             {/* Stickers — canvas handles its own z-index and pointer-events */}
             <StickerCanvas
                 targetType="professor"
@@ -775,7 +774,7 @@ export default function ProfessorRatingsContent({
                 <Button
                     variant="outline"
                     size="icon"
-                    className="absolute top-4 left-4 z-20 bg-bb-dark/50 border-white/10 text-white hover:bg-white/10 backdrop-blur-md transition-all hover:scale-110 shadow-lg"
+                    className="absolute top-4 left-4 z-20 bg-bb-dark/50 border-bb-border text-bb-text hover:bg-bb-card backdrop-blur-md transition-all hover:scale-110 shadow-lg"
                     onClick={() => router.back()}
                 >
                     <ArrowLeft className="h-5 w-5" />
@@ -830,20 +829,20 @@ export default function ProfessorRatingsContent({
                                     {professor.especialidad && professorLinkMapping[professor.especialidad.toLowerCase()] ? (
                                         <Link
                                             href={`/dashboard/professors/view?id=${professorLinkMapping[professor.especialidad.toLowerCase()]}`}
-                                            className="bg-blue-500/20 backdrop-blur-md text-blue-300 px-4 py-1.5 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-all uppercase tracking-wider text-xs font-bold shadow-lg shadow-blue-900/20"
+                                            className="bg-blue-500/20 backdrop-blur-md text-blue-500 px-4 py-1.5 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-all uppercase tracking-wider text-xs font-bold shadow-lg shadow-blue-900/10"
                                         >
                                             {professor.especialidad}
                                         </Link>
                                     ) : (
                                         professor.especialidad && (
-                                            <span className="bg-white/5 backdrop-blur-md text-white/70 px-4 py-1.5 rounded-full border border-white/10 uppercase tracking-wider text-xs font-bold">
+                                            <span className="bg-bb-sidebar/50 backdrop-blur-md text-bb-text-secondary px-4 py-1.5 rounded-full border border-bb-border uppercase tracking-wider text-xs font-bold">
                                                 {professor.especialidad}
                                             </span>
                                         )
                                     )}
 
                                     {professor.facultad && (
-                                        <span className="bg-white/5 backdrop-blur-md text-white/70 px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2 text-xs font-medium">
+                                        <span className="bg-bb-sidebar/50 backdrop-blur-md text-bb-text-secondary px-4 py-1.5 rounded-full border border-bb-border flex items-center gap-2 text-xs font-medium">
                                             <div className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]" />
                                             {professor.facultad}
                                         </span>
@@ -862,7 +861,7 @@ export default function ProfessorRatingsContent({
                                 { label: 'Claridad', value: avgClaridad, icon: Sparkles, color: 'text-blue-400' },
                                 { label: 'Facilidad', value: avgFacilidad, icon: TrendingUp, color: 'text-green-400' },
                             ].map((stat, i) => (
-                                <div key={i} className="p-3 flex flex-col items-center justify-center hover:bg-white/5 transition-colors">
+                                <div key={i} className="p-3 flex flex-col items-center justify-center hover:bg-bb-hover/50 transition-colors">
                                     <span className="text-xl md:text-2xl font-black text-bb-text mb-0.5">{stat.value}</span>
                                     <div className="flex items-center gap-1 text-[10px] md:text-xs text-bb-text-secondary uppercase tracking-tight font-bold">
                                         <stat.icon className={`w-3 h-3 md:w-3.5 md:h-3.5 ${stat.color}`} />
@@ -1149,7 +1148,7 @@ export default function ProfessorRatingsContent({
                         </div>
 
                         {/* New Comment Input Box - Crunchyroll style redesign */}
-                        <div className="bg-[#1a1a20] border border-white/5 rounded-lg overflow-hidden mb-12 shadow-xl">
+                        <div className="bg-bb-sidebar/30 border border-bb-border rounded-lg overflow-hidden mb-12 shadow-sm">
                             <form onSubmit={handleSubmitComment}>
                                 <div className="p-4 md:p-6">
                                     <div className="flex gap-4">
@@ -1170,14 +1169,14 @@ export default function ProfessorRatingsContent({
                                                 value={commentText}
                                                 onChange={(e) => setCommentText(e.target.value)}
                                                 placeholder="Escribe algo..."
-                                                className="bg-transparent border-none text-bb-text min-h-[100px] rounded-none resize-none focus:ring-0 text-sm md:text-base placeholder:text-white/20 p-0 shadow-none font-medium"
+                                                className="bg-transparent border-none text-bb-text min-h-[100px] rounded-none resize-none focus:ring-0 text-sm md:text-base placeholder:text-bb-text-secondary/40 p-0 shadow-none font-medium"
                                             />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Toolbar footer */}
-                                <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-t border-white/5">
+                                <div className="bg-bb-sidebar/50 px-4 py-2 flex items-center justify-between border-t border-bb-border/50">
                                     <div className="flex items-center gap-1 md:gap-4">
                                         {[
                                             { icon: Bold, label: 'Negrita' },
@@ -1191,7 +1190,7 @@ export default function ProfessorRatingsContent({
                                             <button
                                                 key={i}
                                                 type="button"
-                                                className="p-1.5 text-white/40 hover:text-white hover:bg-white/5 rounded transition-all"
+                                                className="p-1.5 text-bb-text-secondary hover:text-bb-text hover:bg-bb-hover rounded transition-all"
                                                 title={tool.label}
                                             >
                                                 <tool.icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
@@ -1225,7 +1224,7 @@ export default function ProfessorRatingsContent({
                                         className="w-full bg-red-600 hover:bg-red-500 text-white font-bold h-12 rounded-xl shadow-lg active:scale-95 transition-all"
                                     >
                                         {isDeleting ? (
-                                            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                            <div className="w-4 h-4 border-2 border-bb-text-secondary/20 border-t-bb-text-secondary rounded-full animate-spin" />
                                         ) : (
                                             "Eliminar permanentemente"
                                         )}
@@ -1256,7 +1255,7 @@ export default function ProfessorRatingsContent({
                                                         {/* Continuous Vertical Line for Threads */}
                                                         {replies.length > 0 && (
                                                             <div
-                                                                className="absolute bg-white/10 w-[1.5px] z-0"
+                                                                className="absolute bg-bb-border w-[1px] z-0"
                                                                 style={{
                                                                     left: `${depth * 56 + 20}px`,
                                                                     top: '40px',
@@ -1282,21 +1281,21 @@ export default function ProfessorRatingsContent({
                                                                 className="mt-2 mb-8 pr-4"
                                                                 style={{ marginLeft: `${(depth + 1) * 56}px` }}
                                                             >
-                                                                <div className="bg-[#1a1a20] border border-white/5 rounded-lg overflow-hidden shadow-2xl">
+                                                                <div className="bg-bb-sidebar/30 border border-bb-border rounded-lg overflow-hidden shadow-sm">
                                                                     <form onSubmit={(e) => handleSubmitComment(e, comment.id)}>
                                                                         <div className="p-4">
                                                                             <Textarea
                                                                                 value={replyText}
                                                                                 onChange={(e) => setReplyText(e.target.value)}
                                                                                 placeholder="Escribe algo..."
-                                                                                className="bg-transparent border-none text-bb-text min-h-[80px] rounded-none resize-none focus:ring-0 p-0 text-xs md:text-sm placeholder:text-white/20 shadow-none font-medium"
+                                                                                className="bg-transparent border-none text-bb-text min-h-[80px] rounded-none resize-none focus:ring-0 p-0 text-xs md:text-sm placeholder:text-bb-text-secondary/40 shadow-none font-medium"
                                                                                 autoFocus
                                                                             />
                                                                         </div>
-                                                                        <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-t border-white/5">
+                                                                        <div className="bg-bb-sidebar/50 px-4 py-2 flex items-center justify-between border-t border-bb-border/50">
                                                                             <div className="flex items-center gap-2">
                                                                                 {[Bold, Italic, Quote, ImageIcon].map((Icon, i) => (
-                                                                                    <button key={i} type="button" className="p-1 text-white/30 hover:text-white transition-colors">
+                                                                                    <button key={i} type="button" className="p-1 text-bb-text-secondary/40 hover:text-bb-text transition-colors">
                                                                                         <Icon className="w-3 h-3" />
                                                                                     </button>
                                                                                 ))}
@@ -1308,7 +1307,7 @@ export default function ProfessorRatingsContent({
                                                                                         setReplyToId(null);
                                                                                         setReplyText('');
                                                                                     }}
-                                                                                    className="text-white/40 hover:text-white text-[10px] font-bold uppercase transition-colors px-2"
+                                                                                    className="text-bb-text-secondary hover:text-bb-text text-[10px] font-bold uppercase transition-colors px-2"
                                                                                 >
                                                                                     Cancelar
                                                                                 </button>

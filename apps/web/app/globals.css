@@ -40,8 +40,8 @@
 
 /* --- MODO LIGHT (SÓLIDO) --- */
 [data-theme="light"] {
-  --bg-primary: #f5f7fa;
-  /* Fondo general ligeramente gris */
+  --bg-primary: #ffffff;
+  /* Fondo general blanco puro */
   --bg-secondary: #ffffff;
   /* Áreas blancas */
   --bg-card: #ffffff;
