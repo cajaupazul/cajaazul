@@ -157,7 +157,7 @@ export default function MaterialCard({
             className="flex flex-col bg-bb-darker/20 rounded-2xl overflow-hidden border border-bb-border/50 hover:border-blue-500/20 shadow-sm transition-all cursor-pointer group active:scale-[0.98]"
         >
             {/* Thumbnail Area */}
-            <div className={`h-32 md:h-40 relative flex items-center justify-center overflow-hidden ${config.bg}`}>
+            <div className={`aspect-video w-full relative flex items-center justify-center overflow-hidden shrink-0 ${config.bg}`}>
                 {thumbnailUrl ? (
                     <img
                         src={thumbnailUrl}
