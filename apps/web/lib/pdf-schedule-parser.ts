@@ -172,6 +172,7 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
     let currentSeccion = '';
     let currentProfesor = '';
     let professorBuffer = ''; // accumulates multi-line professor names
+    let expectingProfessor = false; // true after a lone section letter line
 
     const ofertas: ParsedOferta[] = [];
     const blocksSeen = new Set<string>();      // prevent duplicates
@@ -217,6 +218,7 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
         // These lines look like:  CLASE LUN 11:30 13:20 30 J-603
         if (TIPOS.has(firstToken)) {
             flushProfessorBuffer();
+            expectingProfessor = false;
             if (!currentSeccion) continue;  // no section context yet
             if (firstToken === 'PRACCALIFI') continue;  // always skip
 
@@ -258,6 +260,7 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
         //   "LUN 11:30 13:20 30 J-603"  (rare, but happens on wrapping)
         if (DIAS.has(firstToken)) {
             flushProfessorBuffer();
+            expectingProfessor = false;
             if (!currentSeccion) continue;
             // We need to know the tipo — peek at previous ofertas for this section
             const lastOferta = [...ofertas].reverse().find(o =>
@@ -293,25 +296,41 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             continue;
         }
 
-        // B3. Section header: starts with 1–3 uppercase alphanumeric chars
-        //     followed by at least one space.  Must NOT be a reserved keyword.
-        // e.g.  "A PARDO GRAU, Cecilia"    or    "B QUIROZ MEZA, Danitza"
-        const sectionMatch = line.match(/^([A-Z0-9]{1,3})\s+(.+)/);
-        if (
-            sectionMatch &&
-            !NON_SECTION_TOKENS.has(sectionMatch[1].toUpperCase()) &&
-            !hasTime(line)         // section lines don't start with a time
-        ) {
+        // B3. Section header.
+        // Case A: "A PARDO GRAU, Cecilia" — letter + professor on same line
+        // Case B: standalone "B" alone — letter on its own line, professor follows
+        const sectionMatchFull = line.match(/^([A-Z0-9]{1,3})\s+(.+)/);
+        const sectionMatchLone = line.match(/^([A-Z0-9]{1,3})$/);
+
+        // Determine if this is a lone section letter
+        const isLoneSection = !!sectionMatchLone &&
+            !NON_SECTION_TOKENS.has(sectionMatchLone[1].toUpperCase());
+
+        // Determine if this is a section+text line
+        const isFullSection = !!sectionMatchFull &&
+            !NON_SECTION_TOKENS.has(sectionMatchFull[1].toUpperCase()) &&
+            !hasTime(line);
+
+        if (isLoneSection) {
+            // Just a letter like "B" — expect professor name on next line(s)
             flushProfessorBuffer();
-            currentSeccion = sectionMatch[1].toUpperCase();
-            // The rest of this line (after the letter) is the start of the professor name
-            // It may also contain a TIPO token if the schedule is on the same line
-            const rest = sectionMatch[2].trim();
+            currentSeccion = sectionMatchLone![1].toUpperCase();
+            currentProfesor = 'Sin profesor';
+            professorBuffer = '';
+            expectingProfessor = true;
+            continue;
+        }
+
+        if (isFullSection) {
+            flushProfessorBuffer();
+            expectingProfessor = false;
+            currentSeccion = sectionMatchFull![1].toUpperCase();
+            const rest = sectionMatchFull![2].trim();
 
             // Check: does the rest begin with a TIPO (inline schedule)?
             const firstOfRest = rest.split(/\s+/)[0].toUpperCase();
             if (TIPOS.has(firstOfRest)) {
-                // Schedule is on the same line as section letter — treat as a schedule line
+                // Schedule is on the same line as section letter
                 currentProfesor = 'Sin profesor';
                 if (firstOfRest !== 'PRACCALIFI') {
                     const tipo = normalizeTipo(firstOfRest);
@@ -343,19 +362,26 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             } else {
                 // Professor name starts here; may continue on next line(s)
                 professorBuffer = cleanProfName(rest);
+                expectingProfessor = true;
             }
             continue;
         }
 
         // B4. Professor name continuation (multi-line names like "MONSALVE ZANATTI, Martin / …")
+        //     Also handles: professor on the line AFTER a lone section letter.
         //     These lines contain no time tokens and don't start with a TIPO or known keyword.
         if (currentSeccion && !hasTime(line) && !TIPOS.has(firstToken) && !DIAS.has(firstToken)) {
             // Append to professorBuffer if it looks like a name fragment
             if (/^[A-ZÁÉÍÓÚÑÜ]/.test(line) && !NOISE_RE.some(re => re.test(line))) {
-                if (professorBuffer) {
-                    professorBuffer += ' / ' + cleanProfName(line);
+                if (expectingProfessor) {
+                    // After a lone-letter or mid-name continuation
+                    if (professorBuffer) {
+                        professorBuffer += ' ' + cleanProfName(line);
+                    } else {
+                        professorBuffer = cleanProfName(line);
+                    }
                 }
-                // if professorBuffer is empty this is probably a section annotation — ignore
+                // else: just an annotation line, ignore
             }
             continue;
         }
