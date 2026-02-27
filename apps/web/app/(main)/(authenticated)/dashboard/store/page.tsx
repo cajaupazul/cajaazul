@@ -69,6 +69,9 @@ function StoreContent() {
     const [adminMode, setAdminMode] = useState<Record<string, boolean>>({});
     const [editingPrices, setEditingPrices] = useState<Record<string, number>>({});
     const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
     const status = searchParams.get('status');
     const paymentStatus = searchParams.get('payment');
@@ -220,21 +223,29 @@ function StoreContent() {
         }
     };
 
-    const handleCreateCategory = async () => {
-        const name = prompt('Nombre de la nueva categoría:');
-        if (!name) return;
+    const handleCreateCategory = () => {
+        setNewCategoryName('');
+        setIsCategoryModalOpen(true);
+    };
+
+    const submitCreateCategory = async () => {
+        if (!newCategoryName.trim()) return;
         try {
+            setIsCreatingCategory(true);
             const { data, error } = await supabase
                 .from('shop_categories')
-                .insert([{ name, is_active: true, display_order: shopCategories.length }])
+                .insert([{ name: newCategoryName, is_active: true, display_order: shopCategories.length }])
                 .select()
                 .single();
 
             if (error) throw error;
             setShopCategories(prev => [...prev, data]);
+            setIsCategoryModalOpen(false);
         } catch (error: any) {
             console.error('Error creating category:', error);
             alert('Error al crear categoría: ' + error.message);
+        } finally {
+            setIsCreatingCategory(false);
         }
     };
 
@@ -527,6 +538,12 @@ function StoreContent() {
                                                             <div className="relative aspect-square flex items-center justify-center cursor-pointer" onClick={() => setPreviewItem(item)}>
                                                                 <div className="absolute inset-0 bg-indigo-500/10 blur-[40px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
                                                                 <img src={item.image_url || ''} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)]" />
+
+                                                                {item.max_uses !== null && (
+                                                                    <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-black px-2 py-1 rounded-bl-xl rounded-tr-lg shadow-lg z-20">
+                                                                        {item.max_uses} USOS
+                                                                    </div>
+                                                                )}
                                                             </div>
 
                                                             <div className="space-y-1 sm:space-y-2">
@@ -637,6 +654,66 @@ function StoreContent() {
                 onPaymentSuccess={handlePaymentSuccess}
                 onPaymentError={handlePaymentError}
             />
+
+            {/* Modal de Nueva Categoría */}
+            {isCategoryModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsCategoryModalOpen(false)}
+                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                    />
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="relative w-full max-w-md bg-[#131317] border border-white/10 rounded-[2.5rem] p-8 sm:p-10 shadow-2xl overflow-hidden"
+                    >
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-600" />
+
+                        <div className="space-y-8">
+                            <div className="text-center space-y-2">
+                                <h2 className="text-3xl font-[1000] text-white italic tracking-tighter uppercase">Nueva Categoría</h2>
+                                <p className="text-zinc-500 text-xs font-black uppercase tracking-widest">Organiza tu tienda nitro</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block ml-1">Nombre</label>
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="Ej: MARCOS EXCLUSIVOS"
+                                    value={newCategoryName}
+                                    onChange={(e) => setNewCategoryName(e.target.value.toUpperCase())}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') submitCreateCategory();
+                                        if (e.key === 'Escape') setIsCategoryModalOpen(false);
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-indigo-500/50 transition-all placeholder:text-zinc-700"
+                                />
+                            </div>
+
+                            <div className="flex gap-4">
+                                <Button
+                                    onClick={() => setIsCategoryModalOpen(false)}
+                                    className="flex-1 h-14 bg-white/5 hover:bg-white/10 text-zinc-400 font-black uppercase italic rounded-xl border border-white/5"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    onClick={submitCreateCategory}
+                                    disabled={!newCategoryName.trim() || isCreatingCategory}
+                                    className="flex-1 h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase italic rounded-xl shadow-[0_0_30px_rgba(79,70,229,0.3)] disabled:opacity-50"
+                                >
+                                    {isCreatingCategory ? 'Creando...' : 'Confirmar'}
+                                </Button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
 
             <style jsx global>{`
                 @keyframes float {

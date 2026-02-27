@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ShopItem } from '@/lib/supabase';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
-import { Check } from 'lucide-react';
+import { Check, Zap } from 'lucide-react';
 
 interface PreviewModalProps {
     isOpen: boolean;
@@ -162,19 +162,31 @@ export default function PreviewModal({
                         {/* ACCIONES */}
                         <div className="mt-auto space-y-4">
                             {!isOwned && (
-                                <div className="flex justify-between items-center px-2">
-                                    <span className="text-gray-400 text-[10px] md:text-sm uppercase font-bold tracking-widest">
-                                        Costo
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                        <img
-                                            src="/icons/moneda.png"
-                                            alt="Coin"
-                                            className="w-4 h-4 md:w-6 md:h-6"
-                                        />
-                                        <span className="text-lg md:text-2xl font-black">
-                                            {item.price_coins}
+                                <div className="space-y-4 px-2">
+                                    {item.max_uses !== null && (
+                                        <div className="bg-indigo-500/10 border border-indigo-500/20 p-3 rounded-xl flex items-center gap-3">
+                                            <Zap className="text-indigo-400 w-5 h-5 flex-shrink-0" />
+                                            <div>
+                                                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest leading-none">Ítem Consumible</p>
+                                                <p className="text-xs text-indigo-100 font-bold mt-1">Este artículo permite hasta <span className="text-indigo-400">{item.max_uses} usos</span>.</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-400 text-[10px] md:text-sm uppercase font-bold tracking-widest">
+                                            Costo Total
                                         </span>
+                                        <div className="flex items-center gap-2">
+                                            <img
+                                                src="/icons/moneda.png"
+                                                alt="Coin"
+                                                className="w-4 h-4 md:w-6 md:h-6"
+                                            />
+                                            <span className="text-lg md:text-2xl font-black">
+                                                {item.price_coins}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             )}
