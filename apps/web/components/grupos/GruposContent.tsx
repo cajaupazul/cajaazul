@@ -208,7 +208,7 @@ export default function GruposContent({
                 </motion.div>
 
                 {filteredGrupos.length === 0 ? (
-                    <div className="text-center py-20"><Users className="w-16 h-16 text-gray-500 mx-auto mb-6" /><h3 className="text-xl font-bold text-white">Sin grupos</h3></div>
+                    <div className="text-center py-20"><Users className="w-16 h-16 text-gray-500 mx-auto mb-6" /><h3 className="text-xl font-bold text-bb-text">Sin grupos</h3></div>
                 ) : (
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-8">
                         <AnimatePresence>
@@ -259,7 +259,7 @@ export default function GruposContent({
                                                     </div>
                                                 </div>
 
-                                                <h3 className="text-lg md:text-xl font-bold mb-2 text-white group-hover:text-blue-400 transition-colors line-clamp-1" title={grupo.nombre}>
+                                                <h3 className="text-lg md:text-xl font-bold mb-2 text-bb-text group-hover:text-blue-400 transition-colors line-clamp-1" title={grupo.nombre}>
                                                     {grupo.nombre}
                                                 </h3>
 

@@ -249,7 +249,7 @@ const CommentItem = ({
             {/* Branch Connector (Perfectly Aligned with Continuous Parent Line) */}
             {depth > 0 && (
                 <div
-                    className="absolute border-l-[1.5px] border-b-[1.5px] border-bb-text/30 rounded-bl-xl z-0"
+                    className="absolute border-l-[1.5px] border-b-[1.5px] border-bb-text/50 rounded-bl-xl z-0"
                     style={{
                         top: "-2.5rem",
                         left: "-2.25rem", // Indent(56px) - LineX(20px) = 36px (2.25rem)
@@ -1261,7 +1261,7 @@ export default function ProfessorRatingsContent({
                                                         {/* Continuous Vertical Line for Threads */}
                                                         {replies.length > 0 && (
                                                             <div
-                                                                className="absolute bg-bb-text/30 w-[1px] z-0"
+                                                                className="absolute bg-bb-text/50 w-[1px] z-0"
                                                                 style={{
                                                                     left: `${depth * 56 + 20}px`,
                                                                     top: '40px',

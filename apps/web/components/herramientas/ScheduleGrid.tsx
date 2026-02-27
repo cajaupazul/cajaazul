@@ -22,21 +22,21 @@ const END_MIN = 30;
 const SLOT_MINUTES = 60;
 
 const COURSE_COLORS = [
-    { bg: '#3b82f620', border: '#3b82f6', text: '#93c5fd' },
-    { bg: '#ef444420', border: '#ef4444', text: '#fca5a5' },
-    { bg: '#22c55e20', border: '#22c55e', text: '#86efac' },
-    { bg: '#f59e0b20', border: '#f59e0b', text: '#fcd34d' },
-    { bg: '#8b5cf620', border: '#8b5cf6', text: '#c4b5fd' },
-    { bg: '#ec489920', border: '#ec4899', text: '#f9a8d4' },
-    { bg: '#06b6d420', border: '#06b6d4', text: '#67e8f9' },
-    { bg: '#f9731620', border: '#f97316', text: '#fdba74' },
-    { bg: '#14b8a620', border: '#14b8a6', text: '#5eead4' },
-    { bg: '#6366f120', border: '#6366f1', text: '#a5b4fc' },
-    { bg: '#84cc1620', border: '#84cc16', text: '#bef264' },
-    { bg: '#e11d4820', border: '#e11d48', text: '#fb7185' },
-    { bg: '#0ea5e920', border: '#0ea5e9', text: '#7dd3fc' },
-    { bg: '#d946ef20', border: '#d946ef', text: '#e879f9' },
-    { bg: '#facc1520', border: '#facc15', text: '#fde047' },
+    { bg: '#3b82f615', border: '#3b82f6', text: '#2563eb' }, // Blue
+    { bg: '#ef444415', border: '#ef4444', text: '#dc2626' }, // Red
+    { bg: '#22c55e15', border: '#22c55e', text: '#16a34a' }, // Green
+    { bg: '#f59e0b15', border: '#f59e0b', text: '#d97706' }, // Amber
+    { bg: '#8b5cf615', border: '#8b5cf6', text: '#7c3aed' }, // Violet
+    { bg: '#ec489915', border: '#ec4899', text: '#db2777' }, // Pink
+    { bg: '#06b6d415', border: '#06b6d4', text: '#0891b2' }, // Cyan
+    { bg: '#f9731615', border: '#f97316', text: '#ea580c' }, // Orange
+    { bg: '#14b8a615', border: '#14b8a6', text: '#0d9488' }, // Teal
+    { bg: '#6366f115', border: '#6366f1', text: '#4f46e5' }, // Indigo
+    { bg: '#84cc1615', border: '#84cc16', text: '#65a30d' }, // Lime
+    { bg: '#e11d4815', border: '#e11d48', text: '#be123c' }, // Rose
+    { bg: '#0ea5e915', border: '#0ea5e9', text: '#0284c7' }, // Sky
+    { bg: '#d946ef15', border: '#d946ef', text: '#c026d3' }, // Fuchsia
+    { bg: '#facc1515', border: '#facc15', text: '#ca8a04' }, // Yellow
 ];
 
 function timeToMinutes(t: string): number {
@@ -138,21 +138,15 @@ export default function ScheduleGrid({ selectedOfertas, selectedCourses, onRemov
         <div className="w-full overflow-x-auto">
             <div className="min-w-[800px]">
                 {/* Header row */}
-                <div className="grid grid-cols-[80px_repeat(7,1fr)] border-b-2" style={{ borderColor: '#1e3a5f' }}>
-                    <div className="px-2 py-2 text-[11px] font-bold text-bb-text-secondary text-center"
-                        style={{ backgroundColor: '#0a1929', borderRight: '1px solid #1e3a5f' }}
-                    >
+                {/* Header row */}
+                <div className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-bb-border">
+                    <div className="px-2 py-3 text-[11px] font-black text-bb-text uppercase tracking-widest text-center bg-bb-sidebar border-r border-bb-border">
                         HORARIO
                     </div>
                     {DAY_LABELS.map((day, i) => (
                         <div
                             key={day}
-                            className="px-2 py-2 text-[11px] font-bold text-center"
-                            style={{
-                                backgroundColor: '#0a1929',
-                                color: '#60a5fa',
-                                borderRight: i < 6 ? '1px solid #1e3a5f' : 'none',
-                            }}
+                            className="px-2 py-3 text-[11px] font-black text-center bg-bb-sidebar text-blue-500 border-r border-bb-border last:border-r-0"
                         >
                             {day}
                         </div>
@@ -177,8 +171,7 @@ export default function ScheduleGrid({ selectedOfertas, selectedCourses, onRemov
                             >
                                 {/* Time label */}
                                 <div
-                                    className="flex items-center justify-center text-[10px] text-bb-text-secondary font-mono"
-                                    style={{ borderRight: '1px solid #1e3a5f', backgroundColor: '#0a192905' }}
+                                    className="flex items-center justify-center text-[10px] text-bb-text-secondary font-mono border-r border-bb-border bg-bb-sidebar/20"
                                 >
                                     {slot} - {nextSlot || ''}
                                 </div>
@@ -189,7 +182,8 @@ export default function ScheduleGrid({ selectedOfertas, selectedCourses, onRemov
                                         key={`${slot}-${day}`}
                                         className="relative"
                                         style={{
-                                            borderRight: dayIdx < 6 ? '1px solid #1e3a5f20' : 'none',
+                                            borderRight: dayIdx < 6 ? '1px solid var(--bb-border)' : 'none',
+                                            opacity: 0.3
                                         }}
                                     />
                                 ))}
