@@ -137,7 +137,7 @@ export default function InventoryPage() {
                                     </div>
                                 )}
 
-                                <div className="w-full aspect-square rounded-xl overflow-hidden bg-bb-sidebar flex items-center justify-center relative mb-3 sm:mb-4">
+                                <div className="w-full aspect-square rounded-xl bg-bb-sidebar flex items-center justify-center relative mb-3 sm:mb-4">
                                     {/* Dummy Avatar behind for context */}
                                     <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-bb-dark flex items-center justify-center border border-bb-border overflow-hidden opacity-50 relative z-0">
                                         <div className="w-full h-full bg-gradient-to-br from-bb-sidebar to-bb-dark" />

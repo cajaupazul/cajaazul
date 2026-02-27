@@ -153,16 +153,16 @@ export default function FullPageUploadForm({
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Volver al curso
                 </Button>
-                <h1 className="text-3xl font-black text-white uppercase tracking-tight">Subir Material</h1>
+                <h1 className="text-3xl font-black text-bb-text uppercase tracking-tight">Subir Material</h1>
                 <p className="text-bb-text-secondary mt-2 font-medium">
                     Comparte tus recursos con la comunidad de <span className="font-bold text-blue-400">{courseName}</span>.
                 </p>
             </div>
 
-            <form onSubmit={handleUpload} className="space-y-8 bg-bb-card p-8 rounded-2xl shadow-2xl border border-bb-border shadow-black/40">
+            <form onSubmit={handleUpload} className="space-y-8 bg-bb-card p-8 rounded-2xl shadow-2xl border border-bb-border shadow-black/10 dark:shadow-black/40">
                 {/* 1. Selección de Archivo */}
                 <div className="space-y-4">
-                    <Label className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
+                    <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
                         <CheckCircle className={`h-5 w-5 ${materialType === 'enlace' ? (links.some(l => l.url) ? 'text-green-500' : 'text-bb-border') : (files.length > 0 ? 'text-green-500' : 'text-bb-border')}`} />
                         1. {materialType === 'enlace' ? 'Agrega los enlaces' : 'Selecciona los archivos'}
                     </Label>
@@ -177,7 +177,7 @@ export default function FullPageUploadForm({
                                             placeholder="Ej: Video de la clase"
                                             value={link.titulo}
                                             onChange={(e) => updateLink(index, 'titulo', e.target.value)}
-                                            className="h-11 bg-bb-card border-bb-border text-white rounded-xl"
+                                            className="h-11 bg-bb-card border-bb-border text-bb-text rounded-xl"
                                         />
                                     </div>
                                     <div className="space-y-2 relative">
@@ -187,7 +187,7 @@ export default function FullPageUploadForm({
                                                 placeholder="https://..."
                                                 value={link.url}
                                                 onChange={(e) => updateLink(index, 'url', e.target.value)}
-                                                className="h-11 bg-bb-card border-bb-border text-white rounded-xl flex-1"
+                                                className="h-11 bg-bb-card border-bb-border text-bb-text rounded-xl flex-1"
                                             />
                                             {links.length > 1 && (
                                                 <Button
@@ -226,11 +226,11 @@ export default function FullPageUploadForm({
                                 />
                                 <label htmlFor="file" className="cursor-pointer block w-full h-full">
                                     <div className="flex flex-col items-center gap-4 py-4">
-                                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform active:scale-90 ${files.length > 0 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-bb-darker text-blue-400 border border-bb-border'}`}>
+                                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform active:scale-90 ${files.length > 0 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-bb-sidebar text-blue-400 border border-bb-border'}`}>
                                             <Upload className="h-8 w-8" />
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-lg font-bold text-white">Arrastra tus archivos aquí o haz clic para explorar</p>
+                                            <p className="text-lg font-bold text-bb-text">Arrastra tus archivos aquí o haz clic para explorar</p>
                                             <p className="text-xs text-bb-text-secondary font-medium">Soporta múltiples archivos: PDF, PPT, Word, Imágenes, ZIP</p>
                                         </div>
                                     </div>
@@ -248,7 +248,7 @@ export default function FullPageUploadForm({
                                                         <FileText className="h-4 w-4 text-blue-400 shrink-0" />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-sm font-bold text-white truncate">{f.name}</p>
+                                                        <p className="text-sm font-bold text-bb-text truncate">{f.name}</p>
                                                         <p className="text-[10px] text-bb-text-secondary font-medium">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
                                                     </div>
                                                 </div>
@@ -271,8 +271,8 @@ export default function FullPageUploadForm({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* 2. Detalles del Material */}
                     <div className="space-y-4">
-                        <Label className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
-                            <span className="w-7 h-7 rounded-lg bg-bb-darker text-blue-400 border border-bb-border flex items-center justify-center text-xs font-black">2</span>
+                        <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
+                            <span className="w-7 h-7 rounded-lg bg-bb-sidebar text-blue-400 border border-bb-border flex items-center justify-center text-xs font-black">2</span>
                             Detalles del lote
                         </Label>
 
@@ -280,10 +280,10 @@ export default function FullPageUploadForm({
                             <div>
                                 <Label htmlFor="type" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">Categoría de material</Label>
                                 <Select value={materialType} onValueChange={setMaterialType}>
-                                    <SelectTrigger className="mt-1.5 h-12 bg-bb-darker border-bb-border text-white rounded-xl focus:ring-blue-500/20">
+                                    <SelectTrigger className="mt-1.5 h-12 bg-bb-sidebar border-bb-border text-bb-text rounded-xl focus:ring-blue-500/20">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-bb-card border-bb-border text-white rounded-xl">
+                                    <SelectContent className="bg-bb-card border-bb-border text-bb-text rounded-xl">
                                         {MATERIAL_TYPES.map((type) => (
                                             <SelectItem key={type.value} value={type.value} className="focus:bg-blue-600 focus:text-white rounded-lg">
                                                 <div className="flex flex-col py-1">
@@ -303,7 +303,7 @@ export default function FullPageUploadForm({
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     placeholder="Describe brevemente este contenido"
-                                    className="mt-1.5 h-12 bg-bb-darker border-bb-border text-white placeholder:text-bb-text-secondary/30 rounded-xl focus:ring-blue-500/20"
+                                    className="mt-1.5 h-12 bg-bb-sidebar border-bb-border text-bb-text placeholder:text-bb-text-secondary/30 rounded-xl focus:ring-blue-500/20"
                                 />
                             </div>
                         </div>
@@ -311,12 +311,12 @@ export default function FullPageUploadForm({
 
                     {/* 3. Asociación (Profesor) */}
                     <div className="space-y-4">
-                        <Label className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
-                            <span className="w-7 h-7 rounded-lg bg-bb-darker text-blue-400 border border-bb-border flex items-center justify-center text-xs font-black">3</span>
+                        <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
+                            <span className="w-7 h-7 rounded-lg bg-bb-sidebar text-blue-400 border border-bb-border flex items-center justify-center text-xs font-black">3</span>
                             Asociación
                         </Label>
 
-                        <div className="p-5 bg-bb-darker/50 rounded-2xl border border-bb-border">
+                        <div className="p-5 bg-bb-sidebar/50 rounded-2xl border border-bb-border">
                             <div className="flex items-center justify-between mb-3">
                                 <Label htmlFor="professor" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 px-1">Profesor del curso</Label>
                                 <Link
@@ -330,10 +330,10 @@ export default function FullPageUploadForm({
                             </div>
 
                             <Select value={professorId} onValueChange={setProfessorId}>
-                                <SelectTrigger className="h-12 bg-bb-card border-bb-border text-white rounded-xl focus:ring-blue-500/20">
+                                <SelectTrigger className="h-12 bg-bb-card border-bb-border text-bb-text rounded-xl focus:ring-blue-500/20">
                                     <SelectValue placeholder="Seleccionar profesor..." />
                                 </SelectTrigger>
-                                <SelectContent className="bg-bb-card border-bb-border text-white rounded-xl">
+                                <SelectContent className="bg-bb-card border-bb-border text-bb-text rounded-xl">
                                     <SelectItem value="none" className="focus:bg-blue-600 focus:text-white rounded-lg">
                                         <span className="text-bb-text-secondary italic">Ningúno / Material General</span>
                                     </SelectItem>
@@ -369,7 +369,7 @@ export default function FullPageUploadForm({
                         type="button"
                         variant="ghost"
                         onClick={() => router.back()}
-                        className="w-full sm:w-32 text-bb-text-secondary hover:text-white hover:bg-white/5 font-bold rounded-xl"
+                        className="w-full sm:w-32 text-bb-text-secondary hover:text-bb-text hover:bg-bb-hover font-bold rounded-xl"
                     >
                         Cancelar
                     </Button>
