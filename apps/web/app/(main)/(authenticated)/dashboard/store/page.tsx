@@ -560,10 +560,14 @@ function StoreContent() {
                                                                                 <img src="/icons/moneda.png" alt="Coin" className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2" />
                                                                                 <input
                                                                                     type="number"
+                                                                                    min="0"
+                                                                                    step="1"
                                                                                     defaultValue={item.price_coins}
                                                                                     onBlur={(e) => {
                                                                                         const val = parseInt(e.target.value);
-                                                                                        if (val !== item.price_coins) handleUpdateItem(item.id, { price_coins: val });
+                                                                                        if (!isNaN(val) && val !== item.price_coins) {
+                                                                                            handleUpdateItem(item.id, { price_coins: val });
+                                                                                        }
                                                                                     }}
                                                                                     className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-2 py-2 text-white font-bold text-sm outline-none focus:border-indigo-500 transition-colors"
                                                                                 />

@@ -231,8 +231,13 @@ export default function NewShopItemPage() {
                                         <Input
                                             required
                                             type="number"
+                                            min="0"
+                                            step="1"
                                             value={form.price_coins}
-                                            onChange={e => setForm({ ...form, price_coins: parseInt(e.target.value) })}
+                                            onChange={e => {
+                                                const val = parseInt(e.target.value);
+                                                setForm({ ...form, price_coins: isNaN(val) ? 0 : val });
+                                            }}
                                             className="bg-bb-sidebar/30 border-bb-border h-11"
                                         />
                                     </div>
