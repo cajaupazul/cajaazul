@@ -134,18 +134,6 @@ export default function AuthenticatedLayout({
     { label: 'Profesores', href: '/dashboard/professors', icon: Users },
     { label: 'Herramientas', href: '/dashboard/herramientas', icon: Wrench },
     { label: 'Tienda', href: '/dashboard/store', icon: ShoppingBag },
-    ...(profile?.role === 'admin' || profile?.role === 'superadmin'
-      ? [
-        {
-          label: 'Administración Tienda',
-          icon: ShieldCheck,
-          children: [
-            { label: 'Panel Tienda', href: '/admin/shop', icon: LayoutDashboard },
-            { label: 'Configurar Precios', href: '/admin/store-config', icon: Settings }
-          ]
-        }
-      ]
-      : []),
     { label: 'Inventario', href: '/inventory', icon: Package },
     { label: 'Eventos', href: '/dashboard/events', icon: Calendar },
     { label: 'Grupos', href: '/dashboard/grupos', icon: Layers },
@@ -318,10 +306,13 @@ export default function AuthenticatedLayout({
                 );
               }
 
-              // 2. Render Collapsible Group (Admin)
+              // 2. Render Collapsible Group
+              const children = (item as any).children;
+              if (!children) return null;
+
               const isOpen = expandedMenus[item.label] !== false; // Default Open or Controlled
               const Icon = item.icon;
-              const hasActiveChild = item.children.some((child: any) => isActive(child.href));
+              const hasActiveChild = children.some((child: any) => isActive(child.href));
 
               return (
                 <div key={item.label} className="mb-2">
@@ -428,7 +419,7 @@ export default function AuthenticatedLayout({
                   {(() => {
                     if (pathname === '/profile') return 'Perfil';
                     // Helper to find active label recursively
-                    for (const item of navItems) {
+                    for (const item of navItems as any[]) {
                       if (item.href && isActive(item.href)) return item.label;
                       if (item.children) {
                         const child = item.children.find((c: any) => isActive(c.href));

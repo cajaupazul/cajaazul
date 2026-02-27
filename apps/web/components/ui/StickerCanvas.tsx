@@ -91,19 +91,28 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
 
         const { data, error } = await supabase
             .from('user_inventory')
-            .select('shop_items(*)')
+            .select('remaining_uses, shop_items(*)')
             .eq('user_id', profile.id);
 
         if (!error && data) {
             const stickers = (data as any[])
-                .map(d => d.shop_items)
-                .filter(i => i && i.type === 'sticker') as ShopItem[];
+                .filter(d => d.shop_items && d.shop_items.type === 'sticker')
+                .map(d => ({
+                    ...d.shop_items,
+                    remaining_uses: d.remaining_uses
+                }));
             setInventory(stickers);
         }
     };
 
-    const addSticker = async (item: ShopItem) => {
+    const addSticker = async (item: any) => {
         if (!profile?.id) return;
+
+        // Check if item has uses remaining
+        if (item.remaining_uses !== null && item.remaining_uses <= 0) {
+            alert('Este sticker no tiene usos restantes.');
+            return;
+        }
 
         const newDecoration = {
             placer_id: profile.id,
@@ -122,6 +131,20 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
         if (!error && data) {
             setDecorations([...decorations, data as any]);
             setShowInventory(false);
+
+            // Decrement uses if applicable
+            if (item.remaining_uses !== null) {
+                const { error: updateError } = await supabase
+                    .from('user_inventory')
+                    .update({ remaining_uses: item.remaining_uses - 1 })
+                    .eq('user_id', profile.id)
+                    .eq('item_id', item.id);
+
+                if (!updateError) {
+                    // Refresh inventory for next time
+                    fetchInventory();
+                }
+            }
         } else {
             alert('Error al añadir sticker: ' + (error?.message || 'Error desconocido'));
         }
@@ -253,17 +276,23 @@ export function StickerCanvas({ targetType, targetId, canEdit = false }: Sticker
 
                             {inventory.length > 0 ? (
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar pointer-events-auto">
-                                    {inventory.map((item) => (
+                                    {inventory.map((item: any) => (
                                         <button
                                             key={item.id}
                                             onClick={() => addSticker(item)}
-                                            className="group relative aspect-square bg-bb-sidebar/50 rounded-2xl p-2 border border-bb-border hover:border-blue-500/50 hover:bg-blue-500/5 transition-all"
+                                            disabled={item.remaining_uses !== null && item.remaining_uses <= 0}
+                                            className={`group relative aspect-square bg-bb-sidebar/50 rounded-2xl p-2 border border-bb-border hover:border-blue-500/50 hover:bg-blue-500/5 transition-all ${item.remaining_uses !== null && item.remaining_uses <= 0 ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
                                         >
                                             <img
                                                 src={item.image_url || ''}
                                                 alt={item.name}
                                                 className="w-full h-full object-contain group-hover:scale-110 transition-transform"
                                             />
+                                            {item.remaining_uses !== null && (
+                                                <div className="absolute top-2 right-2 bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-lg">
+                                                    x{item.remaining_uses}
+                                                </div>
+                                            )}
                                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/10 rounded-2xl">
                                                 <Plus className="text-blue-400" />
                                             </div>

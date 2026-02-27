@@ -160,28 +160,43 @@ export default function InventoryPage() {
                                 {/* Item Info */}
                                 <div className="space-y-2 sm:space-y-3 flex-1 flex flex-col justify-end">
                                     <div className="mb-1 sm:mb-0">
-                                        <h3 className="text-sm sm:text-xl font-bold text-bb-text leading-tight">{item.name}</h3>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <h3 className="text-sm sm:text-xl font-bold text-bb-text leading-tight">{item.name}</h3>
+                                            {invItem.remaining_uses !== null && (
+                                                <span className="bg-blue-500 text-white text-[9px] sm:text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                    {invItem.remaining_uses} usos
+                                                </span>
+                                            )}
+                                        </div>
                                         <p className="text-[10px] sm:text-sm text-bb-text-secondary line-clamp-2 mt-0.5 sm:mt-1">{item.description}</p>
                                     </div>
 
-                                    <Button
-                                        onClick={() => handleEquipFrame(item.id, item.name)}
-                                        disabled={isEquipped || isLoading}
-                                        size="sm"
-                                        className={`w-full font-bold rounded-lg sm:rounded-xl text-xs sm:text-sm h-8 sm:h-10 mt-auto ${isEquipped
-                                            ? 'bg-bb-hover text-bb-text-secondary cursor-not-allowed'
-                                            : 'text-white hover:opacity-90 transition-opacity'
-                                            }`}
-                                        style={!isEquipped && !isLoading ? { backgroundColor: colors?.primary } : undefined}
-                                    >
-                                        {isLoading ? '...' : isEquipped ? (
-                                            <span className="flex items-center gap-1 sm:gap-2 justify-center">
-                                                <Check size={14} className="sm:w-4 sm:h-4" />
-                                                <span className="hidden sm:inline">Equipado</span>
-                                                <span className="sm:hidden">Activo</span>
+                                    {item.type === 'profile_frame' ? (
+                                        <Button
+                                            onClick={() => handleEquipFrame(item.id, item.name)}
+                                            disabled={isEquipped || isLoading}
+                                            size="sm"
+                                            className={`w-full font-bold rounded-lg sm:rounded-xl text-xs sm:text-sm h-8 sm:h-10 mt-auto ${isEquipped
+                                                ? 'bg-bb-hover text-bb-text-secondary cursor-not-allowed'
+                                                : 'text-white hover:opacity-90 transition-opacity'
+                                                }`}
+                                            style={!isEquipped && !isLoading ? { backgroundColor: colors?.primary } : undefined}
+                                        >
+                                            {isLoading ? '...' : isEquipped ? (
+                                                <span className="flex items-center gap-1 sm:gap-2 justify-center">
+                                                    <Check size={14} className="sm:w-4 sm:h-4" />
+                                                    <span className="hidden sm:inline">Equipado</span>
+                                                    <span className="sm:hidden">Activo</span>
+                                                </span>
+                                            ) : 'Equipar'}
+                                        </Button>
+                                    ) : (
+                                        <div className="h-8 sm:h-10 flex items-center justify-center bg-bb-sidebar/30 rounded-lg sm:rounded-xl border border-bb-border mt-auto">
+                                            <span className="text-[9px] sm:text-xs font-bold text-bb-text-secondary uppercase tracking-widest">
+                                                {item.type === 'sticker' ? 'Consumible' : 'Coleccionable'}
                                             </span>
-                                        ) : 'Equipar'}
-                                    </Button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );

@@ -51,7 +51,8 @@ function EditShopItemWrapper() {
         category_id: '',
         price_coins: 0,
         frame_key: '',
-        is_active: true
+        is_active: true,
+        max_uses: null as number | null
     });
     const [categories, setCategories] = useState<ShopCategory[]>([]);
     const [frameSettings, setFrameSettings] = useState<any>(null);
@@ -98,7 +99,8 @@ function EditShopItemWrapper() {
                 category_id: data.category_id || '',
                 price_coins: data.price_coins,
                 frame_key: data.frame_key || '',
-                is_active: data.is_active
+                is_active: data.is_active,
+                max_uses: data.max_uses
             });
             setFrameSettings(data.frame_settings);
         } else {
@@ -275,6 +277,26 @@ function EditShopItemWrapper() {
                                             className="w-5 h-5 rounded-lg border-bb-border bg-bb-sidebar/30 accent-blue-500"
                                         />
                                         <Label htmlFor="is_active" className="cursor-pointer">Activo</Label>
+                                    </div>
+                                </div>
+                                <div className="space-y-4 pt-2 border-t border-bb-border">
+                                    <div className="space-y-2">
+                                        <Label>Cantidad de Usos</Label>
+                                        <Select
+                                            value={form.max_uses === null ? 'forever' : form.max_uses.toString()}
+                                            onValueChange={(value) => setForm({ ...form, max_uses: value === 'forever' ? null : parseInt(value) })}
+                                        >
+                                            <SelectTrigger className="w-full bg-bb-sidebar/30 border-bb-border h-11">
+                                                <SelectValue placeholder="Seleccionar límite" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="forever">Para siempre (Infinito)</SelectItem>
+                                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                                                    <SelectItem key={n} value={n.toString()}>{n} {n === 1 ? 'uso' : 'usos'}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-[10px] text-bb-text-secondary italic">Ideal para stickers que se consumen al usarlos.</p>
                                     </div>
                                 </div>
                                 <div className="space-y-2">

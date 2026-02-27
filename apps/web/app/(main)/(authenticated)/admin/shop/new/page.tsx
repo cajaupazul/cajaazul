@@ -41,7 +41,8 @@ export default function NewShopItemPage() {
         category_id: '',
         price_coins: 0,
         frame_key: '',
-        is_active: true
+        is_active: true,
+        max_uses: null as number | null
     });
     const [categories, setCategories] = useState<ShopCategory[]>([]);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -244,6 +245,22 @@ export default function NewShopItemPage() {
                                             className="w-5 h-5 rounded-lg border-bb-border bg-bb-sidebar/30 accent-blue-500"
                                         />
                                         <Label htmlFor="is_active" className="cursor-pointer">Activo</Label>
+                                    </div>
+                                </div>
+                                <div className="space-y-4 pt-2 border-t border-bb-border">
+                                    <div className="space-y-2">
+                                        <Label>Cantidad de Usos</Label>
+                                        <select
+                                            value={form.max_uses === null ? 'forever' : form.max_uses.toString()}
+                                            onChange={e => setForm({ ...form, max_uses: e.target.value === 'forever' ? null : parseInt(e.target.value) })}
+                                            className="w-full bg-bb-sidebar/30 border-bb-border h-11 rounded-md px-3 text-sm"
+                                        >
+                                            <option value="forever">Para siempre (Infinito)</option>
+                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                                                <option key={n} value={n.toString()}>{n} {n === 1 ? 'uso' : 'usos'}</option>
+                                            ))}
+                                        </select>
+                                        <p className="text-[10px] text-bb-text-secondary italic">Ideal para stickers que se consumen al usarlos.</p>
                                     </div>
                                 </div>
                                 <div className="space-y-2">

@@ -85,6 +85,7 @@ export type ShopItem = {
     preview: { scale: number; x: number; y: number };
   } | null;
   is_active: boolean;
+  max_uses: number | null;
   created_at: string;
 };
 
@@ -93,6 +94,7 @@ export type UserInventoryItem = {
   user_id: string;
   item_id: string;
   is_equipped: boolean;
+  remaining_uses: number | null;
   acquired_at: string;
   shop_items?: ShopItem;
 };

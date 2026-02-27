@@ -13,7 +13,9 @@ import {
     AlertCircle,
     Package,
     Check,
-    Settings
+    Settings,
+    Plus,
+    Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -64,6 +66,9 @@ function StoreContent() {
     const [previewItem, setPreviewItem] = useState<ShopItem | null>(null);
     const [purchaseMessage, setPurchaseMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [activeView, setActiveView] = useState<'items' | 'recharge'>('items');
+    const [adminMode, setAdminMode] = useState<Record<string, boolean>>({});
+    const [editingPrices, setEditingPrices] = useState<Record<string, number>>({});
+    const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
 
     const status = searchParams.get('status');
     const paymentStatus = searchParams.get('payment');
@@ -177,6 +182,59 @@ function StoreContent() {
         } finally {
             setItemsLoading(prev => ({ ...prev, [item.id]: false }));
             setTimeout(() => setPurchaseMessage(null), 5000);
+        }
+    };
+
+    const handleUpdateItem = async (itemId: string, updates: Partial<ShopItem>) => {
+        try {
+            setIsUpdating(prev => ({ ...prev, [itemId]: true }));
+            const { error } = await supabase
+                .from('shop_items')
+                .update(updates)
+                .eq('id', itemId);
+
+            if (error) throw error;
+
+            setShopItems(prev => prev.map(item => item.id === itemId ? { ...item, ...updates } : item));
+        } catch (error: any) {
+            console.error('Error updating item:', error);
+            alert('Error al actualizar: ' + error.message);
+        } finally {
+            setIsUpdating(prev => ({ ...prev, [itemId]: false }));
+        }
+    };
+
+    const handleDeleteItem = async (itemId: string) => {
+        if (!confirm('¿Estás seguro de que deseas eliminar este artículo permanentemente?')) return;
+        try {
+            const { error } = await supabase
+                .from('shop_items')
+                .delete()
+                .eq('id', itemId);
+
+            if (error) throw error;
+            setShopItems(prev => prev.filter(item => item.id !== itemId));
+        } catch (error: any) {
+            console.error('Error deleting item:', error);
+            alert('Error al eliminar: ' + error.message);
+        }
+    };
+
+    const handleCreateCategory = async () => {
+        const name = prompt('Nombre de la nueva categoría:');
+        if (!name) return;
+        try {
+            const { data, error } = await supabase
+                .from('shop_categories')
+                .insert([{ name, is_active: true, display_order: shopCategories.length }])
+                .select()
+                .single();
+
+            if (error) throw error;
+            setShopCategories(prev => [...prev, data]);
+        } catch (error: any) {
+            console.error('Error creating category:', error);
+            alert('Error al crear categoría: ' + error.message);
         }
     };
 
@@ -300,11 +358,19 @@ function StoreContent() {
                         </button>
                     </div>
                     {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
-                        <Link href="/admin/store-config">
-                            <Button className="h-16 px-8 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black uppercase italic rounded-2xl gap-3 backdrop-blur-md transition-all shadow-xl">
-                                <Settings size={22} /> Configuración
+                        <div className="flex gap-4">
+                            <Button
+                                onClick={handleCreateCategory}
+                                className="h-16 px-6 sm:px-8 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black uppercase italic rounded-2xl gap-3 backdrop-blur-md transition-all shadow-xl text-xs sm:text-base"
+                            >
+                                <Plus size={22} /> <span className="hidden sm:inline">Nueva Categoría</span>
                             </Button>
-                        </Link>
+                            <Link href="/admin/store-config">
+                                <Button className="h-16 px-6 sm:px-8 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black uppercase italic rounded-2xl gap-3 backdrop-blur-md transition-all shadow-xl text-xs sm:text-base">
+                                    <Settings size={22} /> <span className="hidden sm:inline">Configuración</span>
+                                </Button>
+                            </Link>
+                        </div>
                     )}
                 </div>
 
@@ -431,11 +497,19 @@ function StoreContent() {
                                                 <h2 className="text-4xl sm:text-5xl font-black text-white italic tracking-tighter uppercase">{category.name}</h2>
                                             </div>
                                             {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
-                                                <Link href="/admin/shop">
-                                                    <Button className="rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 h-11 px-6 font-bold shadow-2xl backdrop-blur-md">
-                                                        Gestionar {category.name}
+                                                <div className="flex items-center gap-2 sm:gap-4">
+                                                    <Button
+                                                        onClick={() => setAdminMode(prev => ({ ...prev, [category.id]: !prev[category.id] }))}
+                                                        className={`rounded-xl h-11 px-4 sm:px-6 font-bold shadow-2xl backdrop-blur-md transition-all ${adminMode[category.id] ? 'bg-indigo-600 text-white' : 'bg-white/5 border border-white/10 hover:bg-white/10'}`}
+                                                    >
+                                                        {adminMode[category.id] ? 'Finalizar' : 'Gestionar'}
                                                     </Button>
-                                                </Link>
+                                                    <Link href={`/admin/shop/new?category_id=${category.id}`}>
+                                                        <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 h-11 w-11 sm:w-auto sm:px-6 font-bold shadow-2xl p-0 sm:p-2">
+                                                            <Plus size={20} /><span className="hidden sm:inline ml-2">Añadir</span>
+                                                        </Button>
+                                                    </Link>
+                                                </div>
                                             )}
                                         </div>
 
@@ -462,16 +536,54 @@ function StoreContent() {
                                                             </div>
 
                                                             <div className="pt-3 sm:pt-4 border-t border-white/5 flex items-center justify-between gap-1 sm:gap-4">
-                                                                {!isOwned && (
-                                                                    <div className="flex-shrink-0 flex items-center gap-1 sm:gap-2 bg-black px-1.5 py-1 sm:px-3 sm:py-2 rounded-xl">
-                                                                        <img src="/icons/moneda.png" alt="Coin" className="w-3.5 h-3.5 sm:w-5 sm:h-5 flex-shrink-0" />
-                                                                        <span className="text-white font-black text-[10px] sm:text-base tracking-tighter">{item.price_coins}</span>
+                                                                {adminMode[category.id] ? (
+                                                                    <div className="flex flex-col w-full gap-3">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="flex-1 relative">
+                                                                                <img src="/icons/moneda.png" alt="Coin" className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2" />
+                                                                                <input
+                                                                                    type="number"
+                                                                                    defaultValue={item.price_coins}
+                                                                                    onBlur={(e) => {
+                                                                                        const val = parseInt(e.target.value);
+                                                                                        if (val !== item.price_coins) handleUpdateItem(item.id, { price_coins: val });
+                                                                                    }}
+                                                                                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-2 py-2 text-white font-bold text-sm outline-none focus:border-indigo-500 transition-colors"
+                                                                                />
+                                                                            </div>
+                                                                            <Button
+                                                                                onClick={() => handleUpdateItem(item.id, { is_active: !item.is_active })}
+                                                                                className={`flex-shrink-0 h-10 px-3 rounded-xl text-[10px] font-black uppercase transition-all ${item.is_active ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}
+                                                                            >
+                                                                                {item.is_active ? 'ON' : 'OFF'}
+                                                                            </Button>
+                                                                        </div>
+                                                                        <div className="flex gap-2">
+                                                                            <Link href={`/admin/shop/edit?id=${item.id}`} className="flex-1">
+                                                                                <Button className="w-full h-9 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-[10px] uppercase">Detalles</Button>
+                                                                            </Link>
+                                                                            <Button
+                                                                                onClick={() => handleDeleteItem(item.id)}
+                                                                                className="h-9 w-9 p-0 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20"
+                                                                            >
+                                                                                <Trash2 size={14} />
+                                                                            </Button>
+                                                                        </div>
                                                                     </div>
-                                                                )}
-                                                                {isOwned ? (
-                                                                    <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-9 sm:h-11 text-[9px] sm:text-sm px-1" disabled>ADQUIRIDO</Button>
                                                                 ) : (
-                                                                    <Button onClick={() => setPreviewItem(item)} className="flex-1 rounded-xl bg-white text-black hover:bg-zinc-200 font-black h-9 sm:h-11 text-[9px] sm:text-sm italic shadow-xl tracking-tighter px-1">VISTA PREVIA</Button>
+                                                                    <>
+                                                                        {!isOwned && (
+                                                                            <div className="flex-shrink-0 flex items-center gap-1 sm:gap-2 bg-black px-1.5 py-1 sm:px-3 sm:py-2 rounded-xl">
+                                                                                <img src="/icons/moneda.png" alt="Coin" className="w-3.5 h-3.5 sm:w-5 sm:h-5 flex-shrink-0" />
+                                                                                <span className="text-white font-black text-[10px] sm:text-base tracking-tighter">{item.price_coins}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {isOwned ? (
+                                                                            <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-9 sm:h-11 text-[9px] sm:text-sm px-1" disabled>ADQUIRIDO</Button>
+                                                                        ) : (
+                                                                            <Button onClick={() => setPreviewItem(item)} className="flex-1 rounded-xl bg-white text-black hover:bg-zinc-200 font-black h-9 sm:h-11 text-[9px] sm:text-sm italic shadow-xl tracking-tighter px-1">VISTA PREVIA</Button>
+                                                                        )}
+                                                                    </>
                                                                 )}
                                                             </div>
                                                         </div>
