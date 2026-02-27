@@ -12,8 +12,11 @@ import {
   ArrowRight,
   Sparkles,
   Zap,
-  Pencil
+  Pencil,
+  Eye,
+  EyeOff
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 // Dynamically import CreateEventModal to reduce initial bundle size and avoid SSR issues
@@ -49,9 +52,25 @@ export default function EventsPage() {
 
   // Fetch events from DB + fallback to hardcoded pixel art if missing
   const fetchEvents = async () => {
-    const { data } = await supabase.from('events').select('*').order('fecha_inicio', { ascending: true });
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('fecha_inicio', { ascending: true });
+
     if (data) {
       setDbEvents(data);
+    }
+  };
+
+  const handleToggleVisibility = async (event: any) => {
+    const newStatus = !event.is_active;
+    const { error } = await supabase
+      .from('events')
+      .update({ is_active: newStatus })
+      .eq('id', event.id);
+
+    if (!error) {
+      setDbEvents(prev => prev.map(e => e.id === event.id ? { ...e, is_active: newStatus } : e));
     }
   };
 
@@ -80,6 +99,10 @@ export default function EventsPage() {
   }];
 
   const filteredEventos = displayEvents.filter(evento => {
+    // Non-admins only see active events
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
+    if (!isAdmin && evento.is_active === false) return false;
+
     const matchesFilter = activeFilter === 'Todos' || evento.tipo === activeFilter;
     const matchesSearch = (evento.titulo || evento.nombre).toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
@@ -189,11 +212,29 @@ export default function EventsPage() {
                   className="group block rounded-2xl overflow-hidden bg-bb-card border border-bb-border hover:border-blue-500/30 transition-all cursor-pointer relative"
                 >
                   <div
-                    className="h-32 md:h-56 relative overflow-hidden flex items-center justify-center bg-blue-600"
+                    className={cn(
+                      "h-32 md:h-56 relative overflow-hidden flex items-center justify-center bg-blue-600",
+                      evento.is_active === false && "grayscale opacity-60"
+                    )}
                   >
                     <div className="absolute inset-0 opacity-20"
                       style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '20px 20px' }}
                     />
+
+                    {/* Visibility Badge for Admin */}
+                    {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
+                      <div className="absolute top-3 left-3 z-10">
+                        {evento.is_active === false ? (
+                          <Badge className="bg-red-500/20 text-red-100 border border-red-500/30 backdrop-blur-md">
+                            <EyeOff className="w-3 h-3 mr-1" /> OCULTO
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-green-500/20 text-green-100 border border-green-500/30 backdrop-blur-md">
+                            <Eye className="w-3 h-3 mr-1" /> VISIBLE
+                          </Badge>
+                        )}
+                      </div>
+                    )}
 
                     {evento.imagen_url ? (
                       <img src={supabase.storage.from('r2-images').getPublicUrl(evento.imagen_url).data.publicUrl} alt={evento.titulo} className="w-full h-full object-cover" />
@@ -249,16 +290,33 @@ export default function EventsPage() {
                       </span>
                       {/* Admin Edit Trigger */}
                       {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation(); // Avoid triggering card click
-                            handleEditEvent(evento);
-                          }}
-                          className="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg backdrop-blur-sm transition-all border border-white/10"
-                          title="Editar Evento (Admin)"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Avoid triggering card click
+                              handleEditEvent(evento);
+                            }}
+                            className="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg backdrop-blur-sm transition-all border border-white/10"
+                            title="Editar Evento (Admin)"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Avoid triggering card click
+                              handleToggleVisibility(evento);
+                            }}
+                            className={cn(
+                              "p-2 rounded-lg backdrop-blur-sm transition-all border",
+                              evento.is_active === false
+                                ? "bg-red-500/20 text-red-400 border-red-500/20 hover:bg-red-500/30"
+                                : "bg-blue-500/20 text-blue-400 border-blue-500/20 hover:bg-blue-500/30"
+                            )}
+                            title={evento.is_active === false ? "Mostrar Evento" : "Ocultar Evento"}
+                          >
+                            {evento.is_active === false ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>

@@ -722,13 +722,12 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     ctx.stroke();
                 }
 
-                // Draw Pending Pixels Highlights
+                // Draw Pending Pixels Highlights & Colors
                 if (pendingPixelsRef.current.size > 0) {
                     ctx.save();
-                    ctx.lineWidth = 1.5 / scale;
-                    ctx.lineCap = 'square';
+                    ctx.imageSmoothingEnabled = false;
 
-                    pendingPixelsRef.current.forEach((colorIndex, key) => {
+                    pendingPixelsRef.current.forEach((val, key) => {
                         const [pxStr, pyStr] = key.split(',');
                         const x = parseInt(pxStr);
                         const y = parseInt(pyStr);
@@ -736,6 +735,31 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         const px = pixelStartX + x;
                         const py = pixelStartY + y;
 
+                        // FILL COLOR
+                        let uint32 = 0;
+                        if (val === ERASER_INDEX || val === 0) {
+                            uint32 = 0; // Transparent
+                        } else if (typeof val === 'string') {
+                            uint32 = hexToUint32(val);
+                        } else {
+                            uint32 = UINT32_PALETTE[val as number] || 0;
+                        }
+
+                        if (uint32 !== 0) {
+                            const r = uint32 & 0xFF;
+                            const g = (uint32 >> 8) & 0xFF;
+                            const b = (uint32 >> 16) & 0xFF;
+                            ctx.fillStyle = `rgb(${r},${g},${b})`;
+                            ctx.fillRect(px, py, 1, 1);
+                        } else {
+                            // Eraser preview
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.fillRect(px, py, 1, 1);
+                        }
+
+                        // BORDER INDICATOR
+                        ctx.lineWidth = 1.5 / scale;
+                        ctx.lineCap = 'square';
                         ctx.strokeStyle = '#FFFFFF';
                         ctx.shadowColor = 'rgba(0,0,0,0.5)';
                         ctx.shadowBlur = 1;
@@ -1366,18 +1390,18 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     </div>
                 ) : (
                     <div className="absolute bottom-0 left-0 z-30 w-full pointer-events-none" onContextMenu={(e) => e.preventDefault()}>
-                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-t-[1.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-4 md:px-8 md:py-5 border-t border-slate-200/60 flex flex-col gap-4 animate-in slide-in-from-bottom-full duration-500" onMouseDown={e => e.stopPropagation()}>
+                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-t-[2.5rem] shadow-[0_-20px_60px_rgba(0,0,0,0.15)] p-4 md:px-8 md:py-6 border-t border-slate-200/60 flex flex-col gap-4 md:gap-6 animate-in slide-in-from-bottom-full duration-500" onMouseDown={e => e.stopPropagation()}>
 
                             <div className="flex items-center justify-between px-2">
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-2xl border border-slate-100">
-                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Maximize className="w-4 h-4" /></button>
-                                        <div className="h-4 w-[1px] bg-slate-200 mx-1" />
-                                        <span className="text-xs font-bold text-slate-700 px-2 whitespace-nowrap">Pintar píxel ({pendingPixels.size})</span>
-                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Pencil className="w-4 h-4" /></button>
-                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" onClick={() => setShowGuidancePanel(!showGuidancePanel)}><Grid className="w-4 h-4" /></button>
-                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Undo className="w-4 h-4" /></button>
-                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Redo className="w-4 h-4" /></button>
+                                <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
+                                    <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                                        <button className="p-2.5 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Maximize className="w-5 h-5 md:w-4 md:h-4" /></button>
+                                        <div className="h-5 w-[1px] bg-slate-200 mx-1" />
+                                        <span className="text-[10px] md:text-xs font-black text-slate-700 px-3 uppercase tracking-tighter whitespace-nowrap">Pintar ({pendingPixels.size})</span>
+                                        <button className="p-2.5 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Pencil className="w-5 h-5 md:w-4 md:h-4" /></button>
+                                        <button className="p-2.5 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" onClick={() => setShowGuidancePanel(!showGuidancePanel)}><Grid className="w-5 h-5 md:w-4 md:h-4" /></button>
+                                        <button className="p-2.5 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Undo className="w-5 h-5 md:w-4 md:h-4" /></button>
+                                        <button className="p-2.5 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Redo className="w-5 h-5 md:w-4 md:h-4" /></button>
                                     </div>
 
                                     <TemplateSlotBar
@@ -1420,7 +1444,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                 </div>
                             </div>
 
-                            <div className="px-2">
+                            <div className="px-1 overflow-x-auto scrollbar-hide">
                                 <Palette
                                     selectedColor={isPanning || isEditingGuidance || isEraser || isSmartPicking ? null : selectedColor}
                                     onSelectColor={(c) => {
@@ -1429,32 +1453,26 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                         setIsPanning(false);
                                         setIsSmartPicking(false);
                                     }}
-                                    className="border-none bg-transparent shadow-none p-0"
+                                    className="border-none bg-transparent shadow-none p-0 flex-nowrap"
                                 />
                             </div>
 
-                            <div className="flex justify-center -mt-1 pb-1">
+                            <div className="flex justify-center pb-2">
                                 <button
                                     onClick={confirmPaint}
                                     disabled={pendingPixels.size === 0 || isSaving}
                                     className={cn(
-                                        "px-10 py-3 rounded-2xl font-black transition-all flex items-center gap-3 shadow-xl transform active:scale-95 group relative overflow-hidden",
+                                        "px-8 md:px-12 py-3.5 md:py-4 rounded-[1.25rem] font-black transition-all flex items-center gap-3 shadow-[0_15px_30px_-5px_rgba(37,99,235,0.3)] transform active:scale-95 group relative overflow-hidden",
                                         pendingPixels.size > 0 && !isSaving
-                                            ? "bg-blue-600 text-white hover:bg-blue-500 hover:scale-[1.02] shadow-blue-200"
-                                            : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                            ? "bg-blue-600 text-white hover:bg-blue-500 hover:scale-[1.03]"
+                                            : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
                                     )}
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                                    <Sparkles className={cn("w-5 h-5", pendingPixels.size > 0 && !isSaving ? "animate-pulse" : "")} />
-                                    <span className="tracking-tight text-lg">
-                                        {isSaving ? "Guardando..." : `Pintar ${pendingPixels.size > 0 ? pendingPixels.size : ''}`}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                                    <Sparkles className={cn("w-5 h-5 md:w-6 md:h-6", pendingPixels.size > 0 && !isSaving ? "animate-pulse" : "")} />
+                                    <span className="tracking-tight text-base md:text-xl italic uppercase">
+                                        {isSaving ? "Guardando..." : `Confirmar Pintura${pendingPixels.size > 0 ? ` (${pendingPixels.size})` : ''}`}
                                     </span>
-                                    {!isSaving && (
-                                        <>
-                                            <div className="h-5 w-[1px] bg-white/20 mx-1" />
-                                            <span className="text-sm opacity-80">{userProfile?.monedas || 0}</span>
-                                        </>
-                                    )}
                                 </button>
                             </div>
 
