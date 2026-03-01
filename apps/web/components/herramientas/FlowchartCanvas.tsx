@@ -19,8 +19,8 @@ import { cn } from '@/lib/utils';
 interface Point {
     x: number;
     y: number;
-    color: string;
-    size: number;
+    color?: string;
+    size?: number;
     isStamp?: boolean;
 }
 
