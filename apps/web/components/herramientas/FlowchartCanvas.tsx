@@ -50,32 +50,56 @@ export default function FlowchartCanvas({
     const [color, setColor] = useState('#10b981'); // Emerald 500
     const [paths, setPaths] = useState<Path[]>(initialData);
     const [currentPath, setCurrentPath] = useState<Point[]>([]);
-    const [scale, setScale] = useState(1);
+    const [scale, setScale] = useState(0.5); // Initial small scale
     const [offset, setOffset] = useState({ x: 0, y: 0 });
-    const [isPanning, setIsPanning] = useState(false);
-    const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 });
+    const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+    const [stampImage, setStampImage] = useState<HTMLImageElement | null>(null);
 
     const BRUSH_SIZE = 8;
-    const STAMP_SIZE = 40;
+    const STAMP_SIZE = 60; // Slightly larger for clarity
 
-    // Load image and setup canvas size
-    const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+    // Load stamp image
     useEffect(() => {
         const img = new Image();
-        img.src = imageUrl;
-        img.onload = () => {
-            setImageSize({ width: img.width, height: img.height });
-            if (canvasRef.current) {
-                canvasRef.current.width = img.width;
-                canvasRef.current.height = img.height;
-                render();
-            }
-        };
-    }, [imageUrl]);
+        img.src = '/icons/stamp-approved.svg'; // We'll create this file
+        img.onload = () => setStampImage(img);
+        // If it fails, we fall back to manual drawing
+    }, []);
 
-    useEffect(() => {
-        setPaths(initialData);
-    }, [initialData]);
+    const drawStamp = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, stampColor: string) => {
+        if (stampImage) {
+            const aspect = stampImage.height / stampImage.width;
+            const w = STAMP_SIZE * 2;
+            const h = w * aspect;
+            ctx.drawImage(stampImage, x - w / 2, y - h / 2, w, h);
+        } else {
+            // Fallback: Professional badge
+            const width = 80;
+            const height = 24;
+            const radius = 6;
+            ctx.save();
+            ctx.translate(x - width / 2, y - height / 2);
+            ctx.fillStyle = stampColor;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.moveTo(radius, 0); ctx.lineTo(width - radius, 0); ctx.quadraticCurveTo(width, 0, width, radius);
+            ctx.lineTo(width, height - radius); ctx.quadraticCurveTo(width, height, width - radius, height);
+            ctx.lineTo(radius, height); ctx.quadraticCurveTo(0, height, 0, height - radius);
+            ctx.lineTo(0, radius); ctx.quadraticCurveTo(0, 0, radius, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 10px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('APROBADO', width / 2, height / 2);
+            ctx.restore();
+        }
+    }, [stampImage]);
 
     const render = useCallback(() => {
         const canvas = canvasRef.current;
@@ -86,7 +110,12 @@ export default function FlowchartCanvas({
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Draw stored paths
-        [...paths, { points: currentPath, mode, color }].forEach(path => {
+        const allPaths = [...paths];
+        if (currentPath.length > 0) {
+            allPaths.push({ points: currentPath, mode: mode === 'erase' ? 'draw' : (mode as any), color });
+        }
+
+        allPaths.forEach(path => {
             if (path.points.length === 0) return;
 
             if (path.mode === 'stamp') {
@@ -97,69 +126,59 @@ export default function FlowchartCanvas({
                 ctx.lineJoin = 'round';
                 ctx.strokeStyle = path.color;
                 ctx.lineWidth = BRUSH_SIZE;
-                ctx.globalAlpha = 0.4; // Highlighter effect
-
+                ctx.globalAlpha = 0.4;
                 ctx.moveTo(path.points[0].x, path.points[0].y);
                 path.points.forEach(p => ctx.lineTo(p.x, p.y));
                 ctx.stroke();
                 ctx.globalAlpha = 1.0;
             }
         });
-    }, [paths, currentPath, mode, color]);
+    }, [paths, currentPath, mode, color, drawStamp]);
+
+    // Initial Load and Scaling
+    useEffect(() => {
+        const img = new Image();
+        img.src = imageUrl;
+        img.onload = () => {
+            setImageSize({ width: img.width, height: img.height });
+            if (canvasRef.current) {
+                canvasRef.current.width = img.width;
+                canvasRef.current.height = img.height;
+
+                if (containerRef.current) {
+                    const container = containerRef.current;
+                    const padding = 20;
+                    const availableWidth = container.clientWidth - padding;
+                    const availableHeight = container.clientHeight - padding;
+
+                    const scaleX = availableWidth / img.width;
+                    const scaleY = availableHeight / img.height;
+                    const fitScale = Math.min(scaleX, scaleY, 0.95);
+
+                    setScale(fitScale);
+                    // Center the view
+                    setOffset({
+                        x: (container.clientWidth / fitScale - img.width) / 2,
+                        y: (container.clientHeight / fitScale - img.height) / 2
+                    });
+                }
+                render();
+            }
+        };
+    }, [imageUrl, render]);
+
+    useEffect(() => {
+        setPaths(initialData);
+    }, [initialData]);
 
     useEffect(() => {
         render();
     }, [render]);
 
-    const drawStamp = (ctx: CanvasRenderingContext2D, x: number, y: number, stampColor: string) => {
-        const size = STAMP_SIZE;
-        ctx.save();
-
-        // Draw main circle/badge
-        ctx.fillStyle = stampColor;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = 'rgba(0,0,0,0.3)';
-
-        // Rounded Rect for "APROBADO" badge
-        const width = 80;
-        const height = 24;
-        const radius = 6;
-
-        ctx.translate(x - width / 2, y - height / 2);
-
-        ctx.beginPath();
-        ctx.moveTo(radius, 0);
-        ctx.lineTo(width - radius, 0);
-        ctx.quadraticCurveTo(width, 0, width, radius);
-        ctx.lineTo(width, height - radius);
-        ctx.quadraticCurveTo(width, height, width - radius, height);
-        ctx.lineTo(radius, height);
-        ctx.quadraticCurveTo(0, height, 0, height - radius);
-        ctx.lineTo(0, radius);
-        ctx.quadraticCurveTo(0, 0, radius, 0);
-        ctx.closePath();
-        ctx.fill();
-
-        // White border
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-
-        // Text
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 10px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('APROBADO', width / 2, height / 2);
-
-        ctx.restore();
-    };
-
     const getCanvasPoint = (e: React.MouseEvent | React.TouchEvent): { x: number, y: number } => {
         const canvas = canvasRef.current;
         if (!canvas) return { x: 0, y: 0 };
         const rect = canvas.getBoundingClientRect();
-
         let clientX, clientY;
         if ('touches' in e) {
             clientX = e.touches[0].clientX;
@@ -168,7 +187,6 @@ export default function FlowchartCanvas({
             clientX = e.clientX;
             clientY = e.clientY;
         }
-
         const x = (clientX - rect.left) * (canvas.width / rect.width);
         const y = (clientY - rect.top) * (canvas.height / rect.height);
         return { x, y };
@@ -180,18 +198,11 @@ export default function FlowchartCanvas({
             handleErase(point.x, point.y);
             return;
         }
-
         if (mode === 'stamp') {
             const point = getCanvasPoint(e);
-            const newPath: Path = {
-                mode: 'stamp',
-                color: '#10b981',
-                points: [point]
-            };
-            setPaths(prev => [...prev, newPath]);
+            setPaths(prev => [...prev, { mode: 'stamp', color: '#10b981', points: [point] }]);
             return;
         }
-
         if (mode === 'draw') {
             setIsDrawing(true);
             const point = getCanvasPoint(e);
@@ -216,7 +227,7 @@ export default function FlowchartCanvas({
     };
 
     const handleErase = (x: number, y: number) => {
-        const threshold = 20;
+        const threshold = 30; // More generous eraser
         setPaths(prev => prev.filter(path => {
             return !path.points.some(p => {
                 const dist = Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2));
@@ -225,18 +236,26 @@ export default function FlowchartCanvas({
         }));
     };
 
-    // Zoom and Pan logic
     const handleWheel = (e: React.WheelEvent) => {
         if (e.ctrlKey) {
             e.preventDefault();
             const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            setScale(prev => Math.min(Math.max(prev * delta, 0.5), 5));
+            setScale(prev => Math.min(Math.max(prev * delta, 0.2), 5));
         }
     };
 
     const resetZoom = () => {
-        setScale(1);
-        setOffset({ x: 0, y: 0 });
+        if (containerRef.current && imageSize.width > 0) {
+            const container = containerRef.current;
+            const scaleX = (container.clientWidth - 40) / imageSize.width;
+            const scaleY = (container.clientHeight - 40) / imageSize.height;
+            const fitScale = Math.min(scaleX, scaleY, 1);
+            setScale(fitScale);
+            setOffset({
+                x: (container.clientWidth / fitScale - imageSize.width) / 2,
+                y: (container.clientHeight / fitScale - imageSize.height) / 2
+            });
+        }
     };
 
     return (
@@ -288,7 +307,7 @@ export default function FlowchartCanvas({
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setPaths([])}
+                        onClick={() => { if (confirm('¿Borrar todo el dibujo?')) setPaths([]); }}
                         className="h-10 w-10 text-red-400 hover:text-red-300 hover:bg-red-500/10"
                         title="Limpiar todo"
                     >
@@ -300,10 +319,10 @@ export default function FlowchartCanvas({
 
                 <div className="flex items-center gap-2">
                     <div className="flex items-center bg-bb-sidebar/50 rounded-xl p-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setScale(s => Math.max(s - 0.2, 0.5))}><ZoomOut className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setScale(s => Math.max(s - 0.1, 0.1))}><ZoomOut className="w-4 h-4" /></Button>
                         <span className="text-[10px] font-black w-10 text-center">{Math.round(scale * 100)}%</span>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setScale(s => Math.min(s + 0.2, 5))}><ZoomIn className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={resetZoom}><Maximize className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setScale(s => Math.min(s + 0.1, 5))}><ZoomIn className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={resetZoom} title="Ajustar a pantalla"><Maximize className="w-4 h-4" /></Button>
                     </div>
                     <Button
                         onClick={() => onSave(paths)}
@@ -319,23 +338,25 @@ export default function FlowchartCanvas({
             {/* Canvas Area */}
             <div
                 ref={containerRef}
-                className="flex-1 relative bg-black/40 rounded-3xl border border-bb-border overflow-auto cursor-crosshair no-scrollbar"
+                className="flex-1 relative bg-black/40 rounded-3xl border border-bb-border overflow-auto cursor-crosshair no-scrollbar touch-none"
                 onWheel={handleWheel}
             >
                 <div
                     className="relative origin-top-left transition-transform duration-75"
                     style={{
                         transform: `scale(${scale}) translate(${offset.x}px, ${offset.y}px)`,
-                        width: imageSize.width || '100%',
-                        height: imageSize.height || 'h-full'
+                        width: imageSize.width,
+                        height: imageSize.height
                     }}
                 >
-                    <img
-                        src={imageUrl}
-                        alt="Flowchart"
-                        className="absolute inset-0 pointer-events-none"
-                        style={{ width: imageSize.width, height: imageSize.height }}
-                    />
+                    {imageUrl && (
+                        <img
+                            src={imageUrl}
+                            alt="Flowchart"
+                            className="absolute inset-0 pointer-events-none"
+                            style={{ width: imageSize.width, height: imageSize.height }}
+                        />
+                    )}
                     <canvas
                         ref={canvasRef}
                         className="absolute inset-0"
@@ -350,9 +371,9 @@ export default function FlowchartCanvas({
                 </div>
             </div>
 
-            <div className="flex items-center justify-between px-2 text-[10px] text-bb-text-secondary">
+            <div className="flex flex-col sm:flex-row items-center justify-between px-2 gap-2 text-[10px] text-bb-text-secondary">
                 <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1"><MousePointer2 className="w-3 h-3" /> Clic para pintar</span>
+                    <span className="flex items-center gap-1"><MousePointer2 className="w-3 h-3" /> Clic para pintar / poner sello</span>
                     <span className="flex items-center gap-1 font-bold"><kbd className="bg-bb-border px-1.5 rounded">Ctrl + Scroll</kbd> Zoom</span>
                 </div>
                 <div className="italic">El progreso se guarda automáticamente al pulsar "Guardar"</div>
