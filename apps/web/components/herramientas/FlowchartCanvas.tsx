@@ -7,13 +7,17 @@ import {
     Trash2,
     Save,
     RotateCcw,
+    RotateCw,
     ZoomIn,
     ZoomOut,
     Maximize,
     ChevronLeft,
     CheckCircle2,
     X,
-    Minimize2
+    Minimize2,
+    Undo2,
+    Redo2,
+    Type
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -31,6 +35,7 @@ interface Path {
     points: Point[];
     mode: 'draw' | 'stamp';
     color: string;
+    size?: number;
 }
 
 interface FlowchartCanvasProps {
@@ -51,7 +56,13 @@ export default function FlowchartCanvas({
     const [isDrawing, setIsDrawing] = useState(false);
     const [mode, setMode] = useState<'draw' | 'stamp' | 'erase'>('draw');
     const [color, setColor] = useState('#10b981'); // Emerald 500
+    const [brushSize, setBrushSize] = useState(8);
+
+    // History for Undo/Redo
     const [paths, setPaths] = useState<Path[]>(initialData);
+    const [history, setHistory] = useState<Path[][]>([initialData]);
+    const [historyIndex, setHistoryIndex] = useState(0);
+
     const [currentPath, setCurrentPath] = useState<Point[]>([]);
     const [scale, setScale] = useState(1);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -59,37 +70,85 @@ export default function FlowchartCanvas({
     const [isImmersive, setIsImmersive] = useState(false);
     const [stampImage, setStampImage] = useState<HTMLImageElement | null>(null);
 
-    const BRUSH_SIZE = 8;
-    const STAMP_SIZE = 50;
+    // Touch handling for pinch-to-zoom
+    const [touchDist, setTouchDist] = useState<number | null>(null);
 
-    // Load stamp image
+    const STAMP_SIZE = 60;
+    const COLORS = [
+        '#10b981', // Emerald
+        '#3b82f6', // Blue
+        '#f59e0b', // Amber
+        '#ef4444', // Red
+        '#8b5cf6', // Violet
+        '#ec4899', // Pink
+        '#ffffff', // White
+        '#000000'  // Black
+    ];
+
+    // Load stamp image from the path provided by the user
     useEffect(() => {
         const img = new Image();
-        img.src = '/icons/stamp-approved.svg';
+        // The user said "public- cellos-cello", likely /cellos/cello or /cellos/aprov based on the screenshot name
+        // I saw "aprov" in the public_cellos/aprov file path in the previous error
+        img.src = '/cellos/aprov';
         img.onload = () => setStampImage(img);
+        img.onerror = () => {
+            // Fallback to the SVG I created if the direct image fails
+            console.warn("Custom stamp not found at /cellos/aprov, falling back to /icons/stamp-approved.svg");
+            const fallback = new Image();
+            fallback.src = '/icons/stamp-approved.svg';
+            fallback.onload = () => setStampImage(fallback);
+        };
     }, []);
+
+    const addToHistory = useCallback((newPaths: Path[]) => {
+        const newHistory = history.slice(0, historyIndex + 1);
+        newHistory.push([...newPaths]);
+
+        // Keep history manageable
+        if (newHistory.length > 50) newHistory.shift();
+
+        setHistory(newHistory);
+        setHistoryIndex(newHistory.length - 1);
+        setPaths(newPaths);
+    }, [history, historyIndex]);
+
+    const undo = () => {
+        if (historyIndex > 0) {
+            const newIndex = historyIndex - 1;
+            setHistoryIndex(newIndex);
+            setPaths([...history[newIndex]]);
+        }
+    };
+
+    const redo = () => {
+        if (historyIndex < history.length - 1) {
+            const newIndex = historyIndex + 1;
+            setHistoryIndex(newIndex);
+            setPaths([...history[newIndex]]);
+        }
+    };
 
     const drawStamp = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, stampColor: string) => {
         if (stampImage) {
-            const aspect = stampImage.height / stampImage.width;
+            ctx.save();
             const w = STAMP_SIZE * 2;
+            const aspect = stampImage.height / stampImage.width;
             const h = w * aspect;
             ctx.drawImage(stampImage, x - w / 2, y - h / 2, w, h);
+            ctx.restore();
         } else {
+            // High-quality Fallback
             const width = 80;
             const height = 24;
             const radius = 6;
             ctx.save();
             ctx.translate(x - width / 2, y - height / 2);
             ctx.fillStyle = stampColor;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = 'rgba(0,0,0,0.2)';
             ctx.beginPath();
-            ctx.moveTo(radius, 0); ctx.lineTo(width - radius, 0); ctx.quadraticCurveTo(width, 0, width, radius);
-            ctx.lineTo(width, height - radius); ctx.quadraticCurveTo(width, height, width - radius, height);
-            ctx.lineTo(radius, height); ctx.quadraticCurveTo(0, height, 0, height - radius);
-            ctx.lineTo(0, radius); ctx.quadraticCurveTo(0, 0, radius, 0);
-            ctx.closePath();
+            ctx.roundRect(0, 0, width, height, radius);
             ctx.fill();
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 1.5;
@@ -113,7 +172,7 @@ export default function FlowchartCanvas({
 
         const allPaths = [...paths];
         if (currentPath.length > 0) {
-            allPaths.push({ points: currentPath, mode: mode === 'erase' ? 'draw' : (mode as any), color });
+            allPaths.push({ points: currentPath, mode: mode === 'erase' ? 'draw' : (mode as any), color, size: brushSize });
         }
 
         allPaths.forEach(path => {
@@ -125,7 +184,7 @@ export default function FlowchartCanvas({
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
                 ctx.strokeStyle = path.color;
-                ctx.lineWidth = BRUSH_SIZE;
+                ctx.lineWidth = path.size || brushSize;
                 ctx.globalAlpha = 0.4;
                 ctx.moveTo(path.points[0].x, path.points[0].y);
                 path.points.forEach(p => ctx.lineTo(p.x, p.y));
@@ -133,9 +192,8 @@ export default function FlowchartCanvas({
                 ctx.globalAlpha = 1.0;
             }
         });
-    }, [paths, currentPath, mode, color, drawStamp]);
+    }, [paths, currentPath, mode, color, brushSize, drawStamp]);
 
-    // Initial Scaling
     const handleResetZoom = useCallback(() => {
         if (containerRef.current && imageSize.width > 0) {
             const container = containerRef.current;
@@ -169,16 +227,17 @@ export default function FlowchartCanvas({
 
     useEffect(() => {
         setPaths(initialData);
+        setHistory([initialData]);
+        setHistoryIndex(0);
     }, [initialData]);
 
     useEffect(() => {
         render();
     }, [render]);
 
-    // Update zoom/offset when entering immersive mode
     useEffect(() => {
         if (isImmersive) {
-            setTimeout(handleResetZoom, 350); // wait for animation
+            setTimeout(handleResetZoom, 350);
         }
     }, [isImmersive, handleResetZoom]);
 
@@ -205,6 +264,16 @@ export default function FlowchartCanvas({
             return;
         }
 
+        // Handle Touch Zoom Start
+        if ('touches' in e && e.touches.length === 2) {
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            setTouchDist(dist);
+            return;
+        }
+
         if (mode === 'erase') {
             const point = getCanvasPoint(e);
             handleErase(point.x, point.y);
@@ -212,7 +281,7 @@ export default function FlowchartCanvas({
         }
         if (mode === 'stamp') {
             const point = getCanvasPoint(e);
-            setPaths(prev => [...prev, { mode: 'stamp', color: '#10b981', points: [point] }]);
+            addToHistory([...paths, { mode: 'stamp', color: '#10b981', points: [point] }]);
             return;
         }
         if (mode === 'draw') {
@@ -223,16 +292,29 @@ export default function FlowchartCanvas({
     };
 
     const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
+        // Handle Pinch Zoom
+        if ('touches' in e && e.touches.length === 2 && touchDist !== null) {
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            const delta = dist / touchDist;
+            setScale(prev => Math.min(Math.max(prev * delta, 0.1), 5));
+            setTouchDist(dist);
+            return;
+        }
+
         if (!isDrawing) return;
         const point = getCanvasPoint(e);
         setCurrentPath(prev => [...prev, point]);
     };
 
     const endAction = () => {
+        setTouchDist(null);
         if (isDrawing) {
             setIsDrawing(false);
             if (currentPath.length > 0) {
-                setPaths(prev => [...prev, { points: currentPath, mode: 'draw', color }]);
+                addToHistory([...paths, { points: currentPath, mode: 'draw', color, size: brushSize }]);
             }
             setCurrentPath([]);
         }
@@ -240,26 +322,28 @@ export default function FlowchartCanvas({
 
     const handleErase = (x: number, y: number) => {
         const threshold = 35;
-        setPaths(prev => prev.filter(path => {
+        const newPaths = paths.filter(path => {
             return !path.points.some(p => {
                 const dist = Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2));
                 return dist < threshold;
             });
-        }));
+        });
+        if (newPaths.length !== paths.length) {
+            addToHistory(newPaths);
+        }
     };
 
     const handleWheel = (e: React.WheelEvent) => {
-        if (e.ctrlKey) {
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            setScale(prev => Math.min(Math.max(prev * delta, 0.1), 5));
-        }
+        // Zoom with Scroll
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.95 : 1.05;
+        setScale(prev => Math.min(Math.max(prev * delta, 0.1), 5));
     };
 
     return (
         <div
             className={cn(
-                "relative transition-all duration-300 ease-in-out",
+                "relative transition-all duration-300 ease-in-out select-none",
                 isImmersive ? "fixed inset-0 z-[9999] bg-bb-darker p-0" : "h-full w-full bg-bb-sidebar/20 rounded-3xl"
             )}
         >
@@ -279,40 +363,81 @@ export default function FlowchartCanvas({
                         initial={{ x: -20, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: -20, opacity: 0 }}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 z-[10000] flex flex-col gap-3 p-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl"
+                        className="absolute left-4 top-1/2 -translate-y-1/2 z-[10000] flex flex-col gap-3 p-3 bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh] no-scrollbar"
                     >
                         <Button
                             variant="ghost" size="icon"
                             onClick={() => setMode('draw')}
-                            className={cn("h-12 w-12 rounded-2xl", mode === 'draw' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-white")}
+                            className={cn("h-12 w-12 rounded-2xl shrink-0 transition-all", mode === 'draw' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-white")}
                         >
                             <Pencil className="w-5 h-5" />
                         </Button>
                         <Button
                             variant="ghost" size="icon"
                             onClick={() => setMode('stamp')}
-                            className={cn("h-12 w-12 rounded-2xl", mode === 'stamp' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-white")}
+                            className={cn("h-12 w-12 rounded-2xl shrink-0 transition-all", mode === 'stamp' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-white")}
                         >
                             <CheckCircle2 className="w-5 h-5" />
                         </Button>
                         <Button
                             variant="ghost" size="icon"
                             onClick={() => setMode('erase')}
-                            className={cn("h-12 w-12 rounded-2xl", mode === 'erase' ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white")}
+                            className={cn("h-12 w-12 rounded-2xl shrink-0 transition-all", mode === 'erase' ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white")}
                         >
                             <Eraser className="w-5 h-5" />
                         </Button>
-                        <div className="h-px w-8 bg-white/10 mx-auto my-1" />
-                        <button
-                            className={cn("w-10 h-10 rounded-xl mx-auto transition-all", color === '#10b981' ? "ring-2 ring-white scale-110" : "opacity-30")}
-                            style={{ backgroundColor: '#10b981' }}
-                            onClick={() => setColor('#10b981')}
-                        />
-                        <button
-                            className={cn("w-10 h-10 rounded-xl mx-auto transition-all", color === '#3b82f6' ? "ring-2 ring-white scale-110" : "opacity-30")}
-                            style={{ backgroundColor: '#3b82f6' }}
-                            onClick={() => setColor('#3b82f6')}
-                        />
+
+                        <div className="h-px w-8 bg-white/10 mx-auto my-1 shrink-0" />
+
+                        {/* Colors Palette */}
+                        <div className="grid grid-cols-2 gap-2">
+                            {COLORS.map(c => (
+                                <button
+                                    key={c}
+                                    className={cn(
+                                        "w-5 h-5 rounded-full transition-all border border-white/20",
+                                        color === c ? "ring-2 ring-white scale-110" : "opacity-40 hover:opacity-100"
+                                    )}
+                                    style={{ backgroundColor: c }}
+                                    onClick={() => setColor(c)}
+                                />
+                            ))}
+                        </div>
+
+                        <div className="h-px w-8 bg-white/10 mx-auto my-1 shrink-0" />
+
+                        {/* Brush Size Slider (Vertical simulation) */}
+                        <div className="flex flex-col items-center gap-2 group relative">
+                            <span className="text-[10px] font-black text-white/40">{brushSize}</span>
+                            <input
+                                type="range"
+                                min="2"
+                                max="30"
+                                value={brushSize}
+                                onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                                className="w-20 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer -rotate-90 origin-center my-6"
+                            />
+                        </div>
+
+                        <div className="h-px w-8 bg-white/10 mx-auto my-1 shrink-0" />
+
+                        {/* Undo/Redo */}
+                        <Button
+                            variant="ghost" size="icon"
+                            disabled={historyIndex === 0}
+                            onClick={undo}
+                            className="h-12 w-12 rounded-2xl text-zinc-400 hover:text-white disabled:opacity-20"
+                        >
+                            <Undo2 className="w-5 h-5" />
+                        </Button>
+                        <Button
+                            variant="ghost" size="icon"
+                            disabled={historyIndex === history.length - 1}
+                            onClick={redo}
+                            className="h-12 w-12 rounded-2xl text-zinc-400 hover:text-white disabled:opacity-20"
+                        >
+                            <Redo2 className="w-5 h-5" />
+                        </Button>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -366,7 +491,7 @@ export default function FlowchartCanvas({
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => { if (confirm('¿Borrar todo el dibujo?')) setPaths([]); }}
+                            onClick={() => { if (confirm('¿Borrar todo el dibujo?')) addToHistory([]); }}
                             className="h-12 w-12 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
                             title="Limpiar todo"
                         >
@@ -380,8 +505,8 @@ export default function FlowchartCanvas({
             <div
                 ref={containerRef}
                 className={cn(
-                    "relative overflow-auto cursor-crosshair no-scrollbar touch-none w-full h-full",
-                    isImmersive ? "bg-bb-darker" : "rounded-3xl"
+                    "relative overflow-hidden no-scrollbar touch-none w-full h-full",
+                    isImmersive ? "bg-bb-darker border-none" : "rounded-3xl border border-bb-border"
                 )}
                 onWheel={handleWheel}
             >
@@ -416,8 +541,8 @@ export default function FlowchartCanvas({
             </div>
 
             {isImmersive && (
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] text-white/30 font-bold uppercase tracking-widest pointer-events-none z-[10001]">
-                    Modo Inmersivo Activo • Ctrl + Scroll para Zoom
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] text-white/30 font-bold uppercase tracking-widest pointer-events-none z-[10001] text-center w-full">
+                    Scroll para Zoom • Pinch para Zoom en Móvil • Clic en herramienta para empezar
                 </div>
             )}
         </div>
