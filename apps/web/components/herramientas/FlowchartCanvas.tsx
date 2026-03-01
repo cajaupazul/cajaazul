@@ -7,7 +7,6 @@ import {
     Trash2,
     Save,
     RotateCcw,
-    RotateCw,
     ZoomIn,
     ZoomOut,
     Maximize,
@@ -16,8 +15,7 @@ import {
     X,
     Minimize2,
     Undo2,
-    Redo2,
-    Type
+    Redo2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -55,10 +53,9 @@ export default function FlowchartCanvas({
     const containerRef = useRef<HTMLDivElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [mode, setMode] = useState<'draw' | 'stamp' | 'erase'>('draw');
-    const [color, setColor] = useState('#10b981'); // Emerald 500
+    const [color, setColor] = useState('#10b981');
     const [brushSize, setBrushSize] = useState(8);
 
-    // History for Undo/Redo
     const [paths, setPaths] = useState<Path[]>(initialData);
     const [history, setHistory] = useState<Path[][]>([initialData]);
     const [historyIndex, setHistoryIndex] = useState(0);
@@ -70,44 +67,90 @@ export default function FlowchartCanvas({
     const [isImmersive, setIsImmersive] = useState(false);
     const [stampImage, setStampImage] = useState<HTMLImageElement | null>(null);
 
-    // Touch handling for pinch-to-zoom
-    const [touchDist, setTouchDist] = useState<number | null>(null);
+    const STAMP_SIZE = 80;
+    const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#ffffff', '#000000'];
 
-    const STAMP_SIZE = 60;
-    const COLORS = [
-        '#10b981', // Emerald
-        '#3b82f6', // Blue
-        '#f59e0b', // Amber
-        '#ef4444', // Red
-        '#8b5cf6', // Violet
-        '#ec4899', // Pink
-        '#ffffff', // White
-        '#000000'  // Black
-    ];
-
-    // Load stamp image from the path provided by the user
+    // Load stamp image with multiple fallbacks
     useEffect(() => {
-        const img = new Image();
-        // The user said "public- cellos-cello", likely /cellos/cello or /cellos/aprov based on the screenshot name
-        // I saw "aprov" in the public_cellos/aprov file path in the previous error
-        img.src = '/cellos/aprov';
-        img.onload = () => setStampImage(img);
-        img.onerror = () => {
-            // Fallback to the SVG I created if the direct image fails
-            console.warn("Custom stamp not found at /cellos/aprov, falling back to /icons/stamp-approved.svg");
-            const fallback = new Image();
-            fallback.src = '/icons/stamp-approved.svg';
-            fallback.onload = () => setStampImage(fallback);
+        const tryLoad = (src: string): Promise<HTMLImageElement> => {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.src = src;
+                img.onload = () => resolve(img);
+                img.onerror = () => reject();
+            });
+        };
+
+        const loadSequence = async () => {
+            const pathsToTry = ['/cellos/aprov', '/cellos/cello', '/icons/stamp-approved.svg'];
+            for (const path of pathsToTry) {
+                try {
+                    const img = await tryLoad(path);
+                    setStampImage(img);
+                    return;
+                } catch (e) { }
+            }
+        };
+
+        loadSequence();
+    }, []);
+
+    // FIX: Manual non-passive listeners for zoom/pinch
+    const touchDistRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handleWheelEvent = (e: WheelEvent) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.90 : 1.10;
+            setScale(prev => Math.min(Math.max(prev * delta, 0.01), 15));
+        };
+
+        const handleTouchStart = (e: TouchEvent) => {
+            if (e.touches.length === 2) {
+                touchDistRef.current = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+        };
+
+        const handleTouchMove = (e: TouchEvent) => {
+            if (e.touches.length === 2 && touchDistRef.current !== null) {
+                e.preventDefault();
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                const delta = dist / touchDistRef.current;
+                setScale(prev => Math.min(Math.max(prev * delta, 0.01), 15));
+                touchDistRef.current = dist;
+            }
+        };
+
+        const handleTouchEnd = () => {
+            touchDistRef.current = null;
+        };
+
+        container.addEventListener('wheel', handleWheelEvent, { passive: false });
+        container.addEventListener('touchstart', handleTouchStart, { passive: false });
+        container.addEventListener('touchmove', handleTouchMove, { passive: false });
+        container.addEventListener('touchend', handleTouchEnd);
+
+        return () => {
+            container.removeEventListener('wheel', handleWheelEvent);
+            container.removeEventListener('touchstart', handleTouchStart);
+            container.removeEventListener('touchmove', handleTouchMove);
+            container.removeEventListener('touchend', handleTouchEnd);
         };
     }, []);
 
     const addToHistory = useCallback((newPaths: Path[]) => {
         const newHistory = history.slice(0, historyIndex + 1);
         newHistory.push([...newPaths]);
-
-        // Keep history manageable
         if (newHistory.length > 50) newHistory.shift();
-
         setHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
         setPaths(newPaths);
@@ -132,23 +175,19 @@ export default function FlowchartCanvas({
     const drawStamp = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, stampColor: string) => {
         if (stampImage) {
             ctx.save();
-            const w = STAMP_SIZE * 2;
+            const w = STAMP_SIZE;
             const aspect = stampImage.height / stampImage.width;
             const h = w * aspect;
             ctx.drawImage(stampImage, x - w / 2, y - h / 2, w, h);
             ctx.restore();
         } else {
-            // High-quality Fallback
             const width = 80;
             const height = 24;
-            const radius = 6;
             ctx.save();
             ctx.translate(x - width / 2, y - height / 2);
             ctx.fillStyle = stampColor;
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = 'rgba(0,0,0,0.2)';
             ctx.beginPath();
-            ctx.roundRect(0, 0, width, height, radius);
+            ctx.roundRect(0, 0, width, height, 6);
             ctx.fill();
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 1.5;
@@ -197,12 +236,9 @@ export default function FlowchartCanvas({
     const handleResetZoom = useCallback(() => {
         if (containerRef.current && imageSize.width > 0) {
             const container = containerRef.current;
-            const padding = 40;
-            const availableWidth = container.clientWidth - padding;
-            const availableHeight = container.clientHeight - padding;
-            const scaleX = availableWidth / imageSize.width;
-            const scaleY = availableHeight / imageSize.height;
-            const fitScale = Math.min(scaleX, scaleY, 0.95);
+            const availableWidth = container.clientWidth - 40;
+            const availableHeight = container.clientHeight - 40;
+            const fitScale = Math.min(availableWidth / imageSize.width, availableHeight / imageSize.height, 0.95);
             setScale(fitScale);
             setOffset({
                 x: (container.clientWidth / fitScale - imageSize.width) / 2,
@@ -220,10 +256,9 @@ export default function FlowchartCanvas({
                 canvasRef.current.width = img.width;
                 canvasRef.current.height = img.height;
                 handleResetZoom();
-                render();
             }
         };
-    }, [imageUrl, handleResetZoom, render]);
+    }, [imageUrl, handleResetZoom]);
 
     useEffect(() => {
         setPaths(initialData);
@@ -253,9 +288,10 @@ export default function FlowchartCanvas({
             clientX = e.clientX;
             clientY = e.clientY;
         }
-        const x = (clientX - rect.left) * (canvas.width / rect.width);
-        const y = (clientY - rect.top) * (canvas.height / rect.height);
-        return { x, y };
+        return {
+            x: (clientX - rect.left) * (canvas.width / rect.width),
+            y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
     };
 
     const startAction = (e: React.MouseEvent | React.TouchEvent) => {
@@ -263,54 +299,26 @@ export default function FlowchartCanvas({
             setIsImmersive(true);
             return;
         }
-
-        // Handle Touch Zoom Start
-        if ('touches' in e && e.touches.length === 2) {
-            const dist = Math.hypot(
-                e.touches[0].clientX - e.touches[1].clientX,
-                e.touches[0].clientY - e.touches[1].clientY
-            );
-            setTouchDist(dist);
-            return;
-        }
+        if ('touches' in e && e.touches.length === 2) return;
 
         if (mode === 'erase') {
             const point = getCanvasPoint(e);
             handleErase(point.x, point.y);
-            return;
-        }
-        if (mode === 'stamp') {
+        } else if (mode === 'stamp') {
             const point = getCanvasPoint(e);
-            addToHistory([...paths, { mode: 'stamp', color: '#10b981', points: [point] }]);
-            return;
-        }
-        if (mode === 'draw') {
+            addToHistory([...paths, { mode: 'stamp', color, points: [point] }]);
+        } else {
             setIsDrawing(true);
-            const point = getCanvasPoint(e);
-            setCurrentPath([point]);
+            setCurrentPath([getCanvasPoint(e)]);
         }
     };
 
     const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
-        // Handle Pinch Zoom
-        if ('touches' in e && e.touches.length === 2 && touchDist !== null) {
-            const dist = Math.hypot(
-                e.touches[0].clientX - e.touches[1].clientX,
-                e.touches[0].clientY - e.touches[1].clientY
-            );
-            const delta = dist / touchDist;
-            setScale(prev => Math.min(Math.max(prev * delta, 0.1), 5));
-            setTouchDist(dist);
-            return;
-        }
-
         if (!isDrawing) return;
-        const point = getCanvasPoint(e);
-        setCurrentPath(prev => [...prev, point]);
+        setCurrentPath(prev => [...prev, getCanvasPoint(e)]);
     };
 
     const endAction = () => {
-        setTouchDist(null);
         if (isDrawing) {
             setIsDrawing(false);
             if (currentPath.length > 0) {
@@ -322,229 +330,71 @@ export default function FlowchartCanvas({
 
     const handleErase = (x: number, y: number) => {
         const threshold = 35;
-        const newPaths = paths.filter(path => {
-            return !path.points.some(p => {
-                const dist = Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2));
-                return dist < threshold;
-            });
-        });
-        if (newPaths.length !== paths.length) {
-            addToHistory(newPaths);
-        }
-    };
-
-    const handleWheel = (e: React.WheelEvent) => {
-        // Zoom with Scroll
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.95 : 1.05;
-        setScale(prev => Math.min(Math.max(prev * delta, 0.1), 5));
+        const newPaths = paths.filter(path => !path.points.some(p => Math.hypot(p.x - x, p.y - y) < threshold));
+        if (newPaths.length !== paths.length) addToHistory(newPaths);
     };
 
     return (
-        <div
-            className={cn(
-                "relative transition-all duration-300 ease-in-out select-none",
-                isImmersive ? "fixed inset-0 z-[9999] bg-bb-darker p-0" : "h-full w-full bg-bb-sidebar/20 rounded-3xl"
-            )}
-        >
-            {/* Minimal Background Plate */}
+        <div className={cn("relative transition-all duration-300 ease-in-out select-none", isImmersive ? "fixed inset-0 z-[9999] bg-bb-darker" : "h-full w-full bg-bb-sidebar/20 rounded-3xl")}>
             {!isImmersive && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="text-bb-text-secondary text-xs font-black uppercase tracking-widest opacity-20">
-                        Presiona para Activar Pantalla Completa
-                    </div>
+                    <div className="text-bb-text-secondary text-xs font-black uppercase tracking-widest opacity-20">Click para expandir</div>
                 </div>
             )}
 
-            {/* Immersive Sidebar/Controls */}
             <AnimatePresence>
                 {isImmersive && (
-                    <motion.div
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: -20, opacity: 0 }}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 z-[10000] flex flex-col gap-3 p-3 bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh] no-scrollbar"
-                    >
-                        <Button
-                            variant="ghost" size="icon"
-                            onClick={() => setMode('draw')}
-                            className={cn("h-12 w-12 rounded-2xl shrink-0 transition-all", mode === 'draw' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-white")}
-                        >
-                            <Pencil className="w-5 h-5" />
-                        </Button>
-                        <Button
-                            variant="ghost" size="icon"
-                            onClick={() => setMode('stamp')}
-                            className={cn("h-12 w-12 rounded-2xl shrink-0 transition-all", mode === 'stamp' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-white")}
-                        >
-                            <CheckCircle2 className="w-5 h-5" />
-                        </Button>
-                        <Button
-                            variant="ghost" size="icon"
-                            onClick={() => setMode('erase')}
-                            className={cn("h-12 w-12 rounded-2xl shrink-0 transition-all", mode === 'erase' ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white")}
-                        >
-                            <Eraser className="w-5 h-5" />
-                        </Button>
+                    <>
+                        {/* Sidebar */}
+                        <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="absolute left-4 top-1/2 -translate-y-1/2 z-[10000] flex flex-col gap-3 p-3 bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-[90vh] no-scrollbar overflow-y-auto">
+                            <Button variant="ghost" size="icon" onClick={() => setMode('draw')} className={cn("h-12 w-12 rounded-2xl", mode === 'draw' ? "bg-emerald-500 text-white" : "text-zinc-400")}><Pencil className="w-5 h-5" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => setMode('stamp')} className={cn("h-12 w-12 rounded-2xl", mode === 'stamp' ? "bg-emerald-500 text-white" : "text-zinc-400")}><CheckCircle2 className="w-5 h-5" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => setMode('erase')} className={cn("h-12 w-12 rounded-2xl", mode === 'erase' ? "bg-zinc-700 text-white" : "text-zinc-400")}><Eraser className="w-5 h-5" /></Button>
+                            <div className="h-px w-8 bg-white/10 mx-auto" />
+                            <div className="grid grid-cols-2 gap-2">
+                                {COLORS.map(c => (
+                                    <button key={c} className={cn("w-5 h-5 rounded-full border border-white/20", color === c ? "ring-2 ring-white scale-110" : "opacity-40")} style={{ backgroundColor: c }} onClick={() => setColor(c)} />
+                                ))}
+                            </div>
+                            <div className="h-px w-8 bg-white/10 mx-auto" />
+                            <input type="range" min="2" max="30" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} className="w-20 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer -rotate-90 my-6" />
+                            <div className="h-px w-8 bg-white/10 mx-auto" />
+                            <Button variant="ghost" size="icon" disabled={historyIndex === 0} onClick={undo} className="h-12 w-12 rounded-2xl text-zinc-400 disabled:opacity-20"><Undo2 className="w-5 h-5" /></Button>
+                            <Button variant="ghost" size="icon" disabled={historyIndex === history.length - 1} onClick={redo} className="h-12 w-12 rounded-2xl text-zinc-400 disabled:opacity-20"><Redo2 className="w-5 h-5" /></Button>
+                        </motion.div>
 
-                        <div className="h-px w-8 bg-white/10 mx-auto my-1 shrink-0" />
+                        {/* Top Bar */}
+                        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="absolute top-4 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-4 px-6 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+                            <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={() => setScale(s => Math.max(s - 0.1, 0.01))}><ZoomOut className="w-4 h-4" /></Button>
+                                <span className="text-[10px] font-black w-10 text-center text-white">{Math.round(scale * 100)}%</span>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={() => setScale(s => Math.min(s + 0.1, 15))}><ZoomIn className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={handleResetZoom}><Maximize className="w-4 h-4" /></Button>
+                            </div>
+                            <div className="h-6 w-px bg-white/10" />
+                            <Button onClick={() => onSave(paths)} disabled={isSaving} className="h-10 px-6 rounded-xl bg-blue-500 hover:bg-blue-600 font-bold gap-2 text-white">
+                                {isSaving ? <RotateCcw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                <span>Guardar</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setIsImmersive(false)} className="h-10 w-10 rounded-xl bg-zinc-800 text-white"><Minimize2 className="w-5 h-5" /></Button>
+                        </motion.div>
 
-                        {/* Colors Palette */}
-                        <div className="grid grid-cols-2 gap-2">
-                            {COLORS.map(c => (
-                                <button
-                                    key={c}
-                                    className={cn(
-                                        "w-5 h-5 rounded-full transition-all border border-white/20",
-                                        color === c ? "ring-2 ring-white scale-110" : "opacity-40 hover:opacity-100"
-                                    )}
-                                    style={{ backgroundColor: c }}
-                                    onClick={() => setColor(c)}
-                                />
-                            ))}
-                        </div>
-
-                        <div className="h-px w-8 bg-white/10 mx-auto my-1 shrink-0" />
-
-                        {/* Brush Size Slider (Vertical simulation) */}
-                        <div className="flex flex-col items-center gap-2 group relative">
-                            <span className="text-[10px] font-black text-white/40">{brushSize}</span>
-                            <input
-                                type="range"
-                                min="2"
-                                max="30"
-                                value={brushSize}
-                                onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                                className="w-20 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer -rotate-90 origin-center my-6"
-                            />
-                        </div>
-
-                        <div className="h-px w-8 bg-white/10 mx-auto my-1 shrink-0" />
-
-                        {/* Undo/Redo */}
-                        <Button
-                            variant="ghost" size="icon"
-                            disabled={historyIndex === 0}
-                            onClick={undo}
-                            className="h-12 w-12 rounded-2xl text-zinc-400 hover:text-white disabled:opacity-20"
-                        >
-                            <Undo2 className="w-5 h-5" />
-                        </Button>
-                        <Button
-                            variant="ghost" size="icon"
-                            disabled={historyIndex === history.length - 1}
-                            onClick={redo}
-                            className="h-12 w-12 rounded-2xl text-zinc-400 hover:text-white disabled:opacity-20"
-                        >
-                            <Redo2 className="w-5 h-5" />
-                        </Button>
-                    </motion.div>
+                        {/* Trash */}
+                        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="absolute bottom-6 right-6 z-[10000]">
+                            <Button variant="ghost" size="icon" onClick={() => { if (confirm('¿Borrar todo?')) addToHistory([]); }} className="h-12 w-12 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20"><Trash2 className="w-5 h-5" /></Button>
+                        </motion.div>
+                    </>
                 )}
             </AnimatePresence>
 
-            {/* Top Immersive Header */}
-            <AnimatePresence>
-                {isImmersive && (
-                    <motion.div
-                        initial={{ y: -20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: -20, opacity: 0 }}
-                        className="absolute top-4 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-4 px-6 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl"
-                    >
-                        <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={() => setScale(s => Math.max(s - 0.1, 0.1))}><ZoomOut className="w-4 h-4" /></Button>
-                            <span className="text-[10px] font-black w-10 text-center text-white">{Math.round(scale * 100)}%</span>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={() => setScale(s => Math.min(s + 0.1, 5))}><ZoomIn className="w-4 h-4" /></Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={handleResetZoom}><Maximize className="w-4 h-4" /></Button>
-                        </div>
-                        <div className="h-6 w-px bg-white/10" />
-                        <Button
-                            onClick={() => onSave(paths)}
-                            disabled={isSaving}
-                            className="h-10 px-6 rounded-xl bg-blue-500 hover:bg-blue-600 font-bold gap-2 text-white"
-                        >
-                            {isSaving ? <RotateCcw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            <span>Guardar</span>
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsImmersive(false)}
-                            className="h-10 w-10 rounded-xl bg-zinc-800 text-white hover:bg-zinc-700"
-                            title="Regresar"
-                        >
-                            <Minimize2 className="w-5 h-5" />
-                        </Button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Bottom Actions */}
-            <AnimatePresence>
-                {isImmersive && (
-                    <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: 20, opacity: 0 }}
-                        className="absolute bottom-6 right-6 z-[10000]"
-                    >
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => { if (confirm('¿Borrar todo el dibujo?')) addToHistory([]); }}
-                            className="h-12 w-12 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
-                            title="Limpiar todo"
-                        >
-                            <Trash2 className="w-5 h-5" />
-                        </Button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Canvas Area */}
-            <div
-                ref={containerRef}
-                className={cn(
-                    "relative overflow-hidden no-scrollbar touch-none w-full h-full",
-                    isImmersive ? "bg-bb-darker border-none" : "rounded-3xl border border-bb-border"
-                )}
-                onWheel={handleWheel}
-            >
-                <div
-                    className="relative origin-top-left transition-transform duration-75"
-                    style={{
-                        transform: `scale(${scale}) translate(${offset.x}px, ${offset.y}px)`,
-                        width: imageSize.width,
-                        height: imageSize.height
-                    }}
-                >
-                    {imageUrl && (
-                        <img
-                            src={imageUrl}
-                            alt="Flowchart"
-                            className="absolute inset-0 pointer-events-none"
-                            style={{ width: imageSize.width, height: imageSize.height }}
-                        />
-                    )}
-                    <canvas
-                        ref={canvasRef}
-                        className="absolute inset-0"
-                        onMouseDown={startAction}
-                        onMouseMove={handleMove}
-                        onMouseUp={endAction}
-                        onMouseLeave={endAction}
-                        onTouchStart={startAction}
-                        onTouchMove={handleMove}
-                        onTouchEnd={endAction}
-                    />
+            <div ref={containerRef} className={cn("relative overflow-hidden touch-none w-full h-full", isImmersive ? "bg-bb-darker" : "rounded-3xl border border-bb-border")}>
+                <div className="relative origin-top-left transition-transform duration-75" style={{ transform: `scale(${scale}) translate(${offset.x}px, ${offset.y}px)`, width: imageSize.width, height: imageSize.height }}>
+                    {imageUrl && <img src={imageUrl} alt="Flowchart" className="absolute inset-0 pointer-events-none" style={{ width: imageSize.width, height: imageSize.height }} />}
+                    <canvas ref={canvasRef} className="absolute inset-0" onMouseDown={startAction} onMouseMove={handleMove} onMouseUp={endAction} onMouseLeave={endAction} onTouchStart={startAction} onTouchMove={handleMove} onTouchEnd={endAction} />
                 </div>
             </div>
 
-            {isImmersive && (
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] text-white/30 font-bold uppercase tracking-widest pointer-events-none z-[10001] text-center w-full">
-                    Scroll para Zoom • Pinch para Zoom en Móvil • Clic en herramienta para empezar
-                </div>
-            )}
+            {isImmersive && <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] text-white/30 font-bold uppercase tracking-widest pointer-events-none z-[10001]">Scroll para Zoom • Pinch en Móvil</div>}
         </div>
     );
 }
