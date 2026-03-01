@@ -15,7 +15,8 @@ import {
     X,
     Minimize2,
     Undo2,
-    Redo2
+    Redo2,
+    Hand
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -24,9 +25,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface Point {
     x: number;
     y: number;
-    color?: string;
-    size?: number;
-    isStamp?: boolean;
 }
 
 interface Path {
@@ -52,7 +50,8 @@ export default function FlowchartCanvas({
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
-    const [mode, setMode] = useState<'draw' | 'stamp' | 'erase'>('draw');
+    const [isPanning, setIsPanning] = useState(false);
+    const [mode, setMode] = useState<'draw' | 'stamp' | 'erase' | 'pan'>('draw');
     const [color, setColor] = useState('#10b981');
     const [brushSize, setBrushSize] = useState(8);
 
@@ -67,54 +66,55 @@ export default function FlowchartCanvas({
     const [isImmersive, setIsImmersive] = useState(false);
     const [stampImage, setStampImage] = useState<HTMLImageElement | null>(null);
 
-    const STAMP_SIZE = 80;
+    const lastMousePos = useRef<{ x: number, y: number } | null>(null);
+    const touchDistRef = useRef<number | null>(null);
+
+    const STAMP_SIZE = 100;
     const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#ffffff', '#000000'];
 
-    // Load stamp image with multiple fallbacks
+    // Load stamp image with aggressive fallbacks
     useEffect(() => {
-        const tryLoad = (src: string): Promise<HTMLImageElement> => {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.src = src;
-                img.onload = () => resolve(img);
-                img.onerror = () => reject();
-            });
-        };
-
-        const loadSequence = async () => {
-            const pathsToTry = ['/cellos/aprov', '/cellos/cello', '/icons/stamp-approved.svg'];
-            for (const path of pathsToTry) {
+        const loadStamp = async () => {
+            const urls = ['/cellos/aprov.svg', '/cellos/aprov', '/cellos/cello.svg', '/icons/stamp-approved.svg'];
+            for (const url of urls) {
                 try {
-                    const img = await tryLoad(path);
+                    const img = new Image();
+                    img.src = url;
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = reject;
+                    });
                     setStampImage(img);
                     return;
                 } catch (e) { }
             }
         };
-
-        loadSequence();
+        loadStamp();
     }, []);
 
-    // FIX: Manual non-passive listeners for zoom/pinch
-    const touchDistRef = useRef<number | null>(null);
-
+    // FIX: Manual non-passive listeners for wheel and touch
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
 
-        const handleWheelEvent = (e: WheelEvent) => {
+        const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
-            const delta = e.deltaY > 0 ? 0.90 : 1.10;
-            setScale(prev => Math.min(Math.max(prev * delta, 0.01), 15));
-        };
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            const newScale = Math.min(Math.max(scale * delta, 0.05), 20);
 
-        const handleTouchStart = (e: TouchEvent) => {
-            if (e.touches.length === 2) {
-                touchDistRef.current = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-            }
+            // Zoom towards mouse
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const dx = (mouseX - offset.x) / scale;
+            const dy = (mouseY - offset.y) / scale;
+
+            setOffset({
+                x: mouseX - dx * newScale,
+                y: mouseY - dy * newScale
+            });
+            setScale(newScale);
         };
 
         const handleTouchMove = (e: TouchEvent) => {
@@ -125,27 +125,33 @@ export default function FlowchartCanvas({
                     e.touches[0].clientY - e.touches[1].clientY
                 );
                 const delta = dist / touchDistRef.current;
-                setScale(prev => Math.min(Math.max(prev * delta, 0.01), 15));
+                const newScale = Math.min(Math.max(scale * delta, 0.05), 20);
+
+                // Pinch center zoom
+                const rect = container.getBoundingClientRect();
+                const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+                const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+
+                const dx = (centerX - offset.x) / scale;
+                const dy = (centerY - offset.y) / scale;
+
+                setOffset({
+                    x: centerX - dx * newScale,
+                    y: centerY - dy * newScale
+                });
+                setScale(newScale);
                 touchDistRef.current = dist;
             }
         };
 
-        const handleTouchEnd = () => {
-            touchDistRef.current = null;
-        };
-
-        container.addEventListener('wheel', handleWheelEvent, { passive: false });
-        container.addEventListener('touchstart', handleTouchStart, { passive: false });
+        container.addEventListener('wheel', handleWheel, { passive: false });
         container.addEventListener('touchmove', handleTouchMove, { passive: false });
-        container.addEventListener('touchend', handleTouchEnd);
 
         return () => {
-            container.removeEventListener('wheel', handleWheelEvent);
-            container.removeEventListener('touchstart', handleTouchStart);
+            container.removeEventListener('wheel', handleWheel);
             container.removeEventListener('touchmove', handleTouchMove);
-            container.removeEventListener('touchend', handleTouchEnd);
         };
-    }, []);
+    }, [scale, offset]);
 
     const addToHistory = useCallback((newPaths: Path[]) => {
         const newHistory = history.slice(0, historyIndex + 1);
@@ -208,7 +214,6 @@ export default function FlowchartCanvas({
         if (!ctx) return;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         const allPaths = [...paths];
         if (currentPath.length > 0) {
             allPaths.push({ points: currentPath, mode: mode === 'erase' ? 'draw' : (mode as any), color, size: brushSize });
@@ -236,13 +241,14 @@ export default function FlowchartCanvas({
     const handleResetZoom = useCallback(() => {
         if (containerRef.current && imageSize.width > 0) {
             const container = containerRef.current;
-            const availableWidth = container.clientWidth - 40;
-            const availableHeight = container.clientHeight - 40;
+            const padding = 40;
+            const availableWidth = container.clientWidth - padding;
+            const availableHeight = container.clientHeight - padding;
             const fitScale = Math.min(availableWidth / imageSize.width, availableHeight / imageSize.height, 0.95);
             setScale(fitScale);
             setOffset({
-                x: (container.clientWidth / fitScale - imageSize.width) / 2,
-                y: (container.clientHeight / fitScale - imageSize.height) / 2
+                x: (container.clientWidth - imageSize.width * fitScale) / 2,
+                y: (container.clientHeight - imageSize.height * fitScale) / 2
             });
         }
     }, [imageSize]);
@@ -289,8 +295,8 @@ export default function FlowchartCanvas({
             clientY = e.clientY;
         }
         return {
-            x: (clientX - rect.left) * (canvas.width / rect.width),
-            y: (clientY - rect.top) * (canvas.height / rect.height)
+            x: (clientX - rect.left) / scale,
+            y: (clientY - rect.top) / scale
         };
     };
 
@@ -299,7 +305,24 @@ export default function FlowchartCanvas({
             setIsImmersive(true);
             return;
         }
-        if ('touches' in e && e.touches.length === 2) return;
+
+        if ('touches' in e && e.touches.length === 2) {
+            touchDistRef.current = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            return;
+        }
+
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+        // Middle button or Pan mode or Spacebar (simulated)
+        if (mode === 'pan' || (e as React.MouseEvent).button === 1 || (e as React.MouseEvent).button === 2) {
+            setIsPanning(true);
+            lastMousePos.current = { x: clientX, y: clientY };
+            return;
+        }
 
         if (mode === 'erase') {
             const point = getCanvasPoint(e);
@@ -314,34 +337,39 @@ export default function FlowchartCanvas({
     };
 
     const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+        if (isPanning && lastMousePos.current) {
+            const dx = clientX - lastMousePos.current.x;
+            const dy = clientY - lastMousePos.current.y;
+            setOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+            lastMousePos.current = { x: clientX, y: clientY };
+            return;
+        }
+
         if (!isDrawing) return;
         setCurrentPath(prev => [...prev, getCanvasPoint(e)]);
     };
 
     const endAction = () => {
-        if (isDrawing) {
-            setIsDrawing(false);
-            if (currentPath.length > 0) {
-                addToHistory([...paths, { points: currentPath, mode: 'draw', color, size: brushSize }]);
-            }
-            setCurrentPath([]);
+        setIsPanning(false);
+        setIsDrawing(false);
+        touchDistRef.current = null;
+        if (currentPath.length > 0) {
+            addToHistory([...paths, { points: currentPath, mode: 'draw', color, size: brushSize }]);
         }
+        setCurrentPath([]);
     };
 
     const handleErase = (x: number, y: number) => {
-        const threshold = 35;
+        const threshold = 35 / scale;
         const newPaths = paths.filter(path => !path.points.some(p => Math.hypot(p.x - x, p.y - y) < threshold));
         if (newPaths.length !== paths.length) addToHistory(newPaths);
     };
 
     return (
         <div className={cn("relative transition-all duration-300 ease-in-out select-none", isImmersive ? "fixed inset-0 z-[9999] bg-bb-darker" : "h-full w-full bg-bb-sidebar/20 rounded-3xl")}>
-            {!isImmersive && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="text-bb-text-secondary text-xs font-black uppercase tracking-widest opacity-20">Click para expandir</div>
-                </div>
-            )}
-
             <AnimatePresence>
                 {isImmersive && (
                     <>
@@ -349,6 +377,7 @@ export default function FlowchartCanvas({
                         <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="absolute left-4 top-1/2 -translate-y-1/2 z-[10000] flex flex-col gap-3 p-3 bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl max-h-[90vh] no-scrollbar overflow-y-auto">
                             <Button variant="ghost" size="icon" onClick={() => setMode('draw')} className={cn("h-12 w-12 rounded-2xl", mode === 'draw' ? "bg-emerald-500 text-white" : "text-zinc-400")}><Pencil className="w-5 h-5" /></Button>
                             <Button variant="ghost" size="icon" onClick={() => setMode('stamp')} className={cn("h-12 w-12 rounded-2xl", mode === 'stamp' ? "bg-emerald-500 text-white" : "text-zinc-400")}><CheckCircle2 className="w-5 h-5" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => setMode('pan')} className={cn("h-12 w-12 rounded-2xl", mode === 'pan' ? "bg-blue-500 text-white" : "text-zinc-400")}><Hand className="w-5 h-5" /></Button>
                             <Button variant="ghost" size="icon" onClick={() => setMode('erase')} className={cn("h-12 w-12 rounded-2xl", mode === 'erase' ? "bg-zinc-700 text-white" : "text-zinc-400")}><Eraser className="w-5 h-5" /></Button>
                             <div className="h-px w-8 bg-white/10 mx-auto" />
                             <div className="grid grid-cols-2 gap-2">
@@ -363,14 +392,9 @@ export default function FlowchartCanvas({
                             <Button variant="ghost" size="icon" disabled={historyIndex === history.length - 1} onClick={redo} className="h-12 w-12 rounded-2xl text-zinc-400 disabled:opacity-20"><Redo2 className="w-5 h-5" /></Button>
                         </motion.div>
 
-                        {/* Top Bar */}
                         <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="absolute top-4 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-4 px-6 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
-                            <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={() => setScale(s => Math.max(s - 0.1, 0.01))}><ZoomOut className="w-4 h-4" /></Button>
-                                <span className="text-[10px] font-black w-10 text-center text-white">{Math.round(scale * 100)}%</span>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={() => setScale(s => Math.min(s + 0.1, 15))}><ZoomIn className="w-4 h-4" /></Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={handleResetZoom}><Maximize className="w-4 h-4" /></Button>
-                            </div>
+                            <span className="text-[10px] font-black w-10 text-center text-white">{Math.round(scale * 100)}%</span>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={handleResetZoom}><Maximize className="w-4 h-4" /></Button>
                             <div className="h-6 w-px bg-white/10" />
                             <Button onClick={() => onSave(paths)} disabled={isSaving} className="h-10 px-6 rounded-xl bg-blue-500 hover:bg-blue-600 font-bold gap-2 text-white">
                                 {isSaving ? <RotateCcw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -379,7 +403,6 @@ export default function FlowchartCanvas({
                             <Button variant="ghost" size="icon" onClick={() => setIsImmersive(false)} className="h-10 w-10 rounded-xl bg-zinc-800 text-white"><Minimize2 className="w-5 h-5" /></Button>
                         </motion.div>
 
-                        {/* Trash */}
                         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="absolute bottom-6 right-6 z-[10000]">
                             <Button variant="ghost" size="icon" onClick={() => { if (confirm('¿Borrar todo?')) addToHistory([]); }} className="h-12 w-12 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20"><Trash2 className="w-5 h-5" /></Button>
                         </motion.div>
@@ -387,14 +410,44 @@ export default function FlowchartCanvas({
                 )}
             </AnimatePresence>
 
-            <div ref={containerRef} className={cn("relative overflow-hidden touch-none w-full h-full", isImmersive ? "bg-bb-darker" : "rounded-3xl border border-bb-border")}>
-                <div className="relative origin-top-left transition-transform duration-75" style={{ transform: `scale(${scale}) translate(${offset.x}px, ${offset.y}px)`, width: imageSize.width, height: imageSize.height }}>
+            <div
+                ref={containerRef}
+                className={cn(
+                    "relative overflow-hidden touch-none w-full h-full",
+                    isImmersive ? "bg-bb-darker" : "rounded-3xl border border-bb-border cursor-pointer",
+                    mode === 'pan' && "cursor-grab active:cursor-grabbing"
+                )}
+                onMouseDown={startAction}
+                onMouseMove={handleMove}
+                onMouseUp={endAction}
+                onMouseLeave={endAction}
+                onTouchStart={startAction}
+                onTouchEnd={endAction}
+                onContextMenu={(e) => e.preventDefault()}
+            >
+                {!isImmersive && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                        <div className="text-bb-text-secondary text-xs font-black uppercase tracking-widest opacity-20 bg-black/40 px-4 py-2 rounded-full backdrop-blur-sm">Click para Modo Inmersivo</div>
+                    </div>
+                )}
+                <div
+                    className="relative origin-top-left transition-transform duration-75 will-change-transform"
+                    style={{
+                        transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+                        width: imageSize.width,
+                        height: imageSize.height
+                    }}
+                >
                     {imageUrl && <img src={imageUrl} alt="Flowchart" className="absolute inset-0 pointer-events-none" style={{ width: imageSize.width, height: imageSize.height }} />}
-                    <canvas ref={canvasRef} className="absolute inset-0" onMouseDown={startAction} onMouseMove={handleMove} onMouseUp={endAction} onMouseLeave={endAction} onTouchStart={startAction} onTouchMove={handleMove} onTouchEnd={endAction} />
+                    <canvas ref={canvasRef} className="absolute inset-0" />
                 </div>
             </div>
 
-            {isImmersive && <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] text-white/30 font-bold uppercase tracking-widest pointer-events-none z-[10001]">Scroll para Zoom • Pinch en Móvil</div>}
+            {isImmersive && (
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] text-white/30 font-bold uppercase tracking-widest pointer-events-none z-[10001]">
+                    Rueda: Zoom • Click Derecho/Central: Mover • Pinch: Zoom Móvil
+                </div>
+            )}
         </div>
     );
 }

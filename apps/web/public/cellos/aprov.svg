@@ -1,0 +1,20 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer Ring with "Rough" texture -->
+  <circle cx="100" cy="100" r="85" stroke="#15803d" stroke-width="6" stroke-dasharray="10 4" />
+  <circle cx="100" cy="100" r="75" stroke="#15803d" stroke-width="3" stroke-dasharray="5 2" />
+  
+  <!-- Diagonal Banner -->
+  <rect x="10" y="80" width="180" height="40" rx="4" fill="#15803d" transform="rotate(-15 100 100)" />
+  
+  <!-- "APPROVED" Text -->
+  <text x="100" y="107" fill="white" font-family="Arial, sans-serif" font-size="24" font-weight="950" text-anchor="middle" transform="rotate(-15 100 100)" style="letter-spacing: 2px;">APROBADO</text>
+  
+  <!-- Rough elements to simulate rubber stamp -->
+  <g opacity="0.4">
+    <circle cx="100" cy="40" r="2" fill="#15803d" />
+    <circle cx="150" cy="60" r="1.5" fill="#15803d" />
+    <circle cx="40" cy="120" r="2.5" fill="#15803d" />
+    <circle cx="160" cy="140" r="2" fill="#15803d" />
+    <circle cx="80" cy="170" r="1.5" fill="#15803d" />
+  </g>
+</svg>
