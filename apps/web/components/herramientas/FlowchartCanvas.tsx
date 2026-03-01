@@ -10,11 +10,14 @@ import {
     ZoomIn,
     ZoomOut,
     Maximize,
-    MousePointer2,
-    CheckCircle2
+    ChevronLeft,
+    CheckCircle2,
+    X,
+    Minimize2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Point {
     x: number;
@@ -50,20 +53,20 @@ export default function FlowchartCanvas({
     const [color, setColor] = useState('#10b981'); // Emerald 500
     const [paths, setPaths] = useState<Path[]>(initialData);
     const [currentPath, setCurrentPath] = useState<Point[]>([]);
-    const [scale, setScale] = useState(0.5); // Initial small scale
+    const [scale, setScale] = useState(1);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
     const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+    const [isImmersive, setIsImmersive] = useState(false);
     const [stampImage, setStampImage] = useState<HTMLImageElement | null>(null);
 
     const BRUSH_SIZE = 8;
-    const STAMP_SIZE = 60; // Slightly larger for clarity
+    const STAMP_SIZE = 50;
 
     // Load stamp image
     useEffect(() => {
         const img = new Image();
-        img.src = '/icons/stamp-approved.svg'; // We'll create this file
+        img.src = '/icons/stamp-approved.svg';
         img.onload = () => setStampImage(img);
-        // If it fails, we fall back to manual drawing
     }, []);
 
     const drawStamp = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, stampColor: string) => {
@@ -73,7 +76,6 @@ export default function FlowchartCanvas({
             const h = w * aspect;
             ctx.drawImage(stampImage, x - w / 2, y - h / 2, w, h);
         } else {
-            // Fallback: Professional badge
             const width = 80;
             const height = 24;
             const radius = 6;
@@ -109,7 +111,6 @@ export default function FlowchartCanvas({
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Draw stored paths
         const allPaths = [...paths];
         if (currentPath.length > 0) {
             allPaths.push({ points: currentPath, mode: mode === 'erase' ? 'draw' : (mode as any), color });
@@ -117,7 +118,6 @@ export default function FlowchartCanvas({
 
         allPaths.forEach(path => {
             if (path.points.length === 0) return;
-
             if (path.mode === 'stamp') {
                 path.points.forEach(point => drawStamp(ctx, point.x, point.y, path.color));
             } else {
@@ -135,7 +135,24 @@ export default function FlowchartCanvas({
         });
     }, [paths, currentPath, mode, color, drawStamp]);
 
-    // Initial Load and Scaling
+    // Initial Scaling
+    const handleResetZoom = useCallback(() => {
+        if (containerRef.current && imageSize.width > 0) {
+            const container = containerRef.current;
+            const padding = 40;
+            const availableWidth = container.clientWidth - padding;
+            const availableHeight = container.clientHeight - padding;
+            const scaleX = availableWidth / imageSize.width;
+            const scaleY = availableHeight / imageSize.height;
+            const fitScale = Math.min(scaleX, scaleY, 0.95);
+            setScale(fitScale);
+            setOffset({
+                x: (container.clientWidth / fitScale - imageSize.width) / 2,
+                y: (container.clientHeight / fitScale - imageSize.height) / 2
+            });
+        }
+    }, [imageSize]);
+
     useEffect(() => {
         const img = new Image();
         img.src = imageUrl;
@@ -144,28 +161,11 @@ export default function FlowchartCanvas({
             if (canvasRef.current) {
                 canvasRef.current.width = img.width;
                 canvasRef.current.height = img.height;
-
-                if (containerRef.current) {
-                    const container = containerRef.current;
-                    const padding = 20;
-                    const availableWidth = container.clientWidth - padding;
-                    const availableHeight = container.clientHeight - padding;
-
-                    const scaleX = availableWidth / img.width;
-                    const scaleY = availableHeight / img.height;
-                    const fitScale = Math.min(scaleX, scaleY, 0.95);
-
-                    setScale(fitScale);
-                    // Center the view
-                    setOffset({
-                        x: (container.clientWidth / fitScale - img.width) / 2,
-                        y: (container.clientHeight / fitScale - img.height) / 2
-                    });
-                }
+                handleResetZoom();
                 render();
             }
         };
-    }, [imageUrl, render]);
+    }, [imageUrl, handleResetZoom, render]);
 
     useEffect(() => {
         setPaths(initialData);
@@ -174,6 +174,13 @@ export default function FlowchartCanvas({
     useEffect(() => {
         render();
     }, [render]);
+
+    // Update zoom/offset when entering immersive mode
+    useEffect(() => {
+        if (isImmersive) {
+            setTimeout(handleResetZoom, 350); // wait for animation
+        }
+    }, [isImmersive, handleResetZoom]);
 
     const getCanvasPoint = (e: React.MouseEvent | React.TouchEvent): { x: number, y: number } => {
         const canvas = canvasRef.current;
@@ -193,6 +200,11 @@ export default function FlowchartCanvas({
     };
 
     const startAction = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!isImmersive) {
+            setIsImmersive(true);
+            return;
+        }
+
         if (mode === 'erase') {
             const point = getCanvasPoint(e);
             handleErase(point.x, point.y);
@@ -227,7 +239,7 @@ export default function FlowchartCanvas({
     };
 
     const handleErase = (x: number, y: number) => {
-        const threshold = 30; // More generous eraser
+        const threshold = 35;
         setPaths(prev => prev.filter(path => {
             return !path.points.some(p => {
                 const dist = Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2));
@@ -240,105 +252,137 @@ export default function FlowchartCanvas({
         if (e.ctrlKey) {
             e.preventDefault();
             const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            setScale(prev => Math.min(Math.max(prev * delta, 0.2), 5));
-        }
-    };
-
-    const resetZoom = () => {
-        if (containerRef.current && imageSize.width > 0) {
-            const container = containerRef.current;
-            const scaleX = (container.clientWidth - 40) / imageSize.width;
-            const scaleY = (container.clientHeight - 40) / imageSize.height;
-            const fitScale = Math.min(scaleX, scaleY, 1);
-            setScale(fitScale);
-            setOffset({
-                x: (container.clientWidth / fitScale - imageSize.width) / 2,
-                y: (container.clientHeight / fitScale - imageSize.height) / 2
-            });
+            setScale(prev => Math.min(Math.max(prev * delta, 0.1), 5));
         }
     };
 
     return (
-        <div className="flex flex-col h-full space-y-4">
-            {/* Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-bb-card border border-bb-border rounded-2xl shadow-xl">
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant={mode === 'draw' ? 'default' : 'ghost'}
-                        onClick={() => setMode('draw')}
-                        className={cn("h-10 px-3 rounded-xl gap-2", mode === 'draw' && "bg-emerald-500 hover:bg-emerald-600")}
-                    >
-                        <Pencil className="w-4 h-4" />
-                        <span className="hidden sm:inline">Pincel</span>
-                    </Button>
-                    <Button
-                        variant={mode === 'stamp' ? 'default' : 'ghost'}
-                        onClick={() => setMode('stamp')}
-                        className={cn("h-10 px-3 rounded-xl gap-2", mode === 'stamp' && "bg-emerald-500 hover:bg-emerald-600")}
-                    >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span className="hidden sm:inline">Sello Aprobado</span>
-                    </Button>
-                    <Button
-                        variant={mode === 'erase' ? 'default' : 'ghost'}
-                        onClick={() => setMode('erase')}
-                        className={cn("h-10 px-3 rounded-xl gap-2", mode === 'erase' && "bg-zinc-700 text-white")}
-                    >
-                        <Eraser className="w-4 h-4" />
-                        <span className="hidden sm:inline">Borrador</span>
-                    </Button>
+        <div
+            className={cn(
+                "relative transition-all duration-300 ease-in-out",
+                isImmersive ? "fixed inset-0 z-[9999] bg-bb-darker p-0" : "h-full w-full bg-bb-sidebar/20 rounded-3xl"
+            )}
+        >
+            {/* Minimal Background Plate */}
+            {!isImmersive && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="text-bb-text-secondary text-xs font-black uppercase tracking-widest opacity-20">
+                        Presiona para Activar Pantalla Completa
+                    </div>
                 </div>
+            )}
 
-                <div className="h-8 w-px bg-bb-border mx-1 hidden sm:block" />
-
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-bb-sidebar/50 rounded-xl p-1 gap-1">
+            {/* Immersive Sidebar/Controls */}
+            <AnimatePresence>
+                {isImmersive && (
+                    <motion.div
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: -20, opacity: 0 }}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 z-[10000] flex flex-col gap-3 p-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl"
+                    >
+                        <Button
+                            variant="ghost" size="icon"
+                            onClick={() => setMode('draw')}
+                            className={cn("h-12 w-12 rounded-2xl", mode === 'draw' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-white")}
+                        >
+                            <Pencil className="w-5 h-5" />
+                        </Button>
+                        <Button
+                            variant="ghost" size="icon"
+                            onClick={() => setMode('stamp')}
+                            className={cn("h-12 w-12 rounded-2xl", mode === 'stamp' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-white")}
+                        >
+                            <CheckCircle2 className="w-5 h-5" />
+                        </Button>
+                        <Button
+                            variant="ghost" size="icon"
+                            onClick={() => setMode('erase')}
+                            className={cn("h-12 w-12 rounded-2xl", mode === 'erase' ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white")}
+                        >
+                            <Eraser className="w-5 h-5" />
+                        </Button>
+                        <div className="h-px w-8 bg-white/10 mx-auto my-1" />
                         <button
-                            className={cn("w-8 h-8 rounded-lg transition-all", color === '#10b981' ? "ring-2 ring-white scale-110" : "opacity-50")}
+                            className={cn("w-10 h-10 rounded-xl mx-auto transition-all", color === '#10b981' ? "ring-2 ring-white scale-110" : "opacity-30")}
                             style={{ backgroundColor: '#10b981' }}
                             onClick={() => setColor('#10b981')}
                         />
                         <button
-                            className={cn("w-8 h-8 rounded-lg transition-all", color === '#3b82f6' ? "ring-2 ring-white scale-110" : "opacity-50")}
+                            className={cn("w-10 h-10 rounded-xl mx-auto transition-all", color === '#3b82f6' ? "ring-2 ring-white scale-110" : "opacity-30")}
                             style={{ backgroundColor: '#3b82f6' }}
                             onClick={() => setColor('#3b82f6')}
                         />
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => { if (confirm('¿Borrar todo el dibujo?')) setPaths([]); }}
-                        className="h-10 w-10 text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                        title="Limpiar todo"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </Button>
-                </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-                <div className="flex-1" />
-
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-bb-sidebar/50 rounded-xl p-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setScale(s => Math.max(s - 0.1, 0.1))}><ZoomOut className="w-4 h-4" /></Button>
-                        <span className="text-[10px] font-black w-10 text-center">{Math.round(scale * 100)}%</span>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setScale(s => Math.min(s + 0.1, 5))}><ZoomIn className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={resetZoom} title="Ajustar a pantalla"><Maximize className="w-4 h-4" /></Button>
-                    </div>
-                    <Button
-                        onClick={() => onSave(paths)}
-                        disabled={isSaving}
-                        className="h-10 px-6 rounded-xl bg-blue-500 hover:bg-blue-600 font-bold gap-2"
+            {/* Top Immersive Header */}
+            <AnimatePresence>
+                {isImmersive && (
+                    <motion.div
+                        initial={{ y: -20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -20, opacity: 0 }}
+                        className="absolute top-4 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-4 px-6 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl"
                     >
-                        {isSaving ? <RotateCcw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        Guardar
-                    </Button>
-                </div>
-            </div>
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={() => setScale(s => Math.max(s - 0.1, 0.1))}><ZoomOut className="w-4 h-4" /></Button>
+                            <span className="text-[10px] font-black w-10 text-center text-white">{Math.round(scale * 100)}%</span>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={() => setScale(s => Math.min(s + 0.1, 5))}><ZoomIn className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400" onClick={handleResetZoom}><Maximize className="w-4 h-4" /></Button>
+                        </div>
+                        <div className="h-6 w-px bg-white/10" />
+                        <Button
+                            onClick={() => onSave(paths)}
+                            disabled={isSaving}
+                            className="h-10 px-6 rounded-xl bg-blue-500 hover:bg-blue-600 font-bold gap-2 text-white"
+                        >
+                            {isSaving ? <RotateCcw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            <span>Guardar</span>
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsImmersive(false)}
+                            className="h-10 w-10 rounded-xl bg-zinc-800 text-white hover:bg-zinc-700"
+                            title="Regresar"
+                        >
+                            <Minimize2 className="w-5 h-5" />
+                        </Button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Bottom Actions */}
+            <AnimatePresence>
+                {isImmersive && (
+                    <motion.div
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 20, opacity: 0 }}
+                        className="absolute bottom-6 right-6 z-[10000]"
+                    >
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => { if (confirm('¿Borrar todo el dibujo?')) setPaths([]); }}
+                            className="h-12 w-12 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                            title="Limpiar todo"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </Button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Canvas Area */}
             <div
                 ref={containerRef}
-                className="flex-1 relative bg-black/40 rounded-3xl border border-bb-border overflow-auto cursor-crosshair no-scrollbar touch-none"
+                className={cn(
+                    "relative overflow-auto cursor-crosshair no-scrollbar touch-none w-full h-full",
+                    isImmersive ? "bg-bb-darker" : "rounded-3xl"
+                )}
                 onWheel={handleWheel}
             >
                 <div
@@ -371,13 +415,11 @@ export default function FlowchartCanvas({
                 </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between px-2 gap-2 text-[10px] text-bb-text-secondary">
-                <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1"><MousePointer2 className="w-3 h-3" /> Clic para pintar / poner sello</span>
-                    <span className="flex items-center gap-1 font-bold"><kbd className="bg-bb-border px-1.5 rounded">Ctrl + Scroll</kbd> Zoom</span>
+            {isImmersive && (
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] text-white/30 font-bold uppercase tracking-widest pointer-events-none z-[10001]">
+                    Modo Inmersivo Activo • Ctrl + Scroll para Zoom
                 </div>
-                <div className="italic">El progreso se guarda automáticamente al pulsar "Guardar"</div>
-            </div>
+            )}
         </div>
     );
 }

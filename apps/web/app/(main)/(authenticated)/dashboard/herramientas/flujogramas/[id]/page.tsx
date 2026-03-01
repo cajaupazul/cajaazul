@@ -134,14 +134,9 @@ export default function FlowchartDetailPage({ params }: { params: Promise<{ id: 
                         </Button>
                     </Link>
                     <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-sm sm:text-lg font-black text-white italic uppercase tracking-tight leading-none truncate max-w-[150px] sm:max-w-md">
-                                {flowchart.name}
-                            </h1>
-                            <span className="hidden sm:inline-block px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[9px] font-black uppercase tracking-widest">
-                                {flowchart.faculty}
-                            </span>
-                        </div>
+                        <h1 className="text-sm font-black text-white italic uppercase tracking-tight leading-none truncate max-w-[200px] sm:max-w-md">
+                            {flowchart.name}
+                        </h1>
                         {lastSaved && (
                             <div className="flex items-center gap-1.5 text-[9px] text-bb-text-secondary mt-1">
                                 <CheckCircle className="w-2.5 h-2.5 text-emerald-500" />
@@ -151,19 +146,19 @@ export default function FlowchartDetailPage({ params }: { params: Promise<{ id: 
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl border border-bb-border text-bb-text-secondary hover:text-white" title="Próximamente: Compartir">
+                <div className="hidden sm:flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[9px] font-black uppercase tracking-widest border border-emerald-500/20">
+                        {flowchart.faculty}
+                    </span>
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl border border-bb-border text-bb-text-secondary hover:text-white">
                         <Share2 className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl border border-bb-border text-bb-text-secondary hover:text-white" title="Próximamente: Descargar PDF">
-                        <Download className="w-4 h-4" />
                     </Button>
                 </div>
             </div>
 
             {/* Main Interactive Area */}
-            <div className="flex-1 p-2 sm:p-4 overflow-hidden">
-                <div className="bg-bb-sidebar/30 rounded-3xl h-full border border-bb-border shadow-inner-xl overflow-hidden relative">
+            <div className="flex-1 overflow-hidden">
+                <div className="h-full relative">
                     <FlowchartCanvas
                         imageUrl={flowchart.image_url}
                         initialData={initialDrawing}
