@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CalendarDays, Upload, ArrowRight, Trash2, AlertTriangle } from 'lucide-react';
+import { CalendarDays, Upload, ArrowRight, Trash2, AlertTriangle, FileText, Wrench } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
 import { useProfile } from '@/lib/profile-context';
 import { supabase } from '@/lib/supabase';
@@ -111,6 +111,56 @@ export default function HerramientasPage() {
                                 >
                                     {clearing ? <div className="w-4 h-4 border-2 border-red-400 border-t-transparent animate-spin rounded-full" /> : <Trash2 className="w-4 h-4" />}
                                 </button>
+                            )}
+                        </div>
+                    </div>
+                </Link>
+
+                {/* Flowchart tool Card */}
+                <Link
+                    href="/dashboard/herramientas/flujogramas"
+                    className="group relative bg-bb-card border border-bb-border rounded-2xl p-6 hover:border-opacity-60 transition-all duration-300 overflow-hidden"
+                    style={{ textDecoration: 'none' }}
+                >
+                    {/* Glow effect */}
+                    <div
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"
+                        style={{
+                            background: `radial-gradient(circle at 30% 30%, ${colors?.primary}10, transparent 70%)`,
+                        }}
+                    />
+
+                    <div className="relative z-10">
+                        <div
+                            className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
+                            style={{ backgroundColor: '#10b98120' }}
+                        >
+                            <FileText className="w-7 h-7 text-emerald-500" />
+                        </div>
+
+                        <h3 className="text-lg font-bold text-bb-text mb-2 group-hover:text-white transition-colors">
+                            Flujogramas Interactivos
+                        </h3>
+                        <p className="text-bb-text-secondary text-sm leading-relaxed mb-4">
+                            Lleva el control de tu carrera de forma visual. Marca tus cursos aprobados y planifica tu próximo ciclo sobre el flujograma oficial.
+                        </p>
+
+                        <div className="flex items-center justify-between">
+                            <div
+                                className="flex items-center gap-1.5 text-sm font-semibold transition-all group-hover:gap-2.5 text-emerald-500"
+                            >
+                                Abrir <ArrowRight className="w-4 h-4" />
+                            </div>
+
+                            {isAdmin && (
+                                <Link href="/admin/flowcharts" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                        className="p-2 rounded-lg hover:bg-zinc-800 text-bb-text-secondary hover:text-white transition-colors relative z-20"
+                                        title="Gestionar flujogramas"
+                                    >
+                                        <Wrench className="w-4 h-4" />
+                                    </button>
+                                </Link>
                             )}
                         </div>
                     </div>
