@@ -66,7 +66,8 @@ export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, is
         '#06b6d4', '#e11d48', '#a855f7', '#fbbf24', '#64748b', '#991b1b',
         '#1e40af', '#065f46'
     ];
-    const STAMP_SIZE = 600;
+    // Adaptive stamp: ~5% of image width so it covers one box regardless of diagram size
+    const STAMP_SIZE = imageSize.width > 0 ? Math.min(Math.max(imageSize.width * 0.05, 80), 800) : 300;
 
     // ─── STAMP LOAD ───────────────────────────────────────────────────────────
     useEffect(() => {
