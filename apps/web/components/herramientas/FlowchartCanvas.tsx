@@ -59,7 +59,7 @@ export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, is
     useEffect(() => { offsetRef.current = offset; }, [offset]);
 
     const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#ffffff', '#000000'];
-    const STAMP_SIZE = 150;
+    const STAMP_SIZE = 600;
 
     // ─── STAMP IMAGE LOAD ──────────────────────────────────────────────────────
     useEffect(() => {
@@ -356,7 +356,8 @@ export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, is
                         {/* Sidebar tools */}
                         <motion.div
                             initial={{ x: -60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -60, opacity: 0 }}
-                            className="absolute left-4 top-1/2 -translate-y-1/2 z-[10000] flex flex-col gap-3 p-3 bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl"
+                            className="absolute left-4 top-1/2 -translate-y-1/2 z-[10000] flex flex-col gap-3 p-3 bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-y-auto no-scrollbar"
+                            style={{ maxHeight: 'calc(100vh - 80px)' }}
                         >
                             {([
                                 { m: 'draw', icon: <Pencil className="w-5 h-5" />, label: 'Pincel' },
