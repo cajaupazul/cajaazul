@@ -22,7 +22,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { FrameEditor } from '@/components/admin/FrameEditor';
 import { PLACEHOLDERS } from '@/lib/constants';
 import Link from 'next/link';
 
@@ -36,12 +35,14 @@ export default function NewVipFramePage() {
     const [form, setForm] = useState({
         label: 'Marco Exclusivo',
         description: '',
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+        scale_factor: 1.4,
+        offset_x: 0,
+        offset_y: 0
     });
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [skipResize, setSkipResize] = useState(false);
-    const [frameSettings, setFrameSettings] = useState<any>(null); // Kept in case we want to support internal adjustments later
 
     // Proteccion de ruta
     useEffect(() => {
@@ -103,6 +104,9 @@ export default function NewVipFramePage() {
                     label: form.label,
                     description: form.description,
                     expires_at: new Date(form.expires_at).toISOString(),
+                    scale_factor: form.scale_factor,
+                    offset_x: form.offset_x,
+                    offset_y: form.offset_y,
                     is_active: true
                 }]);
 
@@ -200,6 +204,63 @@ export default function NewVipFramePage() {
                             </div>
                         </div>
 
+                        {/* Adjustments */}
+                        <div className="bg-bb-card border border-amber-500/20 rounded-3xl p-6 shadow-xl space-y-6 relative overflow-hidden">
+                            <h2 className="font-bold text-lg flex items-center gap-2 border-b border-bb-border pb-4 text-amber-100">
+                                Ajustes de Alineación
+                            </h2>
+                            <div className="space-y-5">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <Label className="text-zinc-400 uppercase text-[10px] tracking-widest font-black">Escala del marco</Label>
+                                        <span className="text-xs text-amber-500 font-bold">{form.scale_factor.toFixed(2)}x</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0.5" max="3.0" step="0.05"
+                                        value={form.scale_factor}
+                                        onChange={e => setForm({ ...form, scale_factor: parseFloat(e.target.value) })}
+                                        className="w-full accent-amber-500"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <Label className="text-zinc-400 uppercase text-[10px] tracking-widest font-black">Pos X (Pixels)</Label>
+                                            <span className="text-xs text-amber-500 font-bold">{form.offset_x}</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="-100" max="100" step="1"
+                                            value={form.offset_x}
+                                            onChange={e => setForm({ ...form, offset_x: parseInt(e.target.value) })}
+                                            className="w-full accent-amber-500"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <Label className="text-zinc-400 uppercase text-[10px] tracking-widest font-black">Pos Y (Pixels)</Label>
+                                            <span className="text-xs text-amber-500 font-bold">{form.offset_y}</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="-100" max="100" step="1"
+                                            value={form.offset_y}
+                                            onChange={e => setForm({ ...form, offset_y: parseInt(e.target.value) })}
+                                            className="w-full accent-amber-500"
+                                        />
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    className="w-full text-xs"
+                                    onClick={(e) => { e.preventDefault(); setForm({ ...form, scale_factor: 1.4, offset_x: 0, offset_y: 0 }); }}
+                                >
+                                    Resetear ajustes
+                                </Button>
+                            </div>
+                        </div>
+
                         {/* Image Upload Area */}
                         <div className="bg-bb-card border border-bb-border rounded-3xl p-6 shadow-xl space-y-4">
                             <h2 className="font-bold text-lg border-b border-bb-border pb-4">Imagen del Marco</h2>
@@ -261,10 +322,24 @@ export default function NewVipFramePage() {
                                     </p>
                                 </div>
 
-                                <FrameEditor
-                                    frameImageUrl={previewUrl}
-                                    onSave={(settings) => setFrameSettings(settings)}
-                                />
+                                <div className="flex items-center justify-center p-10 bg-black/40 rounded-2xl border border-white/5 shadow-inner">
+                                    <div className="relative w-28 h-28 my-2">
+                                        {/* Fallback avatar preview */}
+                                        <div className="absolute inset-0 bg-zinc-800 rounded-full flex items-center justify-center border-2 border-zinc-700">
+                                            <ImageIcon size={24} className="text-zinc-600" />
+                                        </div>
+                                        {/* Actual Frame Layer with live transformation */}
+                                        <img
+                                            src={previewUrl}
+                                            alt="Preview"
+                                            className="absolute top-1/2 left-1/2 w-[140%] h-[140%] object-contain drop-shadow-2xl z-10 pointer-events-none"
+                                            style={{
+                                                transform: `translate(calc(-50% + ${form.offset_x}px), calc(-50% + ${form.offset_y}px)) scale(${form.scale_factor})`,
+                                                transformOrigin: 'center center'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
 
                                 <div className="bg-amber-500/5 border border-amber-500/10 p-5 rounded-2xl flex gap-4 mt-8">
                                     <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">

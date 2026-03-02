@@ -58,6 +58,9 @@ interface VipExclusiveFrame {
     description: string;
     expires_at: string;
     is_active: boolean;
+    scale_factor: number;
+    offset_x: number;
+    offset_y: number;
 }
 
 export default function StorePage() {
@@ -451,7 +454,17 @@ function StoreContent() {
                                                             <div className="absolute inset-0 bg-zinc-800 rounded-full flex items-center justify-center animate-pulse border-2 border-zinc-700">
                                                                 <ImageIcon size={24} className="text-zinc-600" />
                                                             </div>
-                                                            <img src={activeFrame.image_url} alt={activeFrame.label} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[140%] object-contain drop-shadow-2xl z-10 animate-float" style={{ animationDuration: '4s' }} />
+                                                            <div className="absolute inset-0 z-10 animate-float" style={{ animationDuration: '4s' }}>
+                                                                <img
+                                                                    src={activeFrame.image_url}
+                                                                    alt={activeFrame.label}
+                                                                    className="absolute top-1/2 left-1/2 w-[140%] h-[140%] object-contain drop-shadow-2xl pointer-events-none"
+                                                                    style={{
+                                                                        transform: `translate(calc(-50% + ${activeFrame.offset_x || 0}px), calc(-50% + ${activeFrame.offset_y || 0}px)) scale(${activeFrame.scale_factor === undefined ? 1.4 : activeFrame.scale_factor})`,
+                                                                        transformOrigin: 'center center'
+                                                                    }}
+                                                                />
+                                                            </div>
                                                         </div>
                                                         <div>
                                                             <h4 className="text-white font-black italic uppercase text-lg leading-tight">{activeFrame.label}</h4>
