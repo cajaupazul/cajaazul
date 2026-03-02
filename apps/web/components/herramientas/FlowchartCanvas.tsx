@@ -58,7 +58,12 @@ export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, is
     useEffect(() => { scaleRef.current = scale; }, [scale]);
     useEffect(() => { offsetRef.current = offset; }, [offset]);
 
-    const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#ffffff', '#000000'];
+    const COLORS = [
+        '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899',
+        '#ffffff', '#000000', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
+        '#06b6d4', '#e11d48', '#a855f7', '#fbbf24', '#64748b', '#991b1b',
+        '#1e40af', '#065f46'
+    ];
     const STAMP_SIZE = 600;
 
     // ─── STAMP IMAGE LOAD ──────────────────────────────────────────────────────
@@ -353,11 +358,11 @@ export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, is
             <AnimatePresence>
                 {isImmersive && (
                     <>
-                        {/* Sidebar tools */}
+                        {/* Sidebar tools — anchored to top-left, grows down */}
                         <motion.div
                             initial={{ x: -60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -60, opacity: 0 }}
-                            className="absolute left-4 top-1/2 -translate-y-1/2 z-[10000] flex flex-col gap-3 p-3 bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-y-auto no-scrollbar"
-                            style={{ maxHeight: 'calc(100vh - 80px)' }}
+                            className="absolute left-4 top-4 z-[10000] flex flex-col gap-2 p-3 bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-y-auto no-scrollbar"
+                            style={{ maxHeight: 'calc(100dvh - 40px)' }}
                         >
                             {([
                                 { m: 'draw', icon: <Pencil className="w-5 h-5" />, label: 'Pincel' },
@@ -401,10 +406,10 @@ export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, is
                             <Button variant="ghost" size="icon" disabled={historyIdx === history.length - 1} onClick={redo} className="h-10 w-10 text-zinc-400 disabled:opacity-20 hover:text-white"><Redo2 className="w-4 h-4" /></Button>
                         </motion.div>
 
-                        {/* Top bar */}
+                        {/* Top-right bar */}
                         <motion.div
                             initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -60, opacity: 0 }}
-                            className="absolute top-4 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-4 px-6 py-2.5 bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl"
+                            className="absolute top-4 right-6 z-[10000] flex items-center gap-4 px-6 py-2.5 bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl"
                         >
                             <div className="text-center min-w-[3rem]">
                                 <p className="text-[9px] font-black text-emerald-400 tracking-widest">ZOOM</p>
