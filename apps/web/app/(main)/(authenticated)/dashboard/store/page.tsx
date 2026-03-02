@@ -419,14 +419,14 @@ function StoreContent() {
                             {vipProduct && (
                                 <div className="lg:col-span-12 relative group">
                                     <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[3rem] blur opacity-25 group-hover:opacity-40 transition duration-1000" />
-                                    <div className="relative bg-[#111114] rounded-[2.5rem] border border-white/5 overflow-visible p-4 sm:p-16 flex flex-col lg:flex-row items-stretch gap-8 lg:gap-16 backdrop-blur-3xl">
+                                    <div className="relative bg-[#111114] rounded-[2.5rem] border border-white/5 overflow-visible p-4 sm:p-16 flex flex-col lg:flex-row items-center gap-8 lg:gap-16 backdrop-blur-3xl">
                                         {/* Mascot Origi + Frame Component */}
-                                        <div className="w-full lg:w-1/2 flex flex-col justify-between items-center relative order-first z-10 gap-8">
+                                        <div className="w-full lg:w-1/2 flex flex-col justify-center items-center relative order-first z-10 gap-8">
                                             <div className="absolute top-0 bottom-1/2 left-0 right-0 bg-indigo-500/25 blur-[100px] rounded-full pointer-events-none" />
                                             <img
                                                 src="/tienda/orivipp.png"
                                                 alt="Origi Mascot"
-                                                className="w-[180px] sm:w-[400px] object-contain relative z-10 animate-float pointer-events-none select-none drop-shadow-2xl mt-auto"
+                                                className="w-[180px] sm:w-[400px] object-contain relative z-10 animate-float pointer-events-none select-none drop-shadow-2xl"
                                             />
 
                                             {/* VIP Exclusive Frame Showcase */}
@@ -451,7 +451,7 @@ function StoreContent() {
                                                             <div className="absolute inset-0 bg-zinc-800 rounded-full flex items-center justify-center animate-pulse border-2 border-zinc-700">
                                                                 <ImageIcon size={24} className="text-zinc-600" />
                                                             </div>
-                                                            <img src={activeFrame.image_url} alt={activeFrame.label} className="absolute inset-[-20%] w-[140%] h-[140%] object-contain drop-shadow-2xl z-10 animate-float" style={{ animationDuration: '4s' }} />
+                                                            <img src={activeFrame.image_url} alt={activeFrame.label} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[140%] object-contain drop-shadow-2xl z-10 animate-float" style={{ animationDuration: '4s' }} />
                                                         </div>
                                                         <div>
                                                             <h4 className="text-white font-black italic uppercase text-lg leading-tight">{activeFrame.label}</h4>
@@ -472,7 +472,7 @@ function StoreContent() {
                                             )}
                                         </div>
 
-                                        <div className="w-full lg:w-1/2 flex flex-col justify-between text-center lg:text-left gap-6 lg:gap-10">
+                                        <div className="w-full lg:w-1/2 space-y-6 lg:space-y-10 text-center lg:text-left">
                                             <div className="space-y-4 lg:space-y-8">
                                                 <div className="space-y-2 lg:space-y-6">
                                                     <h2 className="text-3xl sm:text-7xl font-[1000] text-white italic tracking-tight uppercase leading-[1.1] pb-1 lg:pb-2">
@@ -498,7 +498,7 @@ function StoreContent() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-8 pt-2 lg:pt-6 mb-auto xl:mb-0">
+                                            <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-8 pt-2 lg:pt-6">
                                                 <div className="text-4xl lg:text-6xl font-[1000] text-white tracking-tighter italic">S/ {vipProduct.price} <span className="text-xs text-zinc-500 font-bold uppercase tracking-[0.3em] block sm:inline mt-1 sm:mt-0">/ {vipProduct.amount} días</span></div>
                                                 <Button
                                                     onClick={() => handlePurchase(vipProduct.id)}
