@@ -173,34 +173,39 @@ export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, is
         }
     }, [stampImg]);
 
-    // Render on every relevant state change
+    // Throttled render using rAF — only 1 draw per frame max
+    const rafRef = useRef<number | null>(null);
     useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d', { alpha: true });
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        [...paths, ...(currentPath.length > 0 ? [{
-            points: currentPath,
-            mode: (modeRef.current === 'erase' ? 'draw' : modeRef.current) as any,
-            color, size: brushSize
-        }] : [])].forEach(path => {
-            if (!path.points.length) return;
-            if (path.mode === 'stamp') {
-                path.points.forEach(p => drawStamp(ctx, p.x, p.y, path.color));
-            } else {
-                ctx.beginPath();
-                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-                ctx.strokeStyle = path.color;
-                ctx.lineWidth = path.size ?? brushSize;
-                ctx.globalAlpha = 0.85;
-                ctx.moveTo(path.points[0].x, path.points[0].y);
-                path.points.forEach(p => ctx.lineTo(p.x, p.y));
-                ctx.stroke();
-                ctx.globalAlpha = 1;
-            }
+            [...paths, ...(currentPath.length > 0 ? [{
+                points: currentPath,
+                mode: (modeRef.current === 'erase' ? 'draw' : modeRef.current) as any,
+                color, size: brushSize
+            }] : [])].forEach(path => {
+                if (!path.points.length) return;
+                if (path.mode === 'stamp') {
+                    path.points.forEach(p => drawStamp(ctx, p.x, p.y, path.color));
+                } else {
+                    ctx.beginPath();
+                    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                    ctx.strokeStyle = path.color;
+                    ctx.lineWidth = path.size ?? brushSize;
+                    ctx.globalAlpha = 0.85;
+                    ctx.moveTo(path.points[0].x, path.points[0].y);
+                    path.points.forEach(p => ctx.lineTo(p.x, p.y));
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+            });
         });
+        return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
     }, [paths, currentPath, color, brushSize, drawStamp]);
 
     // ─── EVENT LISTENERS (non-passive, DOM-level) ─────────────────────────────

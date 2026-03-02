@@ -1,15 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
 import {
-    ChevronLeft,
-    FileText,
-    Search,
-    Filter,
-    ArrowRight,
-    Map
+    ChevronLeft, FileText, Search, ArrowRight, Map
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +18,59 @@ interface Flowchart {
     image_url: string;
 }
 
+// Lazy image card — only fetches the image when it enters the viewport
+function LazyFlowchartCard({ flow }: { flow: Flowchart }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const observer = new IntersectionObserver(
+            ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+            { rootMargin: '200px' }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <div ref={ref} className="bg-bb-card border border-bb-border rounded-3xl overflow-hidden hover:border-emerald-500/50 transition-all duration-300 shadow-xl relative">
+            <div className="aspect-[16/10] relative overflow-hidden bg-bb-sidebar/30">
+                {visible ? (
+                    <img
+                        src={flow.image_url}
+                        alt={flow.name}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                ) : (
+                    <div className="w-full h-full animate-pulse bg-bb-sidebar/60 flex items-center justify-center">
+                        <Map className="w-10 h-10 text-bb-text-secondary/20" />
+                    </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+
+                <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-black uppercase tracking-wider text-white">
+                        {flow.faculty}
+                    </span>
+                </div>
+
+                <div className="absolute bottom-6 left-6 right-6">
+                    <h3 className="text-xl font-black text-white italic tracking-tight mb-2 group-hover:text-emerald-400 transition-colors uppercase leading-tight line-clamp-2">
+                        {flow.name}
+                    </h3>
+                    <div className="flex items-center gap-2 text-emerald-500 font-bold text-xs">
+                        Comenzar a pintar <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function FlowchartsListPage() {
     const { colors } = useTheme();
     const [flowcharts, setFlowcharts] = useState<Flowchart[]>([]);
@@ -30,25 +78,19 @@ export default function FlowchartsListPage() {
     const [search, setSearch] = useState('');
     const [selectedFaculty, setSelectedFaculty] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchFlowcharts();
-    }, []);
+    useEffect(() => { fetchFlowcharts(); }, []);
 
     async function fetchFlowcharts() {
         setLoading(true);
         const { data, error } = await supabase
             .from('flowcharts')
-            .select('*')
+            .select('id, name, faculty, image_url')  // only fetch needed columns
             .order('name', { ascending: true });
-
-        if (!error && data) {
-            setFlowcharts(data);
-        }
+        if (!error && data) setFlowcharts(data);
         setLoading(false);
     }
 
     const faculties = Array.from(new Set(flowcharts.map(f => f.faculty)));
-
     const filtered = flowcharts.filter(f => {
         const matchesSearch = f.name.toLowerCase().includes(search.toLowerCase()) ||
             f.faculty.toLowerCase().includes(search.toLowerCase());
@@ -59,7 +101,7 @@ export default function FlowchartsListPage() {
     if (loading) {
         return (
             <div className="min-h-screen bg-bb-darker flex items-center justify-center">
-                <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent animate-spin rounded-full"></div>
+                <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent animate-spin rounded-full" />
             </div>
         );
     }
@@ -100,8 +142,7 @@ export default function FlowchartsListPage() {
                         <Button
                             variant={selectedFaculty === null ? 'default' : 'ghost'}
                             onClick={() => setSelectedFaculty(null)}
-                            className={`rounded-full px-5 h-9 text-xs font-bold transition-all ${selectedFaculty === null ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-bb-card/50 text-bb-text-secondary hover:text-white'
-                                }`}
+                            className={`rounded-full px-5 h-9 text-xs font-bold transition-all ${selectedFaculty === null ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-bb-card/50 text-bb-text-secondary hover:text-white'}`}
                         >
                             Todos
                         </Button>
@@ -110,8 +151,7 @@ export default function FlowchartsListPage() {
                                 key={faculty}
                                 variant={selectedFaculty === faculty ? 'default' : 'ghost'}
                                 onClick={() => setSelectedFaculty(faculty)}
-                                className={`rounded-full px-5 h-9 text-xs font-bold whitespace-nowrap transition-all ${selectedFaculty === faculty ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-bb-card/50 text-bb-text-secondary hover:text-white'
-                                    }`}
+                                className={`rounded-full px-5 h-9 text-xs font-bold whitespace-nowrap transition-all ${selectedFaculty === faculty ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-bb-card/50 text-bb-text-secondary hover:text-white'}`}
                             >
                                 {faculty}
                             </Button>
@@ -126,30 +166,10 @@ export default function FlowchartsListPage() {
                             key={flow.id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
+                            transition={{ delay: Math.min(index * 0.04, 0.25) }}
                         >
                             <Link href={`/dashboard/herramientas/flujogramas/${flow.id}`} className="block group">
-                                <div className="bg-bb-card border border-bb-border rounded-3xl overflow-hidden hover:border-emerald-500/50 transition-all duration-300 shadow-xl relative">
-                                    <div className="aspect-[16/10] relative overflow-hidden">
-                                        <img src={flow.image_url} alt={flow.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-
-                                        <div className="absolute top-4 left-4">
-                                            <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-black uppercase tracking-wider text-white">
-                                                {flow.faculty}
-                                            </span>
-                                        </div>
-
-                                        <div className="absolute bottom-6 left-6 right-6">
-                                            <h3 className="text-xl font-black text-white italic tracking-tight mb-2 group-hover:text-emerald-400 transition-colors uppercase leading-tight line-clamp-2">
-                                                {flow.name}
-                                            </h3>
-                                            <div className="flex items-center gap-2 text-emerald-500 font-bold text-xs">
-                                                Comenzar a pintar <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <LazyFlowchartCard flow={flow} />
                             </Link>
                         </motion.div>
                     ))}
