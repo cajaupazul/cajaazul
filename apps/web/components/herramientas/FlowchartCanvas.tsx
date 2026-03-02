@@ -2,34 +2,15 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
-    Pencil,
-    Eraser,
-    Trash2,
-    Save,
-    RotateCcw,
-    Maximize,
-    CheckCircle2,
-    Minimize2,
-    Undo2,
-    Redo2,
-    Hand
+    Pencil, Eraser, Trash2, Save, RotateCcw,
+    Maximize, CheckCircle2, Minimize2, Undo2, Redo2, Hand
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface Point {
-    x: number;
-    y: number;
-}
-
-interface Path {
-    points: Point[];
-    mode: 'draw' | 'stamp';
-    color: string;
-    size?: number;
-}
-
+interface Point { x: number; y: number; }
+interface Path { points: Point[]; mode: 'draw' | 'stamp'; color: string; size?: number; }
 interface FlowchartCanvasProps {
     imageUrl: string;
     initialData?: Path[];
@@ -37,317 +18,278 @@ interface FlowchartCanvasProps {
     isSaving?: boolean;
 }
 
-export default function FlowchartCanvas({
-    imageUrl,
-    initialData = [],
-    onSave,
-    isSaving = false
-}: FlowchartCanvasProps) {
+export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, isSaving = false }: FlowchartCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // React State for UI
+    // ─── REACT STATE (drives DOM rendering) ───────────────────────────────────
     const [mode, setMode] = useState<'draw' | 'stamp' | 'erase' | 'pan'>('draw');
     const [color, setColor] = useState('#10b981');
     const [brushSize, setBrushSize] = useState(15);
     const [scale, setScale] = useState(1);
+    const [offset, setOffset] = useState({ x: 0, y: 0 });
+    const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
     const [isImmersive, setIsImmersive] = useState(false);
-    const [stampImage, setStampImage] = useState<HTMLImageElement | null>(null);
-    const [historyIndex, setHistoryIndex] = useState(0);
-    const [historyLength, setHistoryLength] = useState(1);
+    const [stampImg, setStampImg] = useState<HTMLImageElement | null>(null);
+    const [paths, setPaths] = useState<Path[]>(initialData);
+    const [history, setHistory] = useState<Path[][]>([initialData]);
+    const [historyIdx, setHistoryIdx] = useState(0);
+    const [currentPath, setCurrentPath] = useState<Point[]>([]);
 
-    // Refs for interaction state (to avoid stale closures and high-perf updates)
-    const state = useRef({
-        paths: initialData as Path[],
-        history: [initialData] as Path[][],
-        historyIndex: 0,
-        currentPath: [] as Point[],
-        scale: 1,
-        offset: { x: 0, y: 0 },
-        isPanning: false,
-        isDrawing: false,
-        lastMousePos: { x: 0, y: 0 },
-        imageSize: { width: 0, height: 0 },
-        touchDist: null as number | null,
-        mode: 'draw' as 'draw' | 'stamp' | 'erase' | 'pan',
-        color: '#10b981',
-        brushSize: 15,
-        needsRender: true
-    });
+    // ─── REFS (for use inside non-React event listeners) ──────────────────────
+    const scaleRef = useRef(1);
+    const offsetRef = useRef({ x: 0, y: 0 });
+    const modeRef = useRef<'draw' | 'stamp' | 'erase' | 'pan'>('draw');
+    const colorRef = useRef('#10b981');
+    const brushSizeRef = useRef(15);
+    const pathsRef = useRef<Path[]>(initialData);
+    const historyRef = useRef<Path[][]>([initialData]);
+    const historyIdxRef = useRef(0);
+    const isDrawingRef = useRef(false);
+    const isPanningRef = useRef(false);
+    const currentPathRef = useRef<Point[]>([]);
+    const lastMouseRef = useRef({ x: 0, y: 0 });
+    const touchDistRef = useRef<number | null>(null);
 
-    const STAMP_SIZE = 140;
+    // Keep refs in sync with state
+    useEffect(() => { modeRef.current = mode; }, [mode]);
+    useEffect(() => { colorRef.current = color; }, [color]);
+    useEffect(() => { brushSizeRef.current = brushSize; }, [brushSize]);
+    useEffect(() => { scaleRef.current = scale; }, [scale]);
+    useEffect(() => { offsetRef.current = offset; }, [offset]);
+
     const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#ffffff', '#000000'];
+    const STAMP_SIZE = 150;
 
-    // Sync React state to Ref for persistent access in listeners
-    useEffect(() => { state.current.mode = mode; }, [mode]);
-    useEffect(() => { state.current.color = color; }, [color]);
-    useEffect(() => { state.current.brushSize = brushSize; }, [brushSize]);
-
-    // Load Stamp Image
+    // ─── STAMP IMAGE LOAD ──────────────────────────────────────────────────────
     useEffect(() => {
-        const loadStamp = async () => {
-            const urls = [
-                '/cellos/Gemini_Generated_Image_1cxzh91cxzh91cxz.png',
-                '/cellos/aprov.svg',
-                '/cellos/cello',
-                '/icons/stamp-approved.svg'
-            ];
+        const urls = [
+            '/cellos/Gemini_Generated_Image_1cxzh91cxzh91cxz.png',
+            '/cellos/aprov.svg',
+        ];
+        (async () => {
             for (const url of urls) {
                 try {
                     const img = new Image();
                     img.src = url;
-                    await new Promise((resolve, reject) => {
-                        img.onload = () => resolve(true);
-                        img.onerror = reject;
-                    });
-                    setStampImage(img);
-                    return;
-                } catch (e) { }
+                    await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; });
+                    if (img.naturalWidth > 0) { setStampImg(img); return; }
+                } catch { }
             }
-        };
-        loadStamp();
+        })();
     }, []);
 
-    const addToHistory = useCallback((newPaths: Path[]) => {
-        const newHistory = state.current.history.slice(0, state.current.historyIndex + 1);
-        newHistory.push([...newPaths]);
-        if (newHistory.length > 50) newHistory.shift();
-
-        state.current.history = newHistory;
-        state.current.historyIndex = newHistory.length - 1;
-        state.current.paths = newPaths;
-
-        setHistoryIndex(state.current.historyIndex);
-        setHistoryLength(newHistory.length);
-        state.current.needsRender = true;
+    // ─── HISTORY HELPERS ──────────────────────────────────────────────────────
+    const commitHistory = useCallback((newPaths: Path[]) => {
+        const newHist = historyRef.current.slice(0, historyIdxRef.current + 1);
+        newHist.push([...newPaths]);
+        if (newHist.length > 50) newHist.shift();
+        historyRef.current = newHist;
+        historyIdxRef.current = newHist.length - 1;
+        pathsRef.current = newPaths;
+        setPaths(newPaths);
+        setHistory(newHist);
+        setHistoryIdx(newHist.length - 1);
     }, []);
 
     const undo = () => {
-        if (state.current.historyIndex > 0) {
-            state.current.historyIndex--;
-            state.current.paths = [...state.current.history[state.current.historyIndex]];
-            setHistoryIndex(state.current.historyIndex);
-            state.current.needsRender = true;
+        if (historyIdxRef.current > 0) {
+            historyIdxRef.current--;
+            const p = [...historyRef.current[historyIdxRef.current]];
+            pathsRef.current = p;
+            setPaths(p);
+            setHistoryIdx(historyIdxRef.current);
         }
     };
-
     const redo = () => {
-        if (state.current.historyIndex < state.current.history.length - 1) {
-            state.current.historyIndex++;
-            state.current.paths = [...state.current.history[state.current.historyIndex]];
-            setHistoryIndex(state.current.historyIndex);
-            state.current.needsRender = true;
+        if (historyIdxRef.current < historyRef.current.length - 1) {
+            historyIdxRef.current++;
+            const p = [...historyRef.current[historyIdxRef.current]];
+            pathsRef.current = p;
+            setPaths(p);
+            setHistoryIdx(historyIdxRef.current);
         }
     };
 
-    const handleResetZoom = useCallback(() => {
-        if (containerRef.current && state.current.imageSize.width > 0) {
-            const container = containerRef.current;
-            const iw = state.current.imageSize.width;
-            const ih = state.current.imageSize.height;
-            const cw = container.clientWidth;
-            const ch = container.clientHeight;
-
-            const pad = 40;
-            const fs = Math.min((cw - pad) / iw, (ch - pad) / ih, 1.0);
-
-            state.current.scale = fs;
-            state.current.offset = {
-                x: (cw - iw * fs) / 2,
-                y: (ch - ih * fs) / 2
-            };
-            setScale(fs);
-            state.current.needsRender = true;
-        }
-    }, []);
-
-    // Initial Centering on load or immersive toggle
-    useEffect(() => {
-        const img = new Image();
-        img.src = imageUrl;
-        img.onload = () => {
-            state.current.imageSize = { width: img.width, height: img.height };
-            if (canvasRef.current) {
-                canvasRef.current.width = img.width;
-                canvasRef.current.height = img.height;
-                // Wait a bit for container to settle
-                setTimeout(handleResetZoom, 50);
-            }
-        };
-    }, [imageUrl, handleResetZoom]);
-
-    useEffect(() => {
-        if (isImmersive) {
-            setTimeout(handleResetZoom, 350); // Match animation
-        }
-    }, [isImmersive, handleResetZoom]);
-
-    // Redrawing
-    useEffect(() => {
-        let frame: number;
-        const ctx = canvasRef.current?.getContext('2d');
-
-        const loop = () => {
-            if (state.current.needsRender && ctx && canvasRef.current) {
-                const c = canvasRef.current;
-                ctx.clearRect(0, 0, c.width, c.height);
-
-                const allPaths = [...state.current.paths];
-                if (state.current.currentPath.length > 0) {
-                    allPaths.push({
-                        points: state.current.currentPath,
-                        mode: state.current.mode === 'erase' ? 'draw' : (state.current.mode as any),
-                        color: state.current.color,
-                        size: state.current.brushSize
-                    });
-                }
-
-                allPaths.forEach(path => {
-                    if (path.points.length === 0) return;
-                    if (path.mode === 'stamp') {
-                        path.points.forEach(p => {
-                            if (stampImage) {
-                                ctx.save();
-                                const w = STAMP_SIZE;
-                                const h = w * (stampImage.height / stampImage.width);
-                                ctx.drawImage(stampImage, p.x - w / 2, p.y - h / 2, w, h);
-                                ctx.restore();
-                            } else {
-                                ctx.save();
-                                ctx.translate(p.x, p.y);
-                                ctx.rotate(-0.15);
-                                ctx.strokeStyle = path.color;
-                                ctx.lineWidth = 3;
-                                ctx.strokeRect(-60, -20, 120, 40);
-                                ctx.fillStyle = path.color;
-                                ctx.font = 'bold 18px sans-serif';
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'middle';
-                                ctx.fillText('APROBADO', 0, 0);
-                                ctx.restore();
-                            }
-                        });
-                    } else {
-                        ctx.beginPath();
-                        ctx.lineCap = 'round';
-                        ctx.lineJoin = 'round';
-                        ctx.strokeStyle = path.color;
-                        ctx.lineWidth = path.size || state.current.brushSize;
-                        ctx.globalAlpha = 0.8;
-                        ctx.moveTo(path.points[0].x, path.points[0].y);
-                        path.points.forEach(p => ctx.lineTo(p.x, p.y));
-                        ctx.stroke();
-                        ctx.globalAlpha = 1.0;
-                    }
-                });
-                state.current.needsRender = false;
-            }
-            frame = requestAnimationFrame(loop);
-        };
-        loop();
-        return () => cancelAnimationFrame(frame);
-    }, [stampImage]);
-
-    // Event Management
-    useEffect(() => {
+    // ─── CENTERING ────────────────────────────────────────────────────────────
+    const centerView = useCallback(() => {
         const container = containerRef.current;
-        if (!container) return;
+        if (!container || imageSize.width === 0) return;
+        const { clientWidth: cw, clientHeight: ch } = container;
+        const fs = Math.min((cw - 40) / imageSize.width, (ch - 40) / imageSize.height, 1);
+        const newOffset = {
+            x: Math.round((cw - imageSize.width * fs) / 2),
+            y: Math.round((ch - imageSize.height * fs) / 2),
+        };
+        scaleRef.current = fs;
+        offsetRef.current = newOffset;
+        setScale(fs);
+        setOffset(newOffset);
+    }, [imageSize]);
 
-        const getCanvasPoint = (clientX: number, clientY: number) => {
-            const rect = container.getBoundingClientRect();
+    // Load image metadata
+    useEffect(() => {
+        if (!imageUrl) return;
+        const img = new Image();
+        img.onload = () => {
+            setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
+            if (canvasRef.current) {
+                canvasRef.current.width = img.naturalWidth;
+                canvasRef.current.height = img.naturalHeight;
+            }
+        };
+        img.src = imageUrl;
+    }, [imageUrl]);
+
+    // Center once image size known
+    useEffect(() => {
+        if (imageSize.width > 0) setTimeout(centerView, 80);
+    }, [imageSize, centerView]);
+
+    useEffect(() => {
+        if (isImmersive && imageSize.width > 0) setTimeout(centerView, 350);
+    }, [isImmersive, imageSize, centerView]);
+
+    // ─── CANVAS DRAW ──────────────────────────────────────────────────────────
+    const drawStamp = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, c: string) => {
+        if (stampImg) {
+            const w = STAMP_SIZE;
+            const h = w * (stampImg.naturalHeight / stampImg.naturalWidth);
+            ctx.drawImage(stampImg, x - w / 2, y - h / 2, w, h);
+        } else {
+            ctx.save();
+            ctx.translate(x, y); ctx.rotate(-0.15);
+            ctx.strokeStyle = c; ctx.lineWidth = 4;
+            ctx.strokeRect(-65, -22, 130, 44);
+            ctx.fillStyle = c;
+            ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('APROBADO', 0, 0);
+            ctx.restore();
+        }
+    }, [stampImg]);
+
+    // Render on every relevant state change
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        [...paths, ...(currentPath.length > 0 ? [{
+            points: currentPath,
+            mode: (modeRef.current === 'erase' ? 'draw' : modeRef.current) as any,
+            color, size: brushSize
+        }] : [])].forEach(path => {
+            if (!path.points.length) return;
+            if (path.mode === 'stamp') {
+                path.points.forEach(p => drawStamp(ctx, p.x, p.y, path.color));
+            } else {
+                ctx.beginPath();
+                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                ctx.strokeStyle = path.color;
+                ctx.lineWidth = path.size ?? brushSize;
+                ctx.globalAlpha = 0.85;
+                ctx.moveTo(path.points[0].x, path.points[0].y);
+                path.points.forEach(p => ctx.lineTo(p.x, p.y));
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            }
+        });
+    }, [paths, currentPath, color, brushSize, drawStamp]);
+
+    // ─── EVENT LISTENERS (non-passive, DOM-level) ─────────────────────────────
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+
+        const toCanvas = (cx: number, cy: number): Point => {
+            const r = el.getBoundingClientRect();
             return {
-                x: (clientX - rect.left - state.current.offset.x) / state.current.scale,
-                y: (clientY - rect.top - state.current.offset.y) / state.current.scale
+                x: (cx - r.left - offsetRef.current.x) / scaleRef.current,
+                y: (cy - r.top - offsetRef.current.y) / scaleRef.current,
             };
+        };
+
+        const applyZoom = (delta: number, pivotX: number, pivotY: number) => {
+            const s = scaleRef.current;
+            const ns = Math.min(Math.max(s * delta, 0.03), 30);
+            const r = el.getBoundingClientRect();
+            const mx = pivotX - r.left;
+            const my = pivotY - r.top;
+            const dx = (mx - offsetRef.current.x) / s;
+            const dy = (my - offsetRef.current.y) / s;
+            const no = { x: mx - dx * ns, y: my - dy * ns };
+            scaleRef.current = ns;
+            offsetRef.current = no;
+            setScale(ns);
+            setOffset({ ...no });
         };
 
         const onWheel = (e: WheelEvent) => {
             e.preventDefault();
-            const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            const s = state.current.scale;
-            const newScale = Math.min(Math.max(s * delta, 0.05), 30);
-
-            const rect = container.getBoundingClientRect();
-            const mx = e.clientX - rect.left;
-            const my = e.clientY - rect.top;
-
-            const dx = (mx - state.current.offset.x) / s;
-            const dy = (my - state.current.offset.y) / s;
-
-            state.current.offset = {
-                x: mx - dx * newScale,
-                y: my - dy * newScale
-            };
-            state.current.scale = newScale;
-            setScale(newScale);
+            applyZoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX, e.clientY);
         };
 
         const onMouseDown = (e: MouseEvent) => {
             if (!isImmersive) return;
-
-            const isMiddle = e.button === 1;
-            const isRight = e.button === 2;
-
-            if (state.current.mode === 'pan' || isMiddle || isRight) {
-                state.current.isPanning = true;
-                state.current.lastMousePos = { x: e.clientX, y: e.clientY };
-                container.style.cursor = 'grabbing';
+            const pan = modeRef.current === 'pan' || e.button === 1 || e.button === 2;
+            if (pan) {
+                isPanningRef.current = true;
+                lastMouseRef.current = { x: e.clientX, y: e.clientY };
+                el.style.cursor = 'grabbing';
                 return;
             }
-
-            const p = getCanvasPoint(e.clientX, e.clientY);
-            if (state.current.mode === 'erase') {
-                const threshold = 30 / state.current.scale;
-                const newPaths = state.current.paths.filter(path =>
-                    !path.points.some(pt => Math.hypot(pt.x - p.x, pt.y - p.y) < threshold)
+            const p = toCanvas(e.clientX, e.clientY);
+            if (modeRef.current === 'erase') {
+                const thr = 25 / scaleRef.current;
+                const np = pathsRef.current.filter(path =>
+                    !path.points.some(pt => Math.hypot(pt.x - p.x, pt.y - p.y) < thr)
                 );
-                if (newPaths.length !== state.current.paths.length) addToHistory(newPaths);
-            } else if (state.current.mode === 'stamp') {
-                addToHistory([...state.current.paths, { mode: 'stamp', color: state.current.color, points: [p] }]);
+                if (np.length !== pathsRef.current.length) commitHistory(np);
+            } else if (modeRef.current === 'stamp') {
+                commitHistory([...pathsRef.current, { mode: 'stamp', color: colorRef.current, points: [p] }]);
             } else {
-                state.current.isDrawing = true;
-                state.current.currentPath = [p];
+                isDrawingRef.current = true;
+                currentPathRef.current = [p];
+                setCurrentPath([p]);
             }
-            state.current.needsRender = true;
         };
 
         const onMouseMove = (e: MouseEvent) => {
-            if (state.current.isPanning) {
-                const dx = e.clientX - state.current.lastMousePos.x;
-                const dy = e.clientY - state.current.lastMousePos.y;
-                state.current.offset.x += dx;
-                state.current.offset.y += dy;
-                state.current.lastMousePos = { x: e.clientX, y: e.clientY };
-                state.current.needsRender = true;
+            if (isPanningRef.current) {
+                const dx = e.clientX - lastMouseRef.current.x;
+                const dy = e.clientY - lastMouseRef.current.y;
+                lastMouseRef.current = { x: e.clientX, y: e.clientY };
+                offsetRef.current = { x: offsetRef.current.x + dx, y: offsetRef.current.y + dy };
+                setOffset({ ...offsetRef.current });
                 return;
             }
-
-            if (state.current.isDrawing) {
-                state.current.currentPath.push(getCanvasPoint(e.clientX, e.clientY));
-                state.current.needsRender = true;
+            if (isDrawingRef.current) {
+                const p = toCanvas(e.clientX, e.clientY);
+                currentPathRef.current = [...currentPathRef.current, p];
+                setCurrentPath([...currentPathRef.current]);
             }
         };
 
         const onMouseUp = () => {
-            if (state.current.isDrawing) {
-                addToHistory([...state.current.paths, {
-                    points: [...state.current.currentPath],
-                    mode: 'draw',
-                    color: state.current.color,
-                    size: state.current.brushSize
+            if (isDrawingRef.current && currentPathRef.current.length > 1) {
+                commitHistory([...pathsRef.current, {
+                    points: [...currentPathRef.current],
+                    mode: 'draw', color: colorRef.current, size: brushSizeRef.current
                 }]);
             }
-            state.current.isDrawing = false;
-            state.current.isPanning = false;
-            state.current.currentPath = [];
-            state.current.needsRender = true;
-            container.style.cursor = state.current.mode === 'pan' ? 'grab' : 'crosshair';
+            isDrawingRef.current = false;
+            isPanningRef.current = false;
+            currentPathRef.current = [];
+            setCurrentPath([]);
+            el.style.cursor = modeRef.current === 'pan' ? 'grab' : 'crosshair';
         };
 
-        // Touch Support
         const onTouchStart = (e: TouchEvent) => {
+            if (!isImmersive) return;
             if (e.touches.length === 2) {
-                state.current.touchDist = Math.hypot(
+                touchDistRef.current = Math.hypot(
                     e.touches[0].clientX - e.touches[1].clientX,
                     e.touches[0].clientY - e.touches[1].clientY
                 );
@@ -358,151 +300,178 @@ export default function FlowchartCanvas({
         };
 
         const onTouchMove = (e: TouchEvent) => {
-            if (e.touches.length === 2 && state.current.touchDist !== null) {
+            if (e.touches.length === 2 && touchDistRef.current) {
                 e.preventDefault();
                 const dist = Math.hypot(
                     e.touches[0].clientX - e.touches[1].clientX,
                     e.touches[0].clientY - e.touches[1].clientY
                 );
-                const delta = dist / state.current.touchDist;
-                const s = state.current.scale;
-                const newScale = Math.min(Math.max(s * delta, 0.05), 30);
-
-                const rect = container.getBoundingClientRect();
-                const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-                const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
-
-                const dx = (cx - state.current.offset.x) / s;
-                const dy = (cy - state.current.offset.y) / s;
-
-                state.current.offset = { x: cx - dx * newScale, y: cy - dy * newScale };
-                state.current.scale = newScale;
-                state.current.touchDist = dist;
-                setScale(newScale);
-                state.current.needsRender = true;
+                const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                applyZoom(dist / touchDistRef.current, cx, cy);
+                touchDistRef.current = dist;
                 return;
             }
-            const t = e.touches[0];
-            onMouseMove(new MouseEvent('mousemove', { clientX: t.clientX, clientY: t.clientY } as any));
+            if (e.touches.length === 1) {
+                const t = e.touches[0];
+                onMouseMove(new MouseEvent('mousemove', { clientX: t.clientX, clientY: t.clientY } as any));
+            }
         };
 
-        container.addEventListener('wheel', onWheel, { passive: false });
-        container.addEventListener('mousedown', onMouseDown);
+        const onTouchEnd = () => { touchDistRef.current = null; onMouseUp(); };
+        const noCtx = (e: Event) => e.preventDefault();
+
+        el.addEventListener('wheel', onWheel, { passive: false });
+        el.addEventListener('mousedown', onMouseDown);
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mouseup', onMouseUp);
-        container.addEventListener('touchstart', onTouchStart, { passive: false });
-        container.addEventListener('touchmove', onTouchMove, { passive: false });
-        window.addEventListener('touchend', onMouseUp);
-        container.addEventListener('contextmenu', e => e.preventDefault());
+        el.addEventListener('touchstart', onTouchStart, { passive: false });
+        el.addEventListener('touchmove', onTouchMove, { passive: false });
+        el.addEventListener('touchend', onTouchEnd);
+        el.addEventListener('contextmenu', noCtx);
 
         return () => {
-            container.removeEventListener('wheel', onWheel);
-            container.removeEventListener('mousedown', onMouseDown);
+            el.removeEventListener('wheel', onWheel);
+            el.removeEventListener('mousedown', onMouseDown);
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
-            container.removeEventListener('touchstart', onTouchStart);
-            container.removeEventListener('touchmove', onTouchMove);
-            window.removeEventListener('touchend', onMouseUp);
+            el.removeEventListener('touchstart', onTouchStart);
+            el.removeEventListener('touchmove', onTouchMove);
+            el.removeEventListener('touchend', onTouchEnd);
+            el.removeEventListener('contextmenu', noCtx);
         };
-    }, [isImmersive]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isImmersive, commitHistory]);
 
+    // ─── UI ──────────────────────────────────────────────────────────────────
     return (
-        <div className={cn("relative transition-all duration-300 ease-in-out select-none overflow-hidden", isImmersive ? "fixed inset-0 z-[9999] bg-bb-darker" : "h-full w-full bg-bb-sidebar/20 rounded-3xl")}>
+        <div className={cn(
+            "relative select-none overflow-hidden transition-all duration-300",
+            isImmersive ? "fixed inset-0 z-[9999] bg-black" : "h-full w-full rounded-3xl bg-black/30"
+        )}>
+            {/* ── Immersive UI ─────────────────────────────────────────────── */}
             <AnimatePresence>
                 {isImmersive && (
                     <>
-                        {/* Sidebar */}
-                        <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="absolute left-6 top-1/2 -translate-y-1/2 z-[10000] flex flex-col gap-4 p-4 bg-black/80 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl">
-                            <Button variant="ghost" size="icon" onClick={() => setMode('draw')} className={cn("h-12 w-12 rounded-2xl transition-all", mode === 'draw' ? "bg-emerald-500 text-white scale-110 shadow-lg shadow-emerald-500/20" : "text-zinc-400")}><Pencil className="w-5 h-5" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => setMode('stamp')} className={cn("h-12 w-12 rounded-2xl transition-all", mode === 'stamp' ? "bg-emerald-500 text-white scale-110 shadow-lg shadow-emerald-500/20" : "text-zinc-400")}><CheckCircle2 className="w-5 h-5" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => setMode('pan')} className={cn("h-12 w-12 rounded-2xl transition-all", mode === 'pan' ? "bg-blue-500 text-white scale-110 shadow-lg shadow-blue-500/20" : "text-zinc-400")}><Hand className="w-5 h-5" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => setMode('erase')} className={cn("h-12 w-12 rounded-2xl transition-all", mode === 'erase' ? "bg-zinc-700 text-white scale-110" : "text-zinc-400")}><Eraser className="w-5 h-5" /></Button>
+                        {/* Sidebar tools */}
+                        <motion.div
+                            initial={{ x: -60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -60, opacity: 0 }}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 z-[10000] flex flex-col gap-3 p-3 bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl"
+                        >
+                            {([
+                                { m: 'draw', icon: <Pencil className="w-5 h-5" />, label: 'Pincel' },
+                                { m: 'stamp', icon: <CheckCircle2 className="w-5 h-5" />, label: 'Sello' },
+                                { m: 'pan', icon: <Hand className="w-5 h-5" />, label: 'Mover' },
+                                { m: 'erase', icon: <Eraser className="w-5 h-5" />, label: 'Borrar' },
+                            ] as const).map(({ m, icon }) => (
+                                <Button key={m} variant="ghost" size="icon" onClick={() => setMode(m)}
+                                    className={cn("h-12 w-12 rounded-2xl transition-all duration-200", mode === m ? (m === 'pan' ? "bg-blue-500 text-white" : "bg-emerald-500 text-white") : "text-zinc-400 hover:text-white hover:bg-white/10")}
+                                >{icon}</Button>
+                            ))}
 
                             <div className="h-px w-8 bg-white/10 mx-auto" />
 
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 gap-1.5">
                                 {COLORS.map(c => (
-                                    <button key={c} className={cn("w-6 h-6 rounded-full border border-white/20 transition-transform", color === c ? "ring-2 ring-white scale-125" : "opacity-40 hover:opacity-60")} style={{ backgroundColor: c }} onClick={() => setColor(c)} />
+                                    <button key={c} title={c}
+                                        className={cn("w-6 h-6 rounded-full border-2 transition-transform", color === c ? "border-white scale-125 shadow-lg" : "border-transparent opacity-50 hover:opacity-80 hover:scale-110")}
+                                        style={{ backgroundColor: c }}
+                                        onClick={() => setColor(c)}
+                                    />
                                 ))}
                             </div>
 
                             <div className="h-px w-8 bg-white/10 mx-auto" />
 
-                            <input type="range" min="4" max="80" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} className="w-24 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer -rotate-90 my-10" />
+                            {/* Brush size slider (vertical) */}
+                            <div className="flex flex-col items-center gap-1">
+                                <span className="text-[8px] text-white/40 font-bold">GROSOR</span>
+                                <span className="text-[10px] text-white font-black">{brushSize}</span>
+                                <input type="range" min="3" max="80" value={brushSize}
+                                    onChange={e => setBrushSize(+e.target.value)}
+                                    className="w-20 accent-emerald-400 -rotate-90 my-7"
+                                    style={{ height: '6px' }}
+                                />
+                            </div>
 
                             <div className="h-px w-8 bg-white/10 mx-auto" />
 
-                            <Button variant="ghost" size="icon" disabled={historyIndex === 0} onClick={undo} className="h-10 w-10 text-zinc-400 disabled:opacity-20"><Undo2 className="w-4 h-4" /></Button>
-                            <Button variant="ghost" size="icon" disabled={historyIndex === historyLength - 1} onClick={redo} className="h-10 w-10 text-zinc-400 disabled:opacity-20"><Redo2 className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="icon" disabled={historyIdx === 0} onClick={undo} className="h-10 w-10 text-zinc-400 disabled:opacity-20 hover:text-white"><Undo2 className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="icon" disabled={historyIdx === history.length - 1} onClick={redo} className="h-10 w-10 text-zinc-400 disabled:opacity-20 hover:text-white"><Redo2 className="w-4 h-4" /></Button>
                         </motion.div>
 
-                        {/* Top Bar */}
-                        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="absolute top-6 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-6 px-8 py-3 bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl">
-                            <div className="flex flex-col items-center min-w-16">
-                                <span className="text-[10px] font-black tracking-tighter text-emerald-400">ZOOM</span>
-                                <span className="text-sm font-black text-white">{Math.round(scale * 100)}%</span>
+                        {/* Top bar */}
+                        <motion.div
+                            initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -60, opacity: 0 }}
+                            className="absolute top-4 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-4 px-6 py-2.5 bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl"
+                        >
+                            <div className="text-center min-w-[3rem]">
+                                <p className="text-[9px] font-black text-emerald-400 tracking-widest">ZOOM</p>
+                                <p className="text-sm font-black text-white leading-none">{Math.round(scale * 100)}%</p>
                             </div>
-                            <Button variant="ghost" size="icon" className="h-10 w-10 text-zinc-400 hover:text-white bg-white/5" onClick={handleResetZoom}><Maximize className="w-5 h-5" /></Button>
-                            <div className="h-8 w-px bg-white/10" />
-                            <Button onClick={() => onSave(state.current.paths)} disabled={isSaving} className="h-12 px-8 rounded-2xl bg-emerald-500 hover:bg-emerald-600 font-black gap-3 text-white transition-all active:scale-95">
-                                {isSaving ? <RotateCcw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                                <span>GUARDAR</span>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-400 hover:text-white" onClick={centerView}><Maximize className="w-4 h-4" /></Button>
+                            <div className="h-7 w-px bg-white/10" />
+                            <Button onClick={() => onSave(paths)} disabled={isSaving} className="h-10 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 font-black text-white gap-2 active:scale-95 transition-transform">
+                                {isSaving ? <RotateCcw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Guardar
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => setIsImmersive(false)} className="h-12 w-12 rounded-2xl bg-zinc-800 text-white hover:bg-zinc-700 transition-colors"><Minimize2 className="w-6 h-6" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => setIsImmersive(false)} className="h-10 w-10 rounded-xl bg-zinc-800 text-white hover:bg-zinc-700"><Minimize2 className="w-5 h-5" /></Button>
                         </motion.div>
 
-                        {/* Trash */}
-                        <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }} className="absolute bottom-8 right-8 z-[10000]">
-                            <Button variant="ghost" size="icon" onClick={() => { if (confirm('¿Borrar todo?')) addToHistory([]); }} className="h-14 w-14 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all"><Trash2 className="w-6 h-6" /></Button>
+                        {/* Trash button */}
+                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="absolute bottom-8 right-8 z-[10000]">
+                            <Button variant="ghost" size="icon" onClick={() => confirm('¿Borrar todo?') && commitHistory([])} className="h-12 w-12 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white transition-all"><Trash2 className="w-5 h-5" /></Button>
                         </motion.div>
+
+                        {/* Hint */}
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[10000] text-[9px] text-white/30 font-bold tracking-widest uppercase bg-black/40 px-4 py-1 rounded-full whitespace-nowrap">
+                            Scroll: Zoom&nbsp;•&nbsp;Botón derecho / Manito: Mover&nbsp;•&nbsp;Pellizco: Zoom móvil
+                        </div>
                     </>
                 )}
             </AnimatePresence>
 
+            {/* ── Canvas container ─────────────────────────────────────────── */}
             <div
                 ref={containerRef}
-                className={cn(
-                    "relative w-full h-full touch-none",
-                    !isImmersive ? "cursor-pointer group" : (mode === 'pan' ? "cursor-grab" : "cursor-crosshair")
-                )}
+                className={cn("relative w-full h-full touch-none", !isImmersive ? "cursor-pointer" : (mode === 'pan' ? "cursor-grab" : "cursor-crosshair"))}
                 onClick={() => !isImmersive && setIsImmersive(true)}
             >
+                {/* Click-to-enter overlay */}
                 {!isImmersive && (
-                    <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/40 group-hover:bg-black/60 transition-colors">
-                        <div className="bg-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.2em] px-6 py-3 rounded-full shadow-2xl animate-pulse">
-                            ENTRAR A MODO EDICIÓN
-                        </div>
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 hover:bg-black/50 transition-colors">
+                        <span className="bg-emerald-500 text-white text-[11px] font-black uppercase tracking-[0.15em] px-6 py-3 rounded-full shadow-2xl shadow-emerald-500/30 animate-pulse">
+                            Entrar a Modo Edición
+                        </span>
                     </div>
                 )}
 
-                <div
-                    className="absolute top-0 left-0 will-change-transform"
-                    style={{
-                        transform: `translate(${state.current.offset.x}px, ${state.current.offset.y}px) scale(${state.current.scale})`,
-                        width: state.current.imageSize.width || '100%',
-                        height: state.current.imageSize.height || '100%'
-                    }}
-                >
-                    {imageUrl && (
+                {/* Transformed viewport — driven by REACT STATE, so it updates! */}
+                {imageSize.width > 0 && (
+                    <div
+                        className="absolute top-0 left-0 origin-top-left will-change-transform"
+                        style={{
+                            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+                            width: imageSize.width,
+                            height: imageSize.height,
+                        }}
+                    >
                         <img
                             src={imageUrl}
-                            alt="Flowchart"
-                            className="absolute inset-0 pointer-events-none"
-                            style={{
-                                width: state.current.imageSize.width,
-                                height: state.current.imageSize.height
-                            }}
+                            alt="Flujograma"
+                            className="absolute inset-0 block pointer-events-none"
+                            style={{ width: imageSize.width, height: imageSize.height }}
+                            draggable={false}
                         />
-                    )}
-                    <canvas ref={canvasRef} className="absolute inset-0" />
-                </div>
+                        <canvas
+                            ref={canvasRef}
+                            className="absolute inset-0 pointer-events-none"
+                            width={imageSize.width || 1}
+                            height={imageSize.height || 1}
+                        />
+                    </div>
+                )}
             </div>
-
-            {isImmersive && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] text-white/40 font-black tracking-widest pointer-events-none z-[10001] bg-black/60 px-6 py-2 rounded-full backdrop-blur-md border border-white/5 uppercase">
-                    Scroll: Zoom • Click Derecho o herramienta mano: Mover • Pinch: Zoom Móvil
-                </div>
-            )}
         </div>
     );
 }
