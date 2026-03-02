@@ -229,7 +229,7 @@ checkout.post('/webhook', async (c) => {
                     } else if (productDetails.type === 'vip') {
                         const expiresAt = new Date()
                         expiresAt.setDate(expiresAt.getDate() + (productDetails.amount || 30))
-                        await supabase.from('profiles').update({ es_vip: true, vip_hasta: expiresAt.toISOString() }).eq('id', userId)
+                        await supabase.from('profiles').update({ es_vip: true, vip_hasta: expiresAt.toISOString(), active_frame_key: 'vip_exclusive' }).eq('id', userId)
                     }
                 } else {
                     // Fallback logic for legacy or missing product_id
@@ -242,7 +242,7 @@ checkout.post('/webhook', async (c) => {
                     } else if (title.toLowerCase().includes('vip')) {
                         const expiresAt = new Date()
                         expiresAt.setDate(expiresAt.getDate() + 30)
-                        await supabase.from('profiles').update({ es_vip: true, vip_hasta: expiresAt.toISOString() }).eq('id', userId)
+                        await supabase.from('profiles').update({ es_vip: true, vip_hasta: expiresAt.toISOString(), active_frame_key: 'vip_exclusive' }).eq('id', userId)
                     }
                 }
             }

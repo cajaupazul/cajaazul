@@ -112,6 +112,26 @@ export default function NewVipFramePage() {
 
             if (dbError) throw dbError;
 
+            // 6. Sync to shop_items for global usage
+            const { error: shopItemError } = await supabase
+                .from('shop_items')
+                .upsert({
+                    type: 'profile_frame',
+                    name: form.label,
+                    description: form.description,
+                    image_url: publicUrl,
+                    price_coins: 0, // Unpurchasable with coins
+                    is_active: true,
+                    frame_key: 'vip_exclusive',
+                    frame_settings: {
+                        card: { scale: form.scale_factor, x: form.offset_x, y: form.offset_y },
+                        profile: { scale: form.scale_factor, x: form.offset_x, y: form.offset_y },
+                        navbar: { scale: form.scale_factor, x: form.offset_x, y: form.offset_y },
+                    }
+                }, { onConflict: 'frame_key' });
+
+            if (shopItemError) throw shopItemError;
+
             // Success
             router.push('/dashboard/store');
             router.refresh();

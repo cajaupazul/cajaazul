@@ -320,9 +320,13 @@ function StoreContent() {
                 // Update local context immediately for instant feedback
                 updateProfile({ ...profile, monedas: newCoins });
             } else if (selectedProduct.type === 'vip') {
-                console.log('[StorePage] Optimistically setting VIP status');
-                // For VIP we mark it true immediately
-                updateProfile({ ...profile, es_vip: true });
+                console.log('[StorePage] Optimistically setting VIP status and frame');
+                // For VIP we mark it true immediately and automatically equip the VIP frame
+                updateProfile({
+                    ...profile,
+                    es_vip: true,
+                    active_frame_key: 'vip_exclusive'
+                });
             }
         }
 
