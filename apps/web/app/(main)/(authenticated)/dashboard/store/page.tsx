@@ -419,14 +419,14 @@ function StoreContent() {
                             {vipProduct && (
                                 <div className="lg:col-span-12 relative group">
                                     <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[3rem] blur opacity-25 group-hover:opacity-40 transition duration-1000" />
-                                    <div className="relative bg-[#111114] rounded-[2.5rem] border border-white/5 overflow-visible p-4 sm:p-16 flex flex-col lg:flex-row items-center gap-4 lg:gap-16 backdrop-blur-3xl">
+                                    <div className="relative bg-[#111114] rounded-[2.5rem] border border-white/5 overflow-visible p-4 sm:p-16 flex flex-col lg:flex-row items-stretch gap-8 lg:gap-16 backdrop-blur-3xl">
                                         {/* Mascot Origi + Frame Component */}
-                                        <div className="w-full lg:w-1/2 flex flex-col justify-center items-center relative order-first z-10 gap-8">
+                                        <div className="w-full lg:w-1/2 flex flex-col justify-between items-center relative order-first z-10 gap-8">
                                             <div className="absolute top-0 bottom-1/2 left-0 right-0 bg-indigo-500/25 blur-[100px] rounded-full pointer-events-none" />
                                             <img
                                                 src="/tienda/orivipp.png"
                                                 alt="Origi Mascot"
-                                                className="w-[180px] sm:w-[400px] object-contain relative z-10 animate-float pointer-events-none select-none drop-shadow-2xl"
+                                                className="w-[180px] sm:w-[400px] object-contain relative z-10 animate-float pointer-events-none select-none drop-shadow-2xl mt-auto"
                                             />
 
                                             {/* VIP Exclusive Frame Showcase */}
@@ -472,31 +472,33 @@ function StoreContent() {
                                             )}
                                         </div>
 
-                                        <div className="w-full lg:w-1/2 space-y-6 lg:space-y-10 text-center lg:text-left">
-                                            <div className="space-y-2 lg:space-y-6">
-                                                <h2 className="text-3xl sm:text-7xl font-[1000] text-white italic tracking-tight uppercase leading-[1.1] pb-1 lg:pb-2">
-                                                    CONVIÉRTETE EN <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent px-1 lg:px-2">VIP</span>
-                                                </h2>
-                                                <p className="text-zinc-400 text-sm sm:text-2xl font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
-                                                    Acceso total, descargas ilimitadas y estilo absoluto. Desbloquea el lado más potente de CampusLink.
-                                                </p>
+                                        <div className="w-full lg:w-1/2 flex flex-col justify-between text-center lg:text-left gap-6 lg:gap-10">
+                                            <div className="space-y-4 lg:space-y-8">
+                                                <div className="space-y-2 lg:space-y-6">
+                                                    <h2 className="text-3xl sm:text-7xl font-[1000] text-white italic tracking-tight uppercase leading-[1.1] pb-1 lg:pb-2">
+                                                        CONVIÉRTETE EN <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent px-1 lg:px-2">VIP</span>
+                                                    </h2>
+                                                    <p className="text-zinc-400 text-sm sm:text-2xl font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
+                                                        Acceso total, descargas ilimitadas y estilo absoluto. Desbloquea el lado más potente de CampusLink.
+                                                    </p>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-5">
+                                                    {[
+                                                        { text: 'Descargas ilimitadas', icon: Check },
+                                                        { text: 'Grupos exclusivos', icon: Check },
+                                                        { text: 'Insignia dorada', icon: Check },
+                                                        { text: 'Soporte prioritario', icon: Check }
+                                                    ].map((f, i) => (
+                                                        <div key={i} className="flex items-center gap-3 lg:gap-4 bg-white/5 p-3 lg:p-5 rounded-xl lg:rounded-3xl border border-white/5 backdrop-blur-md">
+                                                            <div className="p-1 lg:p-1.5 bg-green-500/20 rounded-full shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Check className="text-green-500 w-3.5 h-3.5 lg:w-5 lg:h-5" /></div>
+                                                            <span className="text-white font-black uppercase text-[10px] lg:text-sm italic">{f.text}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-5">
-                                                {[
-                                                    { text: 'Descargas ilimitadas', icon: Check },
-                                                    { text: 'Grupos exclusivos', icon: Check },
-                                                    { text: 'Insignia dorada', icon: Check },
-                                                    { text: 'Soporte prioritario', icon: Check }
-                                                ].map((f, i) => (
-                                                    <div key={i} className="flex items-center gap-3 lg:gap-4 bg-white/5 p-3 lg:p-5 rounded-xl lg:rounded-3xl border border-white/5 backdrop-blur-md">
-                                                        <div className="p-1 lg:p-1.5 bg-green-500/20 rounded-full shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Check className="text-green-500 w-3.5 h-3.5 lg:w-5 lg:h-5" /></div>
-                                                        <span className="text-white font-black uppercase text-[10px] lg:text-sm italic">{f.text}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-8 pt-2 lg:pt-6">
+                                            <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-8 pt-2 lg:pt-6 mb-auto xl:mb-0">
                                                 <div className="text-4xl lg:text-6xl font-[1000] text-white tracking-tighter italic">S/ {vipProduct.price} <span className="text-xs text-zinc-500 font-bold uppercase tracking-[0.3em] block sm:inline mt-1 sm:mt-0">/ {vipProduct.amount} días</span></div>
                                                 <Button
                                                     onClick={() => handlePurchase(vipProduct.id)}
