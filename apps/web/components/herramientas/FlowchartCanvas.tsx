@@ -53,7 +53,7 @@ export default function FlowchartCanvas({
     const [isPanning, setIsPanning] = useState(false);
     const [mode, setMode] = useState<'draw' | 'stamp' | 'erase' | 'pan'>('draw');
     const [color, setColor] = useState('#10b981');
-    const [brushSize, setBrushSize] = useState(8);
+    const [brushSize, setBrushSize] = useState(12);
 
     const [paths, setPaths] = useState<Path[]>(initialData);
     const [history, setHistory] = useState<Path[][]>([initialData]);
@@ -69,13 +69,19 @@ export default function FlowchartCanvas({
     const lastMousePos = useRef<{ x: number, y: number } | null>(null);
     const touchDistRef = useRef<number | null>(null);
 
-    const STAMP_SIZE = 100;
+    const STAMP_SIZE = 120;
     const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#ffffff', '#000000'];
 
     // Load stamp image with aggressive fallbacks
     useEffect(() => {
         const loadStamp = async () => {
-            const urls = ['/cellos/aprov.svg', '/cellos/aprov', '/cellos/cello.svg', '/icons/stamp-approved.svg'];
+            const urls = [
+                '/cellos/Gemini_Generated_Image_1cxzh91cxzh91cxz.png',
+                '/cellos/aprov.svg',
+                '/cellos/aprov',
+                '/cellos/cello.svg',
+                '/icons/stamp-approved.svg'
+            ];
             for (const url of urls) {
                 try {
                     const img = new Image();
@@ -99,8 +105,8 @@ export default function FlowchartCanvas({
 
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
-            const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            const newScale = Math.min(Math.max(scale * delta, 0.05), 20);
+            const delta = e.deltaY > 0 ? 0.85 : 1.15;
+            const newScale = Math.min(Math.max(scale * delta, 0.01), 30);
 
             // Zoom towards mouse
             const rect = container.getBoundingClientRect();
@@ -229,7 +235,7 @@ export default function FlowchartCanvas({
                 ctx.lineJoin = 'round';
                 ctx.strokeStyle = path.color;
                 ctx.lineWidth = path.size || brushSize;
-                ctx.globalAlpha = 0.4;
+                ctx.globalAlpha = 0.7;
                 ctx.moveTo(path.points[0].x, path.points[0].y);
                 path.points.forEach(p => ctx.lineTo(p.x, p.y));
                 ctx.stroke();
@@ -386,7 +392,7 @@ export default function FlowchartCanvas({
                                 ))}
                             </div>
                             <div className="h-px w-8 bg-white/10 mx-auto" />
-                            <input type="range" min="2" max="30" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} className="w-20 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer -rotate-90 my-6" />
+                            <input type="range" min="4" max="60" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} className="w-24 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer -rotate-90 my-8" />
                             <div className="h-px w-8 bg-white/10 mx-auto" />
                             <Button variant="ghost" size="icon" disabled={historyIndex === 0} onClick={undo} className="h-12 w-12 rounded-2xl text-zinc-400 disabled:opacity-20"><Undo2 className="w-5 h-5" /></Button>
                             <Button variant="ghost" size="icon" disabled={historyIndex === history.length - 1} onClick={redo} className="h-12 w-12 rounded-2xl text-zinc-400 disabled:opacity-20"><Redo2 className="w-5 h-5" /></Button>
