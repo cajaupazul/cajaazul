@@ -15,7 +15,11 @@ import {
     Check,
     Settings,
     Plus,
-    Trash2
+    Trash2,
+    Calendar,
+    Clock,
+    Image as ImageIcon,
+    Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -45,6 +49,15 @@ interface StoreLayoutConfig {
     y_pos: number;
     scale: number;
     is_visible: boolean;
+}
+
+interface VipExclusiveFrame {
+    id: string;
+    image_url: string;
+    label: string;
+    description: string;
+    expires_at: string;
+    is_active: boolean;
 }
 
 export default function StorePage() {
@@ -88,6 +101,17 @@ function StoreContent() {
     const [coinPackages, setCoinPackages] = useState<StoreProduct[]>([]);
     const [vipProduct, setVipProduct] = useState<StoreProduct | null>(null);
 
+    // VIP Frame State
+    const [activeFrame, setActiveFrame] = useState<VipExclusiveFrame | null>(null);
+    const [isFrameModalOpen, setIsFrameModalOpen] = useState(false);
+    const [frameFormData, setFrameFormData] = useState<Partial<VipExclusiveFrame>>({
+        image_url: '',
+        label: 'Marco Exclusivo',
+        description: '',
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)
+    });
+    const [isSavingFrame, setIsSavingFrame] = useState(false);
+
     // Fetch shop items, categories, and recharge products (VIP/Coins)
     useEffect(() => {
         const fetchData = async () => {
@@ -125,6 +149,14 @@ function StoreContent() {
                 setCoinPackages(products.filter(p => p.type === 'coins').sort((a, b) => a.price - b.price));
                 setVipProduct(products.find(p => p.type === 'vip') || null);
             }
+
+            // 4. Fetch Active VIP Frame
+            const { data: frameData } = await supabase
+                .from('vip_exclusive_frames')
+                .select('*')
+                .eq('is_active', true)
+                .single();
+            if (frameData) setActiveFrame(frameData);
         };
 
         fetchData();
@@ -248,6 +280,43 @@ function StoreContent() {
             setIsCreatingCategory(false);
         }
     };
+
+    // VIP Frame Admin Submit
+    const handleSaveFrame = async () => {
+        if (!frameFormData.image_url || !frameFormData.label || !frameFormData.expires_at) {
+            alert('Por favor completa todos los campos del marco.');
+            return;
+        }
+        setIsSavingFrame(true);
+        try {
+            // Unset current active frame if any
+            if (activeFrame) {
+                await supabase.from('vip_exclusive_frames').update({ is_active: false }).eq('id', activeFrame.id);
+            }
+            // Insert or Update
+            const { data, error } = await supabase
+                .from('vip_exclusive_frames')
+                .insert([{
+                    image_url: frameFormData.image_url,
+                    label: frameFormData.label,
+                    description: frameFormData.description,
+                    expires_at: new Date(frameFormData.expires_at).toISOString(),
+                    is_active: true
+                }])
+                .select()
+                .single();
+            if (error) throw error;
+            setActiveFrame(data);
+            setIsFrameModalOpen(false);
+            alert('Marco guardado correctamente.');
+        } catch (error: any) {
+            console.error('Error saving frame:', error);
+            alert('Error: ' + error.message);
+        } finally {
+            setIsSavingFrame(false);
+        }
+    };
+
 
     // Payment Modal State
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -393,14 +462,55 @@ function StoreContent() {
                                 <div className="lg:col-span-12 relative group">
                                     <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[3rem] blur opacity-25 group-hover:opacity-40 transition duration-1000" />
                                     <div className="relative bg-[#111114] rounded-[2.5rem] border border-white/5 overflow-visible p-4 sm:p-16 flex flex-col lg:flex-row items-center gap-4 lg:gap-16 backdrop-blur-3xl">
-                                        {/* Mascot Origi */}
-                                        <div className="w-full lg:w-1/2 flex justify-center items-center relative order-first z-10">
-                                            <div className="absolute inset-0 bg-indigo-500/25 blur-[100px] rounded-full pointer-events-none" />
+                                        {/* Mascot Origi + Frame Component */}
+                                        <div className="w-full lg:w-1/2 flex flex-col justify-center items-center relative order-first z-10 gap-8">
+                                            <div className="absolute top-0 bottom-1/2 left-0 right-0 bg-indigo-500/25 blur-[100px] rounded-full pointer-events-none" />
                                             <img
                                                 src="/tienda/orivipp.png"
                                                 alt="Origi Mascot"
-                                                className="w-[180px] sm:w-[500px] object-contain relative z-10 animate-float pointer-events-none select-none"
+                                                className="w-[180px] sm:w-[400px] object-contain relative z-10 animate-float pointer-events-none select-none drop-shadow-2xl"
                                             />
+
+                                            {/* VIP Exclusive Frame Showcase */}
+                                            {activeFrame && new Date(activeFrame.expires_at) > new Date() && (
+                                                <div className="relative w-full max-w-[320px] bg-black/40 border border-white/10 rounded-3xl p-5 backdrop-blur-md shadow-2xl overflow-hidden group/frame">
+                                                    {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setFrameFormData({ image_url: activeFrame.image_url, label: activeFrame.label, description: activeFrame.description, expires_at: new Date(activeFrame.expires_at).toISOString().slice(0, 16) }); setIsFrameModalOpen(true); }}
+                                                            className="absolute top-3 right-3 z-20 p-2 bg-black/50 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"
+                                                            title="Editar marco"
+                                                        >
+                                                            <Settings size={14} />
+                                                        </button>
+                                                    )}
+                                                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-purple-500/10 opacity-50 pointer-events-none" />
+                                                    <div className="flex flex-col items-center text-center gap-3 relative z-10">
+                                                        <div className="px-3 py-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.4)]">
+                                                            <Clock size={12} className="text-white animate-pulse" />
+                                                            <span className="text-[9px] font-black text-white uppercase tracking-wider">Por tiempo limitado</span>
+                                                        </div>
+                                                        <div className="relative w-28 h-28 my-2">
+                                                            <div className="absolute inset-0 bg-zinc-800 rounded-full flex items-center justify-center animate-pulse border-2 border-zinc-700">
+                                                                <ImageIcon size={24} className="text-zinc-600" />
+                                                            </div>
+                                                            <img src={activeFrame.image_url} alt={activeFrame.label} className="absolute inset-[-20%] w-[140%] h-[140%] object-contain drop-shadow-2xl z-10 animate-float" style={{ animationDuration: '4s' }} />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-white font-black italic uppercase text-lg leading-tight">{activeFrame.label}</h4>
+                                                            {activeFrame.description && <p className="text-zinc-400 text-xs mt-1">{activeFrame.description}</p>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {(!activeFrame || new Date(activeFrame.expires_at) < new Date()) && (profile?.role === 'admin' || profile?.role === 'superadmin') && (
+                                                <Button
+                                                    variant="ghost"
+                                                    className="border border-white/10 bg-black/30 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full text-xs font-bold gap-2"
+                                                    onClick={() => setIsFrameModalOpen(true)}
+                                                >
+                                                    <Plus size={14} /> Activar Marco Exclusivo
+                                                </Button>
+                                            )}
                                         </div>
 
                                         <div className="w-full lg:w-1/2 space-y-6 lg:space-y-10 text-center lg:text-left">
@@ -658,6 +768,99 @@ function StoreContent() {
                 onPaymentSuccess={handlePaymentSuccess}
                 onPaymentError={handlePaymentError}
             />
+
+            {/* Modal de Configuración Marco VIP */}
+            {isFrameModalOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsFrameModalOpen(false)}
+                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                    />
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="relative w-full max-w-lg bg-[#111114] border border-white/10 rounded-[2.5rem] p-8 sm:p-10 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden"
+                    >
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-500" />
+                        <button onClick={() => setIsFrameModalOpen(false)} className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors">
+                            <XCircle size={24} />
+                        </button>
+
+                        <div className="space-y-8">
+                            <div className="text-center space-y-2">
+                                <h2 className="text-3xl sm:text-4xl font-[1000] text-white italic tracking-tighter uppercase relative inline-block">
+                                    MARCO EXCLUSIVO
+                                    <Sparkles className="absolute -top-4 -right-6 text-amber-400 animate-pulse" size={20} />
+                                </h2>
+                                <p className="text-zinc-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em]">Configuración para VIPs</p>
+                            </div>
+
+                            <div className="space-y-5">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block ml-1">URL de la Imagen</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: https://.../marco.png"
+                                        value={frameFormData.image_url || ''}
+                                        onChange={(e) => setFrameFormData(p => ({ ...p, image_url: e.target.value }))}
+                                        className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-black"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block ml-1">Etiqueta</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: MARCO ESTELAR"
+                                        value={frameFormData.label || ''}
+                                        onChange={(e) => setFrameFormData(p => ({ ...p, label: e.target.value }))}
+                                        className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-white uppercase italic tracking-wider focus:outline-none focus:border-indigo-500 transition-all font-black text-lg"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block ml-1">Descripción corta (opcional)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Disponible solo este mes..."
+                                        value={frameFormData.description || ''}
+                                        onChange={(e) => setFrameFormData(p => ({ ...p, description: e.target.value }))}
+                                        className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-indigo-500 transition-all text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block ml-1">Válido hasta</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={frameFormData.expires_at || ''}
+                                        onChange={(e) => setFrameFormData(p => ({ ...p, expires_at: e.target.value }))}
+                                        className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-indigo-500 transition-all font-mono text-sm [color-scheme:dark]"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <Button
+                                    onClick={() => setIsFrameModalOpen(false)}
+                                    className="flex-1 bg-white/5 hover:bg-white/10 text-white border border-white/10 h-14 rounded-xl font-black uppercase italic tracking-widest"
+                                    disabled={isSavingFrame}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    onClick={handleSaveFrame}
+                                    disabled={isSavingFrame || !frameFormData.image_url || !frameFormData.label || !frameFormData.expires_at}
+                                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white h-14 rounded-xl font-[1000] uppercase italic tracking-[0.2em] shadow-[0_0_30px_rgba(79,70,229,0.3)] disabled:opacity-50"
+                                >
+                                    {isSavingFrame ? 'Guardando...' : 'GUARDAR MARCO'}
+                                </Button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
 
             {/* Modal de Nueva Categoría */}
             {isCategoryModalOpen && (
