@@ -51,10 +51,28 @@ export default function CourseSelector({
 
     const filtered = useMemo(() => {
         if (!search.trim()) return courseGroups;
-        const q = search.toLowerCase();
-        return courseGroups.filter(
-            c => c.nombre.toLowerCase().includes(q) || c.codigo.includes(q)
-        );
+
+        // Normalize terms: remove accents and convert to lower case
+        const normalize = (str: string) =>
+            str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+        const searchTerms = normalize(search)
+            .split(/\s+/)
+            .filter(term => term.length > 0);
+
+        return courseGroups.filter(c => {
+            // First try exact code matching
+            if (c.codigo.includes(search)) return true;
+
+            const courseNameWords = normalize(c.nombre)
+                .split(/[\s\-.,()]+/)
+                .filter(w => w.length > 0);
+
+            // For each term in the search, it MUST match the BEGINNING of at least one word in the course name
+            return searchTerms.every(term =>
+                courseNameWords.some(word => word.startsWith(term))
+            );
+        });
     }, [courseGroups, search]);
 
     // Color palette for courses

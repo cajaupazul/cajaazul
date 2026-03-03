@@ -367,13 +367,46 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                 // Professor name starts here; may continue on next line(s)
                 professorBuffer = cleanProfName(rest);
                 expectingProfessor = true;
+
+                // CRITICAL FIX: If the line ALSO contains a schedule (e.g., squashed on the same line after the professor),
+                // we must parse that schedule. `cleanProfName` removed it from the professor name, but we need to extract it.
+                const tipoMatch = rest.match(/\b(CLASE|FINAL|PARCIAL|PRÁCTICA|PRACTICA|LABORATORIO|TALLER)\b/i);
+                if (tipoMatch && hasTime(rest)) {
+                    const schedPart = rest.slice(tipoMatch.index);
+                    const firstSchedToken = schedPart.split(/\s+/)[0].toUpperCase();
+                    if (TIPOS.has(firstSchedToken) && firstSchedToken !== 'PRACCALIFI') {
+                        const tipo = normalizeTipo(firstSchedToken);
+                        const times = extractTimes(schedPart);
+                        const dia = extractDay(schedPart);
+                        for (const [start, end] of times) {
+                            const key = `${currentCodigo}-${currentSeccion}-${tipo}-${dia}-${start}-${end}`;
+                            if (!blocksSeen.has(key)) {
+                                blocksSeen.add(key);
+                                const [h1, m1] = start.split(':').map(Number);
+                                const [h2, m2] = end.split(':').map(Number);
+                                const aula = extractAula(schedPart, start);
+                                ofertas.push({
+                                    codigo_curso: currentCodigo,
+                                    nombre_curso: currentNombre,
+                                    seccion: currentSeccion,
+                                    profesor: professorBuffer, // It's clean now
+                                    creditos: currentCreditos,
+                                    tipo,
+                                    dia,
+                                    hora_inicio: start,
+                                    hora_fin: end,
+                                    duracion: Math.max(0, (h2 * 60 + m2) - (h1 * 60 + m1)),
+                                    cupos: 0,
+                                    aula,
+                                });
+                            }
+                        }
+                    }
+                }
             }
             continue;
         }
 
-        // B4. Professor name continuation (multi-line names like "MONSALVE ZANATTI, Martin / …")
-        //     Also handles: professor on the line AFTER a lone section letter.
-        //     These lines contain no time tokens and don't start with a TIPO or known keyword.
         if (currentSeccion && !hasTime(line) && !TIPOS.has(firstToken) && !DIAS.has(firstToken)) {
             // Append to professorBuffer if it looks like a name fragment
             if (/^[A-ZÁÉÍÓÚÑÜ]/.test(line) && !NOISE_RE.some(re => re.test(line))) {
@@ -386,6 +419,52 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                     }
                 }
                 // else: just an annotation line, ignore
+            }
+            continue;
+        }
+
+        // B5. Inline schedule mixed with professor name or other text
+        // (e.g. "PEREZ BARROS, Juan CLASE MIE 10:30 12:30 J-503")
+        if (currentSeccion && hasTime(line) && !TIPOS.has(firstToken) && !DIAS.has(firstToken)) {
+            const tipoMatch = line.match(/\b(CLASE|FINAL|PARCIAL|PRÁCTICA|PRACTICA|LABORATORIO|TALLER)\b/i);
+            if (tipoMatch) {
+                const schedPart = line.slice(tipoMatch.index);
+                const profPart = line.slice(0, tipoMatch.index).trim();
+
+                if (profPart && expectingProfessor) {
+                    if (professorBuffer) professorBuffer += ' ' + cleanProfName(profPart);
+                    else professorBuffer = cleanProfName(profPart);
+                }
+
+                const firstSchedToken = schedPart.split(/\s+/)[0].toUpperCase();
+                if (TIPOS.has(firstSchedToken) && firstSchedToken !== 'PRACCALIFI') {
+                    const tipo = normalizeTipo(firstSchedToken);
+                    const times = extractTimes(schedPart);
+                    const dia = extractDay(schedPart);
+                    for (const [start, end] of times) {
+                        const key = `${currentCodigo}-${currentSeccion}-${tipo}-${dia}-${start}-${end}`;
+                        if (!blocksSeen.has(key)) {
+                            blocksSeen.add(key);
+                            const [h1, m1] = start.split(':').map(Number);
+                            const [h2, m2] = end.split(':').map(Number);
+                            const aula = extractAula(schedPart, start);
+                            ofertas.push({
+                                codigo_curso: currentCodigo,
+                                nombre_curso: currentNombre,
+                                seccion: currentSeccion,
+                                profesor: currentProfesor || professorBuffer || 'Sin profesor',
+                                creditos: currentCreditos,
+                                tipo,
+                                dia,
+                                hora_inicio: start,
+                                hora_fin: end,
+                                duracion: Math.max(0, (h2 * 60 + m2) - (h1 * 60 + m1)),
+                                cupos: 0,
+                                aula,
+                            });
+                        }
+                    }
+                }
             }
             continue;
         }
