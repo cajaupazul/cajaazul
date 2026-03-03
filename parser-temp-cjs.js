@@ -12,20 +12,20 @@
  *   PARCIAL MIE 10:30 12:30 40 A-PEND
  */
 
-export type ParsedOferta = {
-    codigo_curso: string;
-    nombre_curso: string;
-    seccion: string;
-    profesor: string;
-    creditos: number;
-    tipo: string;       // CLASE | FINAL | PARCIAL | PRACTICA | LABORATORIO | …
-    dia: string;        // LUN | MAR | MIE | JUE | VIE | SAB | DOM
-    hora_inicio: string; // HH:MM
-    hora_fin: string;    // HH:MM
-    duracion: number;
-    cupos: number;
-    aula: string;
-    section_id?: string;
+type ParsedOferta = {
+    codigo_curso;
+    nombre_curso;
+    seccion;
+    profesor;
+    creditos;
+    tipo;       // CLASE | FINAL | PARCIAL | PRACTICA | LABORATORIO | …
+    dia;        // LUN | MAR | MIE | JUE | VIE | SAB | DOM
+    hora_inicio; // HH:MM
+    hora_fin;    // HH:MM
+    duracion;
+    cupos;
+    aula;
+    section_id?;
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -72,8 +72,8 @@ const NOISE_RE = [
 //  Public entry points
 // ────────────────────────────────────────────────────────────────────────────────
 
-export async function parseOfertaFile(file: File): Promise<{
-    periodo: string; ofertas: ParsedOferta[]; errors: string[];
+async function parseOfertaFile(file: File): Promise<{
+    periodo; ofertas: ParsedOferta[]; errors[];
 }> {
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (ext === 'pdf') return parseFromPDF(file);
@@ -81,8 +81,8 @@ export async function parseOfertaFile(file: File): Promise<{
     return { periodo: '', ofertas: [], errors: [`Formato no soportado: .${ext}. Usa PDF o Word.`] };
 }
 
-export async function parseOfertaText(text: string): Promise<{
-    periodo: string; ofertas: ParsedOferta[]; errors: string[];
+async function parseOfertaText(text): Promise<{
+    periodo; ofertas: ParsedOferta[]; errors[];
 }> {
     return parseLines(text.split('\n'));
 }
@@ -91,25 +91,25 @@ export async function parseOfertaText(text: string): Promise<{
 //  PDF / Word readers
 // ────────────────────────────────────────────────────────────────────────────────
 
-async function parseFromPDF(file: File): Promise<{ periodo: string; ofertas: ParsedOferta[]; errors: string[] }> {
+async function parseFromPDF(file: File): Promise<{ periodo; ofertas: ParsedOferta[]; errors[] }> {
     const pdfjsLib = await import('pdfjs-dist');
     if (typeof window !== 'undefined') {
         pdfjsLib.GlobalWorkerOptions.workerSrc =
             `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
     }
     const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-    const lines: string[] = [];
+    const lines[] = [];
 
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
 
         // Group items by y-position to reconstruct lines
-        const byY = new Map<number, Array<{ x: number; text: string }>>();
+        const byY = new Map<number, Array<{ x; text }>>();
         for (const item of content.items) {
             if (!('str' in item) || !item.str.trim()) continue;
-            const y = Math.round((item as any).transform[5]);
-            const x = Math.round((item as any).transform[4]);
+            const y = Math.round((item).transform[5]);
+            const x = Math.round((item).transform[4]);
             if (!byY.has(y)) byY.set(y, []);
             byY.get(y)!.push({ x, text: item.str.trim() });
         }
@@ -132,7 +132,7 @@ async function parseFromPDF(file: File): Promise<{ periodo: string; ofertas: Par
     return parseLines(lines);
 }
 
-async function parseFromWord(file: File): Promise<{ periodo: string; ofertas: ParsedOferta[]; errors: string[] }> {
+async function parseFromWord(file: File): Promise<{ periodo; ofertas: ParsedOferta[]; errors[] }> {
     const mammoth = await import('mammoth');
     const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
     return parseLines(result.value.split('\n'));
@@ -142,10 +142,10 @@ async function parseFromWord(file: File): Promise<{ periodo: string; ofertas: Pa
 //  Core parser  (line-by-line state machine)
 // ────────────────────────────────────────────────────────────────────────────────
 
-function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOferta[]; errors: string[] } {
+function parseLines(rawLines[]): { periodo; ofertas: ParsedOferta[]; errors[] } {
 
     // ── 1. Normalise: deduplicate identical consecutive lines ──────────────────
-    let lines: string[] = [];
+    let lines[] = [];
     for (let i = 0; i < rawLines.length; i++) {
         const t = rawLines[i].trim();
         if (!t) continue;
@@ -155,12 +155,9 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
     // ── 1.5. Heal fractured aulas ──────────────────────────────────────────────
     // Aulas like A-PEND or B-305 sometimes get split across 3 lines: 
     // "FINAL MIE 16:30 18:30 30" -> "A" -> "-PEND"
-    // Or across 2 lines: "FINAL MIE 16:30 18:30 30" -> "A -PEND"
-    const healedLines: string[] = [];
+    const healedLines[] = [];
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-
-        // 1. Fully fractured: "FINAL..." -> "A" -> "-PEND"
         if (/^-(PEND|VIR|VIRT|VIRTUA|AUD|\d{3})/i.test(line) && healedLines.length >= 2) {
             const prevLine = healedLines[healedLines.length - 1];
             const prevPrevLine = healedLines[healedLines.length - 2];
@@ -177,18 +174,6 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                 }
             }
         }
-
-        // 2. Partially fractured: "FINAL..." -> "A -PEND"
-        if (/^[A-Z]{1,3}\s*-(PEND|VIR|VIRT|VIRTUA|AUD|\d{3})/i.test(line) && healedLines.length >= 1) {
-            const prevLine = healedLines[healedLines.length - 1];
-            const firstToken = prevLine.split(/\s+/)[0].toUpperCase();
-            if (TIPOS.has(firstToken) || hasTime(prevLine)) {
-                const base = healedLines.pop(); // Remove "FINAL..."
-                healedLines.push(`${base} ${line}`);
-                continue;
-            }
-        }
-
         healedLines.push(line);
     }
 
@@ -399,12 +384,10 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
         const isLoneSection = !!sectionMatchLone &&
             !NON_SECTION_TOKENS.has(sectionMatchLone[1].toUpperCase());
 
-        // Determine if this is a section+text line. 
-        // IMPORTANT: Must NOT be an aula fragment like "A -PEND" mistakenly parsed as Section A, Professor "-PEND"
+        // Determine if this is a section+text line
         const isFullSection = !!sectionMatchFull &&
             !NON_SECTION_TOKENS.has(sectionMatchFull[1].toUpperCase()) &&
-            !hasTime(sectionMatchFull[2].trim().split(/\s+/)[0]) &&
-            !/^\s*-(PEND|VIR|VIRT|VIRTUA|AUD|\d{3})/i.test(sectionMatchFull[2]);
+            !hasTime(sectionMatchFull[2].trim().split(/\s+/)[0]); // Only ignore if the VERY FIRST word is a time, otherwise it might be Section I then a schedule.
 
         if (isLoneSection) {
             // Just a letter like "B" — expect professor name on next line(s)
@@ -488,7 +471,7 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
 
     flushProfessorBuffer();
 
-    const errors: string[] = [];
+    const errors[] = [];
     if (ofertas.length === 0) {
         errors.push(
             'No se encontraron horarios. Asegúrate de pegar el texto completo (incluyendo los códigos de 6 dígitos y los horarios).'
@@ -513,7 +496,7 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
         }
     }
 
-    function retrofillOrphanSchedules(codigo: string, seccion: string) {
+    function retrofillOrphanSchedules(codigo, seccion) {
         for (const oferta of ofertas) {
             if (oferta.codigo_curso === codigo && oferta.seccion === '?') {
                 oferta.seccion = seccion;
@@ -527,12 +510,12 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
 //  Utility helpers
 // ────────────────────────────────────────────────────────────────────────────────
 
-function hasTime(line: string): boolean {
+function hasTime(line) {
     return /\b\d{1,2}:\d{2}\b/.test(line);
 }
 
 /** Returns all [start, end] time pairs found in a line */
-function extractTimes(line: string): [string, string][] {
+function extractTimes(line): [string, string][] {
     const matches = Array.from(line.matchAll(/\b(\d{1,2}:\d{2})\b/g));
     const result: [string, string][] = [];
     for (let i = 0; i + 1 < matches.length; i += 2) {
@@ -542,7 +525,7 @@ function extractTimes(line: string): [string, string][] {
 }
 
 /** Extracts the first day keyword from a line */
-function extractDay(line: string): string {
+function extractDay(line) {
     for (const token of line.split(/\s+/)) {
         if (DIAS.has(token.toUpperCase())) return token.toUpperCase();
     }
@@ -550,7 +533,7 @@ function extractDay(line: string): string {
 }
 
 /** Extracts classroom code (e.g. A-603, X -302, Virtual-Virtua) after the times */
-function extractAulaWithIndex(lineTokensStr: string, timeMatch: string): { aula: string, endIndex: number } {
+function extractAulaWithIndex(lineTokensStr, timeMatch): { aula, endIndex } {
     const afterTime = lineTokensStr.slice(lineTokensStr.indexOf(timeMatch) + timeMatch.length);
     const words = afterTime.split(/\s+/).filter(Boolean);
 
@@ -596,7 +579,7 @@ function extractAulaWithIndex(lineTokensStr: string, timeMatch: string): { aula:
 }
 
 /** Normalize tipo names */
-function normalizeTipo(raw: string): string {
+function normalizeTipo(raw) {
     const u = raw.toUpperCase();
     if (u === 'PRACTICA' || u === 'PRÁCTICA') return 'PRACTICA';
     if (u === 'PRACDIRIGI') return 'PRACTICA';
@@ -631,7 +614,7 @@ const PROF_NOISE = [
 ];
 
 /** Clean up a raw professor name string */
-function cleanProfName(raw: string): string {
+function cleanProfName(raw) {
     // 1. Cut at first TIPO keyword because everything after is the schedule part
     const tipoIdx = raw.search(/\b(CLASE|FINAL|PARCIAL|PRÁCTICA|PRACTICA|LABORATORIO|TALLER)\b/i);
     if (tipoIdx > 0) raw = raw.slice(0, tipoIdx);
@@ -658,4 +641,6 @@ function cleanProfName(raw: string): string {
 }
 
 // Backward compat
-export const parseOfertaPDF = parseOfertaFile;
+const parseOfertaPDF = parseOfertaFile;
+
+module.exports = { parseLines };

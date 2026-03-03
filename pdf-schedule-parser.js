@@ -1,3 +1,4 @@
+"use strict";
 /**
  * pdf-schedule-parser.ts  (v4 – rewritten from scratch)
  *
@@ -11,34 +12,18 @@
  *   FINAL MIE 10:30 12:30 40 A-PEND
  *   PARCIAL MIE 10:30 12:30 40 A-PEND
  */
-
-export type ParsedOferta = {
-    codigo_curso: string;
-    nombre_curso: string;
-    seccion: string;
-    profesor: string;
-    creditos: number;
-    tipo: string;       // CLASE | FINAL | PARCIAL | PRACTICA | LABORATORIO | …
-    dia: string;        // LUN | MAR | MIE | JUE | VIE | SAB | DOM
-    hora_inicio: string; // HH:MM
-    hora_fin: string;    // HH:MM
-    duracion: number;
-    cupos: number;
-    aula: string;
-    section_id?: string;
-};
-
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.parseOfertaPDF = void 0;
+exports.parseOfertaFile = parseOfertaFile;
+exports.parseOfertaText = parseOfertaText;
 // ────────────────────────────────────────────────────────────────────────────────
 //  Helper sets / regexes
 // ────────────────────────────────────────────────────────────────────────────────
-
 const DIAS = new Set(['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM']);
-
 const TIPOS = new Set([
     'CLASE', 'FINAL', 'PARCIAL', 'LABORATORIO', 'TALLER',
     'PRÁCTICA', 'PRACTICA', 'PRACCALIFI', 'PRACDIRIGI',
 ]);
-
 // Tokens that look like section letters but are actually type or day keywords
 const NON_SECTION_TOKENS = new Set([
     ...Array.from(DIAS),
@@ -50,13 +35,10 @@ const NON_SECTION_TOKENS = new Set([
     'DOBLE', 'GRADO', 'CLASES', 'DE', 'DEL', 'LA', 'LAS', 'LOS',
     'SAN', 'MAC', 'VON', 'VAN', 'EL', 'MC'
 ]);
-
 // Matches "09:30" or "9:30"
 const TIME_RE = /\b(\d{1,2}:\d{2})\b/g;
-
 // Match a course header like "120266 - Nombre del curso 4,00"
 const COURSE_HEADER_RE = /^(\d{6})\s*[-–]\s*(.+)/;
-
 // Noise lines to ignore entirely (but NOT reset course context)
 const NOISE_RE = [
     /^Se sugiere revisar/i,
@@ -65,59 +47,51 @@ const NOISE_RE = [
     /^Página\s+\d/i,
     /^OFERTA/i,
     /^SISTEMA/i,
-    /^Secc\s+Tipo\s+Docentes/i,   // table header row
+    /^Secc\s+Tipo\s+Docentes/i, // table header row
 ];
-
 // ────────────────────────────────────────────────────────────────────────────────
 //  Public entry points
 // ────────────────────────────────────────────────────────────────────────────────
-
-export async function parseOfertaFile(file: File): Promise<{
-    periodo: string; ofertas: ParsedOferta[]; errors: string[];
-}> {
+async function parseOfertaFile(file) {
     const ext = file.name.split('.').pop()?.toLowerCase();
-    if (ext === 'pdf') return parseFromPDF(file);
-    if (ext === 'docx' || ext === 'doc') return parseFromWord(file);
+    if (ext === 'pdf')
+        return parseFromPDF(file);
+    if (ext === 'docx' || ext === 'doc')
+        return parseFromWord(file);
     return { periodo: '', ofertas: [], errors: [`Formato no soportado: .${ext}. Usa PDF o Word.`] };
 }
-
-export async function parseOfertaText(text: string): Promise<{
-    periodo: string; ofertas: ParsedOferta[]; errors: string[];
-}> {
+async function parseOfertaText(text) {
     return parseLines(text.split('\n'));
 }
-
 // ────────────────────────────────────────────────────────────────────────────────
 //  PDF / Word readers
 // ────────────────────────────────────────────────────────────────────────────────
-
-async function parseFromPDF(file: File): Promise<{ periodo: string; ofertas: ParsedOferta[]; errors: string[] }> {
-    const pdfjsLib = await import('pdfjs-dist');
+async function parseFromPDF(file) {
+    const pdfjsLib = await Promise.resolve().then(() => require('pdfjs-dist'));
     if (typeof window !== 'undefined') {
         pdfjsLib.GlobalWorkerOptions.workerSrc =
             `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
     }
     const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-    const lines: string[] = [];
-
+    const lines = [];
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-
         // Group items by y-position to reconstruct lines
-        const byY = new Map<number, Array<{ x: number; text: string }>>();
+        const byY = new Map();
         for (const item of content.items) {
-            if (!('str' in item) || !item.str.trim()) continue;
-            const y = Math.round((item as any).transform[5]);
-            const x = Math.round((item as any).transform[4]);
-            if (!byY.has(y)) byY.set(y, []);
-            byY.get(y)!.push({ x, text: item.str.trim() });
+            if (!('str' in item) || !item.str.trim())
+                continue;
+            const y = Math.round(item.transform[5]);
+            const x = Math.round(item.transform[4]);
+            if (!byY.has(y))
+                byY.set(y, []);
+            byY.get(y).push({ x, text: item.str.trim() });
         }
-
         // Top-to-bottom order (descending y in PDF coords)
         const ys = Array.from(byY.keys()).sort((a, b) => b - a);
         for (const y of ys) {
-            const items = byY.get(y)!.sort((a, b) => a.x - b.x);
+            const items = byY.get(y).sort((a, b) => a.x - b.x);
             let line = '';
             for (let j = 0; j < items.length; j++) {
                 if (j > 0) {
@@ -131,40 +105,33 @@ async function parseFromPDF(file: File): Promise<{ periodo: string; ofertas: Par
     }
     return parseLines(lines);
 }
-
-async function parseFromWord(file: File): Promise<{ periodo: string; ofertas: ParsedOferta[]; errors: string[] }> {
-    const mammoth = await import('mammoth');
+async function parseFromWord(file) {
+    const mammoth = await Promise.resolve().then(() => require('mammoth'));
     const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
     return parseLines(result.value.split('\n'));
 }
-
 // ────────────────────────────────────────────────────────────────────────────────
 //  Core parser  (line-by-line state machine)
 // ────────────────────────────────────────────────────────────────────────────────
-
-function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOferta[]; errors: string[] } {
-
+function parseLines(rawLines) {
     // ── 1. Normalise: deduplicate identical consecutive lines ──────────────────
-    let lines: string[] = [];
+    let lines = [];
     for (let i = 0; i < rawLines.length; i++) {
         const t = rawLines[i].trim();
-        if (!t) continue;
-        if (lines.length === 0 || t !== lines[lines.length - 1]) lines.push(t);
+        if (!t)
+            continue;
+        if (lines.length === 0 || t !== lines[lines.length - 1])
+            lines.push(t);
     }
-
     // ── 1.5. Heal fractured aulas ──────────────────────────────────────────────
     // Aulas like A-PEND or B-305 sometimes get split across 3 lines: 
     // "FINAL MIE 16:30 18:30 30" -> "A" -> "-PEND"
-    // Or across 2 lines: "FINAL MIE 16:30 18:30 30" -> "A -PEND"
-    const healedLines: string[] = [];
+    const healedLines = [];
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-
-        // 1. Fully fractured: "FINAL..." -> "A" -> "-PEND"
         if (/^-(PEND|VIR|VIRT|VIRTUA|AUD|\d{3})/i.test(line) && healedLines.length >= 2) {
             const prevLine = healedLines[healedLines.length - 1];
             const prevPrevLine = healedLines[healedLines.length - 2];
-
             // Check if prev is just 1-3 uppercase letters
             if (/^[A-Z]{1,3}$/.test(prevLine)) {
                 // Check if prevPrev contains scheduling info
@@ -177,39 +144,31 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                 }
             }
         }
-
-        // 2. Partially fractured: "FINAL..." -> "A -PEND"
-        if (/^[A-Z]{1,3}\s*-(PEND|VIR|VIRT|VIRTUA|AUD|\d{3})/i.test(line) && healedLines.length >= 1) {
-            const prevLine = healedLines[healedLines.length - 1];
-            const firstToken = prevLine.split(/\s+/)[0].toUpperCase();
-            if (TIPOS.has(firstToken) || hasTime(prevLine)) {
-                const base = healedLines.pop(); // Remove "FINAL..."
-                healedLines.push(`${base} ${line}`);
-                continue;
-            }
-        }
-
         healedLines.push(line);
     }
-
     // overwrite lines with healedLines
     lines = healedLines;
-
     // ── 2. Detect periodo ──────────────────────────────────────────────────────
     let periodo = '';
     for (const line of lines.slice(0, 40)) {
         const m = line.match(/Horarios\s+[Oo]fertados:\s*(.+)/i);
-        if (m) { periodo = m[1].trim(); break; }
+        if (m) {
+            periodo = m[1].trim();
+            break;
+        }
     }
     // Fallback: look anywhere
     if (!periodo) {
         for (const line of lines) {
             const m = line.match(/(\d{4}-[IV]+(?:\s+PERIODO[- \w]*)?)/i);
-            if (m) { periodo = m[1].trim(); break; }
+            if (m) {
+                periodo = m[1].trim();
+                break;
+            }
         }
     }
-    if (!periodo) periodo = 'Periodo sin identificar';
-
+    if (!periodo)
+        periodo = 'Periodo sin identificar';
     // ── 3. State ───────────────────────────────────────────────────────────────
     let currentCodigo = '';
     let currentNombre = '';
@@ -218,21 +177,18 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
     let currentProfesor = '';
     let professorBuffer = ''; // accumulates multi-line professor names
     let expectingProfessor = false; // true after a lone section letter line
-
-    const ofertas: ParsedOferta[] = [];
-    const blocksSeen = new Set<string>();      // prevent duplicates
-
+    const ofertas = [];
+    const blocksSeen = new Set(); // prevent duplicates
     // ── 4. Line-by-line (Queue-based) ────────────────────────────────────────
     const queue = [...lines];
-
     while (queue.length > 0) {
-        const rawLine = queue.shift()!;
+        const rawLine = queue.shift();
         const line = rawLine.trim();
-        if (!line) continue;
-
+        if (!line)
+            continue;
         // Skip noise (but keep course context)
-        if (NOISE_RE.some(re => re.test(line))) continue;
-
+        if (NOISE_RE.some(re => re.test(line)))
+            continue;
         // ── A. Course header ──────────────────────────────────────────────────
         const courseMatch = line.match(COURSE_HEADER_RE);
         if (courseMatch) {
@@ -242,31 +198,25 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                 currentCodigo = codigo;
                 currentCreditos = 0; // Reset for new course!
                 let namePart = courseMatch[2].trim();
-
                 // 1. Strip PREREQUISITO suffix FIRST, so it doesn't block the credit regex
                 namePart = namePart.replace(/\s+PREREQUISITO[:\s].*/i, '').trim();
-
                 // 2. Extract credits anywhere in the remaining string
                 // Often: "Nombre del curso 4,00 A PROFESOR..."
                 const creditMatch = namePart.match(/\s+(\d+[.,]\d+)\s*/);
                 if (creditMatch) {
                     currentCreditos = parseFloat(creditMatch[1].replace(',', '.'));
-                    const creditIndex = creditMatch.index!;
+                    const creditIndex = creditMatch.index;
                     const creditLength = creditMatch[0].length;
-
                     // The actual course name is whatever came before the credit
                     const beforeCredit = namePart.slice(0, creditIndex).trim();
                     // Whatever came after the credit is likely a section header that got squashed!
                     const afterCredit = namePart.slice(creditIndex + creditLength).trim();
-
                     namePart = beforeCredit;
-
                     if (afterCredit) {
                         // Re-inject the rest of the line to be parsed next iteration
                         queue.unshift(afterCredit);
                     }
                 }
-
                 currentNombre = namePart;
                 currentSeccion = '';
                 currentProfesor = '';
@@ -274,41 +224,35 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             }
             continue;
         }
-
-        if (!currentCodigo) continue;
-
+        if (!currentCodigo)
+            continue;
         // ── B. Try to classify the line ───────────────────────────────────────
         const firstToken = line.split(/\s+/)[0].toUpperCase();
-
         // B1. Schedule type token (CLASE/FINAL/PARCIAL/PRÁCTICA/…)
         // These lines look like:  CLASE LUN 11:30 13:20 30 J-603
         if (TIPOS.has(firstToken)) {
             flushProfessorBuffer();
             expectingProfessor = false;
-
             if (!currentSeccion) {
                 // Allow orphan schedules to be parsed temporarily under '?'
                 currentSeccion = '?';
                 currentProfesor = 'Sin profesor';
             }
-
-            if (firstToken === 'PRACCALIFI') continue;  // always skip
-
+            if (firstToken === 'PRACCALIFI')
+                continue; // always skip
             const tipo = normalizeTipo(firstToken);
             const times = extractTimes(line);
-            if (times.length === 0) continue;
-
+            if (times.length === 0)
+                continue;
             const dia = extractDay(line);
-
             for (const [start, end] of times) {
                 const key = `${currentCodigo}-${currentSeccion}-${tipo}-${dia}-${start}-${end}`;
-                if (blocksSeen.has(key)) continue;
+                if (blocksSeen.has(key))
+                    continue;
                 blocksSeen.add(key);
-
                 const [h1, m1] = start.split(':').map(Number);
                 const [h2, m2] = end.split(':').map(Number);
                 const duracion = (h2 * 60 + m2) - (h1 * 60 + m1);
-
                 const { aula, endIndex } = extractAulaWithIndex(line, start);
                 ofertas.push({
                     codigo_curso: currentCodigo,
@@ -324,7 +268,6 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                     cupos: 0,
                     aula,
                 });
-
                 // If there's garbage left over after the aula (like another squashed section)
                 if (endIndex < line.length) {
                     const leftover = line.slice(endIndex).trim();
@@ -337,29 +280,27 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             }
             continue;
         }
-
         // B2. Day-only token — could be a wrapped schedule line:
         //   "LUN 11:30 13:20 30 J-603"  (rare, but happens on wrapping)
         if (DIAS.has(firstToken)) {
             flushProfessorBuffer();
             expectingProfessor = false;
-            if (!currentSeccion) continue;
+            if (!currentSeccion)
+                continue;
             // We need to know the tipo — peek at previous ofertas for this section
-            const lastOferta = [...ofertas].reverse().find(o =>
-                o.codigo_curso === currentCodigo && o.seccion === currentSeccion
-            );
+            const lastOferta = [...ofertas].reverse().find(o => o.codigo_curso === currentCodigo && o.seccion === currentSeccion);
             const tipo = lastOferta?.tipo ?? 'CLASE';
             const times = extractTimes(line);
-            if (times.length === 0) continue;
+            if (times.length === 0)
+                continue;
             const dia = firstToken;
-
             for (const [start, end] of times) {
                 const key = `${currentCodigo}-${currentSeccion}-${tipo}-${dia}-${start}-${end}`;
-                if (blocksSeen.has(key)) continue;
+                if (blocksSeen.has(key))
+                    continue;
                 blocksSeen.add(key);
                 const [h1, m1] = start.split(':').map(Number);
                 const [h2, m2] = end.split(':').map(Number);
-
                 const { aula, endIndex } = extractAulaWithIndex(line, start);
                 ofertas.push({
                     codigo_curso: currentCodigo,
@@ -375,7 +316,6 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                     cupos: 0,
                     aula,
                 });
-
                 if (endIndex < line.length) {
                     const leftover = line.slice(endIndex).trim();
                     if (leftover && !leftover.match(/^\d+$/)) {
@@ -385,45 +325,36 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             }
             continue;
         }
-
         // B3. Section header.
         // Case A: "A PARDO GRAU, Cecilia" — letter + professor on same line
         // Case B: standalone "B" alone — letter on its own line, professor follows
-
         // Let's make the regex more permissive for section names. It can start with up to 3 upper case alphanumeric chars.
         // REMOVED 'i' FLAG: Sections MUST be strictly upper-case. This prevents cases where "Del" is interpreted as "DEL"
         const sectionMatchFull = line.match(/^([A-Z0-9]{1,3})\s+(.+)/);
         const sectionMatchLone = line.match(/^([A-Z0-9]{1,3})$/);
-
         // Determine if this is a lone section letter
         const isLoneSection = !!sectionMatchLone &&
             !NON_SECTION_TOKENS.has(sectionMatchLone[1].toUpperCase());
-
-        // Determine if this is a section+text line. 
-        // IMPORTANT: Must NOT be an aula fragment like "A -PEND" mistakenly parsed as Section A, Professor "-PEND"
+        // Determine if this is a section+text line
         const isFullSection = !!sectionMatchFull &&
             !NON_SECTION_TOKENS.has(sectionMatchFull[1].toUpperCase()) &&
-            !hasTime(sectionMatchFull[2].trim().split(/\s+/)[0]) &&
-            !/^\s*-(PEND|VIR|VIRT|VIRTUA|AUD|\d{3})/i.test(sectionMatchFull[2]);
-
+            !hasTime(sectionMatchFull[2].trim().split(/\s+/)[0]); // Only ignore if the VERY FIRST word is a time, otherwise it might be Section I then a schedule.
         if (isLoneSection) {
             // Just a letter like "B" — expect professor name on next line(s)
             flushProfessorBuffer();
-            currentSeccion = sectionMatchLone![1].toUpperCase();
+            currentSeccion = sectionMatchLone[1].toUpperCase();
             retrofillOrphanSchedules(currentCodigo, currentSeccion);
             currentProfesor = 'Sin profesor';
             professorBuffer = '';
             expectingProfessor = true;
             continue;
         }
-
         if (isFullSection) {
             flushProfessorBuffer();
             expectingProfessor = false;
-            currentSeccion = sectionMatchFull![1].toUpperCase();
+            currentSeccion = sectionMatchFull[1].toUpperCase();
             retrofillOrphanSchedules(currentCodigo, currentSeccion);
-            const rest = sectionMatchFull![2].trim();
-
+            const rest = sectionMatchFull[2].trim();
             // Check: does the rest begin with a TIPO (inline schedule)?
             const firstOfRest = rest.split(/\s+/)[0].toUpperCase();
             if (TIPOS.has(firstOfRest)) {
@@ -433,11 +364,11 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                     // Push it back onto the queue to be processed by B1
                     queue.unshift(rest);
                 }
-            } else {
+            }
+            else {
                 // Professor name starts here; may continue on next line(s)
                 professorBuffer = cleanProfName(rest);
                 expectingProfessor = true;
-
                 // CRITICAL FIX: If the line ALSO contains a schedule (e.g., squashed on the same line after the professor),
                 // we must parse that schedule. `cleanProfName` removed it from the professor name, but we need to extract it.
                 const tipoMatch = rest.match(/\b(CLASE|FINAL|PARCIAL|PRÁCTICA|PRACTICA|LABORATORIO|TALLER)\b/i);
@@ -448,7 +379,6 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             }
             continue;
         }
-
         if (currentSeccion && !hasTime(line) && !TIPOS.has(firstToken) && !DIAS.has(firstToken)) {
             // Append to professorBuffer if it looks like a name fragment
             if (/^[A-ZÁÉÍÓÚÑÜ]/.test(line) && !NOISE_RE.some(re => re.test(line))) {
@@ -456,7 +386,8 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                     // After a lone-letter or mid-name continuation
                     if (professorBuffer) {
                         professorBuffer += ' ' + cleanProfName(line);
-                    } else {
+                    }
+                    else {
                         professorBuffer = cleanProfName(line);
                     }
                 }
@@ -464,7 +395,6 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             }
             continue;
         }
-
         // B5. Inline schedule mixed with professor name or other text
         // (e.g. "PEREZ BARROS, Juan CLASE MIE 10:30 12:30 J-503")
         if (currentSeccion && hasTime(line) && !TIPOS.has(firstToken) && !DIAS.has(firstToken)) {
@@ -472,12 +402,12 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             if (tipoMatch) {
                 const schedPart = line.slice(tipoMatch.index);
                 const profPart = line.slice(0, tipoMatch.index).trim();
-
                 if (profPart && expectingProfessor) {
-                    if (professorBuffer) professorBuffer += ' ' + cleanProfName(profPart);
-                    else professorBuffer = cleanProfName(profPart);
+                    if (professorBuffer)
+                        professorBuffer += ' ' + cleanProfName(profPart);
+                    else
+                        professorBuffer = cleanProfName(profPart);
                 }
-
                 // Instead of processing manually here, push it into the queue!
                 // It will be picked up by B1.
                 queue.unshift(schedPart);
@@ -485,23 +415,17 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             continue;
         }
     }
-
     flushProfessorBuffer();
-
-    const errors: string[] = [];
+    const errors = [];
     if (ofertas.length === 0) {
-        errors.push(
-            'No se encontraron horarios. Asegúrate de pegar el texto completo (incluyendo los códigos de 6 dígitos y los horarios).'
-        );
+        errors.push('No se encontraron horarios. Asegúrate de pegar el texto completo (incluyendo los códigos de 6 dígitos y los horarios).');
     }
     return { periodo, ofertas, errors };
-
     // ── Helper: flush accumulated professor name to current section ──────────
     function flushProfessorBuffer() {
         if (professorBuffer) {
             currentProfesor = professorBuffer;
             professorBuffer = '';
-
             // Retro-fill professor for existing ofertas in the current section
             for (const oferta of ofertas) {
                 if (oferta.codigo_curso === currentCodigo &&
@@ -512,8 +436,7 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             }
         }
     }
-
-    function retrofillOrphanSchedules(codigo: string, seccion: string) {
+    function retrofillOrphanSchedules(codigo, seccion) {
         for (const oferta of ofertas) {
             if (oferta.codigo_curso === codigo && oferta.seccion === '?') {
                 oferta.seccion = seccion;
@@ -522,42 +445,36 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
         }
     }
 }
-
 // ────────────────────────────────────────────────────────────────────────────────
 //  Utility helpers
 // ────────────────────────────────────────────────────────────────────────────────
-
-function hasTime(line: string): boolean {
+function hasTime(line) {
     return /\b\d{1,2}:\d{2}\b/.test(line);
 }
-
 /** Returns all [start, end] time pairs found in a line */
-function extractTimes(line: string): [string, string][] {
+function extractTimes(line) {
     const matches = Array.from(line.matchAll(/\b(\d{1,2}:\d{2})\b/g));
-    const result: [string, string][] = [];
+    const result = [];
     for (let i = 0; i + 1 < matches.length; i += 2) {
         result.push([matches[i][1], matches[i + 1][1]]);
     }
     return result;
 }
-
 /** Extracts the first day keyword from a line */
-function extractDay(line: string): string {
+function extractDay(line) {
     for (const token of line.split(/\s+/)) {
-        if (DIAS.has(token.toUpperCase())) return token.toUpperCase();
+        if (DIAS.has(token.toUpperCase()))
+            return token.toUpperCase();
     }
     return 'LUN';
 }
-
 /** Extracts classroom code (e.g. A-603, X -302, Virtual-Virtua) after the times */
-function extractAulaWithIndex(lineTokensStr: string, timeMatch: string): { aula: string, endIndex: number } {
+function extractAulaWithIndex(lineTokensStr, timeMatch) {
     const afterTime = lineTokensStr.slice(lineTokensStr.indexOf(timeMatch) + timeMatch.length);
     const words = afterTime.split(/\s+/).filter(Boolean);
-
     // Check next few tokens for typical class markers: "30 B-505" (30 cupos, aula B-505), "A-PEND", "VIRTUAL"
     let aula = 'POR ASIGNAR';
     let endWordIndex = 0;
-
     for (let i = 0; i < words.length; i++) {
         const w = words[i].toUpperCase();
         if (w.match(/^[A-Z]-\d{3}$/)) { // like B-505, J-603
@@ -571,7 +488,6 @@ function extractAulaWithIndex(lineTokensStr: string, timeMatch: string): { aula:
             break;
         }
     }
-
     // Now calculate where this aula actually ends in the ORIGINAL string so we can chop it!
     let endIndex = lineTokensStr.length;
     if (aula !== 'POR ASIGNAR') {
@@ -579,7 +495,8 @@ function extractAulaWithIndex(lineTokensStr: string, timeMatch: string): { aula:
         if (originalAulaMatchIndex !== -1) {
             endIndex = originalAulaMatchIndex + aula.length;
         }
-    } else {
+    }
+    else {
         // If we didn't find an aula, but we know there's text (and maybe a cupos number like "30"), let's just 
         // chop off the string immediately after the cupos number if it exists.
         // It usually follows: TIME TIME CUPOS AULA. e.g "17:30 19:20 30 B-505". If B-505 is missing: "17:30 19:20 30"
@@ -591,19 +508,19 @@ function extractAulaWithIndex(lineTokensStr: string, timeMatch: string): { aula:
             }
         }
     }
-
     return { aula, endIndex };
 }
-
 /** Normalize tipo names */
-function normalizeTipo(raw: string): string {
+function normalizeTipo(raw) {
     const u = raw.toUpperCase();
-    if (u === 'PRACTICA' || u === 'PRÁCTICA') return 'PRACTICA';
-    if (u === 'PRACDIRIGI') return 'PRACTICA';
-    if (u === 'PRACCALIFI') return 'PRACCALIFI'; // should already be skipped
+    if (u === 'PRACTICA' || u === 'PRÁCTICA')
+        return 'PRACTICA';
+    if (u === 'PRACDIRIGI')
+        return 'PRACTICA';
+    if (u === 'PRACCALIFI')
+        return 'PRACCALIFI'; // should already be skipped
     return u;
 }
-
 const PROF_NOISE = [
     /Dictado en Ingl[ée]s\.?/ig,
     /DOBLE GRADO\.?/ig,
@@ -629,13 +546,12 @@ const PROF_NOISE = [
     /Las asesor[íi]as se realizar[áa]n presencialmente.*?s[áa]bados\.?/ig,
     /Clases te[óo]ricas presenciales.*?clases virtuales\..*?Presencial/ig
 ];
-
 /** Clean up a raw professor name string */
-function cleanProfName(raw: string): string {
+function cleanProfName(raw) {
     // 1. Cut at first TIPO keyword because everything after is the schedule part
     const tipoIdx = raw.search(/\b(CLASE|FINAL|PARCIAL|PRÁCTICA|PRACTICA|LABORATORIO|TALLER)\b/i);
-    if (tipoIdx > 0) raw = raw.slice(0, tipoIdx);
-
+    if (tipoIdx > 0)
+        raw = raw.slice(0, tipoIdx);
     // 2. Iteratively strip noise phrases until stable
     let prev = "";
     while (raw !== prev) {
@@ -648,14 +564,12 @@ function cleanProfName(raw: string): string {
         // Remove dangling word "Viernes" if left at start
         raw = raw.replace(/^(Lunes|Martes|Mi[ée]rcoles|Jueves|Viernes|S[áa]bado|Domingo)\s*/i, ' ').trim();
     }
-
     // 3. Last fallback: if there is still an actual time left in the string, cut it
     const timeIdx = raw.search(/\b\d{1,2}:\d{2}\b/);
-    if (timeIdx > 0) raw = raw.slice(0, timeIdx);
-
+    if (timeIdx > 0)
+        raw = raw.slice(0, timeIdx);
     // 4. Remove trailing numbers, tabs, extra whitespace
     return raw.replace(/\s+\d+\s*$/, '').replace(/\t/g, ' ').replace(/\s+/g, ' ').trim();
 }
-
 // Backward compat
-export const parseOfertaPDF = parseOfertaFile;
+exports.parseOfertaPDF = parseOfertaFile;
