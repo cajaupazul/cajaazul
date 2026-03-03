@@ -530,16 +530,57 @@ function normalizeTipo(raw: string): string {
     return u;
 }
 
+const PROF_NOISE = [
+    /Dictado en Ingl[ée]s\.?/ig,
+    /DOBLE GRADO\.?/ig,
+    /Virtual(?:\s*\/?\s*Presencial)?\.?/ig,
+    /Pr[áa]cticas? quincenales?\.?/ig,
+    /Pr[áa]cticas? (?:quincenal )?(?:semana )?(?:par|impar):.*?\./ig,
+    /La sesiones de los d[ií]as martes son virtuales\.?/ig,
+    /Clases teóricas presenciales.*?\./ig,
+    /Fechas de clases pr[áa]cticas.*?\sasincr[óo]nicas/ig,
+    /Del lunes .*? pm/ig,
+    /Presentaci[óo]n final:.*?pm/ig,
+    /Curso Faculty Led Program/ig,
+    /Clases previas:.*?pm/ig,
+    /Revisar fechas en web ORI\.?/ig,
+    /Curso de la Semana Internacional\.?/ig,
+    /Clases del \d{2}\/\d{2}\/\d{4} al \d{2}\/\d{2}\/\d{4}\.?/ig,
+    /Codictado\..*?-\s*Prof\.\s*[A-Za-zÁÉÍÓÚÑáéíóúñ\s]+/ig,
+    /Las primeras tres semanas.*?Virtual \/ Presencial/ig,
+    /Las sesiones de clase y las.*?manera virtual\./ig,
+    /La primera semana de clases.*?d[ií]as mi[ée]rcoles/ig,
+    /La primera semana de clases.*?d[ií]as viernes\.?/ig,
+    /Las asesor[íi]as se realizar[áa]n virtualmente\..*?Presencial/ig,
+    /Las asesor[íi]as se realizar[áa]n presencialmente.*?s[áa]bados\.?/ig,
+    /Clases te[óo]ricas presenciales.*?clases virtuales\..*?Presencial/ig
+];
+
 /** Clean up a raw professor name string */
 function cleanProfName(raw: string): string {
-    // Cut at first TIPO keyword
+    // 1. Cut at first TIPO keyword because everything after is the schedule part
     const tipoIdx = raw.search(/\b(CLASE|FINAL|PARCIAL|PRÁCTICA|PRACTICA|LABORATORIO|TALLER)\b/i);
     if (tipoIdx > 0) raw = raw.slice(0, tipoIdx);
-    // Cut at first time
+
+    // 2. Iteratively strip noise phrases until stable
+    let prev = "";
+    while (raw !== prev) {
+        prev = raw;
+        for (const re of PROF_NOISE) {
+            raw = raw.replace(re, ' ').trim();
+        }
+        // Remove dangling standalone times like "09:30 a 11:20."
+        raw = raw.replace(/^\d{1,2}:\d{2}\s+a\s+\d{1,2}:\d{2}\.?\s*/i, ' ').trim();
+        // Remove dangling word "Viernes" if left at start
+        raw = raw.replace(/^(Lunes|Martes|Mi[ée]rcoles|Jueves|Viernes|S[áa]bado|Domingo)\s*/i, ' ').trim();
+    }
+
+    // 3. Last fallback: if there is still an actual time left in the string, cut it
     const timeIdx = raw.search(/\b\d{1,2}:\d{2}\b/);
     if (timeIdx > 0) raw = raw.slice(0, timeIdx);
-    // Remove trailing numbers, tabs, extra whitespace
-    return raw.replace(/\s+\d+\s*$/, '').replace(/\t/g, ' ').trim();
+
+    // 4. Remove trailing numbers, tabs, extra whitespace
+    return raw.replace(/\s+\d+\s*$/, '').replace(/\t/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 // Backward compat
