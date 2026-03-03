@@ -47,7 +47,8 @@ const NON_SECTION_TOKENS = new Set([
     'VIRTUAL', 'PRESENCIAL', 'LUNES', 'MARTES', 'MIERCOLES',
     'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO', 'CURSOS', 'ACADÉMICOS',
     'CREDITOS', 'ACA', 'CURSADO', 'DICTADO', 'INGLÉS', 'INGLES',
-    'DOBLE', 'GRADO', 'CLASES',
+    'DOBLE', 'GRADO', 'CLASES', 'DE', 'DEL', 'LA', 'LAS', 'LOS',
+    'SAN', 'MAC', 'VON', 'VAN', 'Y', 'EL', 'MC'
 ]);
 
 // Matches "09:30" or "9:30"
@@ -346,8 +347,9 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
         // Case B: standalone "B" alone — letter on its own line, professor follows
 
         // Let's make the regex more permissive for section names. It can start with up to 3 upper case alphanumeric chars.
-        const sectionMatchFull = line.match(/^([A-Z0-9]{1,3})\s+(.+)/i);
-        const sectionMatchLone = line.match(/^([A-Z0-9]{1,3})$/i);
+        // REMOVED 'i' FLAG: Sections MUST be strictly upper-case. This prevents cases where "Del" is interpreted as "DEL"
+        const sectionMatchFull = line.match(/^([A-Z0-9]{1,3})\s+(.+)/);
+        const sectionMatchLone = line.match(/^([A-Z0-9]{1,3})$/);
 
         // Determine if this is a lone section letter
         const isLoneSection = !!sectionMatchLone &&
