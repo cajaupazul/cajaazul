@@ -240,7 +240,13 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
         if (TIPOS.has(firstToken)) {
             flushProfessorBuffer();
             expectingProfessor = false;
-            if (!currentSeccion) continue;  // no section context yet
+
+            if (!currentSeccion) {
+                // Allow orphan schedules to be parsed temporarily under '?'
+                currentSeccion = '?';
+                currentProfesor = 'Sin profesor';
+            }
+
             if (firstToken === 'PRACCALIFI') continue;  // always skip
 
             const tipo = normalizeTipo(firstToken);
@@ -356,6 +362,7 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             // Just a letter like "B" — expect professor name on next line(s)
             flushProfessorBuffer();
             currentSeccion = sectionMatchLone![1].toUpperCase();
+            retrofillOrphanSchedules(currentCodigo, currentSeccion);
             currentProfesor = 'Sin profesor';
             professorBuffer = '';
             expectingProfessor = true;
@@ -366,6 +373,7 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
             flushProfessorBuffer();
             expectingProfessor = false;
             currentSeccion = sectionMatchFull![1].toUpperCase();
+            retrofillOrphanSchedules(currentCodigo, currentSeccion);
             const rest = sectionMatchFull![2].trim();
 
             // Check: does the rest begin with a TIPO (inline schedule)?
@@ -445,6 +453,24 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
         if (professorBuffer) {
             currentProfesor = professorBuffer;
             professorBuffer = '';
+
+            // Retro-fill professor for existing ofertas in the current section
+            for (const oferta of ofertas) {
+                if (oferta.codigo_curso === currentCodigo &&
+                    oferta.seccion === currentSeccion &&
+                    (!oferta.profesor || oferta.profesor === 'Sin profesor' || oferta.profesor.trim() === '')) {
+                    oferta.profesor = currentProfesor;
+                }
+            }
+        }
+    }
+
+    function retrofillOrphanSchedules(codigo: string, seccion: string) {
+        for (const oferta of ofertas) {
+            if (oferta.codigo_curso === codigo && oferta.seccion === '?') {
+                oferta.seccion = seccion;
+                // Professor retrofilling will be handled by flushProfessorBuffer
+            }
         }
     }
 }
