@@ -48,7 +48,7 @@ const NON_SECTION_TOKENS = new Set([
     'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO', 'CURSOS', 'ACADÉMICOS',
     'CREDITOS', 'ACA', 'CURSADO', 'DICTADO', 'INGLÉS', 'INGLES',
     'DOBLE', 'GRADO', 'CLASES', 'DE', 'DEL', 'LA', 'LAS', 'LOS',
-    'SAN', 'MAC', 'VON', 'VAN', 'Y', 'EL', 'MC'
+    'SAN', 'MAC', 'VON', 'VAN', 'EL', 'MC'
 ]);
 
 // Matches "09:30" or "9:30"
@@ -145,11 +145,40 @@ async function parseFromWord(file: File): Promise<{ periodo: string; ofertas: Pa
 function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOferta[]; errors: string[] } {
 
     // ── 1. Normalise: deduplicate identical consecutive lines ──────────────────
-    const lines: string[] = [];
+    let lines: string[] = [];
     for (let i = 0; i < rawLines.length; i++) {
-        const t = rawLines[i];
-        if (i === 0 || t !== rawLines[i - 1]) lines.push(t);
+        const t = rawLines[i].trim();
+        if (!t) continue;
+        if (lines.length === 0 || t !== lines[lines.length - 1]) lines.push(t);
     }
+
+    // ── 1.5. Heal fractured aulas ──────────────────────────────────────────────
+    // Aulas like A-PEND or B-305 sometimes get split across 3 lines: 
+    // "FINAL MIE 16:30 18:30 30" -> "A" -> "-PEND"
+    const healedLines: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (/^-(PEND|VIR|VIRT|VIRTUA|AUD|\d{3})/i.test(line) && healedLines.length >= 2) {
+            const prevLine = healedLines[healedLines.length - 1];
+            const prevPrevLine = healedLines[healedLines.length - 2];
+
+            // Check if prev is just 1-3 uppercase letters
+            if (/^[A-Z]{1,3}$/.test(prevLine)) {
+                // Check if prevPrev contains scheduling info
+                const firstToken = prevPrevLine.split(/\s+/)[0].toUpperCase();
+                if (TIPOS.has(firstToken) || hasTime(prevPrevLine)) {
+                    healedLines.pop(); // Remove "A"
+                    const base = healedLines.pop(); // Remove "FINAL..."
+                    healedLines.push(`${base} ${prevLine}${line}`);
+                    continue;
+                }
+            }
+        }
+        healedLines.push(line);
+    }
+
+    // overwrite lines with healedLines
+    lines = healedLines;
 
     // ── 2. Detect periodo ──────────────────────────────────────────────────────
     let periodo = '';
