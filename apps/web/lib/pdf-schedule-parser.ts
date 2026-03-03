@@ -177,8 +177,11 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
     const ofertas: ParsedOferta[] = [];
     const blocksSeen = new Set<string>();      // prevent duplicates
 
-    // ── 4. Line-by-line ────────────────────────────────────────────────────────
-    for (const rawLine of lines) {
+    // ── 4. Line-by-line (Queue-based) ────────────────────────────────────────
+    const queue = [...lines];
+
+    while (queue.length > 0) {
+        const rawLine = queue.shift()!;
         const line = rawLine.trim();
         if (!line) continue;
 
@@ -195,14 +198,28 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                 currentCreditos = 0; // Reset for new course!
                 let namePart = courseMatch[2].trim();
 
-                // 1. Strip PREREQUISITO suffix FIRST, so it doesn't block the credit regex at the end of the line
+                // 1. Strip PREREQUISITO suffix FIRST, so it doesn't block the credit regex
                 namePart = namePart.replace(/\s+PREREQUISITO[:\s].*/i, '').trim();
 
-                // 2. Extract credits from end: "4,00" or "4.00"
-                const creditMatch = namePart.match(/(\d+[.,]\d+)\s*$/);
+                // 2. Extract credits anywhere in the remaining string
+                // Often: "Nombre del curso 4,00 A PROFESOR..."
+                const creditMatch = namePart.match(/\s+(\d+[.,]\d+)\s*/);
                 if (creditMatch) {
                     currentCreditos = parseFloat(creditMatch[1].replace(',', '.'));
-                    namePart = namePart.slice(0, creditMatch.index).trim();
+                    const creditIndex = creditMatch.index!;
+                    const creditLength = creditMatch[0].length;
+
+                    // The actual course name is whatever came before the credit
+                    const beforeCredit = namePart.slice(0, creditIndex).trim();
+                    // Whatever came after the credit is likely a section header that got squashed!
+                    const afterCredit = namePart.slice(creditIndex + creditLength).trim();
+
+                    namePart = beforeCredit;
+
+                    if (afterCredit) {
+                        // Re-inject the rest of the line to be parsed next iteration
+                        queue.unshift(afterCredit);
+                    }
                 }
 
                 currentNombre = namePart;
@@ -240,8 +257,8 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                 const [h1, m1] = start.split(':').map(Number);
                 const [h2, m2] = end.split(':').map(Number);
                 const duracion = (h2 * 60 + m2) - (h1 * 60 + m1);
-                const aula = extractAula(line, start);
 
+                const { aula, endIndex } = extractAulaWithIndex(line, start);
                 ofertas.push({
                     codigo_curso: currentCodigo,
                     nombre_curso: currentNombre,
@@ -256,6 +273,16 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                     cupos: 0,
                     aula,
                 });
+
+                // If there's garbage left over after the aula (like another squashed section)
+                if (endIndex < line.length) {
+                    const leftover = line.slice(endIndex).trim();
+                    if (leftover && !leftover.match(/^\d+$/)) {
+                        // Very common squashed case: "I BELTRÁN PUERTA" -> section I
+                        // Or even just "I" (lone section letter)
+                        queue.unshift(leftover);
+                    }
+                }
             }
             continue;
         }
@@ -281,7 +308,8 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                 blocksSeen.add(key);
                 const [h1, m1] = start.split(':').map(Number);
                 const [h2, m2] = end.split(':').map(Number);
-                const aula = extractAula(line, start);
+
+                const { aula, endIndex } = extractAulaWithIndex(line, start);
                 ofertas.push({
                     codigo_curso: currentCodigo,
                     nombre_curso: currentNombre,
@@ -296,6 +324,13 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                     cupos: 0,
                     aula,
                 });
+
+                if (endIndex < line.length) {
+                    const leftover = line.slice(endIndex).trim();
+                    if (leftover && !leftover.match(/^\d+$/)) {
+                        queue.unshift(leftover);
+                    }
+                }
             }
             continue;
         }
@@ -303,8 +338,10 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
         // B3. Section header.
         // Case A: "A PARDO GRAU, Cecilia" — letter + professor on same line
         // Case B: standalone "B" alone — letter on its own line, professor follows
-        const sectionMatchFull = line.match(/^([A-Z0-9]{1,3})\s+(.+)/);
-        const sectionMatchLone = line.match(/^([A-Z0-9]{1,3})$/);
+
+        // Let's make the regex more permissive for section names. It can start with up to 3 upper case alphanumeric chars.
+        const sectionMatchFull = line.match(/^([A-Z0-9]{1,3})\s+(.+)/i);
+        const sectionMatchLone = line.match(/^([A-Z0-9]{1,3})$/i);
 
         // Determine if this is a lone section letter
         const isLoneSection = !!sectionMatchLone &&
@@ -313,7 +350,7 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
         // Determine if this is a section+text line
         const isFullSection = !!sectionMatchFull &&
             !NON_SECTION_TOKENS.has(sectionMatchFull[1].toUpperCase()) &&
-            !hasTime(line);
+            !hasTime(sectionMatchFull[2].trim().split(/\s+/)[0]); // Only ignore if the VERY FIRST word is a time, otherwise it might be Section I then a schedule.
 
         if (isLoneSection) {
             // Just a letter like "B" — expect professor name on next line(s)
@@ -337,31 +374,8 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                 // Schedule is on the same line as section letter
                 currentProfesor = 'Sin profesor';
                 if (firstOfRest !== 'PRACCALIFI') {
-                    const tipo = normalizeTipo(firstOfRest);
-                    const times = extractTimes(rest);
-                    const dia = extractDay(rest);
-                    for (const [start, end] of times) {
-                        const key = `${currentCodigo}-${currentSeccion}-${tipo}-${dia}-${start}-${end}`;
-                        if (blocksSeen.has(key)) continue;
-                        blocksSeen.add(key);
-                        const [h1, m1] = start.split(':').map(Number);
-                        const [h2, m2] = end.split(':').map(Number);
-                        const aula = extractAula(rest, start);
-                        ofertas.push({
-                            codigo_curso: currentCodigo,
-                            nombre_curso: currentNombre,
-                            seccion: currentSeccion,
-                            profesor: currentProfesor,
-                            creditos: currentCreditos,
-                            tipo,
-                            dia,
-                            hora_inicio: start,
-                            hora_fin: end,
-                            duracion: Math.max(0, (h2 * 60 + m2) - (h1 * 60 + m1)),
-                            cupos: 0,
-                            aula,
-                        });
-                    }
+                    // Push it back onto the queue to be processed by B1
+                    queue.unshift(rest);
                 }
             } else {
                 // Professor name starts here; may continue on next line(s)
@@ -373,35 +387,7 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                 const tipoMatch = rest.match(/\b(CLASE|FINAL|PARCIAL|PRÁCTICA|PRACTICA|LABORATORIO|TALLER)\b/i);
                 if (tipoMatch && hasTime(rest)) {
                     const schedPart = rest.slice(tipoMatch.index);
-                    const firstSchedToken = schedPart.split(/\s+/)[0].toUpperCase();
-                    if (TIPOS.has(firstSchedToken) && firstSchedToken !== 'PRACCALIFI') {
-                        const tipo = normalizeTipo(firstSchedToken);
-                        const times = extractTimes(schedPart);
-                        const dia = extractDay(schedPart);
-                        for (const [start, end] of times) {
-                            const key = `${currentCodigo}-${currentSeccion}-${tipo}-${dia}-${start}-${end}`;
-                            if (!blocksSeen.has(key)) {
-                                blocksSeen.add(key);
-                                const [h1, m1] = start.split(':').map(Number);
-                                const [h2, m2] = end.split(':').map(Number);
-                                const aula = extractAula(schedPart, start);
-                                ofertas.push({
-                                    codigo_curso: currentCodigo,
-                                    nombre_curso: currentNombre,
-                                    seccion: currentSeccion,
-                                    profesor: professorBuffer, // It's clean now
-                                    creditos: currentCreditos,
-                                    tipo,
-                                    dia,
-                                    hora_inicio: start,
-                                    hora_fin: end,
-                                    duracion: Math.max(0, (h2 * 60 + m2) - (h1 * 60 + m1)),
-                                    cupos: 0,
-                                    aula,
-                                });
-                            }
-                        }
-                    }
+                    queue.unshift(schedPart);
                 }
             }
             continue;
@@ -436,35 +422,9 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
                     else professorBuffer = cleanProfName(profPart);
                 }
 
-                const firstSchedToken = schedPart.split(/\s+/)[0].toUpperCase();
-                if (TIPOS.has(firstSchedToken) && firstSchedToken !== 'PRACCALIFI') {
-                    const tipo = normalizeTipo(firstSchedToken);
-                    const times = extractTimes(schedPart);
-                    const dia = extractDay(schedPart);
-                    for (const [start, end] of times) {
-                        const key = `${currentCodigo}-${currentSeccion}-${tipo}-${dia}-${start}-${end}`;
-                        if (!blocksSeen.has(key)) {
-                            blocksSeen.add(key);
-                            const [h1, m1] = start.split(':').map(Number);
-                            const [h2, m2] = end.split(':').map(Number);
-                            const aula = extractAula(schedPart, start);
-                            ofertas.push({
-                                codigo_curso: currentCodigo,
-                                nombre_curso: currentNombre,
-                                seccion: currentSeccion,
-                                profesor: currentProfesor || professorBuffer || 'Sin profesor',
-                                creditos: currentCreditos,
-                                tipo,
-                                dia,
-                                hora_inicio: start,
-                                hora_fin: end,
-                                duracion: Math.max(0, (h2 * 60 + m2) - (h1 * 60 + m1)),
-                                cupos: 0,
-                                aula,
-                            });
-                        }
-                    }
-                }
+                // Instead of processing manually here, push it into the queue!
+                // It will be picked up by B1.
+                queue.unshift(schedPart);
             }
             continue;
         }
@@ -516,14 +476,49 @@ function extractDay(line: string): string {
 }
 
 /** Extracts classroom code (e.g. A-603, X -302, Virtual-Virtua) after the times */
-function extractAula(line: string, afterTime: string): string {
-    const idx = line.lastIndexOf(afterTime);
-    if (idx < 0) return 'PEND';
-    const rest = line.slice(idx);
-    // Match pattern like: J-603 | A-PEND | X -302 | Virtual-Virtua | B-306
-    const aulaMatch = rest.match(/\b([A-Z][a-zA-Z]?\s*-\s*(?:\d{3}|PEND|Virtua|[A-Z]{3,}))\b/);
-    if (aulaMatch) return aulaMatch[1].replace(/\s+/g, '').toUpperCase();
-    return 'PEND';
+function extractAulaWithIndex(lineTokensStr: string, timeMatch: string): { aula: string, endIndex: number } {
+    const afterTime = lineTokensStr.slice(lineTokensStr.indexOf(timeMatch) + timeMatch.length);
+    const words = afterTime.split(/\s+/).filter(Boolean);
+
+    // Check next few tokens for typical class markers: "30 B-505" (30 cupos, aula B-505), "A-PEND", "VIRTUAL"
+    let aula = 'POR ASIGNAR';
+    let endWordIndex = 0;
+
+    for (let i = 0; i < words.length; i++) {
+        const w = words[i].toUpperCase();
+        if (w.match(/^[A-Z]-\d{3}$/)) { // like B-505, J-603
+            aula = w;
+            endWordIndex = i;
+            break;
+        }
+        if (w === 'A-PEND' || w === 'VIRTUAL' || w === 'C-CRAI' || w === 'J-AUD' || w === 'POR ASIGNAR') {
+            aula = w;
+            endWordIndex = i;
+            break;
+        }
+    }
+
+    // Now calculate where this aula actually ends in the ORIGINAL string so we can chop it!
+    let endIndex = lineTokensStr.length;
+    if (aula !== 'POR ASIGNAR') {
+        const originalAulaMatchIndex = lineTokensStr.indexOf(aula, lineTokensStr.indexOf(timeMatch));
+        if (originalAulaMatchIndex !== -1) {
+            endIndex = originalAulaMatchIndex + aula.length;
+        }
+    } else {
+        // If we didn't find an aula, but we know there's text (and maybe a cupos number like "30"), let's just 
+        // chop off the string immediately after the cupos number if it exists.
+        // It usually follows: TIME TIME CUPOS AULA. e.g "17:30 19:20 30 B-505". If B-505 is missing: "17:30 19:20 30"
+        if (words.length > 0 && /^\d+$/.test(words[0])) {
+            const cuposNumber = words[0];
+            const originalCuposMatchIndex = lineTokensStr.indexOf(cuposNumber, lineTokensStr.indexOf(timeMatch));
+            if (originalCuposMatchIndex !== -1) {
+                endIndex = originalCuposMatchIndex + cuposNumber.length;
+            }
+        }
+    }
+
+    return { aula, endIndex };
 }
 
 /** Normalize tipo names */
