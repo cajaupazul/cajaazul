@@ -54,8 +54,8 @@ const NON_SECTION_TOKENS = new Set([
 // Matches "09:30" or "9:30"
 const TIME_RE = /\b(\d{1,2}:\d{2})\b/g;
 
-// Match a course header like "120266 - Nombre del curso 4,00" or "1F0162 - Análisis Financiero"
-const COURSE_HEADER_RE = /^([A-Z0-9]{6})\s*[-–]\s*(.+)/i;
+// Match a course header like "120266 - Nombre del curso 4,00" or "1F0162 - Análisis Financiero" or "1MN003 Gestión"
+const COURSE_HEADER_RE = /^([A-Z0-9]{4,8})\s*(?:[-–]\s*)?(.+)/i;
 
 // Noise lines to ignore entirely (but NOT reset course context)
 const NOISE_RE = [
@@ -236,43 +236,47 @@ function parseLines(rawLinestring[]) periodotring; ofertasarsedOferta[]; errorst
         // ── A. Course header ──────────────────────────────────────────────────
         const courseMatch = line.match(COURSE_HEADER_RE);
         if (courseMatch) {
-            const codigo = courseMatch[1];
-            if (codigo !== currentCodigo) {
-                flushProfessorBuffer();
-                currentCodigo = codigo;
-                currentCreditos = 0; // Reset for new course!
-                let namePart = courseMatch[2].trim();
+            const codigo = courseMatch[1].toUpperCase();
 
-                // 1. Strip PREREQUISITO suffix FIRST, so it doesn't block the credit regex
-                namePart = namePart.replace(/\s+PREREQUISITO[:\s].*/i, '').trim();
+            // Ensure the captured code is not a reserved word (like "CLASE") and contains at least one digit
+            if (!NON_SECTION_TOKENS.has(codigo) && /\d/.test(codigo)) {
+                if (codigo !== currentCodigo) {
+                    flushProfessorBuffer();
+                    currentCodigo = codigo;
+                    currentCreditos = 0; // Reset for new course!
+                    let namePart = courseMatch[2].trim();
 
-                // 2. Extract credits anywhere in the remaining string
-                // Often: "Nombre del curso 4,00 A PROFESOR..."
-                const creditMatch = namePart.match(/\s+(\d+[.,]\d+)\s*/);
-                if (creditMatch) {
-                    currentCreditos = parseFloat(creditMatch[1].replace(',', '.'));
-                    const creditIndex = creditMatch.index!;
-                    const creditLength = creditMatch[0].length;
+                    // 1. Strip PREREQUISITO suffix FIRST, so it doesn't block the credit regex
+                    namePart = namePart.replace(/\s+PREREQUISITO[:\s].*/i, '').trim();
 
-                    // The actual course name is whatever came before the credit
-                    const beforeCredit = namePart.slice(0, creditIndex).trim();
-                    // Whatever came after the credit is likely a section header that got squashed!
-                    const afterCredit = namePart.slice(creditIndex + creditLength).trim();
+                    // 2. Extract credits anywhere in the remaining string
+                    // Often: "Nombre del curso 4,00 A PROFESOR..."
+                    const creditMatch = namePart.match(/\s+(\d+[.,]\d+)\s*/);
+                    if (creditMatch) {
+                        currentCreditos = parseFloat(creditMatch[1].replace(',', '.'));
+                        const creditIndex = creditMatch.index!;
+                        const creditLength = creditMatch[0].length;
 
-                    namePart = beforeCredit;
+                        // The actual course name is whatever came before the credit
+                        const beforeCredit = namePart.slice(0, creditIndex).trim();
+                        // Whatever came after the credit is likely a section header that got squashed!
+                        const afterCredit = namePart.slice(creditIndex + creditLength).trim();
 
-                    if (afterCredit) {
-                        // Re-inject the rest of the line to be parsed next iteration
-                        queue.unshift(afterCredit);
+                        namePart = beforeCredit;
+
+                        if (afterCredit) {
+                            // Re-inject the rest of the line to be parsed next iteration
+                            queue.unshift(afterCredit);
+                        }
                     }
-                }
 
-                currentNombre = namePart;
-                currentSeccion = '';
-                currentProfesor = '';
-                professorBuffer = '';
+                    currentNombre = namePart;
+                    currentSeccion = '';
+                    currentProfesor = '';
+                    professorBuffer = '';
+                }
+                continue;
             }
-            continue;
         }
 
         if (!currentCodigo) continue;
@@ -658,7 +662,7 @@ function cleanProfName(rawtring)tring {
 }
 
 // Backward compat
-export const parseOfertaPDF = parseOfertaFile;
+
 
 
 module.exports = { parseLines };

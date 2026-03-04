@@ -240,6 +240,19 @@ function parseLines(rawLines: string[]): { periodo: string; ofertas: ParsedOfert
 
             // Ensure the captured code is not a reserved word (like "CLASE") and contains at least one digit
             if (!NON_SECTION_TOKENS.has(codigo) && /\d/.test(codigo)) {
+
+                // IMPORTANT: Prevent Prerequisite/Correquisite fragments from hijacking the parser!
+                // If a line is a real Excel course row, it will almost always have a hyphen ("120266 - Course") 
+                // OR it will have a credit amount ("EJEM010 Strategy 4,00"). 
+                // If a line lacks both, it is just a wrapped text fragment (like "142277 Analítica de Datos...)").
+                const hasHyphen = line.includes('-') || line.includes('–');
+                const hasCredits = /\s+(\d+[.,]\d+)\s*/.test(line);
+
+                if (!hasHyphen && !hasCredits) {
+                    // Ignore this fake course header, let it fall through or be ignored
+                    continue;
+                }
+
                 if (codigo !== currentCodigo) {
                     flushProfessorBuffer();
                     currentCodigo = codigo;
