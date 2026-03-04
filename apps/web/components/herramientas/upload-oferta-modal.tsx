@@ -75,6 +75,9 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
 
         setUploading(true);
         try {
+            // Also clean legacy table to avoid user confusion in Supabase Studio
+            await supabase.from('oferta_academica').delete().eq('periodo', periodo);
+
             const { error } = await supabase.from('sche_sections').delete().eq('periodo', periodo);
             if (error) throw error;
             alert(`Toda la oferta del periodo ${periodo} ha sido borrada.`);
@@ -142,6 +145,9 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
             // We do this to ensure we don't have stale sections if the PDF changed
             const { error: dErr } = await supabase.from('sche_sections').delete().eq('periodo', periodo);
             if (dErr) throw dErr;
+
+            // Also clean legacy table to avoid user confusion in Supabase Studio
+            await supabase.from('oferta_academica').delete().eq('periodo', periodo);
 
             // C. Insert Sections
             const { error: sErr } = await supabase.from('sche_sections').insert(sectionRows);
@@ -346,9 +352,9 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                                                     <td className="px-3 py-1.5 text-bb-text-secondary truncate max-w-[120px]">{o.profesor || '—'}</td>
                                                     <td className="px-3 py-1.5">
                                                         <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${o.tipo === 'FINAL' ? 'bg-red-500 text-white' :
-                                                                o.tipo === 'PARCIAL' ? 'bg-yellow-500 text-white' :
-                                                                    o.tipo === 'PRACTICA' ? 'bg-purple-500/70 text-white' :
-                                                                        'bg-blue-500/40 text-blue-200'
+                                                            o.tipo === 'PARCIAL' ? 'bg-yellow-500 text-white' :
+                                                                o.tipo === 'PRACTICA' ? 'bg-purple-500/70 text-white' :
+                                                                    'bg-blue-500/40 text-blue-200'
                                                             }`}>{o.tipo}</span>
                                                     </td>
                                                     <td className="px-3 py-1.5 text-bb-text">{o.dia}</td>
