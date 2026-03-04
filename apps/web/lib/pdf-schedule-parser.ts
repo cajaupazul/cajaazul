@@ -55,7 +55,8 @@ const NON_SECTION_TOKENS = new Set([
 const TIME_RE = /\b(\d{1,2}:\d{2})\b/g;
 
 // Match a course header like "120266 - Nombre del curso 4,00" or "1F0162 - Análisis Financiero" or "1MN003 Gestión"
-const COURSE_HEADER_RE = /^([A-Z0-9]{4,8})\s*(?:[-–]\s*)?(.+)/i;
+// Includes optional leading " to handle CSV/Excel wrapped cells
+const COURSE_HEADER_RE = /^"?([A-Z0-9]{4,8})\s*(?:[-–]\s*)?(.+)/i;
 
 // Noise lines to ignore entirely (but NOT reset course context)
 const NOISE_RE = [
@@ -81,10 +82,41 @@ export async function parseOfertaFile(file: File): Promise<{
     return { periodo: '', ofertas: [], errors: [`Formato no soportado: .${ext}. Usa PDF o Word.`] };
 }
 
+/**
+ * Handles Excel's copy-paste behavior where internal cell newlines (Alt+Enter)
+ * cause the entire cell to be wrapped in double quotes. This breaks standard line-by-line parsing.
+ * This function merges those fractured lines back into single lines seamlessly.
+ */
+function splitExcelText(text: string): string[] {
+    const lines: string[] = [];
+    let currentLine = '';
+    let insideQuotes = false;
+
+    // Normalize \r\n to \n
+    text = text.replace(/\r\n/g, '\n');
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '"') {
+            insideQuotes = !insideQuotes;
+        } else if (char === '\n' && !insideQuotes) {
+            lines.push(currentLine);
+            currentLine = '';
+            continue;
+        }
+        currentLine += char;
+    }
+    if (currentLine) lines.push(currentLine);
+
+    // After reassembling the wrapped cells, any internal newlines are converted to spaces.
+    // We also forcefully strip all double quotes now that we have used them to recombine the cells.
+    return lines.map(l => l.replace(/\n/g, ' ').replace(/"/g, ''));
+}
+
 export async function parseOfertaText(text: string): Promise<{
     periodo: string; ofertas: ParsedOferta[]; errors: string[];
 }> {
-    return parseLines(text.split('\n'));
+    return parseLines(splitExcelText(text));
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
