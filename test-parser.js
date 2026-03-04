@@ -54,8 +54,8 @@ const NON_SECTION_TOKENS = new Set([
 // Matches "09:30" or "9:30"
 const TIME_RE = /\b(\d{1,2}:\d{2})\b/g;
 
-// Match a course header like "120266 - Nombre del curso 4,00"
-const COURSE_HEADER_RE = /^(\d{6})\s*[-–]\s*(.+)/;
+// Match a course header like "120266 - Nombre del curso 4,00" or "1F0162 - Análisis Financiero"
+const COURSE_HEADER_RE = /^([A-Z0-9]{6})\s*[-–]\s*(.+)/i;
 
 // Noise lines to ignore entirely (but NOT reset course context)
 const NOISE_RE = [
@@ -155,9 +155,12 @@ function parseLines(rawLinestring[]) periodotring; ofertasarsedOferta[]; errorst
     // ── 1.5. Heal fractured aulas ──────────────────────────────────────────────
     // Aulas like A-PEND or B-305 sometimes get split across 3 lines: 
     // "FINAL MIE 16:30 18:30 30" -> "A" -> "-PEND"
+    // Or across 2 lines: "FINAL MIE 16:30 18:30 30" -> "A -PEND"
     const healedLinestring[] = [];
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
+
+        // 1. Fully fractured: "FINAL..." -> "A" -> "-PEND"
         if (/^-(PEND|VIR|VIRT|VIRTUA|AUD|\d{3})/i.test(line) && healedLines.length >= 2) {
             const prevLine = healedLines[healedLines.length - 1];
             const prevPrevLine = healedLines[healedLines.length - 2];
@@ -174,6 +177,18 @@ function parseLines(rawLinestring[]) periodotring; ofertasarsedOferta[]; errorst
                 }
             }
         }
+
+        // 2. Partially fractured: "FINAL..." -> "A -PEND"
+        if (/^[A-Z]{1,3}\s*-(PEND|VIR|VIRT|VIRTUA|AUD|\d{3})/i.test(line) && healedLines.length >= 1) {
+            const prevLine = healedLines[healedLines.length - 1];
+            const firstToken = prevLine.split(/\s+/)[0].toUpperCase();
+            if (TIPOS.has(firstToken) || hasTime(prevLine)) {
+                const base = healedLines.pop(); // Remove "FINAL..."
+                healedLines.push(`${base} ${line}`);
+                continue;
+            }
+        }
+
         healedLines.push(line);
     }
 
@@ -384,10 +399,12 @@ function parseLines(rawLinestring[]) periodotring; ofertasarsedOferta[]; errorst
         const isLoneSection = !!sectionMatchLone &&
             !NON_SECTION_TOKENS.has(sectionMatchLone[1].toUpperCase());
 
-        // Determine if this is a section+text line
+        // Determine if this is a section+text line. 
+        // IMPORTANTust NOT be an aula fragment like "A -PEND" mistakenly parsed as Section A, Professor "-PEND"
         const isFullSection = !!sectionMatchFull &&
             !NON_SECTION_TOKENS.has(sectionMatchFull[1].toUpperCase()) &&
-            !hasTime(sectionMatchFull[2].trim().split(/\s+/)[0]); // Only ignore if the VERY FIRST word is a time, otherwise it might be Section I then a schedule.
+            !hasTime(sectionMatchFull[2].trim().split(/\s+/)[0]) &&
+            !/^\s*-(PEND|VIR|VIRT|VIRTUA|AUD|\d{3})/i.test(sectionMatchFull[2]);
 
         if (isLoneSection) {
             // Just a letter like "B" — expect professor name on next line(s)

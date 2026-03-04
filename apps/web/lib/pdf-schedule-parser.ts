@@ -54,8 +54,8 @@ const NON_SECTION_TOKENS = new Set([
 // Matches "09:30" or "9:30"
 const TIME_RE = /\b(\d{1,2}:\d{2})\b/g;
 
-// Match a course header like "120266 - Nombre del curso 4,00"
-const COURSE_HEADER_RE = /^(\d{6})\s*[-–]\s*(.+)/;
+// Match a course header like "120266 - Nombre del curso 4,00" or "1F0162 - Análisis Financiero"
+const COURSE_HEADER_RE = /^([A-Z0-9]{6})\s*[-–]\s*(.+)/i;
 
 // Noise lines to ignore entirely (but NOT reset course context)
 const NOISE_RE = [
