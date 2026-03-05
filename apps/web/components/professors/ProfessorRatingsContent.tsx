@@ -453,6 +453,7 @@ export default function ProfessorRatingsContent({
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isDeletingCourse, setIsDeletingCourse] = useState(false);
     const [commentReactions, setCommentReactions] = useState<Record<string, {
         counts: Record<string, number>,
         userReaction: string | null
@@ -693,6 +694,56 @@ export default function ProfessorRatingsContent({
         }
     };
 
+    const handleDeleteCourse = async (courseName: string) => {
+        if (!profile || profile.role !== 'admin' || isDeletingCourse) return;
+
+        if (!window.confirm(`¿Estás seguro de que deseas eliminar el curso "${courseName}" de este profesor?`)) {
+            return;
+        }
+
+        setIsDeletingCourse(true);
+        try {
+            // 1. Update professors table
+            let allCourses: string[] = [];
+            if (professor.especialidad) {
+                allCourses.push(professor.especialidad.trim());
+            }
+            if (professor.otros_cursos) {
+                allCourses = allCourses.concat(professor.otros_cursos.split(',').map(c => c.trim()).filter(Boolean));
+            }
+
+            // Remove the target course (case-insensitive)
+            allCourses = allCourses.filter(c => c.toLowerCase() !== courseName.toLowerCase());
+
+            // Reassign
+            const newEspecialidad = allCourses.length > 0 ? allCourses[0] : null;
+            const newOtrosCursos = allCourses.slice(1).join(',') || null;
+
+            const { error: updateError } = await supabase
+                .from('professors')
+                .update({ especialidad: newEspecialidad, otros_cursos: newOtrosCursos })
+                .eq('id', professor.id);
+
+            if (updateError) throw updateError;
+
+            // 2. Delete from course_professors if mapping exists
+            const courseId = courseMapping[courseName.toLowerCase()];
+            if (courseId) {
+                await supabase
+                    .from('course_professors')
+                    .delete()
+                    .match({ professor_id: professor.id, course_id: courseId });
+            }
+
+            alert('Curso eliminado exitosamente del profesor.');
+            window.location.reload();
+        } catch (error: any) {
+            console.error('Error deleting course:', error);
+            alert(`Hubo un error al eliminar el curso: ${error.message}`);
+            setIsDeletingCourse(false); // only reset on error, reload will reset naturally on success
+        }
+    };
+
     const handleReactionComment = async (commentId: string, reactionType: string) => {
         if (!profile) return;
 
@@ -833,17 +884,39 @@ export default function ProfessorRatingsContent({
                                     className="flex flex-wrap gap-2 justify-center md:justify-start"
                                 >
                                     {professor.especialidad && professorLinkMapping[professor.especialidad.toLowerCase()] ? (
-                                        <Link
-                                            href={`/dashboard/professors/view?id=${professorLinkMapping[professor.especialidad.toLowerCase()]}`}
-                                            className="bg-blue-500/20 backdrop-blur-md text-blue-500 px-4 py-1.5 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-all uppercase tracking-wider text-xs font-bold shadow-lg shadow-blue-900/10"
-                                        >
-                                            {professor.especialidad}
-                                        </Link>
+                                        <div className="flex items-center gap-1">
+                                            <Link
+                                                href={`/dashboard/professors/view?id=${professorLinkMapping[professor.especialidad.toLowerCase()]}`}
+                                                className="bg-blue-500/20 backdrop-blur-md text-blue-500 px-4 py-1.5 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-all uppercase tracking-wider text-xs font-bold shadow-lg shadow-blue-900/10"
+                                            >
+                                                {professor.especialidad}
+                                            </Link>
+                                            {profile?.role === 'admin' && (
+                                                <button
+                                                    onClick={() => handleDeleteCourse(professor.especialidad!)}
+                                                    className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors"
+                                                    title="Eliminar este curso"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
+                                        </div>
                                     ) : (
                                         professor.especialidad && (
-                                            <span className="bg-bb-sidebar/50 backdrop-blur-md text-bb-text-secondary px-4 py-1.5 rounded-full border border-bb-border uppercase tracking-wider text-xs font-bold">
-                                                {professor.especialidad}
-                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <span className="bg-bb-sidebar/50 backdrop-blur-md text-bb-text-secondary px-4 py-1.5 rounded-full border border-bb-border uppercase tracking-wider text-xs font-bold">
+                                                    {professor.especialidad}
+                                                </span>
+                                                {profile?.role === 'admin' && (
+                                                    <button
+                                                        onClick={() => handleDeleteCourse(professor.especialidad!)}
+                                                        className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors"
+                                                        title="Eliminar este curso"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         )
                                     )}
 
@@ -1059,21 +1132,42 @@ export default function ProfessorRatingsContent({
                                             // Only link if professor profile exists
                                             if (professorId) {
                                                 return (
-                                                    <Link
-                                                        key={idx}
-                                                        href={`/dashboard/professors/view?id=${professorId}`}
-                                                        className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium hover:bg-purple-500/20 transition-colors"
-                                                    >
-                                                        {trimmedCurso}
-                                                    </Link>
+                                                    <div key={idx} className="flex items-center gap-1">
+                                                        <Link
+                                                            href={`/dashboard/professors/view?id=${professorId}`}
+                                                            className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium hover:bg-purple-500/20 transition-colors"
+                                                        >
+                                                            {trimmedCurso}
+                                                        </Link>
+                                                        {profile?.role === 'admin' && (
+                                                            <button
+                                                                onClick={() => handleDeleteCourse(trimmedCurso)}
+                                                                className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors"
+                                                                title="Eliminar este curso"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 );
                                             }
 
                                             // If no professor profile exists, show as disabled/grayed out
                                             return (
-                                                <span key={idx} className="px-4 py-2 rounded-xl bg-bb-darker/50 text-bb-text-secondary/40 border border-bb-border/50 text-sm font-medium opacity-50 cursor-not-allowed">
-                                                    {trimmedCurso}
-                                                </span>
+                                                <div key={idx} className="flex items-center gap-1">
+                                                    <span className="px-4 py-2 rounded-xl bg-bb-darker/50 text-bb-text-secondary/40 border border-bb-border/50 text-sm font-medium opacity-50 cursor-not-allowed">
+                                                        {trimmedCurso}
+                                                    </span>
+                                                    {profile?.role === 'admin' && (
+                                                        <button
+                                                            onClick={() => handleDeleteCourse(trimmedCurso)}
+                                                            className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors"
+                                                            title="Eliminar este curso"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             );
                                         })
                                     ) : (

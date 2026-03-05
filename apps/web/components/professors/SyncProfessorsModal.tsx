@@ -36,25 +36,70 @@ export default function SyncProfessorsModal({ open, onOpenChange, onSuccess }: S
         if (!pastedText.trim()) return;
         setIsParsing(true);
         try {
-            // 1. Parse Excel Text
+            // 1. Parse Excel Text using the external parser for full schedules
             const result = await parseOfertaText(pastedText);
 
-            // 2. Extract unique professors and their courses
+            // 1.5 Custom parser for simple schedule-less lists
+            const simpleProfMap = new Map<string, Map<string, string>>();
+            const lines = pastedText.split('\n').map(l => l.trimRight());
+            let currentCodigo = '';
+            let currentCurso = '';
+
+            for (const line of lines) {
+                if (!line.trim()) continue;
+
+                // Try course header: "120266 - Antiguo Perú..." or "123456 - Algo\t"
+                const courseMatch = line.match(/^([A-Z0-9]{4,8})\s*[-–]\s*(.+?)(?:\t|$)/);
+                if (courseMatch) {
+                    currentCodigo = courseMatch[1];
+                    currentCurso = courseMatch[2].trim();
+                    continue;
+                }
+
+                // Try professor line: "A\tPARDO GRAU, Cecilia Maria Luisa"
+                const parts = line.split('\t');
+                if (parts.length >= 2) {
+                    const seccion = parts[0].trim();
+                    const profNamesStr = parts[1].trim();
+
+                    if (/^[A-Z]{1,3}$/.test(seccion) && profNamesStr.length > 3) {
+                        const profs = profNamesStr.split('/').map(p => p.trim().toUpperCase());
+
+                        for (let name of profs) {
+                            name = name.replace(/\n/g, ' ').replace(/\s+/g, ' ');
+                            if (name && currentCodigo && name.length >= 5 && !INVALID_NAMES.has(name)) {
+                                if (!simpleProfMap.has(name)) simpleProfMap.set(name, new Map());
+                                simpleProfMap.get(name)!.set(currentCodigo, currentCurso);
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            // 2. Extract unique professors and their courses combining both parsers
             const profMap = new Map<string, Map<string, string>>(); // name -> Map<codigo, cursoNombre>
 
+            // Add results from normal parser
             for (const o of result.ofertas) {
                 if (!o.profesor) continue;
-
-                // Handle multiple professors separated by '/'
                 const rawNames = o.profesor.split('/').map(n => n.trim().toUpperCase());
 
-                for (const name of rawNames) {
+                for (let name of rawNames) {
+                    name = name.replace(/\n/g, ' ').replace(/\s+/g, ' ');
                     if (name.length < 5 || INVALID_NAMES.has(name)) continue;
 
-                    if (!profMap.has(name)) {
-                        profMap.set(name, new Map());
-                    }
+                    if (!profMap.has(name)) profMap.set(name, new Map());
                     profMap.get(name)!.set(o.codigo_curso, o.nombre_curso);
+                }
+            }
+
+            // Add results from simple parser
+            for (const [name, courses] of simpleProfMap.entries()) {
+                if (!profMap.has(name)) profMap.set(name, new Map());
+                const map = profMap.get(name)!;
+                for (const [codigo, curso] of courses.entries()) {
+                    map.set(codigo, curso);
                 }
             }
 
