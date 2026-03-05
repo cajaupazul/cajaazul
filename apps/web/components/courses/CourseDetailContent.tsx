@@ -12,6 +12,7 @@ import AdminMaterialManager from './AdminMaterialManager';
 import { PLACEHOLDERS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
 import MaterialCard from './MaterialCard';
+import { Autocomplete } from '@/components/ui/Autocomplete';
 
 type TabType = 'todos' | 'silabo' | 'presentaciones' | 'examenes' | 'enlaces' | 'otros';
 
@@ -343,29 +344,30 @@ export default function CourseDetailContent({
                                 </div>
                                 <h4 className="text-xs font-bold text-bb-text-secondary uppercase tracking-wider">Filtrar por profesor</h4>
                             </div>
-                            <div className="flex flex-nowrap gap-2 overflow-x-auto pb-4 no-scrollbar -mx-1 px-1 overscroll-contain">
-                                <button
-                                    onClick={() => setSelectedProfessorId('all')}
-                                    className={`px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all shrink-0 border ${selectedProfessorId === 'all'
-                                        ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/30 active:scale-95'
-                                        : 'bg-bb-card text-bb-text-secondary border-bb-border hover:border-blue-500/20 hover:text-bb-text'
-                                        }`}
-                                >
-                                    Todos los materiales
-                                </button>
-                                {allProfessors.map((prof) => (
-                                    <button
-                                        key={prof.id}
-                                        onClick={() => setSelectedProfessorId(prof.id)}
-                                        className={`px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all shrink-0 border flex items-center gap-2 ${selectedProfessorId === prof.id
-                                            ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/30 active:scale-95'
-                                            : 'bg-bb-card text-bb-text-secondary border-bb-border hover:border-blue-500/20 hover:text-bb-text'
-                                            }`}
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <Autocomplete
+                                    items={allProfessors.map(p => p.nombre)}
+                                    value={selectedProfessorId === 'all' ? '' : (allProfessors.find(p => p.id === selectedProfessorId)?.nombre || '')}
+                                    onChange={(val) => {
+                                        if (!val) {
+                                            setSelectedProfessorId('all');
+                                        } else {
+                                            const prof = allProfessors.find(p => p.nombre === val);
+                                            if (prof) setSelectedProfessorId(prof.id);
+                                        }
+                                    }}
+                                    placeholder="Buscar por profesor..."
+                                    className="w-full sm:w-80"
+                                />
+                                {selectedProfessorId !== 'all' && (
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => setSelectedProfessorId('all')}
+                                        className="text-xs font-bold text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 h-11"
                                     >
-                                        <div className={`w-1.5 h-1.5 rounded-full ${selectedProfessorId === prof.id ? 'bg-white' : 'bg-bb-border'}`} />
-                                        {prof.nombre}
-                                    </button>
-                                ))}
+                                        Limpiar Filtro
+                                    </Button>
+                                )}
                             </div>
                         </div>
 

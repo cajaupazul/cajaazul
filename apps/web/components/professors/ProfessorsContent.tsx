@@ -92,17 +92,24 @@ export default function ProfessorsContent({
     const [professorToDelete, setProfessorToDelete] = useState<any>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Extract unique courses across all professors
+    // Extract unique courses across all professors (normalized)
     const uniqueCourses = useMemo(() => {
-        const coursesSet = new Set<string>();
+        const coursesMap = new Map<string, string>(); // lowercase -> original
         initialProfessors.forEach(prof => {
+            const processCourse = (c: string) => {
+                const lower = c.toLowerCase().trim();
+                if (!coursesMap.has(lower)) {
+                    coursesMap.set(lower, c.trim());
+                }
+            };
+
             if (prof.courses && Array.isArray(prof.courses)) {
-                prof.courses.forEach((c: string) => coursesSet.add(c));
+                prof.courses.forEach(processCourse);
             } else if (prof.especialidad) {
-                coursesSet.add(prof.especialidad);
+                processCourse(prof.especialidad);
             }
         });
-        return Array.from(coursesSet).sort();
+        return Array.from(coursesMap.values()).sort((a, b) => a.localeCompare(b));
     }, [initialProfessors]);
 
     const handleDeleteClick = (prof: any) => {
@@ -154,10 +161,16 @@ export default function ProfessorsContent({
 
     // Handle course parameter from URL
     useEffect(() => {
-        if (courseParam && uniqueCourses.includes(courseParam)) {
-            setSelectedCourse(courseParam);
-        } else if (courseParam === 'all') {
-            setSelectedCourse('all');
+        if (courseParam) {
+            const normalizedParam = courseParam.toLowerCase().trim();
+            if (normalizedParam === 'all') {
+                setSelectedCourse('all');
+                return;
+            }
+            const match = uniqueCourses.find(c => c.toLowerCase().trim() === normalizedParam);
+            if (match) {
+                setSelectedCourse(match);
+            }
         }
     }, [courseParam, uniqueCourses]);
 
@@ -169,8 +182,8 @@ export default function ProfessorsContent({
             const otherCoursesMatch = !query || (professor.courses || []).some((course: string) => course.toLowerCase().includes(query));
 
             const courseMatch = selectedCourse === 'all' ||
-                (professor.courses || []).includes(selectedCourse) ||
-                professor.especialidad === selectedCourse;
+                (professor.courses || []).some((c: string) => c.toLowerCase().trim() === selectedCourse.toLowerCase().trim()) ||
+                professor.especialidad?.toLowerCase().trim() === selectedCourse.toLowerCase().trim();
 
             return (nameMatch || specialtyMatch || otherCoursesMatch) && courseMatch;
         });
