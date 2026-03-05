@@ -25,6 +25,13 @@ interface ProfessorPreview {
 
 const INVALID_NAMES = new Set(['PENDIENTE', 'SIN DOCENTE', 'SIN PROFESOR', 'POR ASIGNAR', 'PEND']);
 
+// Helper to chunk large arrays to prevent Supabase URI Too Long errors
+function chunkArray<T>(arr: T[], size: number): T[][] {
+    return Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+        arr.slice(i * size, (i + 1) * size)
+    );
+}
+
 export default function SyncProfessorsModal({ open, onOpenChange, onSuccess }: SyncProfessorsModalProps) {
     const [step, setStep] = useState<'input' | 'preview' | 'syncing' | 'done'>('input');
     const [pastedText, setPastedText] = useState('');
@@ -115,22 +122,35 @@ export default function SyncProfessorsModal({ open, onOpenChange, onSuccess }: S
             });
 
             // 4. Fetch existing courses from 'courses' main directory to check validity
-            const { data: existingCourses, error: cErr } = await supabase
-                .from('courses')
-                .select('id, codigo')
-                .in('codigo', Array.from(allCodigos));
+            const codigosArr = Array.from(allCodigos);
+            const courseChunks = chunkArray(codigosArr, 50);
+            const existingCourses: any[] = [];
 
-            if (cErr) throw cErr;
-            const existingCourseCodigos = new Set(existingCourses?.map(c => c.codigo) || []);
+            for (const chunk of courseChunks) {
+                const { data, error: cErr } = await supabase
+                    .from('courses')
+                    .select('id, codigo')
+                    .in('codigo', chunk);
+                if (cErr) throw cErr;
+                if (data) existingCourses.push(...data);
+            }
+            const existingCourseCodigos = new Set(existingCourses.map(c => c.codigo));
 
             // 5. Fetch existing professors to know if we are updating or creating
-            const { data: existingProfs, error: pErr } = await supabase
-                .from('professors')
-                .select('id, nombre, especialidad, otros_cursos')
-                .in('nombre', Array.from(profMap.keys()));
+            const provsArr = Array.from(profMap.keys());
+            const profChunks = chunkArray(provsArr, 50);
+            const existingProfs: any[] = [];
 
-            if (pErr) throw pErr;
-            const existingProfsMap = new Map(existingProfs?.map(p => [p.nombre.toUpperCase(), p]) || []);
+            for (const chunk of profChunks) {
+                const { data, error: pErr } = await supabase
+                    .from('professors')
+                    .select('id, nombre, especialidad, otros_cursos')
+                    .in('nombre', chunk);
+                if (pErr) throw pErr;
+                if (data) existingProfs.push(...data);
+            }
+
+            const existingProfsMap = new Map(existingProfs.map(p => [p.nombre.toUpperCase(), p]));
 
             // 6. Build Preview Data
             const previewData: ProfessorPreview[] = [];
@@ -227,12 +247,19 @@ export default function SyncProfessorsModal({ open, onOpenChange, onSuccess }: S
                 parsedProfessors.forEach(p => p.courses.filter(c => c.exists).forEach(c => codigosWithExisting.add(c.codigo)));
 
                 if (codigosWithExisting.size > 0) {
-                    const { data: dbCourses } = await supabase
-                        .from('courses')
-                        .select('id, codigo')
-                        .in('codigo', Array.from(codigosWithExisting));
+                    const codigosList = Array.from(codigosWithExisting);
+                    const dbCourses: any[] = [];
+                    const dbChunks = chunkArray(codigosList, 50);
 
-                    const codeToIdMap = new Map(dbCourses?.map(c => [c.codigo, c.id]) || []);
+                    for (const chunk of dbChunks) {
+                        const { data } = await supabase
+                            .from('courses')
+                            .select('id, codigo')
+                            .in('codigo', chunk);
+                        if (data) dbCourses.push(...data);
+                    }
+
+                    const codeToIdMap = new Map(dbCourses.map(c => [c.codigo, c.id]));
 
                     const linksToInsert: { course_id: string; professor_id: string }[] = [];
 
