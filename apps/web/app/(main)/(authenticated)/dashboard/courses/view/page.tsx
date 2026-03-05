@@ -16,19 +16,27 @@ function CourseDetailWrapper() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  // Helper function to perform strict matching on course names (handling Roman Numerals)
+  // Helper to normalize strings (remove accents, lowercase, trim)
+  const normalizeString = (str: string) => {
+    return str
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  };
+
+  // Helper function to perform ultra-strict matching on course names
   const isCleanMatch = (professorCourses: string[], targetCourse: string) => {
     if (!targetCourse) return false;
-    const targetLower = targetCourse.toLowerCase().trim();
+    const targetNorm = normalizeString(targetCourse);
 
     return professorCourses.some(course => {
-      const courseLower = course.toLowerCase().trim();
-      if (courseLower === targetLower) return true;
+      const courseNorm = normalizeString(course);
+      if (courseNorm === targetNorm) return true;
 
-      // Check for word boundaries/Roman numerals to avoid "Mate I" matching "Mate II"
-      const escapedTarget = targetLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(^|\\s)${escapedTarget}(\\s|$)`, 'i');
-      return regex.test(courseLower);
+      // Split professor courses by common delimiters and check for exact segment match
+      const segments = courseNorm.split(/[,;|•]/).map(s => s.trim()).filter(Boolean);
+      return segments.some(segment => segment === targetNorm);
     });
   };
 
