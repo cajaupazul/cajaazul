@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +16,6 @@ import {
 import { Star, Search, Plus, GraduationCap, Trophy, Trash2, RefreshCw } from 'lucide-react';
 import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import { PLACEHOLDERS, getDiversifiedProfessorBackground } from '@/lib/constants';
 import SyncProfessorsModal from './SyncProfessorsModal';
@@ -100,10 +100,22 @@ export default function ProfessorsContent({
         return Array.from(coursesSet).sort();
     }, [initialProfessors]);
 
+    const searchParams = useSearchParams();
+    const courseParam = searchParams.get('course');
+
     // Sync local state when global state changes (e.g. from props)
     useEffect(() => {
         setProfessors(initialProfessors);
     }, [initialProfessors]);
+
+    // Handle course parameter from URL
+    useEffect(() => {
+        if (courseParam && uniqueCourses.includes(courseParam)) {
+            setSelectedCourse(courseParam);
+        } else if (courseParam === 'all') {
+            setSelectedCourse('all');
+        }
+    }, [courseParam, uniqueCourses]);
 
     const filteredAndSortedProfessors = useMemo(() => {
         let result = professors.filter((professor) => {

@@ -719,10 +719,11 @@ export default function ProfessorRatingsContent({
             const newEspecialidad = allCourses.length > 0 ? allCourses[0] : null;
             const newOtrosCursos = allCourses.slice(1).join(',') || null;
 
+            // 1. Update professors table for ALL records with this name (to maintain consistency in grouped search UI)
             const { error: updateError } = await supabase
                 .from('professors')
                 .update({ especialidad: newEspecialidad, otros_cursos: newOtrosCursos })
-                .eq('id', professor.id);
+                .ilike('nombre', professor.nombre.trim());
 
             if (updateError) throw updateError;
 
@@ -1182,7 +1183,7 @@ export default function ProfessorRatingsContent({
 
                                 {relatedProfessors.length > 0 ? (
                                     <div className="space-y-3">
-                                        {relatedProfessors.map((prof) => (
+                                        {relatedProfessors.slice(0, 6).map((prof) => (
                                             <Link
                                                 key={prof.id}
                                                 href={`/dashboard/professors/view?id=${prof.id}`}
@@ -1205,6 +1206,16 @@ export default function ProfessorRatingsContent({
                                                 </div>
                                             </Link>
                                         ))}
+
+                                        {relatedProfessors.length > 6 && (
+                                            <Link
+                                                href={`/dashboard/professors?course=${encodeURIComponent(professor.especialidad || '')}`}
+                                                className="flex items-center justify-center gap-2 p-3 w-full rounded-xl bg-bb-sidebar border border-bb-border text-bb-text-secondary hover:text-white hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group font-bold text-xs uppercase tracking-widest mt-4"
+                                            >
+                                                Mostrar más
+                                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                            </Link>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="text-center py-8">
