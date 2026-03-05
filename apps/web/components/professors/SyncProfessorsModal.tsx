@@ -56,13 +56,14 @@ export default function SyncProfessorsModal({ open, onOpenChange, onSuccess }: S
                     continue;
                 }
 
-                // Try professor line: "A\tPARDO GRAU, Cecilia Maria Luisa"
-                const parts = line.split('\t');
-                if (parts.length >= 2) {
-                    const seccion = parts[0].trim();
-                    const profNamesStr = parts[1].trim();
+                // Try professor line: "A\tPARDO GRAU, Cecilia" or "A   DE VEGA DE UNCETA..."
+                const profMatch = line.match(/^([A-Z0-9]{1,3})(?:\t|\s{2,})(.*)$/);
 
-                    if (/^[A-Z]{1,3}$/.test(seccion) && profNamesStr.length > 3) {
+                if (profMatch) {
+                    const seccion = profMatch[1].trim();
+                    const profNamesStr = profMatch[2].trim();
+
+                    if (profNamesStr.length > 3) {
                         const profs = profNamesStr.split('/').map(p => p.trim().toUpperCase());
 
                         for (let name of profs) {
