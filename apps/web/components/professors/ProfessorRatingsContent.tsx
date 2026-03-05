@@ -734,9 +734,20 @@ export default function ProfessorRatingsContent({
                     .from('course_professors')
                     .delete()
                     .match({ professor_id: professor.id, course_id: courseId });
+
+                // 3. ALSO delete all materials associated with this professor and this course
+                // Requirement: "cuando se elimina el curso ahí si se elimina todos los archivos de dicho curso"
+                const { error: materialsError } = await supabase
+                    .from('materials')
+                    .delete()
+                    .match({ professor_id: professor.id, course_id: courseId });
+
+                if (materialsError) {
+                    console.error('Error deleting materials for course:', materialsError);
+                }
             }
 
-            alert('Curso eliminado exitosamente del profesor.');
+            alert('Curso y sus materiales asociados eliminados exitosamente.');
             window.location.reload();
         } catch (error: any) {
             console.error('Error deleting course:', error);

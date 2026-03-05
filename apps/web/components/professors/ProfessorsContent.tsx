@@ -19,6 +19,8 @@ import { useRouter } from 'next/navigation';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import { PLACEHOLDERS, getDiversifiedProfessorBackground } from '@/lib/constants';
 import SyncProfessorsModal from './SyncProfessorsModal';
+import DeleteProfessorModal from './DeleteProfessorModal';
+import { Autocomplete } from '@/components/ui/Autocomplete';
 
 interface ProfessorsContentProps {
     initialProfessors: any[];
@@ -86,6 +88,9 @@ export default function ProfessorsContent({
     const [sortBy, setSortBy] = useState('best');
     const [savedProfessors, setSavedProfessors] = useState<Set<string>>(new Set(initialSavedProfessors));
     const [syncModalOpen, setSyncModalOpen] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [professorToDelete, setProfessorToDelete] = useState<any>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Extract unique courses across all professors
     const uniqueCourses = useMemo(() => {
@@ -99,6 +104,45 @@ export default function ProfessorsContent({
         });
         return Array.from(coursesSet).sort();
     }, [initialProfessors]);
+
+    const handleDeleteClick = (prof: any) => {
+        setProfessorToDelete(prof);
+        setDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async (deleteMaterials: boolean) => {
+        if (!professorToDelete) return;
+        setIsDeleting(true);
+        try {
+            // 1. Delete comments
+            await supabase.from('professor_comments').delete().eq('professor_id', professorToDelete.id);
+            // 2. Delete stickers
+            await supabase.from('user_decorations').delete().eq('target_type', 'professor').eq('target_id', professorToDelete.id);
+            // 3. Delete ratings
+            await supabase.from('professor_ratings').delete().eq('professor_id', professorToDelete.id);
+            // 4. Optionally delete materials
+            if (deleteMaterials) {
+                await supabase.from('materials').delete().eq('professor_id', professorToDelete.id);
+            } else {
+                // If not deleted, nullify link so files aren't floating with invalid ID
+                await supabase.from('materials').update({ professor_id: null }).eq('professor_id', professorToDelete.id);
+            }
+            // 5. Delete professor record
+            const { error } = await supabase.from('professors').delete().eq('id', professorToDelete.id);
+
+            if (!error) {
+                setProfessors(prev => prev.filter(p => p.id !== professorToDelete.id));
+                removeProfessor(professorToDelete.id);
+                setDeleteModalOpen(false);
+            } else {
+                alert('Error al eliminar profesor');
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const searchParams = useSearchParams();
     const courseParam = searchParams.get('course');
@@ -169,17 +213,13 @@ export default function ProfessorsContent({
                             />
                         </div>
 
-                        <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-                            <SelectTrigger className="h-11 bg-bb-card border-bb-border text-bb-text rounded-xl w-full lg:w-48">
-                                <SelectValue placeholder="Curso" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-bb-card border-bb-border">
-                                <SelectItem value="all">Todos los cursos</SelectItem>
-                                {uniqueCourses.map(course => (
-                                    <SelectItem key={course} value={course}>{course}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <Autocomplete
+                            items={uniqueCourses}
+                            value={selectedCourse === 'all' ? '' : selectedCourse}
+                            onChange={(val) => setSelectedCourse(val || 'all')}
+                            placeholder="Buscar curso..."
+                            className="w-full lg:w-64"
+                        />
 
                         <Select value={sortBy} onValueChange={setSortBy}>
                             <SelectTrigger className="h-11 bg-bb-card border-bb-border text-bb-text rounded-xl w-full lg:w-48">
@@ -233,17 +273,9 @@ export default function ProfessorsContent({
                                             )}
                                             {profile?.role === 'admin' && (
                                                 <button
-                                                    onClick={async (e) => {
+                                                    onClick={(e) => {
                                                         e.stopPropagation();
-                                                        if (confirm('¿Estás seguro de que quieres eliminar este profesor?')) {
-                                                            const { error } = await supabase.from('professors').delete().eq('id', professor.id);
-                                                            if (!error) {
-                                                                setProfessors(prev => prev.filter(p => p.id !== professor.id));
-                                                                removeProfessor(professor.id);
-                                                            } else {
-                                                                alert('Error al eliminar profesor');
-                                                            }
-                                                        }
+                                                        handleDeleteClick(professor);
                                                     }}
                                                     className="absolute top-2 left-2 bg-red-500/20 border border-red-500/30 text-red-400 p-1.5 rounded-lg hover:bg-red-500/40 transition-colors z-20"
                                                     title="Eliminar profesor"
@@ -359,6 +391,13 @@ export default function ProfessorsContent({
                     }}
                 />
             )}
+            <DeleteProfessorModal
+                open={deleteModalOpen}
+                onOpenChange={setDeleteModalOpen}
+                onConfirm={confirmDelete}
+                professorName={professorToDelete?.nombre || ''}
+                isDeleting={isDeleting}
+            />
         </div>
     );
 }
