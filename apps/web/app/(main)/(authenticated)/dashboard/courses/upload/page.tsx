@@ -63,7 +63,41 @@ function UploadWrapper() {
                 const initialProfessors = Array.from(professorsMap.values());
                 const uniqueProfessorsByName = new Map();
 
+                // Refined filtering to avoid partial matches (e.g., "Matemáticas I" matching "II" or "III")
+                const isCleanMatch = (text: string, search: string) => {
+                    if (!text || !search) return false;
+                    const t = text.toLowerCase().trim();
+                    const s = search.toLowerCase().trim();
+                    const index = t.indexOf(s);
+                    if (index === -1) return false;
+
+                    const nextChar = t[index + s.length];
+                    if (!nextChar) return true;
+
+                    // If searching for a Roman numeral course (ends in I, V, X), 
+                    // ensure the next char isn't also a Roman numeral char
+                    const romanChars = ['i', 'v', 'x'];
+                    if (s.match(/[ivx]$/) && romanChars.includes(nextChar)) {
+                        return false;
+                    }
+
+                    // Ensure the match isn't part of a larger word or directly followed by a digit
+                    if (/[a-z0-9]/.test(nextChar)) return false;
+
+                    return true;
+                };
+
                 initialProfessors.forEach((p: any) => {
+                    // Check if this professor actually belongs to the specific course
+                    // either by explicit link (handled by linkedProfIds) OR by matching specialty/others cleanly
+                    const hasCleanSpecialty = isCleanMatch(p.especialidad, courseNameClean);
+                    const hasCleanOthers = isCleanMatch(p.otros_cursos, courseNameClean);
+                    const isExplicitlyLinked = linkedProfIds.includes(p.id);
+
+                    if (!isExplicitlyLinked && !hasCleanSpecialty && !hasCleanOthers) {
+                        return; // Skip if it's just a partial string match (e.g., I inside II)
+                    }
+
                     const normalizedName = p.nombre.toLowerCase().trim();
                     const existing = uniqueProfessorsByName.get(normalizedName);
                     const isExactMatch = p.especialidad?.toLowerCase().trim() === courseNameClean.toLowerCase();
