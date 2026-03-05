@@ -16,6 +16,22 @@ function CourseDetailWrapper() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
+  // Helper function to perform strict matching on course names (handling Roman Numerals)
+  const isCleanMatch = (professorCourses: string[], targetCourse: string) => {
+    if (!targetCourse) return false;
+    const targetLower = targetCourse.toLowerCase().trim();
+
+    return professorCourses.some(course => {
+      const courseLower = course.toLowerCase().trim();
+      if (courseLower === targetLower) return true;
+
+      // Check for word boundaries/Roman numerals to avoid "Mate I" matching "Mate II"
+      const escapedTarget = targetLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(^|\\s)${escapedTarget}(\\s|$)`, 'i');
+      return regex.test(courseLower);
+    });
+  };
+
   useEffect(() => {
     if (!courseId) {
       setLoading(false);
@@ -84,10 +100,23 @@ function CourseDetailWrapper() {
           professorsMap.set(p.id, { ...p, averageRating: avg });
         };
 
-        // 1. Add direct matches from name search
-        matchedProfs?.forEach(addProfToMap);
+        // 1. Add direct matches from name search (with strict JS filtering)
+        matchedProfs?.forEach(p => {
+          if (!p) return;
 
-        // 2. Add professors explicitly linked in junction table
+          // Apply strict clean match logic to ensure we don't pick up "Mate II" for "Mate I"
+          const allProfCourses = [
+            p.especialidad,
+            ...(p.otros_cursos ? (Array.isArray(p.otros_cursos) ? p.otros_cursos : [p.otros_cursos]) : []),
+            ...(p.courses || [])
+          ].filter(Boolean);
+
+          if (isCleanMatch(allProfCourses, courseNameClean)) {
+            addProfToMap(p);
+          }
+        });
+
+        // 2. Add professors explicitly linked in junction table (these are intentional, no need for strict filter)
         const linkedProfIds = cpData?.map(cp => cp.professor_id) || [];
         if (linkedProfIds.length > 0) {
           const { data: linkedProfs } = await supabase
