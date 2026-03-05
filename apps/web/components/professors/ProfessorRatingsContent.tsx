@@ -818,12 +818,8 @@ export default function ProfessorRatingsContent({
             />
 
             {/* === FULL-WIDTH BANNER (edge-to-edge, like Course Detail) === */}
-            <div className="relative h-52 md:h-72 lg:h-80 w-full bg-bb-darker border-b border-bb-border overflow-hidden">
-                {professor.background_image_url ? (
-                    <ProfessorBackground url={professor.background_image_url} name={professor.nombre} specialty={professor.especialidad} />
-                ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-bb-darker to-teal-900/30" />
-                )}
+            <div className="relative h-32 md:h-72 lg:h-80 w-full bg-bb-darker border-b border-bb-border overflow-hidden">
+                <ProfessorBackground url={professor.background_image_url} name={professor.nombre} specialty={professor.especialidad} />
                 {/* Subtle Cinematic gradient only at the very bottom for name readability if needed, but keeping it minimal as requested */}
                 <div className="absolute inset-0 bg-gradient-to-t from-bb-dark/40 to-transparent" />
 

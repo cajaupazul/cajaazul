@@ -269,9 +269,9 @@ export default function ProfessorsContent({
                                                     <h3 className="text-sm md:text-lg font-bold text-bb-text mb-1 truncate group-hover:text-blue-400 transition-colors">
                                                         {professor.nombre}
                                                     </h3>
-                                                    <div className="flex items-center gap-1 md:gap-2 mb-2 md:mb-3 flex-wrap">
-                                                        {(professor.courses || [professor.especialidad]).slice(0, 2).map((course: string, idx: number) => (
-                                                            <span key={idx} className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-md">
+                                                    <div className="flex items-center gap-1 md:gap-1.5 mb-2 md:mb-3 flex-wrap overflow-hidden">
+                                                        {(professor.courses || [professor.especialidad]).slice(0, 6).map((course: string, idx: number) => (
+                                                            <span key={idx} className="text-[9px] md:text-[10px] font-bold uppercase tracking-tight text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-md border border-blue-500/5 whitespace-nowrap">
                                                                 {course}
                                                             </span>
                                                         ))}

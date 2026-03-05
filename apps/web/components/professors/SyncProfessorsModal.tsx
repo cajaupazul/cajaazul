@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { parseOfertaText } from '@/lib/pdf-schedule-parser';
 import { CheckCircle2, RefreshCw, AlertCircle, Users, BookOpen } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { getDiversifiedProfessorBackground } from '@/lib/constants';
 
 interface SyncProfessorsModalProps {
     open: boolean;
@@ -21,6 +22,7 @@ interface ProfessorPreview {
     existingId?: string;
     existingCursosString?: string;
     existingEspecialidad?: string;
+    existingBackground?: string;
 }
 
 const INVALID_NAMES = new Set(['PENDIENTE', 'SIN DOCENTE', 'SIN PROFESOR', 'POR ASIGNAR', 'PEND']);
@@ -144,7 +146,7 @@ export default function SyncProfessorsModal({ open, onOpenChange, onSuccess }: S
             for (const chunk of profChunks) {
                 const { data, error: pErr } = await supabase
                     .from('professors')
-                    .select('id, nombre, especialidad, otros_cursos')
+                    .select('id, nombre, especialidad, otros_cursos, background_image_url')
                     .in('nombre', chunk);
                 if (pErr) throw pErr;
                 if (data) existingProfs.push(...data);
@@ -171,7 +173,8 @@ export default function SyncProfessorsModal({ open, onOpenChange, onSuccess }: S
                     isNew: !existingProf,
                     existingId: existingProf?.id,
                     existingCursosString: existingProf?.otros_cursos,
-                    existingEspecialidad: existingProf?.especialidad
+                    existingEspecialidad: existingProf?.especialidad,
+                    existingBackground: existingProf?.background_image_url
                 });
 
                 totalC += courseList.length;
@@ -207,24 +210,28 @@ export default function SyncProfessorsModal({ open, onOpenChange, onSuccess }: S
 
                     sortedCourses.forEach(c => existingSet.add(c));
                     const mergedCourses = Array.from(existingSet);
+                    const especialidad = mergedCourses.length > 0 ? mergedCourses[0] : null;
 
                     return {
                         id: p.existingId,
                         nombre: p.nombre,
                         facultad: 'General',
                         universidad: 'Universidad del Pacífico',
-                        especialidad: mergedCourses.length > 0 ? mergedCourses[0] : null,
+                        especialidad: especialidad,
                         otros_cursos: mergedCourses.length > 1 ? mergedCourses.slice(1).join(', ') : null,
+                        // Persist background if not already present
+                        background_image_url: p.existingBackground || getDiversifiedProfessorBackground(p.nombre, especialidad)
                     };
                 } else {
+                    const especialidad = sortedCourses.length > 0 ? sortedCourses[0] : null;
                     return {
                         nombre: p.nombre,
                         facultad: 'General',
                         universidad: 'Universidad del Pacífico',
-                        especialidad: sortedCourses.length > 0 ? sortedCourses[0] : null,
+                        especialidad: especialidad,
                         otros_cursos: sortedCourses.length > 1 ? sortedCourses.slice(1).join(', ') : null,
                         avatar_url: '/profes/tl.webp',
-                        background_image_url: null
+                        background_image_url: getDiversifiedProfessorBackground(p.nombre, especialidad)
                     };
                 }
             });
