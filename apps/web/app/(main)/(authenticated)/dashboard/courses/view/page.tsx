@@ -92,16 +92,8 @@ function CourseDetailWrapper() {
 
         const professorsMap = new Map();
 
-        // Helper to format and add professor to map
+        // Helper to format and add professor to map (with strict check)
         const addProfToMap = (p: any) => {
-          if (!p) return;
-          const ratings = p.professor_ratings || [];
-          const avg = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.puntuacion, 0) / ratings.length : 0;
-          professorsMap.set(p.id, { ...p, averageRating: avg });
-        };
-
-        // 1. Add direct matches from name search (with strict JS filtering)
-        matchedProfs?.forEach(p => {
           if (!p) return;
 
           // Apply strict clean match logic to ensure we don't pick up "Mate II" for "Mate I"
@@ -111,12 +103,19 @@ function CourseDetailWrapper() {
             ...(p.courses || [])
           ].filter(Boolean);
 
-          if (isCleanMatch(allProfCourses, courseNameClean)) {
-            addProfToMap(p);
+          if (!isCleanMatch(allProfCourses, courseNameClean)) {
+            return;
           }
-        });
 
-        // 2. Add professors explicitly linked in junction table (these are intentional, no need for strict filter)
+          const ratings = p.professor_ratings || [];
+          const avg = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.puntuacion, 0) / ratings.length : 0;
+          professorsMap.set(p.id, { ...p, averageRating: avg });
+        };
+
+        // 1. Add direct matches from name search
+        matchedProfs?.forEach(addProfToMap);
+
+        // 2. Add professors explicitly linked in junction table
         const linkedProfIds = cpData?.map(cp => cp.professor_id) || [];
         if (linkedProfIds.length > 0) {
           const { data: linkedProfs } = await supabase
