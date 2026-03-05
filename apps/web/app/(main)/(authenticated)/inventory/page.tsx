@@ -158,17 +158,17 @@ export default function InventoryPage() {
                                 </div>
 
                                 {/* Item Info */}
-                                <div className="space-y-2 sm:space-y-3 flex-1 flex flex-col justify-end">
-                                    <div className="mb-1 sm:mb-0">
+                                <div className="space-y-2 sm:space-y-3 flex-1 flex flex-col">
+                                    <div className="flex-1 min-h-[4rem] sm:min-h-[5rem]">
                                         <div className="flex items-center justify-between gap-2">
-                                            <h3 className="text-sm sm:text-xl font-bold text-bb-text leading-tight">{item.name}</h3>
+                                            <h3 className="text-sm sm:text-xl font-bold text-bb-text leading-tight line-clamp-1">{item.name}</h3>
                                             {invItem.remaining_uses !== null && (
                                                 <span className="bg-blue-500 text-white text-[9px] sm:text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
-                                                    {invItem.remaining_uses} usos
+                                                    {invItem.remaining_uses}
                                                 </span>
                                             )}
                                         </div>
-                                        <p className="text-[10px] sm:text-sm text-bb-text-secondary line-clamp-2 mt-0.5 sm:mt-1">{item.description}</p>
+                                        <p className="text-[10px] sm:text-sm text-bb-text-secondary line-clamp-2 mt-1">{item.description}</p>
                                     </div>
 
                                     {item.type === 'profile_frame' ? (
