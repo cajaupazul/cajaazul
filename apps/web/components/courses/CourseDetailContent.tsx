@@ -435,35 +435,66 @@ export default function CourseDetailContent({
                                     </h4>
                                     <div className="grid grid-cols-1 gap-3">
                                         {allProfessors.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0)).map((prof) => (
-                                            <Link
-                                                key={prof.id}
-                                                href={`/dashboard/professors/view?id=${prof.id}`}
-                                                className={`group p-3 bg-bb-card rounded-2xl border transition-all hover:shadow-lg hover:shadow-blue-500/10 active:scale-95 ${selectedProfessorId === prof.id ? 'border-blue-500/50 bg-blue-500/5' : 'border-bb-border hover:border-blue-500/30'}`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="relative shrink-0">
-                                                        <img
-                                                            src={getStorageUrl(prof.avatar_url || '/profes/tl.webp', 'profile-avatars', PLACEHOLDERS.AVATAR)}
-                                                            alt={prof.nombre}
-                                                            className="w-12 h-12 rounded-xl object-cover border border-bb-border/50 shadow-sm transition-transform group-hover:scale-105"
-                                                            onError={(e) => {
-                                                                (e.target as HTMLImageElement).src = '/profes/tl.webp';
-                                                            }}
-                                                        />
-                                                        {prof.averageRating > 0 && (
-                                                            <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-bb-dark text-[8px] font-black px-1 rounded-md border border-bb-dark">
-                                                                {prof.averageRating.toFixed(1)}
-                                                            </div>
-                                                        )}
+                                            prof.hasMaterials ? (
+                                                <Link
+                                                    key={prof.id}
+                                                    href={`/dashboard/professors/view?id=${prof.id}&course=${course.nombre}`}
+                                                    className={`group p-3 bg-bb-card rounded-2xl border transition-all hover:shadow-lg hover:shadow-blue-500/10 active:scale-95 ${selectedProfessorId === prof.id ? 'border-blue-500/50 bg-blue-500/5' : 'border-bb-border hover:border-blue-500/30'}`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="relative shrink-0">
+                                                            <img
+                                                                src={getStorageUrl(prof.avatar_url || '/profes/tl.webp', 'profile-avatars', PLACEHOLDERS.AVATAR)}
+                                                                alt={prof.nombre}
+                                                                className="w-12 h-12 rounded-xl object-cover border border-bb-border/50 shadow-sm transition-transform group-hover:scale-105"
+                                                                onError={(e) => {
+                                                                    (e.target as HTMLImageElement).src = '/profes/tl.webp';
+                                                                }}
+                                                            />
+                                                            {prof.averageRating > 0 && (
+                                                                <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-bb-dark text-[8px] font-black px-1 rounded-md border border-bb-dark">
+                                                                    {prof.averageRating.toFixed(1)}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="font-bold text-sm text-bb-text truncate group-hover:text-blue-400 transition-colors">{prof.nombre}</p>
+                                                            <p className="text-[10px] text-bb-text-secondary truncate mt-0.5">
+                                                                {course.nombre}
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                    <div className="min-w-0 flex-1">
-                                                        <p className="font-bold text-sm text-bb-text truncate group-hover:text-blue-400 transition-colors">{prof.nombre}</p>
-                                                        <p className="text-[10px] text-bb-text-secondary truncate mt-0.5">
-                                                            {prof.especialidad && prof.especialidad !== 'General' ? prof.especialidad : ''}
-                                                        </p>
+                                                </Link>
+                                            ) : (
+                                                <div
+                                                    key={prof.id}
+                                                    className={`group p-3 bg-bb-card rounded-2xl border transition-all opacity-60 cursor-not-allowed ${selectedProfessorId === prof.id ? 'border-blue-500/50 bg-blue-500/5' : 'border-bb-border'}`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="relative shrink-0">
+                                                            <img
+                                                                src={getStorageUrl(prof.avatar_url || '/profes/tl.webp', 'profile-avatars', PLACEHOLDERS.AVATAR)}
+                                                                alt={prof.nombre}
+                                                                className="w-12 h-12 rounded-xl object-cover border border-bb-border/50 shadow-sm"
+                                                                onError={(e) => {
+                                                                    (e.target as HTMLImageElement).src = '/profes/tl.webp';
+                                                                }}
+                                                            />
+                                                            {prof.averageRating > 0 && (
+                                                                <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-bb-dark text-[8px] font-black px-1 rounded-md border border-bb-dark">
+                                                                    {prof.averageRating.toFixed(1)}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="font-bold text-sm text-bb-text truncate">{prof.nombre}</p>
+                                                            <p className="text-[10px] text-bb-text-secondary truncate mt-0.5">
+                                                                {course.nombre}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </Link>
+                                            )
                                         ))}
                                     </div>
                                 </div>

@@ -54,8 +54,7 @@ function CourseDetailWrapper() {
       // For other sources, apply strict clean match logic
       const allProfCourses = [
         p.especialidad,
-        ...(p.otros_cursos ? (Array.isArray(p.otros_cursos) ? p.otros_cursos : [p.otros_cursos]) : []),
-        ...(p.courses || []) // Assuming 'courses' might be another field for courses
+        ...(p.otros_cursos ? (Array.isArray(p.otros_cursos) ? p.otros_cursos : [p.otros_cursos]) : [])
       ].filter(Boolean);
 
       if (isCleanMatch(allProfCourses, courseNameClean)) {
@@ -123,11 +122,19 @@ function CourseDetailWrapper() {
         // 4. Unified Professor Merging
         const professorsMap = new Map();
         const linkedProfIds = new Set(junctionData?.map(cp => cp.professor_id) || []);
-        const contributorIds = new Set(materialsData?.map(m => m.professor_id).filter(Boolean) || []);
+
+        // Count materials per professor for THIS course
+        const materialsPerProf = new Map<string, number>();
+        (materialsData || []).forEach(m => {
+          if (m.professor_id) {
+            materialsPerProf.set(m.professor_id, (materialsPerProf.get(m.professor_id) || 0) + 1);
+          }
+        });
 
         (profsData || []).forEach(p => {
           const isLinked = linkedProfIds.has(p.id);
-          const isContributor = contributorIds.has(p.id);
+          const materialCount = materialsPerProf.get(p.id) || 0;
+          const isContributor = materialCount > 0;
 
           const profCourses = [
             p.especialidad,
@@ -138,11 +145,15 @@ function CourseDetailWrapper() {
 
           // Inclusion Logic:
           // - Always include if linked in junction table (manual link)
-          // - Include if match by name OR if they have materials for this course (with strict check)
-          if (isLinked || matchesName || (isContributor && matchesName)) {
+          // - Include if match by name OR if they have materials for this course
+          if (isLinked || matchesName || isContributor) {
             const ratings = p.professor_ratings || [];
             const avg = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.puntuacion, 0) / ratings.length : 0;
-            professorsMap.set(p.id, { ...p, averageRating: avg });
+            professorsMap.set(p.id, {
+              ...p,
+              averageRating: avg,
+              hasMaterials: isContributor // This professor has active materials for this course
+            });
           }
         });
 
