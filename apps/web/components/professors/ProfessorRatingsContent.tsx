@@ -891,7 +891,7 @@ export default function ProfessorRatingsContent({
                                     transition={{ delay: 0.3 }}
                                     className="flex flex-wrap gap-2 justify-center md:justify-start"
                                 >
-                                    {professor.especialidad && professorLinkMapping[professor.especialidad.toLowerCase()] ? (
+                                    {professor.especialidad && professor.especialidad !== 'General' && professorLinkMapping[professor.especialidad.toLowerCase()] ? (
                                         <div className="flex items-center gap-1">
                                             <Link
                                                 href={`/dashboard/professors/view?id=${professorLinkMapping[professor.especialidad.toLowerCase()]}`}
@@ -910,7 +910,7 @@ export default function ProfessorRatingsContent({
                                             )}
                                         </div>
                                     ) : (
-                                        professor.especialidad && (
+                                        professor.especialidad && professor.especialidad !== 'General' && (
                                             <div className="flex items-center gap-1">
                                                 <span className="bg-bb-sidebar/50 backdrop-blur-md text-bb-text-secondary px-4 py-1.5 rounded-full border border-bb-border uppercase tracking-wider text-xs font-bold">
                                                     {professor.especialidad}
@@ -928,7 +928,7 @@ export default function ProfessorRatingsContent({
                                         )
                                     )}
 
-                                    {professor.facultad && (
+                                    {professor.facultad && professor.facultad !== 'General' && (
                                         <span className="bg-bb-sidebar/50 backdrop-blur-md text-bb-text-secondary px-4 py-1.5 rounded-full border border-bb-border flex items-center gap-2 text-xs font-medium">
                                             <div className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]" />
                                             {professor.facultad}
@@ -1208,11 +1208,9 @@ export default function ProfessorRatingsContent({
                                                         <p className="text-sm font-bold text-bb-text group-hover:text-green-400 transition-colors truncate">
                                                             {prof.nombre}
                                                         </p>
-                                                        {prof.facultad && (
-                                                            <p className="text-xs text-bb-text-secondary truncate mt-0.5">
-                                                                {prof.facultad}
-                                                            </p>
-                                                        )}
+                                                        <p className="text-xs text-bb-text-secondary truncate mt-0.5">
+                                                            {(!prof.facultad || prof.facultad === 'General') ? professor.especialidad : prof.facultad}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </Link>
