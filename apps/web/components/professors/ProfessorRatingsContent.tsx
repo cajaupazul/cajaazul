@@ -40,6 +40,7 @@ interface ProfessorComment {
         puntos?: number;
         es_vip?: boolean;
     };
+    course_name?: string | null;
 }
 
 const REACTIONS = [
@@ -67,6 +68,7 @@ interface Rating {
         puntos?: number;
         es_vip?: boolean;
     };
+    course_name?: string | null;
 }
 
 const containerVariants: Variants = {
@@ -138,6 +140,7 @@ interface ProfessorRatingsContentProps {
     initialMaterials?: any[];
     coursesTaught?: { id: string; nombre: string }[];
     initialComments: ProfessorComment[];
+    selectedCourse?: string | null;
     profile: Profile | null;
     frameMap?: Record<string, any>;
 }
@@ -435,13 +438,22 @@ export default function ProfessorRatingsContent({
     initialMaterials = [],
     coursesTaught = [],
     initialComments = [],
+    selectedCourse = null,
     profile,
     frameMap = {}
 }: ProfessorRatingsContentProps) {
     const router = useRouter();
     const { colors } = useTheme();
-    const [ratings, setRatings] = useState<Rating[]>(initialRatings);
-    const [comments, setComments] = useState<ProfessorComment[]>(initialComments);
+    const [ratings, setRatings] = useState<Rating[]>(() =>
+        selectedCourse
+            ? initialRatings.filter(r => r.course_name?.toLowerCase() === selectedCourse?.toLowerCase())
+            : initialRatings
+    );
+    const [comments, setComments] = useState<ProfessorComment[]>(() =>
+        selectedCourse
+            ? initialComments.filter(c => c.course_name?.toLowerCase() === selectedCourse?.toLowerCase())
+            : initialComments
+    );
     const [commentText, setCommentText] = useState('');
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -462,8 +474,16 @@ export default function ProfessorRatingsContent({
     // Sync state with props when Server Component re-renders
     useEffect(() => {
         setMaterials(initialMaterials);
-        setComments(initialComments);
-    }, [initialMaterials, initialComments]);
+        const filteredComments = selectedCourse
+            ? initialComments.filter(c => c.course_name?.toLowerCase() === selectedCourse?.toLowerCase())
+            : initialComments;
+        setComments(filteredComments);
+
+        const filteredRatings = selectedCourse
+            ? initialRatings.filter(r => r.course_name?.toLowerCase() === selectedCourse?.toLowerCase())
+            : initialRatings;
+        setRatings(filteredRatings);
+    }, [initialMaterials, initialComments, initialRatings, selectedCourse]);
 
     // Realtime Subscriptions
     useEffect(() => {
@@ -612,7 +632,8 @@ export default function ProfessorRatingsContent({
             puntuacion: formData.puntuacion,
             claridad: formData.claridad,
             facilidad: formData.facilidad,
-        }, { onConflict: 'professor_id,user_id' });
+            course_name: selectedCourse
+        }, { onConflict: 'professor_id,user_id,course_name' });
 
         if (!error) {
             setCreateDialogOpen(false);
@@ -635,7 +656,8 @@ export default function ProfessorRatingsContent({
             professor_id: professor.id,
             user_id: user.id,
             contenido: textToSubmit.trim(),
-            parent_id: parentId
+            parent_id: parentId,
+            course_name: selectedCourse
         });
 
         if (!error) {
@@ -891,6 +913,12 @@ export default function ProfessorRatingsContent({
                                     transition={{ delay: 0.3 }}
                                     className="flex flex-wrap gap-2 justify-center md:justify-start"
                                 >
+                                    {selectedCourse && (
+                                        <span className="bg-green-500/20 backdrop-blur-md text-green-400 px-4 py-1.5 rounded-full border border-green-500/30 uppercase tracking-wider text-xs font-bold shadow-lg shadow-green-900/10 flex items-center gap-2">
+                                            <Sparkles className="w-3 h-3" />
+                                            {selectedCourse}
+                                        </span>
+                                    )}
                                     {professor.especialidad && professor.especialidad !== 'General' && professorLinkMapping[professor.especialidad.toLowerCase()] ? (
                                         <div className="flex items-center gap-1">
                                             <Link
@@ -1142,7 +1170,7 @@ export default function ProfessorRatingsContent({
                                                 return (
                                                     <div key={idx} className="flex items-center gap-1">
                                                         <Link
-                                                            href={`/dashboard/professors/view?id=${professorId}`}
+                                                            href={`/dashboard/professors/view?id=${professorId}&course=${encodeURIComponent(trimmedCurso)}`}
                                                             className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium hover:bg-purple-500/20 transition-colors"
                                                         >
                                                             {trimmedCurso}
@@ -1189,7 +1217,7 @@ export default function ProfessorRatingsContent({
                             <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
                                 <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
                                     <User className="w-5 h-5 text-green-400" />
-                                    Otros Profesores de {professor.especialidad}
+                                    Otros Profesores de {selectedCourse || professor.especialidad}
                                 </h3>
 
                                 {relatedProfessors.length > 0 ? (

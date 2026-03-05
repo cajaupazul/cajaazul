@@ -9,6 +9,7 @@ function ProfessorRatingsWrapper() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const professorId = searchParams.get('id');
+  const selectedCourse = searchParams.get('course');
   const [loading, setLoading] = useState(true);
   const [professor, setProfessor] = useState<any>(null);
   const [ratings, setRatings] = useState<any[]>([]);
@@ -221,6 +222,7 @@ function ProfessorRatingsWrapper() {
       initialMaterials={materials}
       coursesTaught={coursesTaught}
       initialComments={comments}
+      selectedCourse={selectedCourse}
       profile={profile}
       frameMap={frameMap}
     />

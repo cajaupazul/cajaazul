@@ -158,6 +158,7 @@ export type Rating = {
   comentario: string | null;
   facilidad: number | null;
   claridad: number | null;
+  course_name?: string | null;
   created_at: string;
   profiles?: Profile;
 };
@@ -193,6 +194,7 @@ export type ProfessorRating = {
   comentario: string | null;
   claridad: number | null;
   facilidad: number | null;
+  course_name?: string | null;
   created_at: string;
   profiles?: Profile;
 };
