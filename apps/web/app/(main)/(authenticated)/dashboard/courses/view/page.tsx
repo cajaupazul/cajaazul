@@ -40,6 +40,30 @@ function CourseDetailWrapper() {
     });
   };
 
+  // Helper function to add professors to the local map, checking for strict course name matches
+  const addProfToMap = (profs: any[], map: Map<string, any>, courseNameClean: string, forceInclude: boolean = false) => {
+    profs.forEach(p => {
+      if (!p || map.has(p.id)) return; // Skip if null/undefined or already added
+
+      // If it's explicitly linked (e.g., junction table), we skip the name check
+      if (forceInclude) {
+        map.set(p.id, p);
+        return;
+      }
+
+      // For other sources, apply strict clean match logic
+      const allProfCourses = [
+        p.especialidad,
+        ...(p.otros_cursos ? (Array.isArray(p.otros_cursos) ? p.otros_cursos : [p.otros_cursos]) : []),
+        ...(p.courses || []) // Assuming 'courses' might be another field for courses
+      ].filter(Boolean);
+
+      if (isCleanMatch(allProfCourses, courseNameClean)) {
+        map.set(p.id, p);
+      }
+    });
+  };
+
   useEffect(() => {
     if (!courseId) {
       setLoading(false);
@@ -48,103 +72,79 @@ function CourseDetailWrapper() {
 
     async function fetchData() {
       try {
-        // 1. Fetch course and materials
-        const [
-          { data: courseData, error: courseError },
-          { data: materialsData }
-        ] = await Promise.all([
-          supabase.from('courses').select('*').eq('id', courseId).single(),
-          supabase.from('materials')
-            .select('*, professors(nombre), profiles(*)')
-            .eq('course_id', courseId)
-            .order('created_at', { ascending: false })
-        ]);
+        setLoading(true);
+        // 1. Fetch course data
+        const { data: courseData, error: courseError } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('id', courseId)
+          .single();
 
         if (courseError || !courseData) {
           console.error('Course not found');
+          setLoading(false);
           return;
         }
+        setCourse(courseData);
+        const courseNameClean = courseData.nombre.trim();
 
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+        // 2. Parallel fetch for associated data
+        const [
+          { data: materialsData },
+          { data: junctionData },
+          { data: profsData },
+          { data: sessionData }
+        ] = await Promise.all([
+          supabase.from('materials')
+            .select('*, professors(nombre), profiles(*)')
+            .eq('course_id', courseId)
+            .order('created_at', { ascending: false }),
+          supabase.from('course_professors')
+            .select('professor_id')
+            .eq('course_id', courseId),
+          supabase.from('professors')
+            .select('*, professor_ratings(puntuacion)')
+            .limit(1000), // Fetch a good pool for matching
+          supabase.auth.getUser()
+        ]);
+
+        setMaterials(materialsData || []);
+
+        // 3. Handle User Permissions
+        if (sessionData?.user) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('role')
-            .eq('id', user.id)
+            .eq('id', sessionData.user.id)
             .single();
           setCurrentUser(profile);
         }
 
-        setCourse(courseData);
-        setMaterials(materialsData || []);
-
-        // 2. Fetch professors (junction table, fuzzy match, and contributors)
-        const courseNameClean = courseData.nombre.trim();
-
-        // Parallel fetch for all potential associations
-        const [
-          { data: cpData },
-          { data: matchedProfs },
-          { data: materialProfs }
-        ] = await Promise.all([
-          supabase.from('course_professors').select('professor_id').eq('course_id', courseId),
-          supabase.from('professors')
-            .select('*, professor_ratings(puntuacion)')
-            .or(`especialidad.ilike.%${courseNameClean}%,otros_cursos.ilike.%${courseNameClean}%`),
-          supabase.from('materials')
-            .select('professor_id')
-            .eq('course_id', courseId)
-            .not('professor_id', 'is', null)
-        ]);
-
+        // 4. Unified Professor Merging
         const professorsMap = new Map();
+        const linkedProfIds = new Set(junctionData?.map(cp => cp.professor_id) || []);
+        const contributorIds = new Set(materialsData?.map(m => m.professor_id).filter(Boolean) || []);
 
-        // Helper to format and add professor to map (with strict check)
-        const addProfToMap = (p: any) => {
-          if (!p) return;
+        (profsData || []).forEach(p => {
+          const isLinked = linkedProfIds.has(p.id);
+          const isContributor = contributorIds.has(p.id);
 
-          // Apply strict clean match logic to ensure we don't pick up "Mate II" for "Mate I"
-          const allProfCourses = [
+          const profCourses = [
             p.especialidad,
-            ...(p.otros_cursos ? (Array.isArray(p.otros_cursos) ? p.otros_cursos : [p.otros_cursos]) : []),
-            ...(p.courses || [])
+            ...(p.otros_cursos ? (Array.isArray(p.otros_cursos) ? p.otros_cursos : [p.otros_cursos]) : [])
           ].filter(Boolean);
 
-          if (!isCleanMatch(allProfCourses, courseNameClean)) {
-            return;
+          const matchesName = isCleanMatch(profCourses, courseNameClean);
+
+          // Inclusion Logic:
+          // - Always include if linked in junction table (manual link)
+          // - Include if match by name OR if they have materials for this course (with strict check)
+          if (isLinked || matchesName || (isContributor && matchesName)) {
+            const ratings = p.professor_ratings || [];
+            const avg = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.puntuacion, 0) / ratings.length : 0;
+            professorsMap.set(p.id, { ...p, averageRating: avg });
           }
-
-          const ratings = p.professor_ratings || [];
-          const avg = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.puntuacion, 0) / ratings.length : 0;
-          professorsMap.set(p.id, { ...p, averageRating: avg });
-        };
-
-        // 1. Add direct matches from name search
-        matchedProfs?.forEach(addProfToMap);
-
-        // 2. Add professors explicitly linked in junction table
-        const linkedProfIds = cpData?.map(cp => cp.professor_id) || [];
-        if (linkedProfIds.length > 0) {
-          const { data: linkedProfs } = await supabase
-            .from('professors')
-            .select('*, professor_ratings(puntuacion)')
-            .in('id', linkedProfIds);
-          linkedProfs?.forEach(addProfToMap);
-        }
-
-        // 3. Add professors who have contributed materials
-        const contributorIds = Array.from(new Set(materialProfs?.map(m => m.professor_id).filter(Boolean)));
-        if (contributorIds.length > 0) {
-          const missingIds = contributorIds.filter(id => !professorsMap.has(id));
-          if (missingIds.length > 0) {
-            const { data: contriProfs } = await supabase
-              .from('professors')
-              .select('*, professor_ratings(puntuacion)')
-              .in('id', missingIds);
-            contriProfs?.forEach(addProfToMap);
-          }
-        }
+        });
 
         const finalProfs = Array.from(professorsMap.values());
         setAllProfessors(finalProfs);
@@ -155,6 +155,7 @@ function CourseDetailWrapper() {
         } else {
           setTopProfessor(null);
         }
+
       } catch (err) {
         console.error('Error fetching course detail:', err);
       } finally {

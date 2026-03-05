@@ -458,7 +458,9 @@ export default function CourseDetailContent({
                                                     </div>
                                                     <div className="min-w-0 flex-1">
                                                         <p className="font-bold text-sm text-bb-text truncate group-hover:text-blue-400 transition-colors">{prof.nombre}</p>
-                                                        <p className="text-[10px] text-bb-text-secondary truncate mt-0.5">{prof.especialidad || course.nombre}</p>
+                                                        <p className="text-[10px] text-bb-text-secondary truncate mt-0.5">
+                                                            {prof.especialidad && prof.especialidad !== 'General' ? prof.especialidad : ''}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </Link>

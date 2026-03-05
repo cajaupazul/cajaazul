@@ -92,25 +92,48 @@ export default function ProfessorsContent({
     const [professorToDelete, setProfessorToDelete] = useState<any>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Extract unique courses across all professors (normalized)
-    const uniqueCourses = useMemo(() => {
-        const coursesMap = new Map<string, string>(); // lowercase -> original
-        initialProfessors.forEach(prof => {
-            const processCourse = (c: string) => {
-                const lower = c.toLowerCase().trim();
-                if (!coursesMap.has(lower)) {
-                    coursesMap.set(lower, c.trim());
-                }
-            };
+    // Helper to normalize strings (remove accents, lowercase, trim)
+    const normalizeString = (str: string) => {
+        return str
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim();
+    };
 
-            if (prof.courses && Array.isArray(prof.courses)) {
-                prof.courses.forEach(processCourse);
-            } else if (prof.especialidad) {
-                processCourse(prof.especialidad);
+    const isCleanMatch = (professorCourses: string[], targetCourse: string) => {
+        if (!targetCourse) return false;
+        const targetNorm = normalizeString(targetCourse);
+
+        return professorCourses.some(course => {
+            const courseNorm = normalizeString(course);
+            if (courseNorm === targetNorm) return true;
+
+            // Split professor courses by common delimiters and check for exact segment match
+            const segments = courseNorm.split(/[,;|•]/).map(s => s.trim()).filter(Boolean);
+            return segments.some(segment => segment === targetNorm);
+        });
+    };
+
+    const uniqueCourses = useMemo(() => {
+        const courseMap = new Map<string, string>();
+        professors.forEach(prof => {
+            if (prof.especialidad && prof.especialidad !== 'General') {
+                const courses = prof.especialidad.split(/[,;|•]/).map((s: string) => s.trim());
+                courses.forEach((c: string) => {
+                    if (c && c !== 'General') {
+                        const normalized = normalizeString(c);
+                        if (!courseMap.has(normalized)) {
+                            courseMap.set(normalized, c);
+                        }
+                    }
+                });
             }
         });
-        return Array.from(coursesMap.values()).sort((a, b) => a.localeCompare(b));
-    }, [initialProfessors]);
+
+        const coursesArray = Array.from(courseMap.values()).sort();
+        return coursesArray;
+    }, [professors]);
 
     const handleDeleteClick = (prof: any) => {
         setProfessorToDelete(prof);
@@ -175,17 +198,12 @@ export default function ProfessorsContent({
     }, [courseParam, uniqueCourses]);
 
     const filteredAndSortedProfessors = useMemo(() => {
-        let result = professors.filter((professor) => {
-            const query = searchQuery.toLowerCase().trim();
-            const nameMatch = !query || professor.nombre.toLowerCase().includes(query);
-            const specialtyMatch = !query || professor.especialidad?.toLowerCase().includes(query);
-            const otherCoursesMatch = !query || (professor.courses || []).some((course: string) => course.toLowerCase().includes(query));
-
-            const courseMatch = selectedCourse === 'all' ||
-                (professor.courses || []).some((c: string) => c.toLowerCase().trim() === selectedCourse.toLowerCase().trim()) ||
-                professor.especialidad?.toLowerCase().trim() === selectedCourse.toLowerCase().trim();
-
-            return (nameMatch || specialtyMatch || otherCoursesMatch) && courseMatch;
+        let result = professors.filter(prof => {
+            const searchTerm = searchQuery;
+            const matchesSearch = prof.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+            const profCourses = prof.especialidad ? [prof.especialidad] : [];
+            const matchesCourse = selectedCourse === 'all' || isCleanMatch(profCourses, selectedCourse);
+            return matchesSearch && matchesCourse;
         });
 
         // Sorting
@@ -327,14 +345,9 @@ export default function ProfessorsContent({
                                                         {professor.nombre}
                                                     </h3>
                                                     <div className="flex items-center gap-1 md:gap-1.5 mb-2 md:mb-3 flex-wrap overflow-hidden">
-                                                        {(professor.courses || [professor.especialidad]).slice(0, 6).map((course: string, idx: number) => (
-                                                            <span key={idx} className="text-[9px] md:text-[10px] font-bold uppercase tracking-tight text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-md border border-blue-500/5 whitespace-nowrap">
-                                                                {course}
-                                                            </span>
-                                                        ))}
-                                                        <span className="hidden md:inline text-[10px] md:text-xs text-bb-text-secondary truncate">
-                                                            {professor.facultad || 'General'}
-                                                        </span>
+                                                        <p className="text-xs text-bb-text-secondary truncate mt-1">
+                                                            {professor.especialidad && professor.especialidad !== 'General' ? professor.especialidad : ''}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
