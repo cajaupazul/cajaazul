@@ -12,12 +12,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Star, Search, Plus, GraduationCap, Trophy, Trash2 } from 'lucide-react';
+import { Star, Search, Plus, GraduationCap, Trophy, Trash2, RefreshCw } from 'lucide-react';
 import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import { PLACEHOLDERS, getDiversifiedProfessorBackground } from '@/lib/constants';
+import SyncProfessorsModal from './SyncProfessorsModal';
 
 interface ProfessorsContentProps {
     initialProfessors: any[];
@@ -84,6 +85,7 @@ export default function ProfessorsContent({
     const [selectedCourse, setSelectedCourse] = useState('all');
     const [sortBy, setSortBy] = useState('best');
     const [savedProfessors, setSavedProfessors] = useState<Set<string>>(new Set(initialSavedProfessors));
+    const [syncModalOpen, setSyncModalOpen] = useState(false);
 
     // Extract unique courses across all professors
     const uniqueCourses = useMemo(() => {
@@ -176,6 +178,17 @@ export default function ProfessorsContent({
                                 <SelectItem value="worst">Menor Calificados</SelectItem>
                             </SelectContent>
                         </Select>
+
+                        {profile?.role === 'admin' && (
+                            <Button
+                                onClick={() => setSyncModalOpen(true)}
+                                className="h-11 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl w-full lg:w-auto"
+                            >
+                                <RefreshCw className="h-5 w-5 mr-1" />
+                                <span className="hidden lg:inline">Sincronizar</span>
+                                <span className="inline lg:hidden">Sincronizar Excel</span>
+                            </Button>
+                        )}
 
                         <Button
                             onClick={() => router.push('/dashboard/professors/nuevo')}
@@ -324,6 +337,16 @@ export default function ProfessorsContent({
                 )}
             </div>
 
+            {profile?.role === 'admin' && (
+                <SyncProfessorsModal
+                    open={syncModalOpen}
+                    onOpenChange={setSyncModalOpen}
+                    onSuccess={() => {
+                        router.refresh();
+                        setTimeout(() => window.location.reload(), 1000);
+                    }}
+                />
+            )}
         </div>
     );
 }
