@@ -111,8 +111,11 @@ checkout.post('/', authMiddleware, async (c) => {
     if (!user) return c.json({ error: 'Unauthorized' }, 401)
 
     const body = await c.req.json()
-    const { product_id } = body;
+    const { product_id, origin } = body;
     const apiBase = c.env.WEBHOOK_URL_BASE || 'https://campuslink-api.cajaupazul.workers.dev'
+
+    // Dynamic redirect base to avoid environment mismatch flickering
+    const redirectBase = origin || 'https://campuslink.pages.dev'
 
     if (!product_id) return c.json({ error: 'Missing product_id' }, 400)
 
@@ -152,9 +155,9 @@ checkout.post('/', authMiddleware, async (c) => {
                     }
                 ],
                 back_urls: {
-                    success: 'https://campuslink.pages.dev/dashboard/store?payment=success',
-                    failure: 'https://campuslink.pages.dev/dashboard/store?payment=failure',
-                    pending: 'https://campuslink.pages.dev/dashboard/store?payment=pending',
+                    success: `${redirectBase}/dashboard/store?payment=success`,
+                    failure: `${redirectBase}/dashboard/store?payment=failure`,
+                    pending: `${redirectBase}/dashboard/store?payment=pending`,
                 },
                 auto_return: 'approved',
                 payment_methods: {

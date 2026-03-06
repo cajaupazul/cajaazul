@@ -88,10 +88,12 @@ function StoreContent() {
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+    const [showDebugInfo, setShowDebugInfo] = useState(false);
 
     const status = searchParams.get('status');
     const paymentStatus = searchParams.get('payment');
     const statusDetail = searchParams.get('status_detail');
+    const collectionId = searchParams.get('collection_id') || searchParams.get('payment_id');
     const effectiveStatus = paymentStatus || status;
 
     React.useEffect(() => {
@@ -364,10 +366,10 @@ function StoreContent() {
                 {/* Alert Messages */}
                 {effectiveStatus && (
                     <div className={`p-6 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 border ${(effectiveStatus === 'success' || effectiveStatus === 'approved')
-                            ? 'bg-green-500/10 border-green-500/20'
-                            : (effectiveStatus === 'failure' || effectiveStatus === 'rejected')
-                                ? 'bg-red-500/10 border-red-500/20'
-                                : 'bg-yellow-500/10 border-yellow-500/20'
+                        ? 'bg-green-500/10 border-green-500/20'
+                        : (effectiveStatus === 'failure' || effectiveStatus === 'rejected')
+                            ? 'bg-red-500/10 border-red-500/20'
+                            : 'bg-yellow-500/10 border-yellow-500/20'
                         }`}>
                         {(effectiveStatus === 'success' || effectiveStatus === 'approved') ? (
                             <CheckCircle2 className="text-green-500 shrink-0" size={32} />
@@ -394,6 +396,26 @@ function StoreContent() {
                                     'Estamos procesando tu pago. Te avisaremos cuando se complete.'
                                 )}
                             </p>
+
+                            {(statusDetail || collectionId) && (effectiveStatus === 'failure' || effectiveStatus === 'rejected') && (
+                                <div className="mt-4">
+                                    <button
+                                        onClick={() => setShowDebugInfo(!showDebugInfo)}
+                                        className="text-[10px] uppercase tracking-widest font-bold text-red-500/60 hover:text-red-500 flex items-center gap-1 transition-colors"
+                                    >
+                                        <Settings size={10} />
+                                        {showDebugInfo ? 'Ocultar detalles técnicos' : 'Ver detalles técnicos'}
+                                    </button>
+
+                                    {showDebugInfo && (
+                                        <div className="mt-2 p-3 bg-black/20 rounded-xl border border-white/5 font-mono text-[10px] text-red-400/80 space-y-1">
+                                            {statusDetail && <div>CODE: {statusDetail}</div>}
+                                            {collectionId && <div>PAYMENT_ID: {collectionId}</div>}
+                                            <div className="mt-2 opacity-60 italic">Causa probable: Filtro de seguridad o límites de la billetera.</div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
