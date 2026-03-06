@@ -93,6 +93,7 @@ function StoreContent() {
     const status = searchParams.get('status');
     const paymentStatus = searchParams.get('payment');
     const statusDetail = searchParams.get('status_detail');
+    const merchantOrderId = searchParams.get('merchant_order_id');
     const collectionId = searchParams.get('collection_id') || searchParams.get('payment_id');
     const effectiveStatus = paymentStatus || status;
 
@@ -408,10 +409,16 @@ function StoreContent() {
                                     </button>
 
                                     {showDebugInfo && (
-                                        <div className="mt-2 p-3 bg-black/20 rounded-xl border border-white/5 font-mono text-[10px] text-red-400/80 space-y-1">
+                                        <div className="mt-2 p-3 bg-black/20 rounded-xl border border-white/5 font-mono text-[10px] text-red-400/80 space-y-1 overflow-x-auto">
                                             {statusDetail && <div>CODE: {statusDetail}</div>}
                                             {collectionId && <div>PAYMENT_ID: {collectionId}</div>}
-                                            <div className="mt-2 opacity-60 italic">Causa probable: Filtro de seguridad o límites de la billetera.</div>
+                                            {merchantOrderId && <div>ORDER_ID: {merchantOrderId}</div>}
+                                            {status && <div>STATUS_PARAM: {status}</div>}
+                                            {paymentStatus && <div>PAYMENT_PARAM: {paymentStatus}</div>}
+                                            <div className="mt-2 opacity-60 italic border-t border-white/5 pt-2">
+                                                Causa probable: Filtro anti-fraude de Mercado Pago o límite de cuenta individual.
+                                                Si tienes saldo, intenta usar la opción "Tarjeta de Débito" dentro de Mercado Pago usando los datos de tu tarjeta asociada a Yape.
+                                            </div>
                                         </div>
                                     )}
                                 </div>
