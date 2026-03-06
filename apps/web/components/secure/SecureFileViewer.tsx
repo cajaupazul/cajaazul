@@ -17,9 +17,10 @@ if (typeof window !== 'undefined') {
 interface SecureFileViewerProps {
     filePath: string;
     fileName: string;
+    onClose?: (open: false) => void;
 }
 
-export default function SecureFileViewer({ filePath, fileName }: SecureFileViewerProps) {
+export default function SecureFileViewer({ filePath, fileName, onClose }: SecureFileViewerProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [fileType, setFileType] = useState<'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'other'>('other');
@@ -251,7 +252,7 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
             <div className={`flex-1 flex flex-col overflow-hidden relative ${isFullscreen ? 'p-0' : ''}`}>
                 {/* 1. PDF */}
                 {fileType === 'pdf' && pdfFile && (
-                    <div className="flex-1 overflow-auto bg-gray-100/50 flex justify-center p-4 scrollbar-thin">
+                    <div className="flex-1 overflow-auto bg-gray-100/50 flex justify-center p-4 scrollbar-thin" onClick={(e) => { if (e.target === e.currentTarget) onClose?.(false); }}>
                         <Document
                             file={pdfFile}
                             onLoadSuccess={({ numPages }) => {
@@ -288,21 +289,21 @@ export default function SecureFileViewer({ filePath, fileName }: SecureFileViewe
 
                 {/* 2. DOCX */}
                 {fileType === 'docx' && !useExternalViewer && (
-                    <div className="flex-1 overflow-auto bg-white p-4 scrollbar-thin">
+                    <div className="flex-1 overflow-auto bg-white p-4 scrollbar-thin" onClick={(e) => { if (e.target === e.currentTarget) onClose?.(false); }}>
                         <div ref={docxContainerRef} className="max-w-[800px] mx-auto docx-content shadow-sm" />
                     </div>
                 )}
 
                 {/* 3. XLSX */}
                 {fileType === 'xlsx' && !useExternalViewer && (
-                    <div className="flex-1 overflow-auto bg-white scrollbar-thin">
+                    <div className="flex-1 overflow-auto bg-white scrollbar-thin" onClick={(e) => { if (e.target === e.currentTarget) onClose?.(false); }}>
                         <div ref={xlsxContainerRef} className="p-4 overflow-x-auto excel-viewer" />
                     </div>
                 )}
 
                 {/* 4. IMAGE */}
                 {fileType === 'image' && blobUrl && (
-                    <div className="flex-1 flex items-center justify-center p-8 overflow-auto scrollbar-thin">
+                    <div className="flex-1 flex items-center justify-center p-8 overflow-auto scrollbar-thin" onClick={(e) => { if (e.target === e.currentTarget) onClose?.(false); }}>
                         <div className="relative shadow-2xl rounded-xl overflow-hidden group">
                             <img
                                 src={blobUrl}

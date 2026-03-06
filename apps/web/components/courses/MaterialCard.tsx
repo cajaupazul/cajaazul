@@ -109,18 +109,20 @@ export default function MaterialCard({
                                 {config.label}
                             </Badge>
                             {material.professors?.nombre && (
-                                <span className="flex items-center gap-1 truncate max-w-[100px]">
+                                <span className="flex items-center gap-1 truncate max-w-[100px]" onClick={(e) => e.stopPropagation()}>
                                     <User className="w-3 h-3" />
                                     {material.professors.nombre}
                                 </span>
                             )}
                             {material.profiles?.nombre && (
-                                <UserHoverCard profile={material.profiles}>
-                                    <span className="flex items-center gap-1 truncate max-w-[100px] hover:text-blue-400 transition-colors">
-                                        <UploadCloud className="w-3 h-3" />
-                                        {material.profiles.nombre}
-                                    </span>
-                                </UserHoverCard>
+                                <div onClick={(e) => e.stopPropagation()}>
+                                    <UserHoverCard profile={material.profiles}>
+                                        <span className="flex items-center gap-1 truncate max-w-[100px] hover:text-blue-400 transition-colors">
+                                            <UploadCloud className="w-3 h-3" />
+                                            {material.profiles.nombre}
+                                        </span>
+                                    </UserHoverCard>
+                                </div>
                             )}
                             <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />
@@ -190,13 +192,13 @@ export default function MaterialCard({
 
                 <div className="flex flex-col gap-2 pt-1 border-t border-bb-border/30">
                     {material.professors?.nombre && (
-                        <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary font-medium truncate">
+                        <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary font-medium truncate" onClick={(e) => e.stopPropagation()}>
                             <User className="w-3 h-3 shrink-0" />
                             <span className="truncate">{material.professors.nombre}</span>
                         </div>
                     )}
                     {material.profiles?.nombre && (
-                        <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary font-medium truncate">
+                        <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary font-medium truncate" onClick={(e) => e.stopPropagation()}>
                             <UploadCloud className="w-3 h-3 shrink-0" />
                             <UserHoverCard profile={material.profiles}>
                                 <span className="truncate hover:text-blue-400 transition-colors">{material.profiles.nombre}</span>
