@@ -42,9 +42,11 @@ export default function NewShopItemPage() {
         price_coins: 0,
         frame_key: '',
         is_active: true,
-        max_uses: null as number | null
+        max_uses: null as number | null,
+        bundle_items: [] as string[]
     });
     const [categories, setCategories] = useState<ShopCategory[]>([]);
+    const [allShopItems, setAllShopItems] = useState<any[]>([]);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [skipResize, setSkipResize] = useState(false);
@@ -59,11 +61,17 @@ export default function NewShopItemPage() {
     }, [profile, router]);
 
     const fetchCategories = async () => {
-        const { data } = await supabase
+        const { data: catData } = await supabase
             .from('shop_categories')
             .select('*')
             .order('display_order', { ascending: true });
-        if (data) setCategories(data);
+        if (catData) setCategories(catData);
+
+        const { data: itemData } = await supabase
+            .from('shop_items')
+            .select('id, name, type, is_active')
+            .order('created_at', { ascending: false });
+        if (itemData) setAllShopItems(itemData);
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,13 +199,13 @@ export default function NewShopItemPage() {
                                         <select
                                             value={form.type}
                                             onChange={e => setForm({ ...form, type: e.target.value })}
-                                            className="w-full bg-bb-sidebar/30 border-bb-border h-11 rounded-md px-3 text-sm"
+                                            className="w-full bg-bb-sidebar/30 border-bb-border h-11 rounded-md px-3 text-sm focus:bg-bb-sidebar"
                                         >
-                                            <option value="profile_frame">Marco de Perfil</option>
-                                            <option value="background">Fondo</option>
-                                            <option value="badge">Insignia</option>
-                                            <option value="sticker">Sticker (Decoración)</option>
-                                            <option value="other">Otro</option>
+                                            <option className="bg-bb-darker text-white" value="profile_frame">Marco de Perfil</option>
+                                            <option className="bg-bb-darker text-white" value="background">Fondo</option>
+                                            <option className="bg-bb-darker text-white" value="badge">Insignia</option>
+                                            <option className="bg-bb-darker text-white" value="sticker">Sticker (Decoración)</option>
+                                            <option className="bg-bb-darker text-white" value="other">Otro / Pack Especial</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">
@@ -205,25 +213,60 @@ export default function NewShopItemPage() {
                                         <select
                                             value={form.category_id}
                                             onChange={e => setForm({ ...form, category_id: e.target.value })}
-                                            className="w-full bg-bb-sidebar/30 border-bb-border h-11 rounded-md px-3 text-sm"
+                                            className="w-full bg-bb-sidebar/30 border-bb-border h-11 rounded-md px-3 text-sm focus:bg-bb-sidebar"
                                         >
-                                            <option value="">Sin categoría</option>
+                                            <option className="bg-bb-darker text-white" value="">Sin categoría</option>
                                             {categories.map(cat => (
-                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                <option className="bg-bb-darker text-white" key={cat.id} value={cat.id}>{cat.name}</option>
                                             ))}
                                         </select>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
+
+                                {/* Seleccionador de Bundle Items (Solo para Packs) */}
+                                {form.type === 'other' && allShopItems.length > 0 && (
+                                    <div className="space-y-3 pt-4 border-t border-bb-border bg-blue-500/5 p-4 rounded-xl">
+                                        <h3 className="font-bold text-sm text-blue-400 flex items-center gap-2">
+                                            📦 Configuración de Pack
+                                        </h3>
+                                        <p className="text-[10px] text-bb-text-secondary">
+                                            Selecciona los artículos que el usuario recibirá automáticamente al comprar este pack.
+                                        </p>
+                                        <div className="max-h-40 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                            {allShopItems.map((item: any) => (
+                                                <label key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer border border-transparent hover:border-white/10 transition-colors">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 rounded bg-bb-darker border-bb-border accent-blue-500"
+                                                        checked={form.bundle_items.includes(item.id)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setForm(prev => ({ ...prev, bundle_items: [...prev.bundle_items, item.id] }));
+                                                            } else {
+                                                                setForm(prev => ({ ...prev, bundle_items: prev.bundle_items.filter(id => id !== item.id) }));
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-xs font-bold text-white truncate">{item.name}</div>
+                                                        <div className="text-[9px] text-zinc-500 uppercase tracking-wider">{item.type.replace('_', ' ')} • ID: {item.id.slice(0, 8)}</div>
+                                                    </div>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="space-y-2 pt-2 border-t border-bb-border">
                                     <Label>Frame Key (Identificador único)</Label>
                                     <Input
                                         required
                                         value={form.frame_key}
                                         onChange={e => setForm({ ...form, frame_key: e.target.value })}
                                         className="bg-bb-sidebar/30 border-bb-border h-11"
-                                        placeholder="ej: frame_fire_01"
+                                        placeholder="ej: bundle_oferta_01"
                                     />
-                                    <p className="text-[10px] text-bb-text-secondary italic">Si no es un marco, puedes dejarlo vacío.</p>
+                                    <p className="text-[10px] text-bb-text-secondary italic">Si es un marco, asegura que coincida con el CSS. Si es un pack u otro, ponle un ID único (ej. pack_verano_1).</p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
@@ -258,14 +301,14 @@ export default function NewShopItemPage() {
                                         <select
                                             value={form.max_uses === null ? 'forever' : form.max_uses.toString()}
                                             onChange={e => setForm({ ...form, max_uses: e.target.value === 'forever' ? null : parseInt(e.target.value) })}
-                                            className="w-full bg-bb-sidebar/30 border-bb-border h-11 rounded-md px-3 text-sm"
+                                            className="w-full bg-bb-sidebar/30 border-bb-border h-11 rounded-md px-3 text-sm focus:bg-bb-sidebar"
                                         >
-                                            <option value="forever">Para siempre (Infinito)</option>
+                                            <option className="bg-bb-darker text-white" value="forever">Para siempre (Infinito)</option>
                                             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                                                <option key={n} value={n.toString()}>{n} {n === 1 ? 'uso' : 'usos'}</option>
+                                                <option className="bg-bb-darker text-white" key={n} value={n.toString()}>{n} {n === 1 ? 'uso' : 'usos'}</option>
                                             ))}
                                         </select>
-                                        <p className="text-[10px] text-bb-text-secondary italic">Ideal para stickers que se consumen al usarlos.</p>
+                                        <p className="text-[10px] text-bb-text-secondary italic">Ideal para stickers que se consumen al usarlos. Dejar infinito para packs y marcos.</p>
                                     </div>
                                 </div>
                                 <div className="space-y-2">

@@ -52,9 +52,11 @@ function EditShopItemWrapper() {
         price_coins: 0,
         frame_key: '',
         is_active: true,
-        max_uses: null as number | null
+        max_uses: null as number | null,
+        bundle_items: [] as string[]
     });
     const [categories, setCategories] = useState<ShopCategory[]>([]);
+    const [allShopItems, setAllShopItems] = useState<any[]>([]);
     const [frameSettings, setFrameSettings] = useState<any>(null);
 
     // Proteccion de ruta
@@ -74,11 +76,18 @@ function EditShopItemWrapper() {
     }, [itemId]);
 
     const fetchCategories = async () => {
-        const { data } = await supabase
+        const { data: catData } = await supabase
             .from('shop_categories')
             .select('*')
             .order('display_order', { ascending: true });
-        if (data) setCategories(data);
+        if (catData) setCategories(catData);
+
+        const { data: itemData } = await supabase
+            .from('shop_items')
+            .select('id, name, type, is_active')
+            .neq('id', itemId) // No seleccionarse a si mismo
+            .order('created_at', { ascending: false });
+        if (itemData) setAllShopItems(itemData);
     };
 
     const fetchItem = async () => {
@@ -100,7 +109,8 @@ function EditShopItemWrapper() {
                 price_coins: data.price_coins,
                 frame_key: data.frame_key || '',
                 is_active: data.is_active,
-                max_uses: data.max_uses
+                max_uses: data.max_uses,
+                bundle_items: data.bundle_items || []
             });
             setFrameSettings(data.frame_settings);
         } else {
@@ -225,7 +235,7 @@ function EditShopItemWrapper() {
                                                 <SelectItem value="background">Fondo</SelectItem>
                                                 <SelectItem value="badge">Insignia</SelectItem>
                                                 <SelectItem value="sticker">Sticker (Decoración)</SelectItem>
-                                                <SelectItem value="other">Otro</SelectItem>
+                                                <SelectItem value="other">Otro / Pack Especial</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -247,7 +257,42 @@ function EditShopItemWrapper() {
                                         </Select>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
+
+                                {/* Seleccionador de Bundle Items (Solo para Packs) */}
+                                {form.type === 'other' && allShopItems.length > 0 && (
+                                    <div className="space-y-3 pt-4 border-t border-bb-border bg-blue-500/5 p-4 rounded-xl">
+                                        <h3 className="font-bold text-sm text-blue-400 flex items-center gap-2">
+                                            📦 Configuración de Pack
+                                        </h3>
+                                        <p className="text-[10px] text-bb-text-secondary">
+                                            Selecciona los artículos que el usuario recibirá automáticamente al comprar este pack.
+                                        </p>
+                                        <div className="max-h-40 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                            {allShopItems.map((item: any) => (
+                                                <label key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer border border-transparent hover:border-white/10 transition-colors">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 rounded bg-bb-darker border-bb-border accent-blue-500"
+                                                        checked={form.bundle_items.includes(item.id)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setForm(prev => ({ ...prev, bundle_items: [...prev.bundle_items, item.id] }));
+                                                            } else {
+                                                                setForm(prev => ({ ...prev, bundle_items: prev.bundle_items.filter(id => id !== item.id) }));
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-xs font-bold text-white truncate">{item.name}</div>
+                                                        <div className="text-[9px] text-zinc-500 uppercase tracking-wider">{item.type.replace('_', ' ')} • ID: {item.id.slice(0, 8)}</div>
+                                                    </div>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="space-y-2 pt-2 border-t border-bb-border">
                                     <Label>Frame Key (No se recomienda cambiar)</Label>
                                     <Input
                                         required
