@@ -346,7 +346,21 @@ export default function ProfessorsContent({
                                                     </h3>
                                                     <div className="flex items-center gap-1 md:gap-1.5 mb-2 md:mb-3 flex-wrap overflow-hidden">
                                                         <p className="text-xs text-bb-text-secondary truncate mt-1">
-                                                            {professor.especialidad && professor.especialidad !== 'General' ? professor.especialidad.toUpperCase() : ''}
+                                                            {(() => {
+                                                                const courses = new Set<string>();
+                                                                if (professor.especialidad && professor.especialidad !== 'General') {
+                                                                    courses.add(professor.especialidad.trim().toUpperCase());
+                                                                }
+                                                                if (professor.otros_cursos) {
+                                                                    professor.otros_cursos.split(',').forEach(c => {
+                                                                        const trimmed = c.trim().toUpperCase();
+                                                                        if (trimmed && trimmed !== 'GENERAL') {
+                                                                            courses.add(trimmed);
+                                                                        }
+                                                                    });
+                                                                }
+                                                                return Array.from(courses).join(' | ');
+                                                            })()}
                                                         </p>
                                                     </div>
                                                 </div>
