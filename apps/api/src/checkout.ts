@@ -160,6 +160,10 @@ checkout.post('/', authMiddleware, async (c) => {
                     pending: `${redirectBase}/dashboard/store?payment=pending`,
                 },
                 auto_return: 'approved',
+                payer: {
+                    name: "Usuario CampusLink",
+                    email: user.email || "campuslink@cajaupazul.com"
+                },
                 payment_methods: {
                     installments: 1,
                     default_installments: 1
