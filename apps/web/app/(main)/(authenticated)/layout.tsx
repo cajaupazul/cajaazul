@@ -126,7 +126,12 @@ export default function AuthenticatedLayout({
     await supabase.auth.signOut();
   };
 
-  const isActive = (href: string) => pathname === href;
+  const isActive = (href: string) => {
+    if (href === '/dashboard' || href === '/inventory') {
+      return pathname === href;
+    }
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   const navItems = [
     { label: 'Inicio', href: '/dashboard', icon: Home },
