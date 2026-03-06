@@ -23,7 +23,7 @@ export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, is
     const containerRef = useRef<HTMLDivElement>(null);
 
     // ─── REACT STATE ──────────────────────────────────────────────────────────
-    const [mode, setMode] = useState<'draw' | 'stamp' | 'erase' | 'pan'>('draw');
+    const [mode, setMode] = useState<'draw' | 'stamp' | 'erase' | 'pan'>('pan');
     const [color, setColor] = useState('#10b981');
     const [brushSize, setBrushSize] = useState(15);
     const [scale, setScale] = useState(1);
@@ -40,7 +40,7 @@ export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, is
     // ─── REFS ─────────────────────────────────────────────────────────────────
     const scaleRef = useRef(1);
     const offsetRef = useRef({ x: 0, y: 0 });
-    const modeRef = useRef<'draw' | 'stamp' | 'erase' | 'pan'>('draw');
+    const modeRef = useRef<'draw' | 'stamp' | 'erase' | 'pan'>('pan');
     const colorRef = useRef('#10b981');
     const brushSizeRef = useRef(15);
     const pathsRef = useRef<Path[]>(initialData);
@@ -235,6 +235,10 @@ export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, is
             }
             if (isDrawingRef.current) {
                 const p = toCanvas(e.clientX, e.clientY);
+                // Optimización móvil: Ignorar el punto si la distancia con el anterior es microscópica (reduce carga de trazado 90%)
+                const last = currentPathRef.current[currentPathRef.current.length - 1];
+                if (last && Math.hypot(last.x - p.x, last.y - p.y) < 1.5) return;
+
                 currentPathRef.current = [...currentPathRef.current, p]; setCurrentPath([...currentPathRef.current]);
             }
         };
@@ -250,6 +254,7 @@ export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, is
 
         const onTouchStart = (e: TouchEvent) => {
             if (!isImmersive) return;
+            if (e.cancelable) e.preventDefault(); // Bloquear gestos nativos (doble tap zoom, etc)
             if (e.touches.length === 2) {
                 touchDistRef.current = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); return;
             }
@@ -258,8 +263,8 @@ export default function FlowchartCanvas({ imageUrl, initialData = [], onSave, is
         };
 
         const onTouchMove = (e: TouchEvent) => {
+            if (e.cancelable) e.preventDefault(); // 🟢 CRÍTICO: Bloquear scroll de iOS/Android para evitar stuttering y lag
             if (e.touches.length === 2 && touchDistRef.current) {
-                e.preventDefault();
                 const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                 const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
