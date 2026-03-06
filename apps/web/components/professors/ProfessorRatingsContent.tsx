@@ -108,8 +108,14 @@ const ProfessorBackground = ({ url, name, specialty }: { url: string | null; nam
         setCurrentUrl(`https://loremflickr.com/1600/900/nature,landscape,forest,mountain/all?lock=${hash}`);
     };
 
+    // Robustness: If image takes too long to load, force visible with what we have
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoaded(true), 3000);
+        return () => clearTimeout(timer);
+    }, []);
+
     return (
-        <>
+        <div className="absolute inset-0 bg-bb-darker shadow-inner">
             <img
                 src={currentUrl}
                 alt=""
@@ -118,10 +124,12 @@ const ProfessorBackground = ({ url, name, specialty }: { url: string | null; nam
                 onError={handleError}
             />
             <div
-                className={`absolute inset-0 bg-cover bg-center transition-all duration-1000 ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110 blur-sm'}`}
+                className={`absolute inset-0 bg-cover bg-center transition-all duration-700 ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105 blur-sm'}`}
                 style={{ backgroundImage: `url("${currentUrl}")` }}
             />
-        </>
+            {/* Added a subtle overlay so it's not pitch black if loading fails */}
+            <div className={`absolute inset-0 bg-blue-600/5 transition-opacity duration-500 ${isLoaded ? 'opacity-0' : 'opacity-100'}`} />
+        </div>
     );
 };
 

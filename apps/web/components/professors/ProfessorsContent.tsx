@@ -200,7 +200,17 @@ export default function ProfessorsContent({
         let result = professors.filter(prof => {
             const searchTerm = normalizeString(searchQuery);
             const matchesSearch = normalizeString(prof.nombre).includes(searchTerm);
-            const profCourses = prof.especialidad ? [prof.especialidad] : [];
+
+            // Extract all courses from both primary specialty and extra courses
+            const profCourses: string[] = [];
+            if (prof.especialidad) profCourses.push(prof.especialidad);
+            if (prof.otros_cursos) {
+                prof.otros_cursos.split(',').forEach((c: string) => {
+                    const trimmed = c.trim();
+                    if (trimmed) profCourses.push(trimmed);
+                });
+            }
+
             const matchesCourse = selectedCourse === 'all' || isCleanMatch(profCourses, selectedCourse);
             return matchesSearch && matchesCourse;
         });
