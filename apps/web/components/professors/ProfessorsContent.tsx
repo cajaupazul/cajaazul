@@ -124,7 +124,7 @@ export default function ProfessorsContent({
                     if (c && c !== 'General') {
                         const normalized = normalizeString(c);
                         if (!courseMap.has(normalized)) {
-                            courseMap.set(normalized, c);
+                            courseMap.set(normalized, c.toUpperCase());
                         }
                     }
                 });
@@ -199,8 +199,8 @@ export default function ProfessorsContent({
 
     const filteredAndSortedProfessors = useMemo(() => {
         let result = professors.filter(prof => {
-            const searchTerm = searchQuery;
-            const matchesSearch = prof.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+            const searchTerm = normalizeString(searchQuery);
+            const matchesSearch = normalizeString(prof.nombre).includes(searchTerm);
             const profCourses = prof.especialidad ? [prof.especialidad] : [];
             const matchesCourse = selectedCourse === 'all' || isCleanMatch(profCourses, selectedCourse);
             return matchesSearch && matchesCourse;

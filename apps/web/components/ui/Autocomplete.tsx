@@ -41,14 +41,18 @@ export function Autocomplete({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const normalizeString = (str: string) =>
+        str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const term = e.target.value;
         setSearchTerm(term);
         onChange(term);
 
         if (term.length > 0) {
+            const normalizedTerm = normalizeString(term);
             const filtered = items.filter(item =>
-                item.toLowerCase().includes(term.toLowerCase())
+                normalizeString(item).includes(normalizedTerm)
             );
             setFilteredItems(filtered);
             setIsOpen(true);
@@ -75,8 +79,9 @@ export function Autocomplete({
 
     const handleFocus = () => {
         if (searchTerm.length > 0) {
+            const normalizedTerm = normalizeString(searchTerm);
             const filtered = items.filter(item =>
-                item.toLowerCase().includes(searchTerm.toLowerCase())
+                normalizeString(item).includes(normalizedTerm)
             );
             setFilteredItems(filtered);
             setIsOpen(true);

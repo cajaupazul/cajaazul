@@ -919,13 +919,13 @@ export default function ProfessorRatingsContent({
                                             {selectedCourse}
                                         </span>
                                     )}
-                                    {professor.especialidad && professor.especialidad !== 'General' && professorLinkMapping[professor.especialidad.toLowerCase()] ? (
+                                    {professor.especialidad && professor.especialidad !== 'General' && (
                                         <div className="flex items-center gap-1">
                                             <Link
-                                                href={`/dashboard/professors/view?id=${professorLinkMapping[professor.especialidad.toLowerCase()]}`}
+                                                href={`/dashboard/professors/view?id=${professorLinkMapping[professor.especialidad.toLowerCase()] || professor.id}&course=${encodeURIComponent(professor.especialidad)}`}
                                                 className="bg-blue-500/20 backdrop-blur-md text-blue-500 px-4 py-1.5 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-all uppercase tracking-wider text-xs font-bold shadow-lg shadow-blue-900/10"
                                             >
-                                                {professor.especialidad}
+                                                {professor.especialidad.toUpperCase()}
                                             </Link>
                                             {profile?.role === 'admin' && (
                                                 <button
@@ -937,23 +937,6 @@ export default function ProfessorRatingsContent({
                                                 </button>
                                             )}
                                         </div>
-                                    ) : (
-                                        professor.especialidad && professor.especialidad !== 'General' && (
-                                            <div className="flex items-center gap-1">
-                                                <span className="bg-bb-sidebar/50 backdrop-blur-md text-bb-text-secondary px-4 py-1.5 rounded-full border border-bb-border uppercase tracking-wider text-xs font-bold">
-                                                    {professor.especialidad}
-                                                </span>
-                                                {profile?.role === 'admin' && (
-                                                    <button
-                                                        onClick={() => handleDeleteCourse(professor.especialidad!)}
-                                                        className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors"
-                                                        title="Eliminar este curso"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )
                                     )}
 
                                     {professor.facultad && professor.facultad !== 'General' && (
@@ -1163,37 +1146,16 @@ export default function ProfessorRatingsContent({
                                     {aggregatedOtherCourses.length > 0 ? (
                                         aggregatedOtherCourses.map((curso: string, idx: number) => {
                                             const trimmedCurso = curso.trim();
-                                            const professorId = professorLinkMapping[trimmedCurso.toLowerCase()];
+                                            const targetId = professorLinkMapping[trimmedCurso.toLowerCase()] || professor.id;
 
-                                            // Only link if professor profile exists
-                                            if (professorId) {
-                                                return (
-                                                    <div key={idx} className="flex items-center gap-1">
-                                                        <Link
-                                                            href={`/dashboard/professors/view?id=${professorId}&course=${encodeURIComponent(trimmedCurso)}`}
-                                                            className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium hover:bg-purple-500/20 transition-colors"
-                                                        >
-                                                            {trimmedCurso}
-                                                        </Link>
-                                                        {profile?.role === 'admin' && (
-                                                            <button
-                                                                onClick={() => handleDeleteCourse(trimmedCurso)}
-                                                                className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors"
-                                                                title="Eliminar este curso"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                );
-                                            }
-
-                                            // If no professor profile exists, show as disabled/grayed out
                                             return (
                                                 <div key={idx} className="flex items-center gap-1">
-                                                    <span className="px-4 py-2 rounded-xl bg-bb-darker/50 text-bb-text-secondary/40 border border-bb-border/50 text-sm font-medium opacity-50 cursor-not-allowed">
-                                                        {trimmedCurso}
-                                                    </span>
+                                                    <Link
+                                                        href={`/dashboard/professors/view?id=${targetId}&course=${encodeURIComponent(trimmedCurso)}`}
+                                                        className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium hover:bg-purple-500/20 transition-colors uppercase"
+                                                    >
+                                                        {trimmedCurso.toUpperCase()}
+                                                    </Link>
                                                     {profile?.role === 'admin' && (
                                                         <button
                                                             onClick={() => handleDeleteCourse(trimmedCurso)}
@@ -1217,7 +1179,7 @@ export default function ProfessorRatingsContent({
                             <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
                                 <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
                                     <User className="w-5 h-5 text-green-400" />
-                                    Otros Profesores de {selectedCourse || professor.especialidad}
+                                    Otros Profesores de {(selectedCourse || professor.especialidad || '').toUpperCase()}
                                 </h3>
 
                                 {relatedProfessors.length > 0 ? (
@@ -1258,7 +1220,7 @@ export default function ProfessorRatingsContent({
                                     <div className="text-center py-8">
                                         <Info className="w-8 h-8 text-bb-text-secondary mx-auto mb-2 opacity-20" />
                                         <p className="text-sm text-bb-text-secondary">
-                                            No hay otros profesores de {professor.especialidad}
+                                            No hay otros profesores de {(professor.especialidad || '').toUpperCase()}
                                         </p>
                                     </div>
                                 )}
