@@ -352,7 +352,7 @@ export default function ProfessorsContent({
                                                                     courses.add(professor.especialidad.trim().toUpperCase());
                                                                 }
                                                                 if (professor.otros_cursos) {
-                                                                    professor.otros_cursos.split(',').forEach(c => {
+                                                                    professor.otros_cursos.split(',').forEach((c: string) => {
                                                                         const trimmed = c.trim().toUpperCase();
                                                                         if (trimmed && trimmed !== 'GENERAL') {
                                                                             courses.add(trimmed);
