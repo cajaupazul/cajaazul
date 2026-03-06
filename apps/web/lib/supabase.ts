@@ -86,6 +86,7 @@ export type ShopItem = {
   } | null;
   is_active: boolean;
   max_uses: number | null;
+  bundle_items: string[] | null;
   created_at: string;
 };
 

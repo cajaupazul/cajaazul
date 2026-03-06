@@ -72,13 +72,22 @@ shop.post('/buy', async (c) => {
     }
 
     // Add Inventory
+    // If it's a bundle, grant the bundle item AND all the items inside the bundle
+    const itemsToGrant = [item.id];
+    if (item.bundle_items && Array.isArray(item.bundle_items)) {
+        itemsToGrant.push(...item.bundle_items);
+    }
+
+    const inventoryRecords = itemsToGrant.map(id => ({
+        user_id: user.id,
+        item_id: id,
+        is_equipped: false
+    }));
+
+    // Use upsert to ignore duplicates if the user already owns some items in the bundle
     const { error: invError } = await supabase
         .from('user_inventory')
-        .insert({
-            user_id: user.id,
-            item_id: item.id,
-            is_equipped: false
-        })
+        .upsert(inventoryRecords, { onConflict: 'user_id, item_id', ignoreDuplicates: true })
 
     if (invError) {
         // Rollback

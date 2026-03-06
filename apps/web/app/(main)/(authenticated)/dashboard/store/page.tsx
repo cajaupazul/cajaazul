@@ -691,7 +691,12 @@ function StoreContent() {
                                                             </div>
 
                                                             <div className="space-y-1 sm:space-y-2">
-                                                                <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">{item.type.replace('_', ' ')}</div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">{item.type.replace('_', ' ')}</div>
+                                                                    {item.bundle_items && item.bundle_items.length > 0 && (
+                                                                        <div className="text-[8px] font-black bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded uppercase tracking-widest border border-indigo-500/30">PACK</div>
+                                                                    )}
+                                                                </div>
                                                                 <h3 className="text-sm sm:text-lg font-black text-white uppercase italic leading-tight truncate tracking-tight">{item.name}</h3>
                                                                 <p className="text-zinc-500 text-[10px] sm:text-xs font-medium line-clamp-2 leading-relaxed min-h-[30px] sm:min-h-[40px]">{item.description}</p>
                                                             </div>
