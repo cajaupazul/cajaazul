@@ -181,9 +181,9 @@ function ProfessorRatingsWrapper() {
 
         setCoursesTaught(Array.from(allCoursesMap.values()));
 
-        const currentSpecialtyLower = currentProf.especialidad?.trim().toLowerCase();
+        const currentlyViewedCourseLower = (selectedCourse || currentProf.especialidad)?.trim().toLowerCase();
         setAggregatedOtherCourses(allUniqueCourseOriginalNames.filter(name =>
-          name.toLowerCase() !== currentSpecialtyLower
+          name.toLowerCase() !== currentlyViewedCourseLower
         ));
 
       } catch (err) {
