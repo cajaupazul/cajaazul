@@ -48,9 +48,11 @@ function ProfessorRatingsWrapper() {
         if (!user) return;
 
         // 2. Fetch data in parallel
-        const specialty = currentProf.especialidad;
-        const orQuery = specialty
-          ? `especialidad.eq."${specialty}",otros_cursos.ilike.%${specialty}%`
+        // If we am inside a specific course context, find other professors for THAT course
+        // otherwise use the professor's default specialty
+        const queryCourse = selectedCourse || currentProf.especialidad;
+        const orQuery = queryCourse
+          ? `especialidad.eq."${queryCourse}",otros_cursos.ilike.%${queryCourse}%`
           : null;
 
         const [
@@ -192,7 +194,7 @@ function ProfessorRatingsWrapper() {
     }
 
     fetchData();
-  }, [professorId]);
+  }, [professorId, selectedCourse]);
 
   if (loading) {
     return (

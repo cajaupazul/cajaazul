@@ -1199,7 +1199,7 @@ export default function ProfessorRatingsContent({
                                                             {prof.nombre}
                                                         </p>
                                                         <p className="text-xs text-bb-text-secondary truncate mt-0.5">
-                                                            {(!prof.facultad || prof.facultad === 'General') ? professor.especialidad : prof.facultad}
+                                                            {(!prof.facultad || prof.facultad === 'General') ? (selectedCourse || professor.especialidad) : prof.facultad}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -1208,7 +1208,7 @@ export default function ProfessorRatingsContent({
 
                                         {relatedProfessors.length > 6 && (
                                             <Link
-                                                href={`/dashboard/professors?course=${encodeURIComponent(professor.especialidad || '')}`}
+                                                href={`/dashboard/professors?course=${encodeURIComponent(selectedCourse || professor.especialidad || '')}`}
                                                 className="flex items-center justify-center gap-2 p-3 w-full rounded-xl bg-bb-sidebar border border-bb-border text-bb-text-secondary hover:text-white hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group font-bold text-xs uppercase tracking-widest mt-4"
                                             >
                                                 Mostrar más
@@ -1220,7 +1220,7 @@ export default function ProfessorRatingsContent({
                                     <div className="text-center py-8">
                                         <Info className="w-8 h-8 text-bb-text-secondary mx-auto mb-2 opacity-20" />
                                         <p className="text-sm text-bb-text-secondary">
-                                            No hay otros profesores de {(professor.especialidad || '').toUpperCase()}
+                                            No hay otros profesores de {(selectedCourse || professor.especialidad || '').toUpperCase()}
                                         </p>
                                     </div>
                                 )}
