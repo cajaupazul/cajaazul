@@ -346,7 +346,7 @@ export default function ProfessorsContent({
                                                     </h3>
                                                     <div className="flex items-center gap-1 md:gap-1.5 mb-2 md:mb-3 flex-wrap overflow-hidden">
                                                         <p className="text-xs text-bb-text-secondary truncate mt-1">
-                                                            {selectedCourse !== 'all' ? selectedCourse : (professor.especialidad && professor.especialidad !== 'General' ? professor.especialidad : '')}
+                                                            {professor.especialidad && professor.especialidad !== 'General' ? professor.especialidad.toUpperCase() : ''}
                                                         </p>
                                                     </div>
                                                 </div>

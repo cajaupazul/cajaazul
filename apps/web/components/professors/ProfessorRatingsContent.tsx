@@ -919,7 +919,7 @@ export default function ProfessorRatingsContent({
                                             {selectedCourse}
                                         </span>
                                     )}
-                                    {professor.especialidad && professor.especialidad !== 'General' && (
+                                    {professor.especialidad && professor.especialidad !== 'General' && !selectedCourse && (
                                         <div className="flex items-center gap-1">
                                             <Link
                                                 href={`/dashboard/professors/view?id=${professorLinkMapping[professor.especialidad.toLowerCase()] || professor.id}&course=${encodeURIComponent(professor.especialidad)}`}
