@@ -12,12 +12,12 @@ function SuccessBridgeContent() {
     const searchParams = useSearchParams();
 
     useEffect(() => {
-        // Capture status and minimal params from Mercado Pago
-        const status = searchParams.get('status') || 'success';
+        // Capture status and all params from Mercado Pago to forward them
+        const query = searchParams.toString();
 
         // Immediate internal redirect using router.replace
-        // This cleans the browser history and moves to the authenticated store page safely
-        router.replace(`/dashboard/store?status=${status}`);
+        // We include all original params to ensure status_detail etc are preserved
+        router.replace(`/dashboard/store?${query}`);
     }, [router, searchParams]);
 
     return (

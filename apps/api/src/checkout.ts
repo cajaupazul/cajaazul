@@ -152,9 +152,9 @@ checkout.post('/', authMiddleware, async (c) => {
                     }
                 ],
                 back_urls: {
-                    success: 'https://cajaazul.pages.dev/dashboard/store?payment=success',
-                    failure: 'https://cajaazul.pages.dev/dashboard/store?payment=failure',
-                    pending: 'https://cajaazul.pages.dev/dashboard/store?payment=pending',
+                    success: 'https://campuslink.pages.dev/dashboard/store?payment=success',
+                    failure: 'https://campuslink.pages.dev/dashboard/store?payment=failure',
+                    pending: 'https://campuslink.pages.dev/dashboard/store?payment=pending',
                 },
                 auto_return: 'approved',
                 payment_methods: {

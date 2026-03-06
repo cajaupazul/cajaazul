@@ -91,10 +91,11 @@ function StoreContent() {
 
     const status = searchParams.get('status');
     const paymentStatus = searchParams.get('payment');
+    const statusDetail = searchParams.get('status_detail');
     const effectiveStatus = paymentStatus || status;
 
     React.useEffect(() => {
-        if (effectiveStatus === 'success') {
+        if (effectiveStatus === 'success' || effectiveStatus === 'approved') {
             refreshProfile();
         }
     }, [effectiveStatus, refreshProfile]);
@@ -362,11 +363,37 @@ function StoreContent() {
             <div className="max-w-6xl mx-auto space-y-16 relative z-10">
                 {/* Alert Messages */}
                 {effectiveStatus && (
-                    <div className={`p-6 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 border ${effectiveStatus === 'success' ? 'bg-green-500/10 border-green-500/20' : effectiveStatus === 'failure' ? 'bg-red-500/10 border-red-500/20' : 'bg-yellow-500/10 border-yellow-500/20'}`}>
-                        {effectiveStatus === 'success' ? <CheckCircle2 className="text-green-500 shrink-0" size={32} /> : effectiveStatus === 'failure' ? <XCircle className="text-red-500 shrink-0" size={32} /> : <AlertCircle className="text-yellow-500 shrink-0" size={32} />}
+                    <div className={`p-6 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 border ${(effectiveStatus === 'success' || effectiveStatus === 'approved')
+                            ? 'bg-green-500/10 border-green-500/20'
+                            : (effectiveStatus === 'failure' || effectiveStatus === 'rejected')
+                                ? 'bg-red-500/10 border-red-500/20'
+                                : 'bg-yellow-500/10 border-yellow-500/20'
+                        }`}>
+                        {(effectiveStatus === 'success' || effectiveStatus === 'approved') ? (
+                            <CheckCircle2 className="text-green-500 shrink-0" size={32} />
+                        ) : (effectiveStatus === 'failure' || effectiveStatus === 'rejected') ? (
+                            <XCircle className="text-red-500 shrink-0" size={32} />
+                        ) : (
+                            <AlertCircle className="text-yellow-500 shrink-0" size={32} />
+                        )}
                         <div>
-                            <h3 className="text-xl font-bold text-white">{effectiveStatus === 'success' ? '¡Pago Exitoso!' : effectiveStatus === 'failure' ? 'Hubo un error' : 'Pago Pendiente'}</h3>
-                            <p className="text-bb-text-secondary text-sm">{effectiveStatus === 'success' ? 'Tu compra se ha procesado correctamente.' : effectiveStatus === 'failure' ? 'No pudimos procesar tu pago.' : 'Te avisaremos cuando se complete.'}</p>
+                            <h3 className="text-xl font-bold text-white">
+                                {(effectiveStatus === 'success' || effectiveStatus === 'approved') ? '¡Pago Exitoso!' : (effectiveStatus === 'failure' || effectiveStatus === 'rejected') ? 'Hubo un error' : 'Pago Pendiente'}
+                            </h3>
+                            <p className="text-bb-text-secondary text-sm">
+                                {(effectiveStatus === 'success' || effectiveStatus === 'approved') ? (
+                                    'Tu compra se ha procesado correctamente y tus beneficios han sido activados.'
+                                ) : (effectiveStatus === 'failure' || effectiveStatus === 'rejected') ? (
+                                    statusDetail === 'cc_rejected_insufficient_amount' ? 'Tu tarjeta no tiene saldo suficiente.' :
+                                        statusDetail === 'cc_rejected_call_for_authorize' ? 'Debes autorizar el pago ante tu banco.' :
+                                            statusDetail === 'cc_rejected_duplicated_payment' ? 'Se detectó un pago duplicado.' :
+                                                statusDetail === 'cc_rejected_bad_filled_security_code' ? 'El código de seguridad es incorrecto.' :
+                                                    statusDetail === 'cc_rejected_card_disabled' ? 'Tu tarjeta se encuentra inactiva.' :
+                                                        'No pudimos procesar tu pago. Por favor, intenta con otro método de pago.'
+                                ) : (
+                                    'Estamos procesando tu pago. Te avisaremos cuando se complete.'
+                                )}
+                            </p>
                         </div>
                     </div>
                 )}
