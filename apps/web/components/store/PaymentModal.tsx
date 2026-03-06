@@ -71,12 +71,22 @@ export default function PaymentModal({
                                 <ShoppingBag size={48} strokeWidth={1.5} />
                             </div>
 
-                            <div className="text-center space-y-2 max-w-sm">
-                                <p className="text-gray-600 text-lg">
+                            <div className="text-center space-y-4 max-w-sm">
+                                <p className="text-gray-600 text-lg leading-snug">
                                     Serás redirigido a la plataforma segura de <strong>Mercado Pago</strong> para completar tu compra de <strong>{product.name}</strong>.
                                 </p>
-                                <p className="text-xs text-gray-400">
-                                    Aceptamos Yape, Plin, tarjetas de crédito, débito y efectivo.
+
+                                <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 text-left space-y-2">
+                                    <p className="text-blue-700 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                        <ShieldCheck size={14} /> Tip para Yape / Plin:
+                                    </p>
+                                    <p className="text-blue-600 text-[11px] leading-relaxed">
+                                        Si tu pago es rechazado, asegúrate de tener <strong>saldo suficiente</strong> y que no hayas superado tu <strong>límite diario</strong>. Los mensajes de "Permiso denegado" en consola son normales por la seguridad del navegador.
+                                    </p>
+                                </div>
+
+                                <p className="text-[10px] text-gray-400">
+                                    Aceptamos Yape, Plin, tarjetas de crédito, débito y efectivo de forma segura.
                                 </p>
                             </div>
 

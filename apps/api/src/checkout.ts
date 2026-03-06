@@ -147,7 +147,7 @@ checkout.post('/', authMiddleware, async (c) => {
                         title: product.name,
                         description: product.description,
                         quantity: 1,
-                        unit_price: Number(product.price),
+                        unit_price: Number(Number(product.price).toFixed(2)),
                         currency_id: 'PEN'
                     }
                 ],
