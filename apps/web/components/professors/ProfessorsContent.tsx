@@ -18,7 +18,7 @@ import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import { PLACEHOLDERS, getDiversifiedProfessorBackground } from '@/lib/constants';
-import SyncProfessorsModal from './SyncProfessorsModal';
+// Removed SyncProfessorsModal import
 import DeleteProfessorModal from './DeleteProfessorModal';
 import { Autocomplete } from '@/components/ui/Autocomplete';
 
@@ -87,7 +87,6 @@ export default function ProfessorsContent({
     const [selectedCourse, setSelectedCourse] = useState('all');
     const [sortBy, setSortBy] = useState('best');
     const [savedProfessors, setSavedProfessors] = useState<Set<string>>(new Set(initialSavedProfessors));
-    const [syncModalOpen, setSyncModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [professorToDelete, setProfessorToDelete] = useState<any>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -231,29 +230,29 @@ export default function ProfessorsContent({
                         <p className="text-sm md:text-base text-bb-text-secondary font-medium ml-1">Descubre a los mejores mentores de tu facultad</p>
                     </div>
 
-                    <div className="flex flex-col sm:grid sm:grid-cols-2 lg:flex lg:flex-row gap-3 w-full lg:w-auto">
-                        <div className="relative group w-full lg:w-72">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="h-5 w-5 text-gray-500" />
-                            </div>
-                            <Input
-                                placeholder="Buscar profesor..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10 h-11 bg-bb-card border-bb-border text-bb-text placeholder:text-gray-500 rounded-xl"
-                            />
+                    <div className="relative group w-full lg:flex-1">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-5 w-5 text-gray-500" />
                         </div>
+                        <Input
+                            placeholder="Buscar profesor..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-11 bg-bb-card border-bb-border text-bb-text placeholder:text-gray-500 rounded-xl"
+                        />
+                    </div>
 
+                    <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto flex-wrap">
                         <Autocomplete
                             items={uniqueCourses}
                             value={selectedCourse === 'all' ? '' : selectedCourse}
                             onChange={(val) => setSelectedCourse(val || 'all')}
                             placeholder="Buscar curso..."
-                            className="w-full lg:w-64"
+                            className="w-full sm:w-64"
                         />
 
                         <Select value={sortBy} onValueChange={setSortBy}>
-                            <SelectTrigger className="h-11 bg-bb-card border-bb-border text-bb-text rounded-xl w-full lg:w-48">
+                            <SelectTrigger className="h-11 bg-bb-card border-bb-border text-bb-text rounded-xl w-full sm:w-48">
                                 <SelectValue placeholder="Ordenar por" />
                             </SelectTrigger>
                             <SelectContent className="bg-bb-card border-bb-border text-bb-text">
@@ -262,20 +261,9 @@ export default function ProfessorsContent({
                             </SelectContent>
                         </Select>
 
-                        {profile?.role === 'admin' && (
-                            <Button
-                                onClick={() => setSyncModalOpen(true)}
-                                className="h-11 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl w-full lg:w-auto"
-                            >
-                                <RefreshCw className="h-5 w-5 mr-1" />
-                                <span className="hidden lg:inline">Sincronizar</span>
-                                <span className="inline lg:hidden">Sincronizar Excel</span>
-                            </Button>
-                        )}
-
                         <Button
                             onClick={() => router.push('/dashboard/professors/nuevo')}
-                            className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl w-full lg:w-auto"
+                            className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl w-full sm:w-auto"
                         >
                             <Plus className="h-5 w-5 mr-1" />
                             Agregar
@@ -423,16 +411,6 @@ export default function ProfessorsContent({
                 )}
             </div>
 
-            {profile?.role === 'admin' && (
-                <SyncProfessorsModal
-                    open={syncModalOpen}
-                    onOpenChange={setSyncModalOpen}
-                    onSuccess={() => {
-                        router.refresh();
-                        setTimeout(() => window.location.reload(), 1000);
-                    }}
-                />
-            )}
             <DeleteProfessorModal
                 open={deleteModalOpen}
                 onOpenChange={setDeleteModalOpen}

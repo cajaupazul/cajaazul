@@ -104,7 +104,7 @@ export function Autocomplete({
                     onFocus={handleFocus}
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
-                    className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 pl-11 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0088CC]/50 transition-all"
+                    className="w-full bg-bb-card border border-bb-border rounded-xl px-4 py-3 pl-11 text-bb-text placeholder:text-bb-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium"
                 />
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
@@ -115,7 +115,7 @@ export function Autocomplete({
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="absolute z-50 w-full mt-2 bg-[#1A1A1A] border border-white/10 rounded-xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
+                        className="absolute z-50 w-full mt-2 bg-bb-card border border-bb-border rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar"
                     >
                         {filteredItems.length > 0 ? (
                             <div className="py-2">
@@ -127,7 +127,7 @@ export function Autocomplete({
                                         key={index}
                                         type="button"
                                         onClick={() => handleSelect(item)}
-                                        className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3"
+                                        className="w-full text-left px-4 py-3 min-h-[48px] text-sm text-bb-text-secondary hover:bg-bb-hover hover:text-bb-text transition-colors flex items-center gap-3 border-b border-bb-border/10 last:border-none"
                                     >
                                         <span>{item}</span>
                                     </button>
