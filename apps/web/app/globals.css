@@ -36,33 +36,36 @@
   --bb-text-secondary: var(--text-secondary);
   --bb-border: var(--border-color);
   --bb-hover: #2a2a2a;
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* --- MODO LIGHT (SÓLIDO) --- */
 [data-theme="light"] {
-  --bg-primary: #ffffff;
-  /* Fondo general blanco puro */
+  --bg-primary: #f8fafc;
+  /* Fondo general gris muy suave */
   --bg-secondary: #ffffff;
-  /* Áreas blancas */
+  /* Áreas blancas (se verán mejor sobre bg-primary) */
   --bg-card: #ffffff;
   /* Tarjetas blancas puras */
   --bg-sidebar: #ffffff;
   /* Sidebar blanco */
 
-  --text-primary: #1e293b;
-  /* Texto slate oscuro */
+  --text-primary: #0f172a;
+  /* Texto slate más oscuro para contraste */
   --text-secondary: #475569;
-  /* Texto slate medio */
+  /* Texto slate medio más legible (Slate-600) */
 
-  --border-color: #e2e8f0;
-  /* Bordes suaves */
-  --border-hover: #cbd5e1;
+  --border-color: #cbd5e1;
+  /* Bordes Slate-300 para nitidez */
+  --border-hover: #94a3b8;
+  /* Hover Slate-400 */
 
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: #e2e8f0;
-  --glass-blur: 8px;
+  --glass-bg: rgba(255, 255, 255, 0.95);
+  --glass-border: #cbd5e1;
+  --glass-blur: 12px;
 
   --bb-hover: #f1f5f9;
+  --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
 /* --- MODO DARK (EXPLICIT) --- */
@@ -170,6 +173,7 @@ button {
     @apply rounded-lg p-6 transition-all duration-200;
     background-color: var(--bb-card);
     border: 1px solid var(--bb-border);
+    box-shadow: var(--card-shadow, none);
   }
 
   .card:hover {

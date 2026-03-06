@@ -304,7 +304,7 @@ const CommentItem = ({
                             active_frame_key: comment.profiles?.active_frame_key,
                             role: 'user'
                         }}>
-                            <p className="font-bold text-white text-[13px] md:text-sm hover:text-blue-400 cursor-pointer transition-colors tracking-tight">
+                            <p className="font-bold text-bb-text text-[13px] md:text-sm hover:text-blue-400 cursor-pointer transition-colors tracking-tight">
                                 {comment.profiles?.nombre}
                             </p>
                         </UserHoverCard>
@@ -337,7 +337,7 @@ const CommentItem = ({
                 >
                     {comment.contenido}
                     {isTruncated && !isExpanded && (
-                        <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-[#0a0a0f] to-transparent" />
+                        <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-bb-sidebar to-transparent" />
                     )}
                 </div>
 
@@ -1306,7 +1306,7 @@ export default function ProfessorRatingsContent({
                                     <Button
                                         type="submit"
                                         disabled={isSubmittingComment || !commentText.trim()}
-                                        className="bg-[#3b3b4f] hover:bg-[#4a4a6a] text-white/70 hover:text-white font-bold px-6 h-8 rounded text-[11px] uppercase tracking-wider transition-all"
+                                        className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 h-8 rounded text-[11px] uppercase tracking-wider transition-all"
                                     >
                                         {isSubmittingComment ? '...' : 'Responder'}
                                     </Button>
