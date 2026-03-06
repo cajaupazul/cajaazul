@@ -344,24 +344,26 @@ export default function ProfessorsContent({
                                                     <h3 className="text-sm md:text-lg font-bold text-bb-text mb-1 truncate group-hover:text-blue-400 transition-colors">
                                                         {professor.nombre}
                                                     </h3>
-                                                    <div className="flex items-center gap-1 md:gap-1.5 mb-2 md:mb-3 flex-wrap overflow-hidden">
-                                                        <p className="text-xs text-bb-text-secondary truncate mt-1">
-                                                            {(() => {
-                                                                const courses = new Set<string>();
-                                                                if (professor.especialidad && professor.especialidad !== 'General') {
-                                                                    courses.add(professor.especialidad.trim().toUpperCase());
-                                                                }
-                                                                if (professor.otros_cursos) {
-                                                                    professor.otros_cursos.split(',').forEach((c: string) => {
-                                                                        const trimmed = c.trim().toUpperCase();
-                                                                        if (trimmed && trimmed !== 'GENERAL') {
-                                                                            courses.add(trimmed);
-                                                                        }
-                                                                    });
-                                                                }
-                                                                return Array.from(courses).join(' | ');
-                                                            })()}
-                                                        </p>
+                                                    <div className="flex flex-col gap-0.5 mb-2 md:mb-3 overflow-hidden">
+                                                        {(() => {
+                                                            const courses = new Set<string>();
+                                                            if (professor.especialidad && professor.especialidad !== 'General') {
+                                                                courses.add(professor.especialidad.trim().toUpperCase());
+                                                            }
+                                                            if (professor.otros_cursos) {
+                                                                professor.otros_cursos.split(',').forEach((c: string) => {
+                                                                    const trimmed = c.trim().toUpperCase();
+                                                                    if (trimmed && trimmed !== 'GENERAL') {
+                                                                        courses.add(trimmed);
+                                                                    }
+                                                                });
+                                                            }
+                                                            return Array.from(courses).map((course, idx) => (
+                                                                <p key={idx} className="text-[10px] md:text-xs text-bb-text-secondary truncate leading-tight">
+                                                                    {course}
+                                                                </p>
+                                                            ));
+                                                        })()}
                                                     </div>
                                                 </div>
                                             </div>
