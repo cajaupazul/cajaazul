@@ -107,18 +107,30 @@ export default function FullPageUploadForm({
                     const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
                     const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-                    const { uploadFileToR2, getSecureFileUrl } = await import('@/lib/r2-storage');
+                    const { uploadFileToR2 } = await import('@/lib/r2-storage');
 
                     // 1. Generate thumbnail client-side (PDF.js / Canvas)
+                    //    Upload to Supabase Storage (public bucket) so <img> can load it without auth
                     let thumbnailUrl: string | null = null;
                     const thumbnailBlob = await generateThumbnailFromFile(file);
                     if (thumbnailBlob) {
                         try {
-                            const thumbPath = `materials/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
-                            const thumbFile = new File([thumbnailBlob], thumbPath, { type: 'image/webp' });
-                            await uploadFileToR2('thumbnails', thumbPath, thumbFile);
-                            thumbnailUrl = getSecureFileUrl('thumbnails', thumbPath);
-                            console.log('[THUMBNAIL] Uploaded client-side thumbnail:', thumbPath);
+                            const thumbFileName = `thumb_${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+                            const { error: thumbError, data: thumbData } = await supabase.storage
+                                .from('thumbnails')
+                                .upload(thumbFileName, thumbnailBlob, {
+                                    contentType: 'image/webp',
+                                    upsert: false,
+                                });
+                            if (thumbError) {
+                                console.warn('[THUMBNAIL] Supabase upload error:', thumbError.message);
+                            } else {
+                                const { data: publicData } = supabase.storage
+                                    .from('thumbnails')
+                                    .getPublicUrl(thumbFileName);
+                                thumbnailUrl = publicData.publicUrl;
+                                console.log('[THUMBNAIL] Uploaded to Supabase Storage:', thumbnailUrl);
+                            }
                         } catch (thumbErr) {
                             console.warn('[THUMBNAIL] Failed to upload thumbnail:', thumbErr);
                         }
