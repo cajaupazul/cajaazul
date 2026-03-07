@@ -1186,7 +1186,7 @@ export default function ProfessorRatingsContent({
                                                         }
                                                     }}
                                                     canDelete={
-                                                        profile && (
+                                                        !!profile && (
                                                             (profile.role === 'admin' || profile.role === 'superadmin') ||
                                                             (material.user_id === profile.id && (new Date().getTime() - new Date(material.created_at).getTime()) / (1000 * 60 * 60) < 24)
                                                         )
