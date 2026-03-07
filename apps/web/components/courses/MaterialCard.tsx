@@ -162,7 +162,7 @@ export default function MaterialCard({
             className="flex flex-col bg-bb-darker/20 rounded-2xl overflow-hidden border border-bb-border/50 hover:border-blue-500/20 shadow-sm transition-all cursor-pointer group active:scale-[0.98]"
         >
             {/* Thumbnail Area */}
-            <div className={`${size === 'compact' ? 'aspect-square sm:aspect-video' : 'aspect-video'} w-full relative flex items-center justify-center overflow-hidden shrink-0 ${config.bg}`}>
+            <div className="aspect-video w-full relative flex items-center justify-center overflow-hidden shrink-0 ${config.bg}">
                 {thumbnailUrl ? (
                     <img
                         src={thumbnailUrl}
@@ -172,7 +172,7 @@ export default function MaterialCard({
                     />
                 ) : (
                     <div className={`${config.color} opacity-30 group-hover:scale-110 group-hover:opacity-60 transition-all duration-500 transform`}>
-                        {React.cloneElement(config.icon as React.ReactElement<any>, { className: size === 'compact' ? 'w-6 h-6' : 'w-8 h-8' })}
+                        {React.cloneElement(config.icon as React.ReactElement<any>, { className: 'w-8 h-8' })}
                     </div>
                 )}
 
