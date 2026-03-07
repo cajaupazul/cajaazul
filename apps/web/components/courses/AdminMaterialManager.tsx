@@ -107,16 +107,9 @@ export default function AdminMaterialManager({
 
         setIsDeleting(material.id);
         try {
-            // Try to delete from storage first if it's a hosted file
-            // Note: Implementation depends on storage path logic, simplified here based on typical pattern
-            if (material.url_archivo.includes('course_materials')) {
-                const pathMatch = material.url_archivo.match(/course_materials\/(.+)$/);
-                if (pathMatch) {
-                    await supabase.storage
-                        .from('course_materials')
-                        .remove([pathMatch[1]]);
-                }
-            }
+            // Delete from storage first
+            const { deleteFileFromR2 } = await import('@/lib/r2-storage');
+            await deleteFileFromR2('course-materials', material.url_archivo);
 
             const { error } = await supabase
                 .from('materials')

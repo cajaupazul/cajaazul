@@ -107,7 +107,8 @@ export default function FullPageUploadForm({
                 // Use parallel uploads for speed
                 const uploadPromises = files.map(async (file) => {
                     const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
-                    const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+                    const originalName = file.name.split('.').slice(0, -1).join('.').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    const storagePath = `${Date.now()}-${originalName}.${fileExt}`;
 
                     const { uploadFileToR2 } = await import('@/lib/r2-storage');
 

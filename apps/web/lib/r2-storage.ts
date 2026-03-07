@@ -101,18 +101,31 @@ export async function deleteFileFromR2(bucket: string, path: string): Promise<bo
         return false
     }
 
-    // Si es una URL completa, extraer el path relativo
-    // Ejemplo: https://api.../secure-url?bucket=x&path=avatars/123.jpg
     let cleanPath = path;
     if (path.startsWith('http')) {
-        const urlObj = new URL(path);
-        const params = new URLSearchParams(urlObj.search);
-        cleanPath = params.get('path') || path;
-    }
+        try {
+            const urlObj = new URL(path);
+            // Case 1: Proxy URL with ?path=...
+            const params = new URLSearchParams(urlObj.search);
+            const pathParam = params.get('path');
 
-    // Si viene solo el nombre del archivo o un path relativo, está bien.
-    // Pero si viene con el bucket al inicio (ej: "grupos/file.jpg"), quitar el bucket si es necesario
-    // aunque generalmente guardamos "userId/file.jpg".
+            if (pathParam) {
+                cleanPath = pathParam;
+            } else {
+                // Case 2: Direct-ish URL like .../bucket-name/actual/path
+                // Or .../storage/v1/object/public/bucket-name/actual/path
+                const parts = urlObj.pathname.split(`/${bucket}/`);
+                if (parts.length > 1) {
+                    cleanPath = parts[1];
+                } else {
+                    // Fallback to basename if nothing else works
+                    cleanPath = urlObj.pathname.split('/').pop() || path;
+                }
+            }
+        } catch (e) {
+            console.warn('Error parsing URL in deleteFileFromR2:', e);
+        }
+    }
 
     try {
         const response = await fetch(

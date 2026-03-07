@@ -78,24 +78,11 @@ export default function CourseDetailContent({
         try {
             // Delete from storage
             const { deleteFileFromR2 } = await import('@/lib/r2-storage');
-            const urlPath = new URL(materialUrl).searchParams.get('path');
-            const storagePath = urlPath || materialUrl.split('/course-materials/')[1] || materialUrl.split('&path=')[1]?.split('&')[0];
-
-            if (storagePath) {
-                await deleteFileFromR2('course-materials', decodeURIComponent(storagePath));
-            }
+            await deleteFileFromR2('course-materials', materialUrl);
 
             // Delete thumbnail if exists
             if (material.thumbnail_url) {
-                try {
-                    const thumbUrl = new URL(material.thumbnail_url);
-                    const thumbPath = thumbUrl.searchParams.get('path');
-                    if (thumbPath) {
-                        await deleteFileFromR2('thumbnails', decodeURIComponent(thumbPath));
-                    }
-                } catch (e) {
-                    console.error('Error parsing thumbnail URL for deletion:', e);
-                }
+                await deleteFileFromR2('thumbnails', material.thumbnail_url);
             }
 
             // Delete from database
@@ -106,8 +93,9 @@ export default function CourseDetailContent({
 
             if (dbError) throw dbError;
 
-            // Refresh the page
-            router.refresh();
+            // Optimistic UI update: Remove from local state immediately
+            setMaterials(prev => prev.filter(m => m.id !== materialId));
+
             alert('Material eliminado exitosamente');
         } catch (error: any) {
             console.error('Error deleting material:', error);
