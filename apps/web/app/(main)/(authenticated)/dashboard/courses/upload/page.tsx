@@ -63,36 +63,42 @@ function UploadWrapper() {
                 const initialProfessors = Array.from(professorsMap.values());
                 const uniqueProfessorsByName = new Map();
 
-                const normalizeStr = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                const normalizeStr = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, ' ').trim();
                 const targetNorm = normalizeStr(courseNameClean);
 
-                const isCleanMatch = (professorCoursesStr: string | null) => {
-                    if (!professorCoursesStr) return false;
-                    const segments = professorCoursesStr.split(/[,;|•]/).map(s => s.trim()).filter(Boolean);
-                    return segments.some(segment => normalizeStr(segment) === targetNorm);
+                const getMatchedCourse = (professorCoursesStr: string | null) => {
+                    if (!professorCoursesStr) return null;
+                    // Split by common separators: comma, semicolon, pipe, bullet, newline
+                    const segments = professorCoursesStr.split(/[,;|•\n]/).map(s => s.trim()).filter(Boolean);
+
+                    // Return the FIRST segment that matches exactly after normalization
+                    return segments.find(segment => normalizeStr(segment) === targetNorm) || null;
                 };
 
                 initialProfessors.forEach((p: any) => {
-                    // Check if this professor actually belongs to the specific course
-                    // either by explicit link (handled by linkedProfIds) OR by matching specialty/others cleanly
-                    const hasCleanSpecialty = isCleanMatch(p.especialidad);
-                    const hasCleanOthers = isCleanMatch(p.otros_cursos);
+                    const matchedSpecialty = getMatchedCourse(p.especialidad);
+                    const matchedOthers = getMatchedCourse(p.otros_cursos);
                     const isExplicitlyLinked = linkedProfIds.includes(p.id);
 
-                    if (!isExplicitlyLinked && !hasCleanSpecialty && !hasCleanOthers) {
-                        return; // Skip if it's just a partial string match (e.g., I inside II)
+                    if (!isExplicitlyLinked && !matchedSpecialty && !matchedOthers) {
+                        return; // Skip if no clear match exists
                     }
+
+                    // Attach which course matched for UI purposes
+                    const displayMatch = matchedSpecialty || matchedOthers || courseNameClean;
+                    const professorWithMatch = { ...p, matchedCourse: displayMatch };
 
                     const normalizedName = p.nombre.toLowerCase().trim();
                     const existing = uniqueProfessorsByName.get(normalizedName);
-                    const isExactMatch = normalizeStr(p.especialidad || '') === targetNorm;
 
-                    if (!existing || (isExactMatch && !(normalizeStr(existing.especialidad || '') === targetNorm))) {
-                        uniqueProfessorsByName.set(normalizedName, p);
+                    // Priority: Explicitly linked > Specialty match > Other match
+                    if (!existing || isExplicitlyLinked || (matchedSpecialty && !getMatchedCourse(existing.especialidad))) {
+                        uniqueProfessorsByName.set(normalizedName, professorWithMatch);
                     }
                 });
 
-                setProfessors(Array.from(uniqueProfessorsByName.values()));
+                const finalProfessors = Array.from(uniqueProfessorsByName.values());
+                setProfessors(finalProfessors);
 
             } catch (err) {
                 console.error('Error fetching upload data:', err);

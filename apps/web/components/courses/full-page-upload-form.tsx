@@ -45,6 +45,13 @@ export default function FullPageUploadForm({
     const [description, setDescription] = useState('');
     const [links, setLinks] = useState<{ titulo: string; url: string }[]>([{ titulo: '', url: '' }]);
 
+    // Auto-select if only one professor is available
+    useState(() => {
+        if (allProfessors.length === 1 && professorId === 'none') {
+            setProfessorId(allProfessors[0].id);
+        }
+    });
+
     const addLinkRow = () => setLinks(prev => [...prev, { titulo: '', url: '' }]);
     const updateLink = (index: number, field: 'titulo' | 'url', value: string) => {
         const newLinks = [...links];
@@ -389,12 +396,12 @@ export default function FullPageUploadForm({
                                     <SelectItem value="none" className="focus:bg-blue-600 focus:text-white rounded-lg">
                                         <span className="text-bb-text-secondary italic">Ningúno / Material General</span>
                                     </SelectItem>
-                                    {allProfessors.map((prof) => (
+                                    {allProfessors.map((prof: any) => (
                                         <SelectItem key={prof.id} value={prof.id} className="focus:bg-blue-600 focus:text-white rounded-lg">
                                             <span className="font-bold">{prof.nombre}</span>
-                                            {prof.especialidad && (
+                                            {prof.matchedCourse && (
                                                 <span className="ml-2 text-[10px] opacity-50 font-medium">
-                                                    ({prof.especialidad})
+                                                    ({prof.matchedCourse})
                                                 </span>
                                             )}
                                         </SelectItem>
