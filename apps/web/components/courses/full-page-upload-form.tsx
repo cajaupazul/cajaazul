@@ -104,45 +104,48 @@ export default function FullPageUploadForm({
                     if (insertError) throw new Error(`Error al guardar enlace: ${insertError.message}`);
                 }
             } else {
-                // Use parallel uploads for speed
-                const uploadPromises = files.map(async (file) => {
+                // 1. First, upload all files to R2 in parallel for maximum speed
+                const uploadedFilesInfo = await Promise.all(files.map(async (file) => {
                     const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
                     const originalName = file.name.split('.').slice(0, -1).join('.').replace(/[^a-z0-9]/gi, '_').toLowerCase();
                     const storagePath = `${Date.now()}-${originalName}.${fileExt}`;
 
                     const { uploadFileToR2 } = await import('@/lib/r2-storage');
 
-                    // 1. Generate thumbnail client-side (PDF.js / Canvas)
-                    //    Upload to Supabase Storage (public bucket) so <img> can load it without auth
+                    // Generate thumbnail client-side
                     let thumbnailUrl: string | null = null;
                     const thumbnailBlob = await generateThumbnailFromFile(file);
                     if (thumbnailBlob) {
                         try {
                             const thumbFileName = `thumb_${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
-                            const { error: thumbError, data: thumbData } = await supabase.storage
+                            const { data: thumbData } = await supabase.storage
                                 .from('thumbnails')
                                 .upload(thumbFileName, thumbnailBlob, {
                                     contentType: 'image/webp',
                                     upsert: false,
                                 });
-                            if (thumbError) {
-                                console.warn('[THUMBNAIL] Supabase upload error:', thumbError.message);
-                            } else {
+
+                            if (thumbData) {
                                 const { data: publicData } = supabase.storage
                                     .from('thumbnails')
                                     .getPublicUrl(thumbFileName);
                                 thumbnailUrl = publicData.publicUrl;
-                                console.log('[THUMBNAIL] Uploaded to Supabase Storage:', thumbnailUrl);
                             }
                         } catch (thumbErr) {
-                            console.warn('[THUMBNAIL] Failed to upload thumbnail:', thumbErr);
+                            console.warn('[THUMBNAIL] Failed:', thumbErr);
                         }
                     }
 
-                    // 2. Upload main file
+                    // Upload main file to R2
                     const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
 
-                    // 3. Insert material record
+                    return { file, materialUrl, thumbnailUrl, fileExt };
+                }));
+
+                // 2. Then, insert into DB sequentially to preserve order in created_at
+                for (const info of uploadedFilesInfo) {
+                    const { file, materialUrl, thumbnailUrl, fileExt } = info;
+
                     const { error: insertError } = await supabase.from('materials').insert({
                         course_id: courseId,
                         user_id: userId,
@@ -164,26 +167,21 @@ export default function FullPageUploadForm({
                             .eq('id', courseId);
                     }
 
-                    // 4. Best-effort: trigger server-side conversion for Office files (PPT, DOCX)
-                    //    as a fallback in case the converter service comes back online.
+                    // Best-effort Office conversion
                     const officeExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'];
                     if (!thumbnailUrl && officeExtensions.includes(fileExt)) {
-                        const { triggerFileConversion } = await import('@/lib/converter');
-                        setTimeout(async () => {
-                            try {
-                                const urlObj = new URL(materialUrl);
-                                const fileKey = urlObj.searchParams.get('path') || materialUrl.split('/course-materials/')[1];
-                                if (fileKey) {
-                                    await triggerFileConversion(decodeURIComponent(fileKey), 'course-materials');
-                                }
-                            } catch (e) {
-                                console.warn('[CONVERTER] Background trigger failed (non-critical):', e);
+                        try {
+                            const { triggerFileConversion } = await import('@/lib/converter');
+                            const urlObj = new URL(materialUrl);
+                            const fileKey = urlObj.searchParams.get('path') || materialUrl.split('/course-materials/')[1];
+                            if (fileKey) {
+                                await triggerFileConversion(decodeURIComponent(fileKey), 'course-materials');
                             }
-                        }, 2000);
+                        } catch (e) {
+                            console.warn('[CONVERTER] Trigger failed:', e);
+                        }
                     }
-                });
-
-                await Promise.all(uploadPromises);
+                }
             }
 
             // Éxito

@@ -109,14 +109,20 @@ export default function CourseDetailContent({
         router.push(`/dashboard/courses/new?id=${course.id}`);
     };
 
+    // Helper for natural alphanumeric sorting (e.g., 2 before 10)
+    const naturalSort = useMemo(() => {
+        const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+        return (a: any, b: any) => collator.compare(a.titulo || '', b.titulo || '');
+    }, []);
+
     // Base materials list filtered ONLY by professor (for counts)
     const materialsForCounts = useMemo(() => {
         let results = materials || [];
         if (selectedProfessorId !== 'all') {
             results = results.filter(m => m.professor_id === selectedProfessorId);
         }
-        return results;
-    }, [materials, selectedProfessorId]);
+        return [...results].sort(naturalSort);
+    }, [materials, selectedProfessorId, naturalSort]);
 
     // Derived lists for COUNTS (stable across tabs)
     const syllabusCount = useMemo(() => {
@@ -153,7 +159,7 @@ export default function CourseDetailContent({
 
     // Filtered lists for DISPLAY (depends on active tab)
     const filteredMaterials = useMemo(() => {
-        const base = materialsForCounts; // Already filtered by professor
+        const base = materialsForCounts; // Already sorted naturally
 
         if (activeTab === 'silabo') {
             return base.filter(m =>
@@ -164,9 +170,6 @@ export default function CourseDetailContent({
         }
 
         if (activeTab === 'todos') {
-            // 'todos' tab logic: usually everything? 
-            // Logic in original code was: 'todos' -> everything.
-            // But let's check original lines 105-110. It returned everything.
             return base;
         }
 
