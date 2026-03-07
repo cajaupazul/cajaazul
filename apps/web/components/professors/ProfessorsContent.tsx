@@ -101,16 +101,21 @@ export default function ProfessorsContent({
     };
 
     const isCleanMatch = (professorCourses: string[], targetCourse: string) => {
-        if (!targetCourse) return false;
+        if (!targetCourse || targetCourse === 'all') return true;
+
+        // Use exact comparison after normalization but WITHOUT broad fuzzy logic
         const targetNorm = normalizeString(targetCourse);
 
         return professorCourses.some(course => {
             const courseNorm = normalizeString(course);
+
+            // 1. Direct match
             if (courseNorm === targetNorm) return true;
 
-            // Split professor courses by common delimiters and check for exact segment match
+            // 2. Exact match within a segmented string (comma separated)
+            // This ensures "Matemáticas I, Física" matches "Matemáticas I" exactly
             const segments = courseNorm.split(/[,;|•]/).map(s => s.trim()).filter(Boolean);
-            return segments.some(segment => segment === targetNorm);
+            return segments.some(segment => normalizeString(segment) === targetNorm);
         });
     };
 

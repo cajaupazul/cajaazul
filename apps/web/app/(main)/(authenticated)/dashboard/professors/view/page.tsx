@@ -107,12 +107,25 @@ function ProfessorRatingsWrapper() {
         setProfile(userProfile);
         setCoursesTaught(coursesTaughtData?.map((ct: any) => ct.courses).filter(Boolean) || []);
 
-        // Related professors
+        // Related professors - Strict Filtering
+        const targetCourseLower = (selectedCourse || currentProf.especialidad || '').trim().toLowerCase();
         const relatedMap = new Map();
+
         (relatedProfessorsRes?.data || []).forEach((p: any) => {
           const normalizedName = p.nombre.trim().toLowerCase();
+
+          // Only include if it's not the same professor AND matches the course exactly
           if (normalizedName !== currentProf.nombre.trim().toLowerCase() && !relatedMap.has(normalizedName)) {
-            relatedMap.set(normalizedName, p);
+            const profCourses = [];
+            if (p.especialidad) profCourses.push(p.especialidad.trim().toLowerCase());
+            if (p.otros_cursos) {
+              p.otros_cursos.split(',').forEach((c: string) => profCourses.push(c.trim().toLowerCase()));
+            }
+
+            const isExactMatch = profCourses.includes(targetCourseLower);
+            if (isExactMatch) {
+              relatedMap.set(normalizedName, p);
+            }
           }
         });
         setRelatedProfessors(Array.from(relatedMap.values()).slice(0, 10));
