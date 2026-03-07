@@ -73,7 +73,9 @@ export default function FullPageProfessorUploadForm({
 
                 const { uploadFileToR2 } = await import('@/lib/r2-storage');
                 const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
+                console.log(`[UPLOAD_DEBUG] R2 upload complete for ${file.name}, URL: ${materialUrl}`);
 
+                console.log(`[UPLOAD_DEBUG] Starting material creation in DB for: ${file.name}`);
                 const { error: insertError } = await supabase.from('materials').insert({
                     course_id: courseId,
                     user_id: userId,
@@ -85,7 +87,11 @@ export default function FullPageProfessorUploadForm({
                     descargas: 0,
                 });
 
-                if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
+                if (insertError) {
+                    console.error('[UPLOAD_DEBUG] DB Insert Error:', insertError);
+                    throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
+                }
+                console.log('[UPLOAD_DEBUG] Material created in DB, triggering conversion...');
 
                 // Activar generación de miniaturas (thumbnails)
                 const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'pdf', 'jpg', 'jpeg', 'png', 'webp'];
@@ -95,7 +101,10 @@ export default function FullPageProfessorUploadForm({
                         const urlObj = new URL(materialUrl);
                         const fileKey = urlObj.searchParams.get('path');
                         if (fileKey) {
+                            console.log(`[UPLOAD_DEBUG] Triggering conversion for path: ${decodeURIComponent(fileKey)}`);
                             triggerFileConversion(decodeURIComponent(fileKey), 'course-materials').catch(console.error);
+                        } else {
+                            console.warn('[UPLOAD_DEBUG] Could not extract file path from URL for conversion');
                         }
                     } catch (e) {
                         console.error('Error parsing materialUrl for conversion:', e);

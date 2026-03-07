@@ -157,6 +157,31 @@ export default function AuthenticatedLayout({
     );
   }
 
+  // 5. Permission Hunter (Diagnostic for unexpected browser prompts)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Track potential permission-requesting APIs
+    const trackApi = (name: string, obj: any, method: string) => {
+      if (!obj || !obj[method]) return;
+      const original = obj[method].bind(obj);
+      obj[method] = async function (...args: any[]) {
+        console.warn(`🚨 [PERMISSION_HUNTER] Gated API access detected: ${name}.${method}`, { args });
+        return original(...args);
+      };
+    };
+
+    // APIs likely to trigger the generic "Permission" prompt in Chrome
+    if ((navigator as any).usb) trackApi('navigator.usb', (navigator as any).usb, 'requestDevice');
+    if ((navigator as any).hid) trackApi('navigator.hid', (navigator as any).hid, 'requestDevice');
+    if ((navigator as any).serial) trackApi('navigator.serial', (navigator as any).serial, 'requestPort');
+    if ((navigator as any).bluetooth) trackApi('navigator.bluetooth', (navigator as any).bluetooth, 'requestDevice');
+
+    // Also look for wakeLock, keyboard lock, etc.
+    if ((navigator as any).keyboard) trackApi('navigator.keyboard', (navigator as any).keyboard, 'lock');
+
+  }, []);
+
   const isInitialLoading = false;
 
   return (

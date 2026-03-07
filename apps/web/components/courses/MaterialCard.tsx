@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import { FileText, FileImage, LayoutPanelLeft, FileSpreadsheet, FileBox, ExternalLink, MoreVertical, Calendar, User, UploadCloud } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,7 @@ interface MaterialCardProps {
     onDelete?: () => void;
     canDelete?: boolean;
     viewMode?: 'grid' | 'list';
+    size?: 'normal' | 'compact';
 }
 
 export default function MaterialCard({
@@ -22,7 +24,8 @@ export default function MaterialCard({
     onClick,
     onDelete,
     canDelete = false,
-    viewMode = 'grid'
+    viewMode = 'grid',
+    size = 'normal'
 }: MaterialCardProps) {
     const materialType = material.tipo?.toLowerCase() || '';
     const isEnlace = materialType === 'enlace';
@@ -160,7 +163,7 @@ export default function MaterialCard({
             className="flex flex-col bg-bb-darker/20 rounded-2xl overflow-hidden border border-bb-border/50 hover:border-blue-500/20 shadow-sm transition-all cursor-pointer group active:scale-[0.98]"
         >
             {/* Thumbnail Area */}
-            <div className={`aspect-video w-full relative flex items-center justify-center overflow-hidden shrink-0 ${config.bg}`}>
+            <div className={`${size === 'compact' ? 'aspect-square sm:aspect-video' : 'aspect-video'} w-full relative flex items-center justify-center overflow-hidden shrink-0 ${config.bg}`}>
                 {thumbnailUrl ? (
                     <img
                         src={thumbnailUrl}
@@ -170,7 +173,7 @@ export default function MaterialCard({
                     />
                 ) : (
                     <div className={`${config.color} opacity-30 group-hover:scale-110 group-hover:opacity-60 transition-all duration-500 transform`}>
-                        {config.icon}
+                        {React.cloneElement(config.icon as React.ReactElement<any>, { className: size === 'compact' ? 'w-6 h-6' : 'w-8 h-8' })}
                     </div>
                 )}
 
@@ -178,16 +181,16 @@ export default function MaterialCard({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-40" />
 
                 {/* Type Badge */}
-                <div className="absolute top-3 right-3 z-10 flex gap-2">
-                    <Badge className={`${config.bg} ${config.color} border-current/20 backdrop-blur-md font-bold text-[9px] uppercase tracking-wider`}>
+                <div className={`absolute ${size === 'compact' ? 'top-1.5 right-1.5' : 'top-3 right-3'} z-10 flex gap-2`}>
+                    <Badge className={`${config.bg} ${config.color} border-current/20 backdrop-blur-md font-bold ${size === 'compact' ? 'text-[7px] px-1 py-0' : 'text-[9px]'} uppercase tracking-wider`}>
                         {config.label}
                     </Badge>
                 </div>
             </div>
 
             {/* Content Area */}
-            <div className="p-4 bg-bb-card border-t border-bb-border/50 space-y-3">
-                <p className="text-sm font-bold text-bb-text line-clamp-2 leading-snug min-h-[2.5rem] group-hover:text-blue-400 transition-colors">
+            <div className={`${size === 'compact' ? 'p-2 space-y-2' : 'p-4 space-y-3'} bg-bb-card border-t border-bb-border/50`}>
+                <p className={`${size === 'compact' ? 'text-[11px]' : 'text-sm'} font-bold text-bb-text line-clamp-2 leading-snug ${size === 'compact' ? 'min-h-[1.5rem]' : 'min-h-[2.5rem]'} group-hover:text-blue-400 transition-colors`}>
                     {material.titulo}
                 </p>
 
