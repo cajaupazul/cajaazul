@@ -14,7 +14,8 @@ import {
     ChevronLeft,
     Sparkles,
     AlertCircle,
-    Eye
+    Eye,
+    X
 } from 'lucide-react';
 import {
     Select,
@@ -58,6 +59,9 @@ function EditShopItemWrapper() {
     const [categories, setCategories] = useState<ShopCategory[]>([]);
     const [allShopItems, setAllShopItems] = useState<any[]>([]);
     const [frameSettings, setFrameSettings] = useState<any>(null);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [skipResize, setSkipResize] = useState(false);
 
     // Proteccion de ruta
     useEffect(() => {
@@ -120,18 +124,53 @@ function EditShopItemWrapper() {
         setLoading(false);
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
+    };
+
     const handleSave = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!itemId) return;
 
         setIsSaving(true);
         try {
+            let finalImageUrl = item?.image_url;
+
+            // Si hay un archivo nuevo, subirlo antes de guardar
+            if (selectedFile) {
+                const { resizeImage } = await import('@/lib/image-utils');
+                const imageBlob = await resizeImage(selectedFile, 512, skipResize);
+                const extension = skipResize ? selectedFile.name.split('.').pop() : 'webp';
+                // Añadimos "_update_" para no pisar el original u otra caché fácilmente
+                const fileName = `${Date.now()}_update_${form.frame_key}.${extension}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('profile-frames')
+                    .upload(fileName, imageBlob, {
+                        contentType: skipResize ? selectedFile.type : 'image/webp',
+                        upsert: true
+                    });
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('profile-frames')
+                    .getPublicUrl(fileName);
+
+                finalImageUrl = publicUrl;
+            }
+
             const { error: dbError } = await supabase
                 .from('shop_items')
                 .update({
                     ...form,
                     category_id: form.category_id || null,
-                    frame_settings: frameSettings
+                    frame_settings: frameSettings,
+                    ...(selectedFile ? { image_url: finalImageUrl } : {})
                 })
                 .eq('id', itemId);
 
@@ -360,19 +399,59 @@ function EditShopItemWrapper() {
                             </div >
                         </div >
 
-                        {/* Image Preview Card */}
-                        < div className="bg-bb-card border border-bb-border rounded-3xl p-6 shadow-xl space-y-4" >
-                            <h2 className="font-bold text-lg border-b border-bb-border pb-4 text-bb-text">Imagen Actual</h2>
-                            <div className="flex flex-col items-center justify-center border border-bb-border rounded-2xl p-8 bg-bb-sidebar/20">
-                                <img src={item.image_url || PLACEHOLDERS.ITEM} className="w-48 h-48 object-contain rounded-xl shadow-2xl" alt="Current" />
-                                <div className="mt-4 flex items-center gap-2 text-[10px] text-bb-text-secondary font-mono">
-                                    <ImageIcon className="w-3 h-3" /> URL: {item.image_url?.split('/').pop() || 'Sin URL'}
+                        {/* Image Upload Area */}
+                        <div className="bg-bb-card border border-bb-border rounded-3xl p-6 shadow-xl space-y-4">
+                            <h2 className="font-bold text-lg border-b border-bb-border pb-4 text-bb-text">Imagen del Artículo</h2>
+                            <div className="flex flex-col items-center justify-center border-2 border-dashed border-bb-border rounded-2xl p-8 bg-bb-sidebar/20 hover:bg-bb-sidebar/30 transition-all cursor-pointer relative">
+                                {previewUrl || item.image_url ? (
+                                    <div className="relative group">
+                                        <img src={previewUrl || item.image_url || PLACEHOLDERS.ITEM} className="w-48 h-48 object-contain rounded-xl shadow-2xl" alt="Preview" />
+                                        {previewUrl && (
+                                            <button
+                                                type="button"
+                                                onClick={() => { setSelectedFile(null); setPreviewUrl(null); }}
+                                                className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 shadow-lg hover:scale-110 transition-transform z-10"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        {/* Overlay para subir nueva si ya hay una */}
+                                        <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center cursor-pointer">
+                                            <div className="text-white font-bold text-sm bg-black/50 px-3 py-1.5 rounded-lg backdrop-blur-sm">Cambiar Imagen</div>
+                                            <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                        </label>
+                                    </div>
+                                ) : (
+                                    <label className="flex flex-col items-center gap-3 cursor-pointer w-full">
+                                        <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                            <ImageIcon className="w-8 h-8" />
+                                        </div>
+                                        <div className="text-center text-bb-text">
+                                            <p className="font-bold">Haz clic para subir nueva imagen</p>
+                                            <p className="text-xs text-bb-text-secondary mt-1">Reemplazará la actual (PNG, GIF, WebP)</p>
+                                        </div>
+                                        <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                    </label>
+                                )}
+                            </div>
+
+                            {/* Optimization Option */}
+                            <div className="bg-blue-500/5 border border-blue-500/10 p-4 rounded-2xl space-y-3 mt-4">
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        id="skip_resize"
+                                        checked={skipResize}
+                                        onChange={(e) => setSkipResize(e.target.checked)}
+                                        className="w-5 h-5 accent-blue-500"
+                                    />
+                                    <Label htmlFor="skip_resize" className="text-sm font-bold flex flex-col cursor-pointer text-bb-text">
+                                        Preservar Animación (Saltar Optimizador)
+                                        <span className="text-[10px] font-normal text-bb-text-secondary mt-1">Usa esto si subes un GIF animado para la nueva imagen.</span>
+                                    </Label>
                                 </div>
                             </div>
-                            <p className="text-xs text-bb-text-secondary italic text-center">
-                                * Para cambiar la imagen, elimina este item y crea uno nuevo.
-                            </p>
-                        </div >
+                        </div>
                     </div >
 
                     {/* Preview / Adjust Side */}
@@ -390,7 +469,7 @@ function EditShopItemWrapper() {
                                     </div>
 
                                     <FrameEditor
-                                        frameImageUrl={item.image_url || PLACEHOLDERS.ITEM}
+                                        frameImageUrl={previewUrl || item.image_url || PLACEHOLDERS.ITEM}
                                         initialSettings={frameSettings || undefined}
                                         onSave={(settings) => setFrameSettings(settings)}
                                     />
