@@ -41,16 +41,11 @@ export default function FullPageUploadForm({
     const [uploading, setUploading] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
     const [materialType, setMaterialType] = useState('otro');
-    const [professorId, setProfessorId] = useState<string>('none');
+    const [professorId, setProfessorId] = useState<string>(
+        allProfessors.length === 1 ? allProfessors[0].id : 'none'
+    );
     const [description, setDescription] = useState('');
     const [links, setLinks] = useState<{ titulo: string; url: string }[]>([{ titulo: '', url: '' }]);
-
-    // Auto-select if only one professor is available
-    useState(() => {
-        if (allProfessors.length === 1 && professorId === 'none') {
-            setProfessorId(allProfessors[0].id);
-        }
-    });
 
     const addLinkRow = () => setLinks(prev => [...prev, { titulo: '', url: '' }]);
     const updateLink = (index: number, field: 'titulo' | 'url', value: string) => {
