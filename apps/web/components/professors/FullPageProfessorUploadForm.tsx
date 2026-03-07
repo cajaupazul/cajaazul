@@ -91,24 +91,28 @@ export default function FullPageProfessorUploadForm({
                     console.error('[UPLOAD_DEBUG] DB Insert Error:', insertError);
                     throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
                 }
-                console.log('[UPLOAD_DEBUG] Material created in DB, triggering conversion...');
+                console.log('[UPLOAD_DEBUG] Material created in DB, waiting 2s before conversion trigger...');
 
                 // Activar generación de miniaturas (thumbnails)
                 const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'pdf', 'jpg', 'jpeg', 'png', 'webp'];
                 if (triggerExtensions.includes(fileExt?.toLowerCase() || '')) {
                     const { triggerFileConversion } = await import('@/lib/converter');
-                    try {
-                        const urlObj = new URL(materialUrl);
-                        const fileKey = urlObj.searchParams.get('path');
-                        if (fileKey) {
-                            console.log(`[UPLOAD_DEBUG] Triggering conversion for path: ${decodeURIComponent(fileKey)}`);
-                            triggerFileConversion(decodeURIComponent(fileKey), 'course-materials').catch(console.error);
-                        } else {
-                            console.warn('[UPLOAD_DEBUG] Could not extract file path from URL for conversion');
+                    // Small delay to ensure Supabase indexing or eventual consistency
+                    setTimeout(async () => {
+                        try {
+                            const urlObj = new URL(materialUrl);
+                            const fileKey = urlObj.searchParams.get('path');
+                            if (fileKey) {
+                                console.log(`[UPLOAD_DEBUG] Triggering conversion for path: ${fileKey}`);
+                                // Use the raw fileKey as it's passed in the URL (it works better for the worker matching)
+                                await triggerFileConversion(fileKey, 'course-materials');
+                            } else {
+                                console.warn('[UPLOAD_DEBUG] Could not extract file path from URL for conversion');
+                            }
+                        } catch (e) {
+                            console.error('Error in conversion trigger timeout:', e);
                         }
-                    } catch (e) {
-                        console.error('Error parsing materialUrl for conversion:', e);
-                    }
+                    }, 2000);
                 }
             });
 

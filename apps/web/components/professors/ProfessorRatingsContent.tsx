@@ -1184,8 +1184,8 @@ export default function ProfessorRatingsContent({
 
                                 {materials.length > 0 ? (
                                     <>
-                                        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 md:gap-3">
-                                            {materials.slice(0, 16).map((material) => (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                                            {materials.slice(0, 8).map((material) => (
                                                 <div key={material.id} className="min-w-0">
                                                     <MaterialCard
                                                         material={material}

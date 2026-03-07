@@ -189,8 +189,8 @@ export default function MaterialCard({
             </div>
 
             {/* Content Area */}
-            <div className={`${size === 'compact' ? 'p-2 space-y-2' : 'p-4 space-y-3'} bg-bb-card border-t border-bb-border/50`}>
-                <p className={`${size === 'compact' ? 'text-[11px]' : 'text-sm'} font-bold text-bb-text line-clamp-2 leading-snug ${size === 'compact' ? 'min-h-[1.5rem]' : 'min-h-[2.5rem]'} group-hover:text-blue-400 transition-colors`}>
+            <div className={`${size === 'compact' ? 'p-3 space-y-2' : 'p-4 space-y-3'} bg-bb-card border-t border-bb-border/50`}>
+                <p className={`${size === 'compact' ? 'text-[12px]' : 'text-sm'} font-black text-bb-text line-clamp-2 leading-tight ${size === 'compact' ? 'min-h-[2rem]' : 'min-h-[2.5rem]'} group-hover:text-blue-400 transition-colors`}>
                     {material.titulo}
                 </p>
 
@@ -201,7 +201,7 @@ export default function MaterialCard({
                             <span className="truncate">{material.professors.nombre}</span>
                         </div>
                     )}
-                    {material.profiles?.nombre && (
+                    {size !== 'compact' && material.profiles?.nombre && (
                         <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary font-medium truncate" onClick={(e) => e.stopPropagation()}>
                             <UploadCloud className="w-3 h-3 shrink-0" />
                             <UserHoverCard profile={material.profiles}>
