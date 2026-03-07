@@ -77,7 +77,7 @@ function ProfessorRatingsWrapper() {
               .select('id, nombre, especialidad, facultad')
               .or(orQuery)
               .neq('id', professorId)
-              .limit(20)
+              .limit(100)
             : Promise.resolve({ data: [] as any[], error: null }),
           supabase.from('materials')
             .select('*, courses(id, nombre)')
