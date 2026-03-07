@@ -133,8 +133,18 @@ storageRouter.put('/upload', async (c) => {
 storageRouter.delete('/delete', async (c) => {
     const path = c.req.query('path')
     const bucketName = c.req.query('bucket') || 'course-materials'
+    const secret = c.req.query('secret')
 
     console.log(`🗑️ Delete request: bucket=${bucketName}, path=${path}`)
+
+    // Allow deletion via maintenance secret OR standard auth
+    if (secret && secret !== c.env.SUPABASE_ANON_KEY) {
+        return c.json({ error: 'Secret de mantenimiento inválido' }, 401)
+    }
+
+    if (!secret && !c.req.header('Authorization')) {
+        return c.json({ error: 'No autorizado (Falta header o secret)' }, 401)
+    }
 
     if (!path) {
         return c.json({ error: 'Falta el parámetro "path"' }, 400)
@@ -334,5 +344,6 @@ storageRouter.get('/secure-url', async (c) => {
         return c.json({ error: e.message }, 500)
     }
 })
+
 
 export default storageRouter
