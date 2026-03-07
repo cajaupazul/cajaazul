@@ -134,13 +134,14 @@ export default function FullPageUploadForm({
                     const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'pdf', 'jpg', 'jpeg', 'png', 'webp'];
                     if (triggerExtensions.includes(fileExt?.toLowerCase() || '')) {
                         const { triggerFileConversion } = await import('@/lib/converter');
-                        // Small safety delay
+                        // Small safety delay to let R2 catch up
                         setTimeout(async () => {
                             try {
                                 const urlObj = new URL(materialUrl);
-                                const fileKey = urlObj.searchParams.get('path');
+                                const fileKey = urlObj.searchParams.get('path') || materialUrl.split('/course-materials/')[1];
                                 if (fileKey) {
-                                    await triggerFileConversion(fileKey, 'course-materials');
+                                    console.log(`[UPLOAD_DEBUG] Triggering conversion for course material: ${fileKey}`);
+                                    await triggerFileConversion(decodeURIComponent(fileKey), 'course-materials');
                                 }
                             } catch (e) {
                                 console.error('Error triggering conversion:', e);
