@@ -503,14 +503,13 @@ export default function ProfessorRatingsContent({
 
         try {
             // Delete from storage
-            const pathMatch = materialUrl.match(/course_materials\/(.+)$/);
-            if (pathMatch) {
-                const storagePath = pathMatch[1];
-                const { error: storageError } = await supabase.storage
-                    .from('course_materials')
-                    .remove([storagePath]);
+            const { deleteFileFromR2 } = await import('@/lib/r2-storage');
+            const urlPath = new URL(materialUrl).searchParams.get('path');
+            const storagePath = urlPath || materialUrl.split('/course-materials/')[1] || materialUrl.split('&path=')[1]?.split('&')[0];
 
-                if (storageError) console.error('Error deleting from storage:', storageError);
+            if (storagePath) {
+                const deleted = await deleteFileFromR2('course-materials', decodeURIComponent(storagePath));
+                if (!deleted) console.warn('Could not confirm deletion from R2 storage');
             }
 
             // Delete from database

@@ -91,9 +91,14 @@ export default function FullPageProfessorUploadForm({
                 const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'pdf', 'jpg', 'jpeg', 'png', 'webp'];
                 if (triggerExtensions.includes(fileExt?.toLowerCase() || '')) {
                     const { triggerFileConversion } = await import('@/lib/converter');
-                    const fileKey = materialUrl.split('&path=')[1]?.split('&')[0] || materialUrl.split('/course_materials/')[1];
-                    if (fileKey) {
-                        triggerFileConversion(decodeURIComponent(fileKey), 'course-materials').catch(console.error);
+                    try {
+                        const urlObj = new URL(materialUrl);
+                        const fileKey = urlObj.searchParams.get('path');
+                        if (fileKey) {
+                            triggerFileConversion(decodeURIComponent(fileKey), 'course-materials').catch(console.error);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing materialUrl for conversion:', e);
                     }
                 }
             });
