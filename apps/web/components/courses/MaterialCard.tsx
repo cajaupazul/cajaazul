@@ -36,7 +36,10 @@ export default function MaterialCard({
                 color: 'text-orange-400',
                 bg: 'bg-orange-500/10',
                 border: 'border-orange-500/20',
-                label: 'Presentación'
+                label: 'Presentación',
+                // Old card header design colors
+                headerGradient: 'from-[#5C2A00] via-[#7A3800] to-[#3A1800]',
+                circleColor: 'bg-orange-800/60',
             };
         }
         if (materialType.includes('examen')) {
@@ -45,7 +48,9 @@ export default function MaterialCard({
                 color: 'text-red-400',
                 bg: 'bg-red-500/10',
                 border: 'border-red-500/20',
-                label: 'Examen'
+                label: 'Examen',
+                headerGradient: 'from-[#5C0000] via-[#7A1000] to-[#3A0000]',
+                circleColor: 'bg-red-900/60',
             };
         }
         if (materialType.includes('syllabus')) {
@@ -54,7 +59,9 @@ export default function MaterialCard({
                 color: 'text-teal-400',
                 bg: 'bg-teal-500/10',
                 border: 'border-teal-500/20',
-                label: 'Sílabo'
+                label: 'Sílabo',
+                headerGradient: 'from-[#003C38] via-[#00524C] to-[#002420]',
+                circleColor: 'bg-teal-900/60',
             };
         }
         if (isEnlace) {
@@ -63,7 +70,9 @@ export default function MaterialCard({
                 color: 'text-blue-400',
                 bg: 'bg-blue-500/10',
                 border: 'border-blue-500/20',
-                label: 'Enlace'
+                label: 'Enlace',
+                headerGradient: 'from-[#001A3C] via-[#002A5C] to-[#000E24]',
+                circleColor: 'bg-blue-900/60',
             };
         }
         if (materialType.includes('xls') || materialType.includes('excel')) {
@@ -72,7 +81,9 @@ export default function MaterialCard({
                 color: 'text-green-400',
                 bg: 'bg-green-500/10',
                 border: 'border-green-500/20',
-                label: 'Excel'
+                label: 'Excel',
+                headerGradient: 'from-[#003A00] via-[#004E00] to-[#002000]',
+                circleColor: 'bg-green-900/60',
             };
         }
         return {
@@ -80,7 +91,9 @@ export default function MaterialCard({
             color: 'text-blue-400',
             bg: 'bg-blue-500/10',
             border: 'border-blue-500/20',
-            label: 'Material'
+            label: 'Material',
+            headerGradient: 'from-[#001A3C] via-[#002A5C] to-[#000E24]',
+            circleColor: 'bg-blue-900/60',
         };
     };
 
@@ -160,8 +173,8 @@ export default function MaterialCard({
             onClick={onClick}
             className="flex flex-col bg-bb-darker/20 rounded-2xl overflow-hidden border border-bb-border/50 hover:border-blue-500/20 shadow-sm transition-all cursor-pointer group active:scale-[0.98]"
         >
-            {/* Thumbnail Area */}
-            <div className={`aspect-video w-full relative flex items-center justify-center overflow-hidden shrink-0 ${config.bg}`}>
+            {/* Thumbnail Area — old card style */}
+            <div className="aspect-video w-full relative overflow-hidden shrink-0">
                 {thumbnailUrl ? (
                     <img
                         src={thumbnailUrl}
@@ -171,28 +184,35 @@ export default function MaterialCard({
                     />
                 ) : (
                     <>
-                        {/* Fallback: gradient background + icon + title, matching old card style */}
-                        <div className={`absolute inset-0 ${config.bg} opacity-80`} />
-                        <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/60" />
-                        <div className="relative z-10 flex flex-col items-center justify-center gap-2 px-4 text-center">
-                            <div className={`${config.color} group-hover:scale-110 transition-all duration-300`}>
-                                {React.cloneElement(config.icon as React.ReactElement<any>, { className: 'w-10 h-10' })}
-                            </div>
-                            <p className={`text-xs font-black leading-tight line-clamp-2 ${config.color} opacity-80`}>
+                        {/* Solid warm gradient background */}
+                        <div className={`absolute inset-0 bg-gradient-to-br ${config.headerGradient}`} />
+
+                        {/* Decorative circle — bottom-left (large) */}
+                        <div
+                            className={`absolute -bottom-8 -left-8 w-36 h-36 rounded-full ${config.circleColor} blur-sm`}
+                        />
+                        {/* Decorative circle — top-right (medium) */}
+                        <div
+                            className={`absolute -top-6 -right-6 w-28 h-28 rounded-full ${config.circleColor} blur-sm opacity-70`}
+                        />
+
+                        {/* Title at bottom-left, exact old style */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+                            <p className="text-sm font-black text-white/90 leading-tight line-clamp-2 drop-shadow">
                                 {material.titulo}
                             </p>
                         </div>
                     </>
                 )}
 
-                {/* Overlay with Gradient */}
+                {/* Overlay with Gradient for thumbnails */}
                 {thumbnailUrl && <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-40" />}
 
-                {/* Type Badge */}
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex gap-2">
-                    <Badge className={`${config.bg} ${config.color} border border-current/30 backdrop-blur-md font-bold text-[9px] uppercase tracking-wider shadow-lg`}>
+                {/* Type Badge — centered at top */}
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
+                    <span className={`inline-block px-3 py-0.5 rounded-full border ${config.color} border-current/60 bg-black/30 backdrop-blur-sm font-black text-[9px] uppercase tracking-widest`}>
                         {config.label}
-                    </Badge>
+                    </span>
                 </div>
             </div>
 
