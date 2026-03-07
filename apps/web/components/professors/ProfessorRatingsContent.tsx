@@ -1172,27 +1172,28 @@ export default function ProfessorRatingsContent({
 
                                 {materials.length > 0 ? (
                                     <>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                                            {materials.slice(0, 4).map((material) => (
-                                                <MaterialCard
-                                                    key={material.id}
-                                                    material={material}
-                                                    viewMode="grid"
-                                                    onClick={() => {
-                                                        if (material.tipo?.toLowerCase() === 'enlace') {
-                                                            window.open(material.url_archivo, '_blank');
-                                                        } else {
-                                                            setViewingFile({ path: material.url_archivo, name: material.titulo });
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                                            {materials.slice(0, 5).map((material) => (
+                                                <div key={material.id} className="min-w-0">
+                                                    <MaterialCard
+                                                        material={material}
+                                                        viewMode="grid"
+                                                        onClick={() => {
+                                                            if (material.tipo?.toLowerCase() === 'enlace') {
+                                                                window.open(material.url_archivo, '_blank');
+                                                            } else {
+                                                                setViewingFile({ path: material.url_archivo, name: material.titulo });
+                                                            }
+                                                        }}
+                                                        canDelete={
+                                                            !!profile && (
+                                                                (profile.role === 'admin' || profile.role === 'superadmin') ||
+                                                                (material.user_id === profile.id && (new Date().getTime() - new Date(material.created_at).getTime()) / (1000 * 60 * 60) < 24)
+                                                            )
                                                         }
-                                                    }}
-                                                    canDelete={
-                                                        !!profile && (
-                                                            (profile.role === 'admin' || profile.role === 'superadmin') ||
-                                                            (material.user_id === profile.id && (new Date().getTime() - new Date(material.created_at).getTime()) / (1000 * 60 * 60) < 24)
-                                                        )
-                                                    }
-                                                    onDelete={() => handleDeleteMaterial(material)}
-                                                />
+                                                        onDelete={() => handleDeleteMaterial(material)}
+                                                    />
+                                                </div>
                                             ))}
                                         </div>
 

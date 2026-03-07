@@ -86,6 +86,16 @@ export default function FullPageProfessorUploadForm({
                 });
 
                 if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
+
+                // Activar generación de miniaturas (thumbnails)
+                const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'pdf', 'jpg', 'jpeg', 'png', 'webp'];
+                if (triggerExtensions.includes(fileExt?.toLowerCase() || '')) {
+                    const { triggerFileConversion } = await import('@/lib/converter');
+                    const fileKey = materialUrl.split('&path=')[1]?.split('&')[0] || materialUrl.split('/course_materials/')[1];
+                    if (fileKey) {
+                        triggerFileConversion(decodeURIComponent(fileKey), 'course-materials').catch(console.error);
+                    }
+                }
             });
 
             // 2. Ejecutar todas las subidas al mismo tiempo
