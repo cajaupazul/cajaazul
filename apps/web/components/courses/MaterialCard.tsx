@@ -174,7 +174,7 @@ export default function MaterialCard({
             className="flex flex-col bg-bb-darker/20 rounded-2xl overflow-hidden border border-bb-border/50 hover:border-blue-500/20 shadow-sm transition-all cursor-pointer group active:scale-[0.98]"
         >
             {/* Thumbnail Area — old card style */}
-            <div className="aspect-video w-full relative overflow-hidden shrink-0">
+            <div className={`aspect-video w-full relative overflow-hidden shrink-0 ${!thumbnailUrl ? 'border-b-2 border-orange-600/70' : ''}`}>
                 {thumbnailUrl ? (
                     <img
                         src={thumbnailUrl}
@@ -187,18 +187,18 @@ export default function MaterialCard({
                         {/* Solid warm gradient background */}
                         <div className={`absolute inset-0 bg-gradient-to-br ${config.headerGradient}`} />
 
-                        {/* Decorative circle — bottom-left (large) */}
+                        {/* Decorative circle — bottom-right (large, very visible) */}
                         <div
-                            className={`absolute -bottom-8 -left-8 w-36 h-36 rounded-full ${config.circleColor} blur-sm`}
+                            className={`absolute -bottom-10 -right-10 w-44 h-44 rounded-full ${config.circleColor} opacity-90`}
                         />
-                        {/* Decorative circle — top-right (medium) */}
+                        {/* Decorative circle — top-right (medium, visible) */}
                         <div
-                            className={`absolute -top-6 -right-6 w-28 h-28 rounded-full ${config.circleColor} blur-sm opacity-70`}
+                            className={`absolute -top-8 -right-4 w-32 h-32 rounded-full ${config.circleColor} opacity-75`}
                         />
 
-                        {/* Title at bottom-left, exact old style */}
-                        <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
-                            <p className="text-sm font-black text-white/90 leading-tight line-clamp-2 drop-shadow">
+                        {/* Title — center-left (vertically centered) */}
+                        <div className="absolute inset-0 flex items-center px-4 z-10">
+                            <p className="text-base font-black text-white leading-tight line-clamp-3 drop-shadow-lg">
                                 {material.titulo}
                             </p>
                         </div>
@@ -253,17 +253,19 @@ export default function MaterialCard({
             </div>
 
             {/* Actions (Floating Delete) */}
-            {canDelete && onDelete && (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete();
-                    }}
-                    className="absolute top-2 right-2 p-2 rounded-xl bg-red-500/10 text-red-500 backdrop-blur-sm transition-all hover:bg-red-500/20 shadow-sm border border-red-500/20 z-20"
-                >
-                    <Trash2 className="w-4 h-4" />
-                </button>
-            )}
-        </motion.div>
+            {
+                canDelete && onDelete && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                        }}
+                        className="absolute top-2 right-2 p-2 rounded-xl bg-red-500/10 text-red-500 backdrop-blur-sm transition-all hover:bg-red-500/20 shadow-sm border border-red-500/20 z-20"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                )
+            }
+        </motion.div >
     );
 }
