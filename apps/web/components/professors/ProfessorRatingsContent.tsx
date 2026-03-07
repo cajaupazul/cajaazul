@@ -1172,7 +1172,7 @@ export default function ProfessorRatingsContent({
 
                                 {materials.length > 0 ? (
                                     <>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                                             {materials.slice(0, 4).map((material) => (
                                                 <MaterialCard
                                                     key={material.id}
@@ -1331,38 +1331,39 @@ export default function ProfessorRatingsContent({
                                         <span className="text-bb-text font-bold text-lg">{ratings.length}</span>
                                     </div>
 
-                                    {totalRecommendations > 0 && (
-                                        <div className="pt-4 border-t border-bb-border space-y-3">
-                                            <div className="flex justify-between items-end">
-                                                <div className="space-y-1">
-                                                    <span className="text-xs font-bold text-bb-text uppercase tracking-wider">Recomiendan al profesor</span>
-                                                    <div className="text-2xl font-black text-green-400">{recommendedPercentage}%</div>
-                                                </div>
-                                                <div className="text-right space-y-1">
-                                                    <span className="text-[10px] text-bb-text-secondary uppercase tracking-widest">{totalRecommendations} votos</span>
-                                                    <div className="flex gap-2 text-xs font-medium">
-                                                        <span className="text-green-400">{recommendedCount} Sí</span>
-                                                        <span className="text-bb-text-secondary">•</span>
-                                                        <span className="text-red-400">{notRecommendedCount} No</span>
-                                                    </div>
-                                                </div>
+                                    <div className="pt-4 border-t border-bb-border space-y-3">
+                                        <div className="flex justify-between items-end">
+                                            <div className="space-y-1">
+                                                <span className="text-xs font-bold text-bb-text uppercase tracking-wider">Recomiendan al profesor</span>
+                                                <div className="text-2xl font-black text-green-400">{recommendedPercentage}%</div>
                                             </div>
-
-                                            {/* Progress Bar */}
-                                            <div className="h-3 w-full bg-bb-sidebar rounded-full overflow-hidden flex shadow-inner">
-                                                <div
-                                                    className="h-full bg-green-500 transition-all duration-1000 ease-out relative"
-                                                    style={{ width: `${recommendedPercentage}%` }}
-                                                >
-                                                    <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ backgroundImage: 'linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent)', backgroundSize: '1rem 1rem' }}></div>
+                                            <div className="text-right space-y-1">
+                                                <span className="text-[10px] text-bb-text-secondary uppercase tracking-widest">{totalRecommendations} votos</span>
+                                                <div className="flex gap-2 text-xs font-medium">
+                                                    <span className="text-green-400">{recommendedCount} Sí</span>
+                                                    <span className="text-bb-text-secondary">•</span>
+                                                    <span className="text-red-400">{notRecommendedCount} No</span>
                                                 </div>
-                                                <div
-                                                    className="h-full bg-red-500 transition-all duration-1000 ease-out"
-                                                    style={{ width: `${notRecommendedPercentage}%` }}
-                                                />
                                             </div>
                                         </div>
-                                    )}
+
+                                        <div className="h-3 w-full bg-bb-sidebar rounded-full overflow-hidden flex shadow-inner">
+                                            <div
+                                                className="h-full bg-green-500 transition-all duration-1000 ease-out relative"
+                                                style={{ width: `${recommendedPercentage}%` }}
+                                            >
+                                                <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ backgroundImage: 'linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent)', backgroundSize: '1rem 1rem' }}></div>
+                                            </div>
+                                            <div
+                                                className="h-full bg-red-500 transition-all duration-1000 ease-out"
+                                                style={{ width: `${notRecommendedPercentage}%` }}
+                                            />
+                                        </div>
+
+                                        {totalRecommendations === 0 && (
+                                            <span className="text-[10px] text-bb-text-secondary italic block text-center mt-2">Aún no hay recomendaciones para este profesor.</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
