@@ -173,8 +173,8 @@ export default function MaterialCard({
             onClick={onClick}
             className="flex flex-col bg-bb-darker/20 rounded-2xl overflow-hidden border border-bb-border/50 hover:border-blue-500/20 shadow-sm transition-all cursor-pointer group active:scale-[0.98]"
         >
-            {/* Thumbnail Area — old card style */}
-            <div className={`aspect-video w-full relative overflow-hidden shrink-0 ${!thumbnailUrl ? 'border-b-2 border-orange-600/70' : ''}`}>
+            {/* Thumbnail Area */}
+            <div className="aspect-video w-full relative overflow-hidden shrink-0">
                 {thumbnailUrl ? (
                     <img
                         src={thumbnailUrl}
@@ -184,20 +184,20 @@ export default function MaterialCard({
                     />
                 ) : (
                     <>
-                        {/* Solid warm gradient background */}
+                        {/* Background gradient — orange/brown */}
                         <div className={`absolute inset-0 bg-gradient-to-br ${config.headerGradient}`} />
 
-                        {/* Decorative circle — bottom-right (large, very visible) */}
-                        <div
-                            className={`absolute -bottom-10 -right-10 w-44 h-44 rounded-full ${config.circleColor} opacity-90`}
-                        />
-                        {/* Decorative circle — top-right (medium, visible) */}
-                        <div
-                            className={`absolute -top-8 -right-4 w-32 h-32 rounded-full ${config.circleColor} opacity-75`}
-                        />
+                        {/* Decorative circle — top-right (large) */}
+                        <div className={`absolute -top-10 -right-8 w-48 h-48 rounded-full ${config.circleColor} opacity-80`} />
 
-                        {/* Title — center-left (vertically centered) */}
-                        <div className="absolute inset-0 flex items-center px-4 z-10">
+                        {/* Decorative circle — bottom-left (medium) */}
+                        <div className={`absolute -bottom-8 -left-4 w-32 h-32 rounded-full ${config.circleColor} opacity-60`} />
+
+                        {/* Yellow/orange left stripe — exact replica of PPT template */}
+                        <div className="absolute left-0 top-0 bottom-0 w-[5px] bg-amber-400 z-10" />
+
+                        {/* Title — vertically centered, left-aligned with padding after stripe */}
+                        <div className="absolute inset-0 flex items-center pl-5 pr-3 z-10">
                             <p className="text-base font-black text-white leading-tight line-clamp-3 drop-shadow-lg">
                                 {material.titulo}
                             </p>
@@ -205,11 +205,11 @@ export default function MaterialCard({
                     </>
                 )}
 
-                {/* Overlay with Gradient for thumbnails */}
-                {thumbnailUrl && <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-40" />}
+                {/* Overlay for thumbnail images */}
+                {thumbnailUrl && <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-30" />}
 
                 {/* Type Badge — centered at top */}
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20">
                     <span className={`inline-block px-3 py-0.5 rounded-full border ${config.color} border-current/60 bg-black/30 backdrop-blur-sm font-black text-[9px] uppercase tracking-widest`}>
                         {config.label}
                     </span>
