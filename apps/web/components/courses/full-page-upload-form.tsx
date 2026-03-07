@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase, Professor } from '@/lib/supabase';
-// import { getPublicFileUrl } from '@/lib/r2-storage';
+import { generateThumbnailFromFile } from '@/lib/thumbnail-generator';
 import { Upload, X, UserPlus, ArrowLeft, FileText, CheckCircle } from 'lucide-react';
 import {
     Select,
@@ -104,12 +104,30 @@ export default function FullPageUploadForm({
             } else {
                 // Use parallel uploads for speed
                 const uploadPromises = files.map(async (file) => {
-                    const fileExt = file.name.split('.').pop();
+                    const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
                     const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-                    const { uploadFileToR2 } = await import('@/lib/r2-storage');
+                    const { uploadFileToR2, getSecureFileUrl } = await import('@/lib/r2-storage');
+
+                    // 1. Generate thumbnail client-side (PDF.js / Canvas)
+                    let thumbnailUrl: string | null = null;
+                    const thumbnailBlob = await generateThumbnailFromFile(file);
+                    if (thumbnailBlob) {
+                        try {
+                            const thumbPath = `materials/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+                            const thumbFile = new File([thumbnailBlob], thumbPath, { type: 'image/webp' });
+                            await uploadFileToR2('thumbnails', thumbPath, thumbFile);
+                            thumbnailUrl = getSecureFileUrl('thumbnails', thumbPath);
+                            console.log('[THUMBNAIL] Uploaded client-side thumbnail:', thumbPath);
+                        } catch (thumbErr) {
+                            console.warn('[THUMBNAIL] Failed to upload thumbnail:', thumbErr);
+                        }
+                    }
+
+                    // 2. Upload main file
                     const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
 
+                    // 3. Insert material record
                     const { error: insertError } = await supabase.from('materials').insert({
                         course_id: courseId,
                         user_id: userId,
@@ -119,6 +137,7 @@ export default function FullPageUploadForm({
                         url_archivo: materialUrl,
                         tipo: materialType,
                         descargas: 0,
+                        thumbnail_url: thumbnailUrl,
                     });
 
                     if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
@@ -130,21 +149,20 @@ export default function FullPageUploadForm({
                             .eq('id', courseId);
                     }
 
-                    // Trigger thumbnail generation
-                    const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'pdf', 'jpg', 'jpeg', 'png', 'webp'];
-                    if (triggerExtensions.includes(fileExt?.toLowerCase() || '')) {
+                    // 4. Best-effort: trigger server-side conversion for Office files (PPT, DOCX)
+                    //    as a fallback in case the converter service comes back online.
+                    const officeExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'];
+                    if (!thumbnailUrl && officeExtensions.includes(fileExt)) {
                         const { triggerFileConversion } = await import('@/lib/converter');
-                        // Small safety delay to let R2 catch up
                         setTimeout(async () => {
                             try {
                                 const urlObj = new URL(materialUrl);
                                 const fileKey = urlObj.searchParams.get('path') || materialUrl.split('/course-materials/')[1];
                                 if (fileKey) {
-                                    console.log(`[UPLOAD_DEBUG] Triggering conversion for course material: ${fileKey}`);
                                     await triggerFileConversion(decodeURIComponent(fileKey), 'course-materials');
                                 }
                             } catch (e) {
-                                console.error('Error triggering conversion:', e);
+                                console.warn('[CONVERTER] Background trigger failed (non-critical):', e);
                             }
                         }, 2000);
                     }

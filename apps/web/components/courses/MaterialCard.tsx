@@ -161,7 +161,7 @@ export default function MaterialCard({
             className="flex flex-col bg-bb-darker/20 rounded-2xl overflow-hidden border border-bb-border/50 hover:border-blue-500/20 shadow-sm transition-all cursor-pointer group active:scale-[0.98]"
         >
             {/* Thumbnail Area */}
-            <div className="aspect-video w-full relative flex items-center justify-center overflow-hidden shrink-0 ${config.bg}">
+            <div className={`aspect-video w-full relative flex items-center justify-center overflow-hidden shrink-0 ${config.bg}`}>
                 {thumbnailUrl ? (
                     <img
                         src={thumbnailUrl}
@@ -170,17 +170,27 @@ export default function MaterialCard({
                         loading="lazy"
                     />
                 ) : (
-                    <div className={`${config.color} opacity-30 group-hover:scale-110 group-hover:opacity-60 transition-all duration-500 transform`}>
-                        {React.cloneElement(config.icon as React.ReactElement<any>, { className: 'w-8 h-8' })}
-                    </div>
+                    <>
+                        {/* Fallback: gradient background + icon + title, matching old card style */}
+                        <div className={`absolute inset-0 ${config.bg} opacity-80`} />
+                        <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/60" />
+                        <div className="relative z-10 flex flex-col items-center justify-center gap-2 px-4 text-center">
+                            <div className={`${config.color} group-hover:scale-110 transition-all duration-300`}>
+                                {React.cloneElement(config.icon as React.ReactElement<any>, { className: 'w-10 h-10' })}
+                            </div>
+                            <p className={`text-xs font-black leading-tight line-clamp-2 ${config.color} opacity-80`}>
+                                {material.titulo}
+                            </p>
+                        </div>
+                    </>
                 )}
 
                 {/* Overlay with Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-40" />
+                {thumbnailUrl && <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-40" />}
 
                 {/* Type Badge */}
-                <div className="absolute top-3 right-3 z-10 flex gap-2">
-                    <Badge className={`${config.bg} ${config.color} border-current/20 backdrop-blur-md font-bold text-[9px] uppercase tracking-wider`}>
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+                    <Badge className={`${config.bg} ${config.color} border border-current/30 backdrop-blur-md font-bold text-[9px] uppercase tracking-wider shadow-lg`}>
                         {config.label}
                     </Badge>
                 </div>
