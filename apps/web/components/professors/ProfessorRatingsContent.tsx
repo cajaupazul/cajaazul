@@ -1184,9 +1184,13 @@ export default function ProfessorRatingsContent({
 
                                 {materials.length > 0 ? (
                                     <>
+                                        {/* Mobile: show 4 | Desktop (sm+): show 6 (as requested) */}
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
-                                            {materials.slice(0, 8).map((material) => (
-                                                <div key={material.id} className="min-w-0">
+                                            {materials.slice(0, 6).map((material, idx) => (
+                                                <div
+                                                    key={material.id}
+                                                    className={`min-w-0 ${idx >= 4 ? 'hidden sm:block' : ''}`}
+                                                >
                                                     <MaterialCard
                                                         material={material}
                                                         viewMode="grid"
