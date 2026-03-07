@@ -24,8 +24,7 @@ export default function MaterialCard({
     onDelete,
     canDelete = false,
     viewMode = 'grid'
-}: Omit<MaterialCardProps, 'size'>) {
-    const size = 'normal';
+}: MaterialCardProps) {
     const materialType = material.tipo?.toLowerCase() || '';
     const isEnlace = materialType === 'enlace';
 
@@ -180,8 +179,8 @@ export default function MaterialCard({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-40" />
 
                 {/* Type Badge */}
-                <div className={`absolute ${size === 'compact' ? 'top-1.5 right-1.5' : 'top-3 right-3'} z-10 flex gap-2`}>
-                    <Badge className={`${config.bg} ${config.color} border-current/20 backdrop-blur-md font-bold ${size === 'compact' ? 'text-[7px] px-1 py-0' : 'text-[9px]'} uppercase tracking-wider`}>
+                <div className="absolute top-3 right-3 z-10 flex gap-2">
+                    <Badge className={`${config.bg} ${config.color} border-current/20 backdrop-blur-md font-bold text-[9px] uppercase tracking-wider`}>
                         {config.label}
                     </Badge>
                 </div>
