@@ -52,7 +52,7 @@ function ProfessorRatingsWrapper() {
         // otherwise use the professor's default specialty
         const queryCourse = selectedCourse || currentProf.especialidad;
         const orQuery = queryCourse
-          ? `especialidad.eq."${queryCourse}",otros_cursos.ilike.%${queryCourse}%`
+          ? `especialidad.ilike."%${queryCourse}%",otros_cursos.ilike."%${queryCourse}%"`
           : null;
 
         const [

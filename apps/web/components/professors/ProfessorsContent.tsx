@@ -117,17 +117,22 @@ export default function ProfessorsContent({
     const uniqueCourses = useMemo(() => {
         const courseMap = new Map<string, string>();
         professors.forEach(prof => {
-            if (prof.especialidad && prof.especialidad !== 'General') {
-                const courses = prof.especialidad.split(/[,;|•]/).map((s: string) => s.trim());
-                courses.forEach((c: string) => {
-                    if (c && c !== 'General') {
-                        const normalized = normalizeString(c);
-                        if (!courseMap.has(normalized)) {
-                            courseMap.set(normalized, c.toUpperCase());
+            const addCourses = (courseStr: string | null | undefined) => {
+                if (courseStr && courseStr !== 'General') {
+                    const courses = courseStr.split(/[,;|•]/).map((s: string) => s.trim());
+                    courses.forEach((c: string) => {
+                        if (c && c.toLowerCase() !== 'general') {
+                            const normalized = normalizeString(c);
+                            if (!courseMap.has(normalized)) {
+                                courseMap.set(normalized, c.toUpperCase());
+                            }
                         }
-                    }
-                });
-            }
+                    });
+                }
+            };
+
+            addCourses(prof.especialidad);
+            addCourses(prof.otros_cursos);
         });
 
         const coursesArray = Array.from(courseMap.values()).sort();
