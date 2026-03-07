@@ -66,18 +66,14 @@ export default function FullPageProfessorUploadForm({
             if (!user) throw new Error('Usuario no autenticado');
             const userId = user.id;
 
-            for (const file of files) {
-                // 1. Crear nombre único para el archivo
+            // 1. Array de promesas para subidas paralelas
+            const uploadPromises = files.map(async (file) => {
                 const fileExt = file.name.split('.').pop();
                 const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-                // 2. Subir archivo a R2 via Proxy
                 const { uploadFileToR2 } = await import('@/lib/r2-storage');
                 const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
 
-                // 3. (Supabase Storage upload removed)
-
-                // 4. Insertar en base de datos
                 const { error: insertError } = await supabase.from('materials').insert({
                     course_id: courseId,
                     user_id: userId,
@@ -90,10 +86,13 @@ export default function FullPageProfessorUploadForm({
                 });
 
                 if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
-            }
+            });
 
-            // Éxito
-            router.push(`/dashboard/professors/${professorId}`);
+            // 2. Ejecutar todas las subidas al mismo tiempo
+            await Promise.all(uploadPromises);
+
+            // Éxito: Redirigir a la vista del profesor, NO a un ID directo para evitar 404
+            router.push(`/dashboard/professors/view?id=${professorId}`);
             router.refresh();
         } catch (error: any) {
             console.error('Error:', error);

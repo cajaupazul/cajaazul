@@ -7,6 +7,7 @@ import { getStorageUrl, Material } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
+import { Trash2 } from 'lucide-react';
 
 interface MaterialCardProps {
     material: Material;
@@ -138,9 +139,9 @@ export default function MaterialCard({
                                 e.stopPropagation();
                                 onDelete();
                             }}
-                            className="p-2 rounded-lg hover:bg-red-500/20 text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                            className="p-2 rounded-lg hover:bg-red-500/20 text-red-500 transition-all bg-red-500/10"
                         >
-                            <LayoutPanelLeft className="w-4 h-4 rotate-45" />
+                            <Trash2 className="w-4 h-4" />
                         </button>
                     )}
                     <MoreVertical className="w-4 h-4 text-bb-text-secondary group-hover:text-blue-400 opacity-50 group-hover:opacity-100 transition-all" />
@@ -227,9 +228,9 @@ export default function MaterialCard({
                         e.stopPropagation();
                         onDelete();
                     }}
-                    className="absolute top-2 right-2 p-2 rounded-xl bg-red-500/10 text-red-500 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/20"
+                    className="absolute top-2 right-2 p-2 rounded-xl bg-red-500/10 text-red-500 backdrop-blur-sm transition-all hover:bg-red-500/20 shadow-sm border border-red-500/20 z-20"
                 >
-                    <LayoutPanelLeft className="w-3.5 h-3.5 rotate-45" />
+                    <Trash2 className="w-4 h-4" />
                 </button>
             )}
         </motion.div>

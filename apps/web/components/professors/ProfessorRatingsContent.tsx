@@ -20,6 +20,7 @@ import { StickerCanvas } from '@/components/ui/StickerCanvas';
 import { PLACEHOLDERS, getDiversifiedProfessorBackground, getStringHash } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
+import MaterialCard from '@/components/courses/MaterialCard';
 
 interface ProfessorComment {
     id: string;
@@ -479,6 +480,54 @@ export default function ProfessorRatingsContent({
         counts: Record<string, number>,
         userReaction: string | null
     }>>({});
+
+    const handleDeleteMaterial = async (material: any) => {
+        const materialId = material.id;
+        const materialUrl = material.url_archivo;
+        const createdAt = new Date(material.created_at);
+        const now = new Date();
+        const diffHours = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+
+        const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
+        const isOwner = profile?.id === material.user_id;
+        const within24h = diffHours < 24;
+
+        if (!isAdmin && (!isOwner || !within24h)) {
+            alert('No tienes permisos para eliminar este material o ya pasaron las 24 horas permitidas.');
+            return;
+        }
+
+        if (!confirm('¿Estás seguro de que deseas eliminar este material? Esta acción no se puede deshacer.')) {
+            return;
+        }
+
+        try {
+            // Delete from storage
+            const pathMatch = materialUrl.match(/course_materials\/(.+)$/);
+            if (pathMatch) {
+                const storagePath = pathMatch[1];
+                const { error: storageError } = await supabase.storage
+                    .from('course_materials')
+                    .remove([storagePath]);
+
+                if (storageError) console.error('Error deleting from storage:', storageError);
+            }
+
+            // Delete from database
+            const { error: dbError } = await supabase
+                .from('materials')
+                .delete()
+                .eq('id', materialId);
+
+            if (dbError) throw dbError;
+
+            setMaterials(prev => prev.filter(m => m.id !== materialId));
+            alert('Material eliminado exitosamente');
+        } catch (error: any) {
+            console.error('Error deleting material:', error);
+            alert('Error al eliminar el material: ' + error.message);
+        }
+    };
 
     // Sync state with props when Server Component re-renders
     useEffect(() => {
@@ -1123,48 +1172,28 @@ export default function ProfessorRatingsContent({
 
                                 {materials.length > 0 ? (
                                     <>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                            {materials.slice(0, 4).map((material) => {
-                                                let bgColor = 'bg-blue-500/10';
-                                                let borderColor = 'border-blue-500/20';
-                                                let textColor = 'text-blue-400';
-                                                let icon = <LayoutPanelLeft className="w-5 h-5" />;
-
-                                                if (material.tipo?.toLowerCase().includes('ppt')) {
-                                                    bgColor = 'bg-orange-500/10';
-                                                    borderColor = 'border-orange-500/20';
-                                                    textColor = 'text-orange-400';
-                                                } else if (material.tipo?.toLowerCase().includes('examen')) {
-                                                    bgColor = 'bg-red-500/10';
-                                                    borderColor = 'border-red-500/20';
-                                                    textColor = 'text-red-400';
-                                                    icon = <FileText className="w-5 h-5" />;
-                                                }
-
-                                                const firstMaterialCourseId = material.courses?.id;
-
-                                                return (
-                                                    <div
-                                                        key={material.id}
-                                                        onClick={() => setViewingFile({ path: material.url_archivo, name: material.titulo })}
-                                                        className={`p-3 ${bgColor} rounded-xl hover:bg-opacity-20 transition-all border ${borderColor} flex flex-col items-center gap-2 group cursor-pointer active:scale-95`}
-                                                    >
-                                                        <div className={`${textColor} group-hover:scale-110 transition-transform`}>
-                                                            {icon}
-                                                        </div>
-                                                        <div className="text-center min-w-0 w-full">
-                                                            <p className="text-[10px] font-bold text-bb-text truncate group-hover:text-white leading-tight">
-                                                                {material.titulo}
-                                                            </p>
-                                                            {material.courses?.nombre && (
-                                                                <p className="text-[8px] text-bb-text-secondary truncate mt-0.5 uppercase tracking-tighter">
-                                                                    {material.courses.nombre}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {materials.slice(0, 4).map((material) => (
+                                                <MaterialCard
+                                                    key={material.id}
+                                                    material={material}
+                                                    viewMode="grid"
+                                                    onClick={() => {
+                                                        if (material.tipo?.toLowerCase() === 'enlace') {
+                                                            window.open(material.url_archivo, '_blank');
+                                                        } else {
+                                                            setViewingFile({ path: material.url_archivo, name: material.titulo });
+                                                        }
+                                                    }}
+                                                    canDelete={
+                                                        profile && (
+                                                            (profile.role === 'admin' || profile.role === 'superadmin') ||
+                                                            (material.user_id === profile.id && (new Date().getTime() - new Date(material.created_at).getTime()) / (1000 * 60 * 60) < 24)
+                                                        )
+                                                    }
+                                                    onDelete={() => handleDeleteMaterial(material)}
+                                                />
+                                            ))}
                                         </div>
 
                                         <div className="mt-4 pt-4 border-t border-bb-border flex justify-center">
