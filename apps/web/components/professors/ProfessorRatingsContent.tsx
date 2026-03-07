@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Star, MessageCircle, TrendingUp, ArrowLeft, Trophy, Sparkles, Share2, Instagram, User, Info, ArrowRight, Upload, Trash2, Bold, Italic, Underline, Strikethrough, Quote, Eye, Image as ImageIcon, Plus, ThumbsUp, MessageSquare, FileText, LayoutPanelLeft, FolderRoot } from 'lucide-react';
+import { Star, MessageCircle, TrendingUp, ArrowLeft, Trophy, Sparkles, Share2, Instagram, User, Info, ArrowRight, Upload, Trash2, Bold, Italic, Underline, Strikethrough, Quote, Eye, Image as ImageIcon, Plus, ThumbsUp, ThumbsDown, MessageSquare, FileText, LayoutPanelLeft, FolderRoot } from 'lucide-react';
 import Link from 'next/link';
 import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
@@ -57,6 +57,7 @@ interface Rating {
     puntuacion: number;
     claridad: number | null;
     facilidad: number | null;
+    recommended?: boolean | null;
     created_at: string;
     profiles?: {
         nombre: string;
@@ -616,6 +617,7 @@ export default function ProfessorRatingsContent({
                         puntuacion: userRating.puntuacion,
                         claridad: userRating.claridad || 5,
                         facilidad: userRating.facilidad || 5,
+                        recommended: userRating.recommended !== undefined ? userRating.recommended : null
                     });
                 }
             }
@@ -627,6 +629,7 @@ export default function ProfessorRatingsContent({
         puntuacion: 5,
         claridad: 5,
         facilidad: 5,
+        recommended: null as boolean | null
     });
 
     const handleSubmitRating = async (e: React.FormEvent) => {
@@ -640,6 +643,7 @@ export default function ProfessorRatingsContent({
             puntuacion: formData.puntuacion,
             claridad: formData.claridad,
             facilidad: formData.facilidad,
+            recommended: formData.recommended,
             course_name: selectedCourse
         }, { onConflict: 'professor_id,user_id,course_name' });
 
@@ -847,8 +851,11 @@ export default function ProfessorRatingsContent({
         ? (ratings.filter(r => r.facilidad).reduce((sum, r) => sum + (r.facilidad || 0), 0) / ratings.filter(r => r.facilidad).length).toFixed(1)
         : '0.0';
 
-
-
+    const recommendedCount = ratings.filter(r => r.recommended === true).length;
+    const notRecommendedCount = ratings.filter(r => r.recommended === false).length;
+    const totalRecommendations = recommendedCount + notRecommendedCount;
+    const recommendedPercentage = totalRecommendations > 0 ? Math.round((recommendedCount / totalRecommendations) * 100) : 0;
+    const notRecommendedPercentage = totalRecommendations > 0 ? 100 - recommendedPercentage : 0;
 
     return (
         <div className="min-h-screen bg-bb-dark relative overflow-hidden transition-colors duration-300">
@@ -1021,6 +1028,35 @@ export default function ProfessorRatingsContent({
                                                     </div>
                                                 </div>
                                             ))}
+
+                                            {/* Recomiendas al profesor */}
+                                            <div className="space-y-3 bg-bb-darker/50 p-4 rounded-2xl border border-bb-border/50">
+                                                <Label className="flex items-center gap-2 text-bb-text font-bold">
+                                                    <ThumbsUp className="w-4 h-4 text-purple-400" /> ¿Recomiendas a este profesor?
+                                                </Label>
+                                                <div className="flex gap-4 px-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData({ ...formData, recommended: true })}
+                                                        className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-bold ${formData.recommended === true
+                                                            ? 'border-green-500 bg-green-500/10 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.2)]'
+                                                            : 'border-bb-border bg-bb-sidebar text-bb-text-secondary hover:border-bb-border/80'
+                                                            }`}
+                                                    >
+                                                        <ThumbsUp className="w-5 h-5" /> Sí
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData({ ...formData, recommended: false })}
+                                                        className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-bold ${formData.recommended === false
+                                                            ? 'border-red-500 bg-red-500/10 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+                                                            : 'border-bb-border bg-bb-sidebar text-bb-text-secondary hover:border-bb-border/80'
+                                                            }`}
+                                                    >
+                                                        <ThumbsDown className="w-5 h-5" /> No
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                         <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 font-bold h-14 text-white text-lg rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
                                             Guardar Calificación
@@ -1074,62 +1110,63 @@ export default function ProfessorRatingsContent({
                             )}
 
                             {/* Moved Materials Section here - prominent position */}
-                            {materials.length > 0 && (
-                                <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-bold text-bb-text flex items-center gap-2">
-                                            <FolderRoot className="w-5 h-5 text-purple-400" />
-                                            Materiales del Profesor
-                                        </h3>
-                                        <span className="text-xs font-bold text-bb-text-secondary bg-bb-darker px-2 py-1 rounded-lg">
-                                            {materials.length} total
-                                        </span>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                        {materials.slice(0, 4).map((material) => {
-                                            let bgColor = 'bg-blue-500/10';
-                                            let borderColor = 'border-blue-500/20';
-                                            let textColor = 'text-blue-400';
-                                            let icon = <LayoutPanelLeft className="w-5 h-5" />;
+                            <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-bold text-bb-text flex items-center gap-2">
+                                        <FolderRoot className="w-5 h-5 text-purple-400" />
+                                        Materiales del Profesor
+                                    </h3>
+                                    <span className="text-xs font-bold text-bb-text-secondary bg-bb-darker px-2 py-1 rounded-lg">
+                                        {materials.length} total
+                                    </span>
+                                </div>
 
-                                            if (material.tipo?.toLowerCase().includes('ppt')) {
-                                                bgColor = 'bg-orange-500/10';
-                                                borderColor = 'border-orange-500/20';
-                                                textColor = 'text-orange-400';
-                                            } else if (material.tipo?.toLowerCase().includes('examen')) {
-                                                bgColor = 'bg-red-500/10';
-                                                borderColor = 'border-red-500/20';
-                                                textColor = 'text-red-400';
-                                                icon = <FileText className="w-5 h-5" />;
-                                            }
+                                {materials.length > 0 ? (
+                                    <>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                            {materials.slice(0, 4).map((material) => {
+                                                let bgColor = 'bg-blue-500/10';
+                                                let borderColor = 'border-blue-500/20';
+                                                let textColor = 'text-blue-400';
+                                                let icon = <LayoutPanelLeft className="w-5 h-5" />;
 
-                                            const firstMaterialCourseId = material.courses?.id;
+                                                if (material.tipo?.toLowerCase().includes('ppt')) {
+                                                    bgColor = 'bg-orange-500/10';
+                                                    borderColor = 'border-orange-500/20';
+                                                    textColor = 'text-orange-400';
+                                                } else if (material.tipo?.toLowerCase().includes('examen')) {
+                                                    bgColor = 'bg-red-500/10';
+                                                    borderColor = 'border-red-500/20';
+                                                    textColor = 'text-red-400';
+                                                    icon = <FileText className="w-5 h-5" />;
+                                                }
 
-                                            return (
-                                                <div
-                                                    key={material.id}
-                                                    onClick={() => setViewingFile({ path: material.url_archivo, name: material.titulo })}
-                                                    className={`p-3 ${bgColor} rounded-xl hover:bg-opacity-20 transition-all border ${borderColor} flex flex-col items-center gap-2 group cursor-pointer active:scale-95`}
-                                                >
-                                                    <div className={`${textColor} group-hover:scale-110 transition-transform`}>
-                                                        {icon}
-                                                    </div>
-                                                    <div className="text-center min-w-0 w-full">
-                                                        <p className="text-[10px] font-bold text-bb-text truncate group-hover:text-white leading-tight">
-                                                            {material.titulo}
-                                                        </p>
-                                                        {material.courses?.nombre && (
-                                                            <p className="text-[8px] text-bb-text-secondary truncate mt-0.5 uppercase tracking-tighter">
-                                                                {material.courses.nombre}
+                                                const firstMaterialCourseId = material.courses?.id;
+
+                                                return (
+                                                    <div
+                                                        key={material.id}
+                                                        onClick={() => setViewingFile({ path: material.url_archivo, name: material.titulo })}
+                                                        className={`p-3 ${bgColor} rounded-xl hover:bg-opacity-20 transition-all border ${borderColor} flex flex-col items-center gap-2 group cursor-pointer active:scale-95`}
+                                                    >
+                                                        <div className={`${textColor} group-hover:scale-110 transition-transform`}>
+                                                            {icon}
+                                                        </div>
+                                                        <div className="text-center min-w-0 w-full">
+                                                            <p className="text-[10px] font-bold text-bb-text truncate group-hover:text-white leading-tight">
+                                                                {material.titulo}
                                                             </p>
-                                                        )}
+                                                            {material.courses?.nombre && (
+                                                                <p className="text-[8px] text-bb-text-secondary truncate mt-0.5 uppercase tracking-tighter">
+                                                                    {material.courses.nombre}
+                                                                </p>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                );
+                                            })}
+                                        </div>
 
-                                    {materials.length > 0 && (
                                         <div className="mt-4 pt-4 border-t border-bb-border flex justify-center">
                                             <Link
                                                 href={materials[0].courses?.id ? `/dashboard/courses/view?id=${materials[0].courses.id}&professor=${professor.id}` : '#'}
@@ -1139,9 +1176,28 @@ export default function ProfessorRatingsContent({
                                                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                                             </Link>
                                         </div>
-                                    )}
-                                </div>
-                            )}
+                                    </>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-10 px-4 text-center border-2 border-dashed border-bb-border/50 rounded-xl bg-bb-darker/30">
+                                        <FolderRoot className="w-10 h-10 text-bb-text-secondary opacity-30 mb-3" />
+                                        <p className="text-sm font-bold text-bb-text mb-1">Sin materiales disponibles</p>
+                                        <p className="text-xs text-bb-text-secondary max-w-[250px]">
+                                            Aún no se han subido materiales para este profesor. Sé el primero en compartir un aporte.
+                                        </p>
+                                        <Button
+                                            className="mt-4 bg-bb-darker border border-bb-border hover:bg-bb-hover font-bold h-8 text-bb-text active:scale-95 transition-transform text-xs uppercase tracking-wide"
+                                            onClick={() => {
+                                                const primaryCourseId = professor.especialidad ? courseMapping[professor.especialidad.toLowerCase()] : null;
+                                                const uploadUrl = `/dashboard/professors/upload?id=${professor.id}${primaryCourseId ? `&courseId=${primaryCourseId}` : ''}`;
+                                                router.push(uploadUrl);
+                                            }}
+                                        >
+                                            <Upload className="h-3 w-3 mr-2" />
+                                            Subir Aporte
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
 
                             <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
                                 <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
@@ -1245,6 +1301,39 @@ export default function ProfessorRatingsContent({
                                         <span className="text-bb-text-secondary text-sm">Total de Reseñas</span>
                                         <span className="text-bb-text font-bold text-lg">{ratings.length}</span>
                                     </div>
+
+                                    {totalRecommendations > 0 && (
+                                        <div className="pt-4 border-t border-bb-border space-y-3">
+                                            <div className="flex justify-between items-end">
+                                                <div className="space-y-1">
+                                                    <span className="text-xs font-bold text-bb-text uppercase tracking-wider">Recomiendan al profesor</span>
+                                                    <div className="text-2xl font-black text-green-400">{recommendedPercentage}%</div>
+                                                </div>
+                                                <div className="text-right space-y-1">
+                                                    <span className="text-[10px] text-bb-text-secondary uppercase tracking-widest">{totalRecommendations} votos</span>
+                                                    <div className="flex gap-2 text-xs font-medium">
+                                                        <span className="text-green-400">{recommendedCount} Sí</span>
+                                                        <span className="text-bb-text-secondary">•</span>
+                                                        <span className="text-red-400">{notRecommendedCount} No</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Progress Bar */}
+                                            <div className="h-3 w-full bg-bb-sidebar rounded-full overflow-hidden flex shadow-inner">
+                                                <div
+                                                    className="h-full bg-green-500 transition-all duration-1000 ease-out relative"
+                                                    style={{ width: `${recommendedPercentage}%` }}
+                                                >
+                                                    <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ backgroundImage: 'linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent)', backgroundSize: '1rem 1rem' }}></div>
+                                                </div>
+                                                <div
+                                                    className="h-full bg-red-500 transition-all duration-1000 ease-out"
+                                                    style={{ width: `${notRecommendedPercentage}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
