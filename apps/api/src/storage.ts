@@ -94,6 +94,7 @@ storageRouter.put('/upload', async (c) => {
         case 'profile-avatars': bucket = c.env.PROFILE_AVATARS; break;
         case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
         case 'grupos': bucket = c.env.GRUPOS; break;
+        case 'thumbnails': bucket = c.env.THUMBNAILS; break;
         default:
             return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
     }
@@ -149,6 +150,7 @@ storageRouter.delete('/delete', async (c) => {
         case 'profile-avatars': bucket = c.env.PROFILE_AVATARS; break;
         case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
         case 'grupos': bucket = c.env.GRUPOS; break;
+        case 'thumbnails': bucket = c.env.THUMBNAILS; break;
         default:
             return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
     }

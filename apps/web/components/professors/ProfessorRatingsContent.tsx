@@ -512,6 +512,19 @@ export default function ProfessorRatingsContent({
                 if (!deleted) console.warn('Could not confirm deletion from R2 storage');
             }
 
+            // Delete thumbnail if exists
+            if (material.thumbnail_url) {
+                try {
+                    const thumbUrl = new URL(material.thumbnail_url);
+                    const thumbPath = thumbUrl.searchParams.get('path');
+                    if (thumbPath) {
+                        await deleteFileFromR2('thumbnails', decodeURIComponent(thumbPath));
+                    }
+                } catch (e) {
+                    console.error('Error parsing thumbnail URL for deletion:', e);
+                }
+            }
+
             // Delete from database
             const { error: dbError } = await supabase
                 .from('materials')
