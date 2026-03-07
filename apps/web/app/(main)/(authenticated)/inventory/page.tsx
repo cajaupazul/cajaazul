@@ -28,8 +28,35 @@ export default function InventoryPage() {
                 .eq('user_id', profile.id)
                 .order('acquired_at', { ascending: false });
 
-            if (!error && data) {
-                setInventory(data as any);
+            // Fetch VIP exclusive frame if user is VIP
+            let finalInventory = data || [];
+            if (profile.es_vip) {
+                const { data: vipFrame } = await supabase
+                    .from('shop_items')
+                    .select('*')
+                    .eq('frame_key', 'vip_exclusive')
+                    .eq('is_active', true)
+                    .single();
+
+                if (vipFrame && !finalInventory.some(i => i.item_id === vipFrame.id)) {
+                    // Inject a virtual inventory item
+                    finalInventory = [
+                        {
+                            id: 'vip-exclusive-frame',
+                            user_id: profile.id,
+                            item_id: vipFrame.id,
+                            acquired_at: new Date().toISOString(),
+                            is_equipped: profile.active_frame_key === 'vip_exclusive',
+                            remaining_uses: null,
+                            shop_items: vipFrame
+                        },
+                        ...finalInventory
+                    ];
+                }
+            }
+
+            if (!error) {
+                setInventory(finalInventory as any);
             }
             setLoading(false);
         };

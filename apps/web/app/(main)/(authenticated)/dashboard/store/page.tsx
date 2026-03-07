@@ -740,6 +740,25 @@ function StoreContent() {
                                                                             </Button>
                                                                         </div>
                                                                     </div>
+                                                                ) : item.frame_key === 'vip_exclusive' ? (
+                                                                    <>
+                                                                        {!profile?.es_vip && (
+                                                                            <div className="flex-shrink-0 flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-amber-500 to-orange-600 px-2 py-1 sm:px-4 sm:py-2 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+                                                                                <Star className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white animate-pulse" />
+                                                                                <span className="text-white font-[1000] text-xs sm:text-lg italic tracking-tighter">VIP</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {profile?.es_vip ? (
+                                                                            <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-9 sm:h-11 text-[9px] sm:text-sm px-1" disabled>ADQUIRIDO</Button>
+                                                                        ) : (
+                                                                            <Button
+                                                                                onClick={() => setActiveView('recharge')}
+                                                                                className="flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-600 text-white font-black h-9 sm:h-11 text-[9px] sm:text-sm italic shadow-xl tracking-tighter px-1 hover:scale-105 transition-transform"
+                                                                            >
+                                                                                OBTENER VIP
+                                                                            </Button>
+                                                                        )}
+                                                                    </>
                                                                 ) : (
                                                                     <>
                                                                         {!isOwned && (
