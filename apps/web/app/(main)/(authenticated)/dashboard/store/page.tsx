@@ -641,7 +641,12 @@ function StoreContent() {
                         /* Shop Items Section */
                         <div className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
                             {shopCategories.map((category) => {
-                                const categoryItems = shopItems.filter(item => item.category_id === category.id);
+                                const categoryItems = shopItems.filter(item => {
+                                    if (item.category_id === category.id) return true;
+                                    // Fallback for VIP frame if category is "Decoraciones de Avatar"
+                                    if (category.name === 'Decoraciones de Avatar' && item.frame_key === 'vip_exclusive' && !item.category_id) return true;
+                                    return false;
+                                });
                                 if (categoryItems.length === 0) return null;
 
                                 return (

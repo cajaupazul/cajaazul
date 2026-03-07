@@ -113,6 +113,13 @@ export default function NewVipFramePage() {
             if (dbError) throw dbError;
 
             // 6. Sync to shop_items for global usage
+            // First, find the "Decoraciones de Avatar" category
+            const { data: categoryData } = await supabase
+                .from('shop_categories')
+                .select('id')
+                .eq('name', 'Decoraciones de Avatar')
+                .single();
+
             const { error: shopItemError } = await supabase
                 .from('shop_items')
                 .upsert({
@@ -123,6 +130,7 @@ export default function NewVipFramePage() {
                     price_coins: 0, // Unpurchasable with coins
                     is_active: true,
                     frame_key: 'vip_exclusive',
+                    category_id: categoryData?.id || null, // Auto-assign category
                     frame_settings: {
                         card: { scale: form.scale_factor, x: form.offset_x, y: form.offset_y },
                         profile: { scale: form.scale_factor, x: form.offset_x, y: form.offset_y },
