@@ -189,15 +189,15 @@ export default function MaterialCard({
             </div>
 
             {/* Content Area */}
-            <div className={`${size === 'compact' ? 'p-3 space-y-2' : 'p-4 space-y-3'} bg-bb-card border-t border-bb-border/50`}>
-                <p className={`${size === 'compact' ? 'text-[12px]' : 'text-sm'} font-black text-bb-text line-clamp-2 leading-tight ${size === 'compact' ? 'min-h-[2rem]' : 'min-h-[2.5rem]'} group-hover:text-blue-400 transition-colors`}>
+            <div className={`${size === 'compact' ? 'p-2 space-y-1' : 'p-4 space-y-3'} bg-bb-card border-t border-bb-border/50`}>
+                <p className={`${size === 'compact' ? 'text-[9px] leading-[1.1]' : 'text-sm font-black'} text-bb-text line-clamp-2 ${size === 'compact' ? 'min-h-[1.5rem] font-bold' : 'min-h-[2.5rem] font-black'} group-hover:text-blue-400 transition-colors`}>
                     {material.titulo}
                 </p>
 
-                <div className="flex flex-col gap-2 pt-1 border-t border-bb-border/30">
+                <div className={`flex flex-col gap-1 pt-1 border-t border-bb-border/30 ${size === 'compact' ? 'mt-0.5' : 'mt-1'}`}>
                     {material.professors?.nombre && (
-                        <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary font-medium truncate" onClick={(e) => e.stopPropagation()}>
-                            <User className="w-3 h-3 shrink-0" />
+                        <div className={`flex items-center gap-1.5 text-bb-text-secondary font-medium truncate ${size === 'compact' ? 'text-[7px]' : 'text-[10px]'}`} onClick={(e) => e.stopPropagation()}>
+                            <User className={`${size === 'compact' ? 'w-2 h-2' : 'w-3 h-3'} shrink-0`} />
                             <span className="truncate">{material.professors.nombre}</span>
                         </div>
                     )}
@@ -210,12 +210,12 @@ export default function MaterialCard({
                         </div>
                     )}
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary opacity-60 font-medium uppercase">
-                            <Calendar className="w-3 h-3" />
-                            {format(new Date(material.created_at), 'd MMM, yyyy', { locale: es })}
+                        <div className={`flex items-center gap-1.5 text-bb-text-secondary opacity-60 font-medium uppercase ${size === 'compact' ? 'text-[7px]' : 'text-[10px]'}`}>
+                            <Calendar className={`${size === 'compact' ? 'w-2 h-2' : 'w-3 h-3'}`} />
+                            {format(new Date(material.created_at), 'd MMM', { locale: es })}
                         </div>
 
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className={`${size === 'compact' ? 'hidden' : 'opacity-0 group-hover:opacity-100 transition-opacity'}`}>
                             <div className="p-1 px-2 rounded-lg bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase">
                                 Ver
                             </div>

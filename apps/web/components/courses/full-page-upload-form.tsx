@@ -102,7 +102,8 @@ export default function FullPageUploadForm({
                     if (insertError) throw new Error(`Error al guardar enlace: ${insertError.message}`);
                 }
             } else {
-                for (const file of files) {
+                // Use parallel uploads for speed
+                const uploadPromises = files.map(async (file) => {
                     const fileExt = file.name.split('.').pop();
                     const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
@@ -128,7 +129,27 @@ export default function FullPageUploadForm({
                             .update({ syllabus_url: materialUrl })
                             .eq('id', courseId);
                     }
-                }
+
+                    // Trigger thumbnail generation
+                    const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'pdf', 'jpg', 'jpeg', 'png', 'webp'];
+                    if (triggerExtensions.includes(fileExt?.toLowerCase() || '')) {
+                        const { triggerFileConversion } = await import('@/lib/converter');
+                        // Small safety delay
+                        setTimeout(async () => {
+                            try {
+                                const urlObj = new URL(materialUrl);
+                                const fileKey = urlObj.searchParams.get('path');
+                                if (fileKey) {
+                                    await triggerFileConversion(fileKey, 'course-materials');
+                                }
+                            } catch (e) {
+                                console.error('Error triggering conversion:', e);
+                            }
+                        }, 2000);
+                    }
+                });
+
+                await Promise.all(uploadPromises);
             }
 
             // Éxito
