@@ -119,7 +119,8 @@ export default function CourseDetailContent({
     const materialsForCounts = useMemo(() => {
         let results = materials || [];
         if (selectedProfessorId !== 'all') {
-            results = results.filter(m => m.professor_id === selectedProfessorId);
+            // Include materials from the selected professor OR those marked as General (null)
+            results = results.filter(m => m.professor_id === selectedProfessorId || m.professor_id === null);
         }
         return [...results].sort(naturalSort);
     }, [materials, selectedProfessorId, naturalSort]);
@@ -436,6 +437,23 @@ export default function CourseDetailContent({
                                         <Users className="w-4 h-4 text-blue-400" /> Profesores del curso
                                     </h4>
                                     <div className="grid grid-cols-1 gap-3">
+                                        <button
+                                            onClick={() => setSelectedProfessorId(selectedProfessorId === 'none' ? 'all' : 'none')}
+                                            className={`group p-3 bg-bb-card rounded-2xl border transition-all hover:shadow-lg hover:shadow-blue-500/10 active:scale-95 text-left w-full ${selectedProfessorId === 'none' ? 'border-blue-500/50 bg-blue-500/5' : 'border-bb-border hover:border-blue-500/30'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-bb-border/50 flex items-center justify-center transition-transform group-hover:scale-105">
+                                                    <FolderRoot className="w-6 h-6 text-blue-400" />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="font-bold text-sm text-bb-text truncate group-hover:text-blue-400 transition-colors">Material General / Todo</p>
+                                                    <p className="text-[10px] text-bb-text-secondary truncate mt-0.5 uppercase tracking-tighter font-black">
+                                                        Recursos comunes
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </button>
+
                                         {allProfessors.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0)).map((prof) => (
                                             <Link
                                                 key={prof.id}

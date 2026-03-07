@@ -386,9 +386,9 @@ export default function FullPageUploadForm({
                                 <SelectTrigger className="h-12 bg-bb-card border-bb-border text-bb-text rounded-xl focus:ring-blue-500/20">
                                     <SelectValue placeholder="Seleccionar profesor..." />
                                 </SelectTrigger>
-                                <SelectContent className="bg-bb-card border-bb-border text-bb-text rounded-xl">
+                                <SelectContent className="bg-bb-card border-bb-border text-bb-text rounded-xl max-h-[300px] overflow-y-auto">
                                     <SelectItem value="none" className="focus:bg-blue-600 focus:text-white rounded-lg">
-                                        <span className="text-bb-text-secondary italic">Ningúno / Material General</span>
+                                        <span className="text-bb-text-secondary italic font-bold text-blue-400">Todo / Material General</span>
                                     </SelectItem>
                                     {allProfessors.map((prof: any) => (
                                         <SelectItem key={prof.id} value={prof.id} className="focus:bg-blue-600 focus:text-white rounded-lg">
