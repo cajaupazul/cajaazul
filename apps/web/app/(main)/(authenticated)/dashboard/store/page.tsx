@@ -552,16 +552,16 @@ function StoreContent() {
                                                         CONVIÉRTETE EN <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent px-1 lg:px-2">VIP</span>
                                                     </h2>
                                                     <p className="text-zinc-400 text-sm sm:text-2xl font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
-                                                        Acceso total, descargas ilimitadas y estilo absoluto. Desbloquea el lado más potente de CampusLink.
+                                                        Apoya a los administradores de la plataforma y obtén beneficios cosméticos exclusivos para destacar tu perfil en CampusLink.
                                                     </p>
                                                 </div>
 
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-5">
                                                     {[
-                                                        { text: 'Descargas ilimitadas', icon: Check },
-                                                        { text: 'Grupos exclusivos', icon: Check },
-                                                        { text: 'Insignia dorada', icon: Check },
-                                                        { text: 'Soporte prioritario', icon: Check }
+                                                        { text: 'Insignia Dorada VIP', icon: Check },
+                                                        { text: 'Roles Destacados', icon: Check },
+                                                        { text: 'Marcos de perfil únicos', icon: Check },
+                                                        { text: 'Apoyo a la plataforma', icon: Check }
                                                     ].map((f, i) => (
                                                         <div key={i} className="flex items-center gap-3 lg:gap-4 bg-white/5 p-3 lg:p-5 rounded-xl lg:rounded-3xl border border-white/5 backdrop-blur-md">
                                                             <div className="p-1 lg:p-1.5 bg-green-500/20 rounded-full shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Check className="text-green-500 w-3.5 h-3.5 lg:w-5 lg:h-5" /></div>

@@ -82,7 +82,7 @@ export default function AboutPage() {
                   </li>
                   <li className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_10px_rgba(129,140,248,0.5)]" />
-                    <span className="text-bb-text-secondary text-sm md:text-base">Conexión directa con mentores</span>
+                    <span className="text-bb-text-secondary text-sm md:text-base">Herramientas de estudio exclusivas</span>
                   </li>
                 </ul>
               </div>
@@ -93,9 +93,9 @@ export default function AboutPage() {
               </div>
               <h2 className="text-2xl md:text-4xl font-black text-bb-text mb-4 md:mb-6 tracking-tight">Nuestra Visión</h2>
               <p className="text-base md:text-xl text-bb-text-secondary leading-relaxed font-medium">
-                Ser la plataforma educativa más confiable y utilizada,
+                Ser la plataforma educativa más confiable y utilizada de nuestra universidad,
                 impactando positivamente en el desempeño académico y creando una comunidad
-                global de aprendizaje.
+                unida y colaborativa de aprendizaje.
               </p>
             </div>
           </div>
