@@ -40,6 +40,13 @@ const FREE_AVATARS = [
   'fb470742d03cd388a65c4ffb20ee1771.png'
 ];
 
+const FACULTY_LOGOS = [
+  '/logo/fce.png',
+  '/logo/fd.png',
+  '/logo/fef.png',
+  '/logo/fi.png'
+];
+
 const DEFAULT_BACKGROUND = '/backgrounds/default_background.d35fbf.png';
 
 // Permission keys for the shop/inventory items
@@ -630,6 +637,31 @@ export default function ProfilePage() {
                     {isSelected && (
                       <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center">
                         <Zap className="w-5 h-5 text-blue-500 fill-blue-500/20" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+
+              <div className="col-span-full mt-6 mb-2">
+                <p className="text-[10px] font-bold text-bb-text-secondary uppercase tracking-widest opacity-60">Logos de Facultad</p>
+              </div>
+
+              {FACULTY_LOGOS.map((url) => {
+                const isSelected = formData.avatar_url === url;
+                return (
+                  <button
+                    key={url}
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, avatar_url: url }));
+                      setIsAvatarSelectorOpen(false);
+                    }}
+                    className={`relative aspect-square rounded-2xl overflow-hidden border-4 bg-white transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                  >
+                    <img src={url} alt="Logo Facultad" className="w-full h-full object-contain p-2" />
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center">
+                        <CheckCircle2 className="w-5 h-5 text-blue-500" />
                       </div>
                     )}
                   </button>
