@@ -78,7 +78,7 @@ export default function AuthenticatedLayout({
       try {
         const { data, error } = await supabase
           .from('sidebar_visibility')
-          .select('section_key, is_hidden');
+          .select('section_key,is_hidden');
 
         if (error) {
           console.warn('[SIDEBAR_VISIBILITY] Could not fetch settings. Using defaults.');
@@ -396,7 +396,7 @@ export default function AuthenticatedLayout({
                     {isAdmin && (
                       <button
                         onClick={(e) => toggleVisibility(item.label, e)}
-                        className={`p-1.5 rounded-lg transition-all hover:bg-white/10 shrink-0 ${visibilitySettings[item.label] ? 'text-red-500 bg-red-500/10' : 'text-bb-text-secondary opacity-0 group-hover:opacity-100'}`}
+                        className={`p-1.5 rounded-lg transition-all hover:bg-white/10 shrink-0 ${visibilitySettings[item.label] ? 'text-red-500 bg-red-500/10' : 'text-bb-text-secondary/60 hover:text-bb-text'}`}
                       >
                         {visibilitySettings[item.label] ? (
                           <EyeOff className="w-4 h-4" />
@@ -434,7 +434,7 @@ export default function AuthenticatedLayout({
                       {isAdmin && (
                         <button
                           onClick={(e) => toggleVisibility(item.label, e)}
-                          className={`p-1 rounded-lg transition-all hover:bg-white/10 shrink-0 ${visibilitySettings[item.label] ? 'text-red-500 bg-red-500/10' : 'text-bb-text-secondary opacity-0 group-hover:opacity-100'}`}
+                          className={`p-1 rounded-lg transition-all hover:bg-white/10 shrink-0 ${visibilitySettings[item.label] ? 'text-red-500 bg-red-500/10' : 'text-bb-text-secondary/60 hover:text-bb-text'}`}
                         >
                           {visibilitySettings[item.label] ? (
                             <EyeOff className="w-4 h-4" />
