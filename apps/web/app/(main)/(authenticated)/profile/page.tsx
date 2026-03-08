@@ -27,6 +27,7 @@ import {
   ExternalLink,
   Pencil,
   Save,
+  CheckCircle2,
 } from 'lucide-react';
 import { DeleteAccountModal } from '@/components/profile/DeleteAccountModal';
 
