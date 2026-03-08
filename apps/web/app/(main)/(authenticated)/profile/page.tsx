@@ -41,12 +41,12 @@ const FREE_AVATARS = [
   'fb470742d03cd388a65c4ffb20ee1771.png'
 ];
 
-const FACULTY_LOGOS = [
-  '/logo/fce.png',
-  '/logo/fd.png',
-  '/logo/fef.png',
-  '/logo/fi.png'
-];
+const FACULTY_LOGOS_MAP: Record<string, string> = {
+  'Facultad de Ciencias Empresariales': '/logo/fce.png',
+  'Facultad de Derecho': '/logo/fd.png',
+  'Facultad de Economía y Finanzas': '/logo/fef.png',
+  'Facultad de Ingeniería': '/logo/fi.png'
+};
 
 const DEFAULT_BACKGROUND = '/backgrounds/default_background.d35fbf.png';
 
@@ -74,6 +74,7 @@ export default function ProfilePage() {
   const [stagedBackgroundUrl, setStagedBackgroundUrl] = useState<string | null>(null);
   const [inventory, setInventory] = useState<string[]>([]);
   const [isAvatarSelectorOpen, setIsAvatarSelectorOpen] = useState(false);
+  const [sidebarVisibility, setSidebarVisibility] = useState<Record<string, boolean>>({});
   const bgInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -131,7 +132,25 @@ export default function ProfilePage() {
     };
 
     fetchEquippedFrame();
-  }, [contextProfile?.active_frame_key, contextProfile?.id]);
+    fetchVisibility(); // Call fetchVisibility here
+  }, [contextProfile?.active_frame_key, contextProfile?.id, profile]); // Added profile to dependencies
+
+  const fetchVisibility = async () => {
+    try {
+      const { data } = await supabase
+        .from('sidebar_visibility')
+        .select('section_key, is_hidden');
+      if (data) {
+        const settings: Record<string, boolean> = {};
+        data.forEach(item => {
+          settings[item.section_key] = item.is_hidden;
+        });
+        setSidebarVisibility(settings);
+      }
+    } catch (err) {
+      console.error('Error fetching visibility:', err);
+    }
+  };
 
   const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -645,55 +664,61 @@ export default function ProfilePage() {
               })}
 
               <div className="col-span-full mt-6 mb-2">
-                <p className="text-[10px] font-bold text-bb-text-secondary uppercase tracking-widest opacity-60">Logos de Facultad</p>
+                <p className="text-[10px] font-bold text-bb-text-secondary uppercase tracking-widest opacity-60">Logo de tu Facultad</p>
               </div>
 
-              {FACULTY_LOGOS.map((url) => {
-                const isSelected = formData.avatar_url === url;
-                return (
-                  <button
-                    key={url}
+              {Object.entries(FACULTY_LOGOS_MAP)
+                .filter(([facName]) => isAdmin || facName === profile.carrera)
+                .map(([facName, url]) => {
+                  const isSelected = formData.avatar_url === url;
+                  return (
+                    <button
+                      key={url}
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, avatar_url: url }));
+                        setIsAvatarSelectorOpen(false);
+                      }}
+                      className={`relative aspect-square rounded-2xl overflow-hidden border-4 bg-white transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                      title={facName}
+                    >
+                      <img src={url} alt={facName} className="w-full h-full object-contain p-2" />
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center">
+                          <CheckCircle2 className="w-5 h-5 text-blue-500" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+
+              {/* Only show custom upload if store is not hidden for users, or if admin */}
+              {(isAdmin || !sidebarVisibility['Tienda']) && (
+                <div className="col-span-full mt-4 pt-4 border-t border-white/5">
+                  <p className="text-[10px] font-bold text-bb-text-secondary uppercase tracking-widest mb-3 opacity-60">Personalización Pro</p>
+                  <div
                     onClick={() => {
-                      setFormData(prev => ({ ...prev, avatar_url: url }));
-                      setIsAvatarSelectorOpen(false);
+                      if (inventory.includes(PERMISSIONS.CUSTOM_AVATAR) || isAdmin) {
+                        avatarInputRef.current?.click();
+                        setIsAvatarSelectorOpen(false);
+                      } else {
+                        router.push('/dashboard/store');
+                      }
                     }}
-                    className={`relative aspect-square rounded-2xl overflow-hidden border-4 bg-white transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border border-dashed transition-all cursor-pointer ${themeMode === 'light' ? 'bg-slate-50 border-slate-300 hover:bg-slate-100' : 'bg-white/5 border-white/20 hover:bg-white/10'}`}
                   >
-                    <img src={url} alt="Logo Facultad" className="w-full h-full object-contain p-2" />
-                    {isSelected && (
-                      <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center">
-                        <CheckCircle2 className="w-5 h-5 text-blue-500" />
-                      </div>
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                      <Camera className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className={`text-sm font-black ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>Subir desde PC</p>
+                      <p className="text-[10px] font-bold text-bb-text-secondary">Necesitas permiso de tienda</p>
+                    </div>
+                    {(!inventory.includes(PERMISSIONS.CUSTOM_AVATAR) && !isAdmin) && (
+                      <ExternalLink className="w-4 h-4 opacity-30" />
                     )}
-                  </button>
-                );
-              })}
-
-              <div className="col-span-full mt-4 pt-4 border-t border-white/5">
-                <p className="text-[10px] font-bold text-bb-text-secondary uppercase tracking-widest mb-3 opacity-60">Personalización Pro</p>
-                <div
-                  onClick={() => {
-                    if (inventory.includes(PERMISSIONS.CUSTOM_AVATAR) || isAdmin) {
-                      avatarInputRef.current?.click();
-                      setIsAvatarSelectorOpen(false);
-                    } else {
-                      router.push('/dashboard/store');
-                    }
-                  }}
-                  className={`flex items-center gap-4 p-4 rounded-2xl border border-dashed transition-all cursor-pointer ${themeMode === 'light' ? 'bg-slate-50 border-slate-300 hover:bg-slate-100' : 'bg-white/5 border-white/20 hover:bg-white/10'}`}
-                >
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-                    <Camera className="w-6 h-6 text-white" />
                   </div>
-                  <div className="flex-1 text-left">
-                    <p className={`text-sm font-black ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>Subir desde PC</p>
-                    <p className="text-[10px] font-bold text-bb-text-secondary">Necesitas permiso de tienda</p>
-                  </div>
-                  {(!inventory.includes(PERMISSIONS.CUSTOM_AVATAR) && !isAdmin) && (
-                    <ExternalLink className="w-4 h-4 opacity-30" />
-                  )}
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
