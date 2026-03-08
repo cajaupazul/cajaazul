@@ -24,7 +24,22 @@ const conversionQueue = new Queue('conversion-queue', {
 });
 
 // Register plugins
-fastify.register(cors);
+fastify.register(cors, {
+    origin: (origin, cb) => {
+        // Permitir localhost, el dominio oficial y subdominios de cloudflare pages
+        if (!origin ||
+            origin.includes('localhost') ||
+            origin.includes('127.0.0.1') ||
+            origin.endsWith('.pages.dev')) {
+            cb(null, true);
+            return;
+        }
+        cb(new Error("Not allowed by CORS"), false);
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
+    credentials: true
+});
 fastify.register(multipart, {
     limits: {
         fileSize: 25 * 1024 * 1024, // 25MB
@@ -128,6 +143,16 @@ fastify.get('/status/:id', async (req: any, reply: any) => {
         result, // Will contain { url: ... } if completed
         error: isFailed ? failureReason : null
     };
+});
+
+// Explicit OPTIONS handling for preflight requests
+fastify.options('*', async (request, reply) => {
+    return reply.code(204).send();
+});
+
+// Health check
+fastify.get('/', async () => {
+    return { status: 'ok', service: 'campuslink-converter' };
 });
 
 // Start server

@@ -115,7 +115,7 @@ checkout.post('/', authMiddleware, async (c) => {
     const apiBase = c.env.WEBHOOK_URL_BASE || 'https://campuslink-api.cajaupazul.workers.dev'
 
     // Dynamic redirect base to avoid environment mismatch flickering
-    const redirectBase = origin || 'https://campuslink.pages.dev'
+    const redirectBase = origin || 'https://cajaazul.pages.dev'
 
     if (!product_id) return c.json({ error: 'Missing product_id' }, 400)
 
