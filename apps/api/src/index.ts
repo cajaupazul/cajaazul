@@ -34,7 +34,7 @@ app.use('*', async (c, next) => {
             return c.env.ALLOWED_ORIGIN;
         },
         allowHeaders: ['Origin', 'Content-Type', 'Authorization', 'X-Custom-Header', 'Upgrade-Insecure-Requests'],
-        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
         maxAge: 600,
         credentials: true,

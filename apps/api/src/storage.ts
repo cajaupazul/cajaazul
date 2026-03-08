@@ -28,7 +28,7 @@ const privateAuthMiddleware = async (c: any, next: any) => {
     const method = c.req.method
 
     // REQUIRE AUTH for all mutations (Upload/Delete) regardless of bucket
-    if (method === 'PUT' || method === 'DELETE') {
+    if (method === 'PUT' || method === 'DELETE' || method === 'PATCH') {
         return authMiddleware(c, next)
     }
 
@@ -138,16 +138,39 @@ storageRouter.delete('/delete', async (c) => {
     console.log(`🗑️ Delete request: bucket=${bucketName}, path=${path}`)
 
     // Allow deletion via maintenance secret OR standard auth
+    const authHeader = c.req.header('Authorization')
     if (secret && secret !== c.env.SUPABASE_ANON_KEY) {
         return c.json({ error: 'Secret de mantenimiento inválido' }, 401)
     }
 
-    if (!secret && !c.req.header('Authorization')) {
+    if (!secret && !authHeader) {
         return c.json({ error: 'No autorizado (Falta header o secret)' }, 401)
     }
 
     if (!path) {
         return c.json({ error: 'Falta el parámetro "path"' }, 400)
+    }
+
+    // Robust path extraction from full URLs if needed
+    let cleanPath = path;
+    if (path.startsWith('http')) {
+        try {
+            const urlObj = new URL(path);
+            const params = new URLSearchParams(urlObj.search);
+            const pathParam = params.get('path');
+            if (pathParam) {
+                cleanPath = pathParam;
+            } else {
+                const parts = urlObj.pathname.split(`/${bucketName.replace(/_/g, '-')}/`);
+                if (parts.length > 1) {
+                    cleanPath = parts[1];
+                } else {
+                    cleanPath = urlObj.pathname.split('/').pop() || path;
+                }
+            }
+        } catch (e) {
+            console.warn('Worker: Error parsing URL for deletion:', e);
+        }
     }
 
     // Seleccionar el bucket correcto

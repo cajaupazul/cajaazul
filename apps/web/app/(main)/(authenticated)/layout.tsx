@@ -27,7 +27,9 @@ import {
   ShieldCheck,
   ChevronDown,
   LayoutDashboard,
-  Wrench
+  Wrench,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -65,6 +67,61 @@ export default function AuthenticatedLayout({
 
   const dataFetched = useRef(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // Visibility settings for sidebar sections
+  const [visibilitySettings, setVisibilitySettings] = useState<Record<string, boolean>>({});
+  const [isVisibilityLoading, setIsVisibilityLoading] = useState(true);
+
+  // Fetch visibility settings
+  useEffect(() => {
+    const fetchVisibility = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('sidebar_visibility')
+          .select('section_key, is_hidden');
+
+        if (error) {
+          console.warn('[SIDEBAR_VISIBILITY] Could not fetch settings. Using defaults.');
+          return;
+        }
+
+        const settings: Record<string, boolean> = {};
+        data.forEach(item => {
+          settings[item.section_key] = item.is_hidden;
+        });
+        setVisibilitySettings(settings);
+      } catch (err) {
+        console.error('[SIDEBAR_VISIBILITY] Error:', err);
+      } finally {
+        setIsVisibilityLoading(false);
+      }
+    };
+
+    fetchVisibility();
+  }, [profile]);
+
+  const toggleVisibility = async (sectionKey: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const currentlyHidden = visibilitySettings[sectionKey] || false;
+    const nextHidden = !currentlyHidden;
+
+    // Optimistic update
+    setVisibilitySettings(prev => ({ ...prev, [sectionKey]: nextHidden }));
+
+    try {
+      const { error } = await supabase
+        .from('sidebar_visibility')
+        .upsert({ section_key: sectionKey, is_hidden: nextHidden }, { onConflict: 'section_key' });
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('[SIDEBAR_VISIBILITY] Failed to update:', err);
+      // Revert on error
+      setVisibilitySettings(prev => ({ ...prev, [sectionKey]: currentlyHidden }));
+    }
+  };
 
   // 1. Core Auth Guard & Ready State
   useEffect(() => {
@@ -133,8 +190,27 @@ export default function AuthenticatedLayout({
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
-  const navItems = [
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
+
+  const allNavItems = [
     { label: 'Inicio', href: '/dashboard', icon: Home },
+    ...(isAdmin ? [
+      {
+        label: 'Administración',
+        icon: ShieldCheck,
+        children: [
+          { label: 'Flujogramas', href: '/admin/flowcharts/new', icon: Layers },
+        ]
+      },
+      {
+        label: 'Administración Tienda',
+        icon: ShoppingBag,
+        children: [
+          { label: 'Nuevo Producto', href: '/admin/shop/new', icon: ShoppingBag },
+          { label: 'Marco VIP', href: '/admin/shop/vip-frame', icon: ShieldCheck },
+        ]
+      }
+    ] : []),
     { label: 'Cursos', href: '/dashboard/courses', icon: BookOpen },
     { label: 'Profesores', href: '/dashboard/professors', icon: Users },
     { label: 'Herramientas', href: '/dashboard/herramientas', icon: Wrench },
@@ -144,6 +220,12 @@ export default function AuthenticatedLayout({
     { label: 'Grupos', href: '/dashboard/grupos', icon: Layers },
     { label: 'Nosotros', href: '/dashboard/about', icon: Info },
   ];
+
+  // Filter items for non-admins
+  const navItems = allNavItems.filter(item => {
+    if (isAdmin) return true; // Admins see everything
+    return !visibilitySettings[item.label]; // Others see only non-hidden
+  });
 
   // While checking initial session, show minimal splash
   if (!isAuthReady) {
@@ -305,8 +387,24 @@ export default function AuthenticatedLayout({
                       className="absolute left-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                       style={{ backgroundColor: colors?.primary }}
                     />
-                    <Icon style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
-                    <span style={{ fontWeight: active ? '600' : '500' }}>{item.label}</span>
+                    <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                      <Icon style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
+                      <span className="truncate" style={{ fontWeight: active ? '600' : '500' }}>{item.label}</span>
+                    </div>
+
+                    {/* EYE ICON FOR ADMINS */}
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => toggleVisibility(item.label, e)}
+                        className={`p-1.5 rounded-lg transition-all hover:bg-white/10 shrink-0 ${visibilitySettings[item.label] ? 'text-red-500 bg-red-500/10' : 'text-bb-text-secondary opacity-0 group-hover:opacity-100'}`}
+                      >
+                        {visibilitySettings[item.label] ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    )}
                   </Link>
                 );
               }
@@ -330,10 +428,26 @@ export default function AuthenticatedLayout({
                       <Icon style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0, color: hasActiveChild ? colors?.primary : undefined }} />
                       <span className={`font-semibold text-sm ${hasActiveChild ? 'text-white' : ''}`}>{item.label}</span>
                     </div>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                      style={{ color: hasActiveChild ? colors?.primary : undefined }}
-                    />
+
+                    <div className="flex items-center gap-2 pr-2">
+                      {/* EYE ICON FOR ADMINS */}
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => toggleVisibility(item.label, e)}
+                          className={`p-1 rounded-lg transition-all hover:bg-white/10 shrink-0 ${visibilitySettings[item.label] ? 'text-red-500 bg-red-500/10' : 'text-bb-text-secondary opacity-0 group-hover:opacity-100'}`}
+                        >
+                          {visibilitySettings[item.label] ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                        style={{ color: hasActiveChild ? colors?.primary : undefined }}
+                      />
+                    </div>
                   </button>
 
                   <AnimatePresence initial={false}>
