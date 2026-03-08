@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "CampusLink - Plataforma Premium",
   description: "Plataforma educativa premium para gestión de cursos",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
