@@ -1,6 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 
-const WORKER_URL = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev'
+const WORKER_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev').trim()
 
 /**
  * Generates a secure URL for accessing a file in R2 via the Cloudflare Worker proxy.
