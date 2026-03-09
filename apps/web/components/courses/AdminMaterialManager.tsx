@@ -40,6 +40,7 @@ interface AdminMaterialManagerProps {
     materials: Material[];
     allProfessors: Professor[];
     courseName: string;
+    onMaterialDeleted?: (materialId: string) => void;
 }
 
 export default function AdminMaterialManager({
@@ -47,9 +48,11 @@ export default function AdminMaterialManager({
     onClose,
     materials,
     allProfessors,
-    courseName
+    courseName,
+    onMaterialDeleted,
 }: AdminMaterialManagerProps) {
     const router = useRouter();
+    const [localMaterials, setLocalMaterials] = useState<Material[]>(materials);
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
@@ -58,7 +61,7 @@ export default function AdminMaterialManager({
     const usersWithMaterials = useMemo(() => {
         const usersMap = new Map();
 
-        materials.forEach(material => {
+        localMaterials.forEach(material => {
             if (!material.profiles) return;
 
             const userId = material.user_id;
@@ -76,7 +79,7 @@ export default function AdminMaterialManager({
         });
 
         return Array.from(usersMap.values());
-    }, [materials]);
+    }, [localMaterials]);
 
     const selectedUserMatches = useMemo(() => {
         if (!selectedUserId) return null;
@@ -117,6 +120,10 @@ export default function AdminMaterialManager({
                 .eq('id', material.id);
 
             if (error) throw error;
+
+            // Immediately remove from local state so UI updates without waiting for router.refresh()
+            setLocalMaterials(prev => prev.filter(m => m.id !== material.id));
+            onMaterialDeleted?.(material.id);
 
             // If user has no more materials, go back to list
             if (selectedUserMatches?.materials.length === 1) {
