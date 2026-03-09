@@ -281,7 +281,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                                 <div key={`page_${index + 1}`} className="mb-8 relative transition-all duration-300 hover:shadow-2xl">
                                     <Page
                                         pageNumber={index + 1}
-                                        renderTextLayer={true}
+                                        renderTextLayer={false}
                                         renderAnnotationLayer={false}
                                         width={isFullscreen ? (windowWidth - 60) : Math.min(windowWidth - 80, 800)}
                                         className="shadow-xl rounded-sm overflow-hidden"
