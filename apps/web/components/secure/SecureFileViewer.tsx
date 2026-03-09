@@ -72,13 +72,15 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
         }
     };
 
-    const loadContent = async () => {
+    const loadContent = async (forceExternal = false) => {
         setLoading(true);
         setError(null);
         setBlobUrl(null);
         setFileBlob(null);
         setExternalViewerUrl(null);
-        setUseExternalViewer(false);
+        if (!forceExternal) {
+            setUseExternalViewer(false);
+        }
 
         try {
             const lowerPath = filePath.toLowerCase();
@@ -111,8 +113,8 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                 return;
             }
 
-            // External viewer fallback
-            if (useExternalViewer) {
+            // External viewer fallback (reached via forceExternal=true when docx-preview fails)
+            if (forceExternal || useExternalViewer) {
                 const previewRes = await fetch(`${baseUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -151,7 +153,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                             });
                         } catch (e) {
                             setUseExternalViewer(true);
-                            loadContent();
+                            loadContent(true); // pass forceExternal=true to bypass stale state
                         }
                     }
                 }, 0);
@@ -168,7 +170,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                         }
                     } catch (e) {
                         setUseExternalViewer(true);
-                        loadContent();
+                        loadContent(true); // pass forceExternal=true to bypass stale state
                     }
                 }, 0);
             }
@@ -211,7 +213,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                 <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
                 <p className="text-red-700 font-medium">{error}</p>
                 <div className="flex gap-4">
-                    <button onClick={loadContent} className="mt-4 text-sm text-blue-600 hover:underline">Reintentar</button>
+                    <button onClick={() => loadContent()} className="mt-4 text-sm text-blue-600 hover:underline">Reintentar</button>
                     {(fileType === 'docx' || fileType === 'xlsx') && !useExternalViewer && (
                         <button
                             onClick={() => { setUseExternalViewer(true); loadContent(); }}
