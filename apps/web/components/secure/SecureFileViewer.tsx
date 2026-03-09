@@ -11,7 +11,7 @@ import SecurePptxViewer from './SecurePptxViewer';
 
 // Worker local para evitar problemas de CORS con CDN
 if (typeof window !== 'undefined') {
-    pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 }
 
 interface SecureFileViewerProps {
@@ -255,6 +255,8 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                     <div className="flex-1 overflow-auto bg-gray-100/50 flex justify-center p-4 scrollbar-thin" onClick={(e) => { if (e.target === e.currentTarget) onClose?.(false); }}>
                         <Document
                             file={pdfFile}
+                            cMapUrl={`https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`}
+                            cMapPacked={true}
                             onLoadSuccess={({ numPages }) => {
                                 setNumPages(numPages);
                             }}
@@ -264,19 +266,26 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                                     console.error("Error Message:", error.message);
                                 }
                             }}
-                            loading={<Loader2 className="animate-spin text-blue-500" />}
+                            loading={
+                                <div className="flex flex-col items-center justify-center p-12">
+                                    <Loader2 className="animate-spin text-blue-500 w-8 h-8 mb-2" />
+                                    <p className="text-sm text-gray-500">Cargando documento...</p>
+                                </div>
+                            }
                             className="max-w-full"
                         >
                             {Array.from(new Array(numPages || 0), (_, index) => (
                                 <div key={`page_${index + 1}`} className="mb-8 relative transition-all duration-300 hover:shadow-2xl">
                                     <Page
                                         pageNumber={index + 1}
-                                        renderTextLayer={false}
+                                        renderTextLayer={true}
                                         renderAnnotationLayer={false}
                                         width={isFullscreen ? (windowWidth - 60) : Math.min(windowWidth - 80, 800)}
                                         className="shadow-xl rounded-sm overflow-hidden"
                                         loading={
-                                            <div className="w-full h-[1100px] bg-white animate-pulse rounded-sm border border-gray-100" style={{ width: isFullscreen ? (windowWidth - 100) : 800 }} />
+                                            <div className="w-full h-[1100px] bg-white animate-pulse rounded-sm border border-gray-100 flex items-center justify-center" style={{ width: isFullscreen ? (windowWidth - 100) : 800 }}>
+                                                <p className="text-gray-300 text-sm">Procesando página {index + 1}...</p>
+                                            </div>
                                         }
                                     />
                                     {/* Individual page protective overlay */}
