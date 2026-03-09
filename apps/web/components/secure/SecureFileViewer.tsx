@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2, AlertCircle, Download, Lock, Maximize, Minimize, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -22,19 +22,22 @@ interface SecureFileViewerProps {
 
 // ─── Lazy PDF Page ─────────────────────────────────────────────────────────────
 // Renderiza el canvas de la página SOLO cuando entra en viewport.
-// Mientras no es visible, muestra un skeleton placeholder del mismo tamaño estimada.
+// CRÍTICO: Solo activa el observer cuando pdfReady=true (el worker ya está listo).
 interface LazyPdfPageProps {
     pageNumber: number;
     pageWidth: number;
     estimatedHeight: number;
-    onPageVisible?: (pageNumber: number) => void;
+    pdfReady: boolean; // Bloquea el observer hasta que el PDF Document esté listo
 }
 
-function LazyPdfPage({ pageNumber, pageWidth, estimatedHeight, onPageVisible }: LazyPdfPageProps) {
+function LazyPdfPage({ pageNumber, pageWidth, estimatedHeight, pdfReady }: LazyPdfPageProps) {
     const [shouldRender, setShouldRender] = useState(false);
     const placeholderRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        // No activar el observer hasta que el PDF worker esté confirmado como listo
+        if (!pdfReady) return;
+
         const el = placeholderRef.current;
         if (!el) return;
 
@@ -42,21 +45,24 @@ function LazyPdfPage({ pageNumber, pageWidth, estimatedHeight, onPageVisible }: 
             ([entry]) => {
                 if (entry.isIntersecting) {
                     setShouldRender(true);
-                    onPageVisible?.(pageNumber);
-                    // Una vez renderizada, no la desmontamos para mantener scroll fluido
+                    // Una vez renderizada, la dejamos montada para scroll fluido
                     observer.disconnect();
                 }
             },
-            // Empezamos a cargar la página 400px antes de que sea visible (pre-fetch)
+            // Pre-carga la página cuando está a 400px de entrar en pantalla
             { rootMargin: '400px 0px 400px 0px', threshold: 0 }
         );
 
         observer.observe(el);
         return () => observer.disconnect();
-    }, [pageNumber, onPageVisible]);
+    }, [pdfReady]); // Solo re-ejecuta cuando pdfReady cambia
 
     return (
-        <div ref={placeholderRef} className="mb-8 relative transition-shadow duration-300 hover:shadow-2xl">
+        <div
+            ref={placeholderRef}
+            className="mb-8 relative transition-shadow duration-300 hover:shadow-2xl"
+            style={{ minHeight: shouldRender ? undefined : estimatedHeight }}
+        >
             {shouldRender ? (
                 <>
                     <Page
@@ -75,11 +81,11 @@ function LazyPdfPage({ pageNumber, pageWidth, estimatedHeight, onPageVisible }: 
                             </div>
                         }
                     />
-                    {/* Overlay de protección individual por página */}
+                    {/* Overlay de protección individual */}
                     <div className="absolute inset-0 z-10 bg-transparent pointer-events-none" />
                 </>
             ) : (
-                // Skeleton: mantiene el espacio exacto para que el scroll sea estable
+                // Skeleton placeholder — mantiene el espacio para scroll estable
                 <div
                     className="bg-gray-100/80 rounded-sm border border-gray-200 flex items-center justify-center"
                     style={{ width: pageWidth, height: estimatedHeight }}
@@ -92,15 +98,14 @@ function LazyPdfPage({ pageNumber, pageWidth, estimatedHeight, onPageVisible }: 
 }
 
 // ─── Mobile Page Navigator ────────────────────────────────────────────────────
-// En móvil, mostramos 1 página a la vez con controles de anterior/siguiente
-// para evitar tener múltiples canvases en RAM simultáneamente.
+// En móvil (<768px): una sola página a la vez para evitar múltiples canvases en RAM.
 interface MobilePdfNavigatorProps {
-    pdfFile: string;
     numPages: number;
     pageWidth: number;
+    estimatedHeight: number;
 }
 
-function MobilePdfNavigator({ pdfFile, numPages, pageWidth }: MobilePdfNavigatorProps) {
+function MobilePdfNavigator({ numPages, pageWidth, estimatedHeight }: MobilePdfNavigatorProps) {
     const [currentPage, setCurrentPage] = useState(1);
 
     return (
@@ -116,7 +121,7 @@ function MobilePdfNavigator({ pdfFile, numPages, pageWidth }: MobilePdfNavigator
                     loading={
                         <div
                             className="bg-white animate-pulse rounded-sm border border-gray-200 flex flex-col items-center justify-center gap-2"
-                            style={{ width: pageWidth, height: Math.round(pageWidth * 1.414) }}
+                            style={{ width: pageWidth, height: estimatedHeight }}
                         >
                             <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
                             <p className="text-gray-400 text-sm">Cargando...</p>
@@ -127,7 +132,7 @@ function MobilePdfNavigator({ pdfFile, numPages, pageWidth }: MobilePdfNavigator
             </div>
 
             {/* Controles de navegación */}
-            <div className="flex items-center gap-4 bg-black/70 px-4 py-2 rounded-full backdrop-blur-sm">
+            <div className="flex items-center gap-4 bg-black/70 px-4 py-2 rounded-full backdrop-blur-sm sticky bottom-4">
                 <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
@@ -163,6 +168,8 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     const [useExternalViewer, setUseExternalViewer] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [numPages, setNumPages] = useState<number | null>(null);
+    // Estado clave: el PDF worker está listo — se activa en onLoadSuccess
+    const [pdfReady, setPdfReady] = useState(false);
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
@@ -175,7 +182,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
         ? windowWidth - 60
         : Math.min(windowWidth - 80, 800);
 
-    // Altura estimada (A4: ratio 1.414 ancho/alto)
+    // Altura estimada (A4: ratio 1:1.414)
     const estimatedPageHeight = Math.round(pdfPageWidth * 1.414);
 
     useEffect(() => {
@@ -188,6 +195,9 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     }, []);
 
     useEffect(() => {
+        // Resetear pdfReady cuando cambia el archivo
+        setPdfReady(false);
+        setNumPages(null);
         loadContent();
         return () => {
             if (blobUrl) URL.revokeObjectURL(blobUrl);
@@ -196,9 +206,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     }, [filePath]);
 
     useEffect(() => {
-        const handleFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement);
-        };
+        const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     }, []);
@@ -206,9 +214,9 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     const toggleFullscreen = () => {
         if (!containerRef.current) return;
         if (!document.fullscreenElement) {
-            containerRef.current.requestFullscreen().catch(err => {
-                console.error(`Error enabling fullscreen: ${err.message}`);
-            });
+            containerRef.current.requestFullscreen().catch(err =>
+                console.error(`Error enabling fullscreen: ${err.message}`)
+            );
         } else {
             document.exitFullscreen();
         }
@@ -220,6 +228,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
         setBlobUrl(null);
         setFileBlob(null);
         setExternalViewerUrl(null);
+        setPdfReady(false);
         setNumPages(null);
         if (!forceExternal) setUseExternalViewer(false);
 
@@ -246,13 +255,11 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
             }
             cleanPath = decodeURIComponent(cleanPath);
 
-            // PPTX usa Microsoft Office Online iframe — no necesita blob
             if (type === 'pptx') {
                 setLoading(false);
                 return;
             }
 
-            // Fallback externo para DOCX/XLSX cuando docx-preview falla
             if (forceExternal || useExternalViewer) {
                 const previewRes = await fetch(
                     `${baseUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`,
@@ -265,7 +272,6 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                 return;
             }
 
-            // Descarga el archivo como blob (necesario para react-pdf y docx-preview)
             const secureUrl = `${baseUrl}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`;
             const blobRes = await fetch(secureUrl, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -281,7 +287,6 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
             const objUrl = URL.createObjectURL(blob);
             setBlobUrl(objUrl);
 
-            // Renderizado client-side para DOCX
             if (type === 'docx') {
                 setTimeout(async () => {
                     if (docxContainerRef.current) {
@@ -298,7 +303,6 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                 }, 0);
             }
 
-            // Renderizado client-side para XLSX
             if (type === 'xlsx') {
                 setTimeout(async () => {
                     try {
@@ -346,12 +350,10 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
         );
     }
 
-    // ── PPTX: delega a SecurePptxViewer ──
     if (fileType === 'pptx' && !useExternalViewer) {
         return <SecurePptxViewer filePath={filePath} fileName={fileName} />;
     }
 
-    // ── Error state ──
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center p-8 text-center bg-red-50 rounded-lg min-h-[300px]">
@@ -381,25 +383,20 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
             className={`w-full ${isFullscreen ? 'h-screen' : 'h-full'} flex flex-col bg-gray-50 min-h-[500px] overflow-hidden rounded-lg relative transition-all duration-300`}
             onContextMenu={(e) => { e.preventDefault(); return false; }}
         >
-            {/* Overlay de protección anti-copia (pasivo) */}
+            {/* Overlay anti-copia pasivo */}
             <div className="absolute inset-0 z-50 pointer-events-none mix-blend-multiply" />
 
-            {/* Botón de pantalla completa */}
+            {/* Botón fullscreen */}
             <div className="absolute top-4 right-4 z-[110] flex gap-2">
                 <button
                     onClick={toggleFullscreen}
                     className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-lg backdrop-blur-sm transition-all flex items-center justify-center border border-white/10"
                     title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
                 >
-                    {isFullscreen ? (
-                        <Minimize className="w-5 h-5 flex-shrink-0" />
-                    ) : (
-                        <Maximize className="w-5 h-5 flex-shrink-0" />
-                    )}
+                    {isFullscreen ? <Minimize className="w-5 h-5 flex-shrink-0" /> : <Maximize className="w-5 h-5 flex-shrink-0" />}
                 </button>
             </div>
 
-            {/* ── Renderizadores de contenido ── */}
             <div className={`flex-1 flex flex-col overflow-hidden relative ${isFullscreen ? 'p-0' : ''}`}>
 
                 {/* 1. PDF — Lazy loading por página */}
@@ -414,8 +411,16 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                                 cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
                                 cMapPacked: true,
                             }}
-                            onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-                            onLoadError={(err) => console.error('PDF Load Error:', err)}
+                            onLoadSuccess={({ numPages: n }) => {
+                                setNumPages(n);
+                                // CRÍTICO: Solo activar lazy loading una vez que el worker está listo
+                                // Pequeño delay para garantizar que el worker está completamente inicializado
+                                setTimeout(() => setPdfReady(true), 150);
+                            }}
+                            onLoadError={(err) => {
+                                console.error('PDF Load Error:', err);
+                                setError('No se pudo cargar el PDF. Intenta recargar la página.');
+                            }}
                             loading={
                                 <div className="flex flex-col items-center justify-center p-12">
                                     <Loader2 className="animate-spin text-blue-500 w-8 h-8 mb-2" />
@@ -426,20 +431,21 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                         >
                             {numPages && (
                                 isMobile ? (
-                                    // Modo móvil: una página a la vez con navegación
+                                    // Móvil: una página a la vez
                                     <MobilePdfNavigator
-                                        pdfFile={blobUrl}
                                         numPages={numPages}
                                         pageWidth={Math.min(windowWidth - 32, 600)}
+                                        estimatedHeight={Math.round(Math.min(windowWidth - 32, 600) * 1.414)}
                                     />
                                 ) : (
-                                    // Modo escritorio: scroll continuo con lazy loading por página
+                                    // PC: scroll continuo con lazy loading por página
                                     Array.from({ length: numPages }, (_, i) => (
                                         <LazyPdfPage
                                             key={`page_${i + 1}`}
                                             pageNumber={i + 1}
                                             pageWidth={pdfPageWidth}
                                             estimatedHeight={estimatedPageHeight}
+                                            pdfReady={pdfReady}
                                         />
                                     ))
                                 )
@@ -487,7 +493,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                     </div>
                 )}
 
-                {/* 5. Visor externo (fallback Office Online) */}
+                {/* 5. Visor externo (Office Online fallback) */}
                 {useExternalViewer && externalViewerUrl && (
                     <div className="flex-1 bg-gray-100 h-full relative">
                         <iframe
@@ -523,7 +529,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                     </div>
                 )}
 
-                {/* Overlay de protección global (pasivo) */}
+                {/* Overlay global de protección */}
                 <div
                     className="fixed inset-0 z-[1000] pointer-events-none select-none"
                     onContextMenu={(e) => e.preventDefault()}
@@ -544,19 +550,9 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                     max-width: 100% !important;
                     height: auto !important;
                 }
-                .docx-content table {
-                    width: 100% !important;
-                    border-collapse: collapse;
-                }
-                .excel-viewer table {
-                    border-collapse: collapse;
-                    width: 100%;
-                }
-                .excel-viewer th, .excel-viewer td {
-                    border: 1px solid #e5e7eb;
-                    padding: 8px;
-                    text-align: left;
-                }
+                .docx-content table { width: 100% !important; border-collapse: collapse; }
+                .excel-viewer table { border-collapse: collapse; width: 100%; }
+                .excel-viewer th, .excel-viewer td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
                 .scrollbar-thin::-webkit-scrollbar { width: 6px; }
                 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
                 .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
