@@ -96,8 +96,8 @@ function MobilePdfNavigator({ numPages, pageWidth, estimatedHeight }: MobilePdfN
     const [currentPage, setCurrentPage] = useState(1);
 
     return (
-        <div className="flex flex-col items-center gap-6 py-6 px-4 pb-24">
-            <div className="relative shadow-2xl rounded-lg overflow-hidden border border-gray-200 bg-white">
+        <div className="flex flex-col items-center justify-center min-h-full w-full gap-6 py-4 pb-28">
+            <div className="relative shadow-2xl rounded-sm overflow-hidden border border-zinc-300 bg-white">
                 <Page
                     pageNumber={currentPage}
                     renderTextLayer={false}
@@ -178,7 +178,9 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     }, [filePath, blobUrl, sessionToken]);
 
     const pdfPageWidth = useMemo(() => {
-        const padding = isFullscreen ? 40 : 80;
+        // V4.3: Margen mínimo en móvil (8px) para maximizar área de lectura.
+        // En escritorio mantenemos un ancho cómodo (850px max).
+        const padding = isMobile ? 8 : (isFullscreen ? 40 : 80);
         const width = windowWidth - padding;
         return isMobile ? width : Math.min(width, 850);
     }, [windowWidth, isFullscreen, isMobile]);
@@ -366,7 +368,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
 
             <div className="flex-1 overflow-hidden relative">
                 {fileType === 'pdf' && fileSource && (
-                    <div className="h-full overflow-auto bg-[#E4E4E7]/50 flex justify-center scroll-smooth">
+                    <div className="h-full overflow-auto bg-[#E4E4E7]/50 flex flex-col items-center scroll-smooth scrollbar-none">
                         <Document
                             file={fileSource}
                             onLoadSuccess={({ numPages: n }) => {
@@ -424,7 +426,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
             </div>
 
             <div className="bg-zinc-900 h-10 flex items-center justify-center">
-                <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Advanced Virtualization Engine v4.2</p>
+                <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Advanced Virtualization Engine v4.3 Stable</p>
             </div>
 
             <style jsx global>{`
