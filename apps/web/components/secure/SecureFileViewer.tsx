@@ -9,9 +9,9 @@ import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import SecurePptxViewer from './SecurePptxViewer';
 
-// Worker local para evitar problemas de CORS con CDN
+// Worker sincronizado con la versión de la librería para evitar crashes por mismatch
 if (typeof window !== 'undefined') {
-    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 }
 
 interface SecureFileViewerProps {
