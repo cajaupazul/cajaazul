@@ -96,8 +96,8 @@ function MobilePdfNavigator({ numPages, pageWidth, estimatedHeight }: MobilePdfN
     const [currentPage, setCurrentPage] = useState(1);
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-full w-full gap-6 py-4 pb-28">
-            <div className="relative shadow-2xl rounded-sm overflow-hidden border border-zinc-300 bg-white">
+        <div className="flex flex-col items-center justify-center min-h-full w-full gap-6 py-4 pb-28 px-0.5">
+            <div className="relative shadow-2xl rounded-sm overflow-hidden border border-zinc-200 bg-white">
                 <Page
                     pageNumber={currentPage}
                     renderTextLayer={false}
@@ -152,7 +152,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [numPages, setNumPages] = useState<number | null>(null);
     const [pdfReady, setPdfReady] = useState(false);
-    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+    const [containerWidth, setContainerWidth] = useState(0); // V4.4: Ancho dinámico real
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
@@ -178,22 +178,28 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     }, [filePath, blobUrl, sessionToken]);
 
     const pdfPageWidth = useMemo(() => {
-        // V4.3: Margen mínimo en móvil (8px) para maximizar área de lectura.
-        // En escritorio mantenemos un ancho cómodo (850px max).
-        const padding = isMobile ? 8 : (isFullscreen ? 40 : 80);
-        const width = windowWidth - padding;
-        return isMobile ? width : Math.min(width, 850);
-    }, [windowWidth, isFullscreen, isMobile]);
+        if (containerWidth === 0) return 300;
+        // V4.4: Usamos el ancho real del contenedor menos un margen de seguridad mínimo (2px para bordes)
+        const safetyMargin = isMobile ? 4 : (isFullscreen ? 40 : 80);
+        const availableWidth = containerWidth - safetyMargin;
+        return isMobile ? availableWidth : Math.min(availableWidth, 850);
+    }, [containerWidth, isFullscreen, isMobile]);
 
     const estimatedPageHeight = Math.round(pdfPageWidth * 1.414);
 
     useEffect(() => {
-        const handleResize = () => {
-            setWindowWidth(window.innerWidth);
-            setIsMobile(window.innerWidth < 768);
-        };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                setContainerWidth(entry.contentRect.width);
+                setIsMobile(entry.contentRect.width < 768);
+            }
+        });
+
+        if (containerRef.current) {
+            observer.observe(containerRef.current);
+        }
+
+        return () => observer.disconnect();
     }, []);
 
     useEffect(() => {
@@ -426,7 +432,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
             </div>
 
             <div className="bg-zinc-900 h-10 flex items-center justify-center">
-                <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Advanced Virtualization Engine v4.3 Stable</p>
+                <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Advanced Virtualization Engine v4.4 Stable</p>
             </div>
 
             <style jsx global>{`
