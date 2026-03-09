@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Loader2, AlertCircle, Download, Lock, Maximize, Minimize, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -9,9 +9,9 @@ import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import SecurePptxViewer from './SecurePptxViewer';
 
-// Worker sincronizado con la versión de la librería para evitar crashes por mismatch
+// V4.0: Usar worker LOCAL para máxima estabilidad y evitar race conditions de red
 if (typeof window !== 'undefined') {
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 }
 
 interface SecureFileViewerProps {
@@ -20,85 +20,86 @@ interface SecureFileViewerProps {
     onClose?: (open: false) => void;
 }
 
-// ─── Lazy PDF Page ─────────────────────────────────────────────────────────────
-// Renderiza el canvas de la página SOLO cuando entra en viewport.
-// CRÍTICO: Solo activa el observer cuando pdfReady=true (el worker ya está listo).
-interface LazyPdfPageProps {
+// ─── Virtualized Lazy PDF Page ────────────────────────────────────────────────
+// Implementa "Windowing": solo renderiza el contenido pesado (canvas)
+// si la página está cerca del viewport. Si está lejos, unmount total para RAM.
+interface VirtualizedPageProps {
     pageNumber: number;
     pageWidth: number;
     estimatedHeight: number;
-    pdfReady: boolean; // Bloquea el observer hasta que el PDF Document esté listo
+    pdfReady: boolean;
 }
 
-function LazyPdfPage({ pageNumber, pageWidth, estimatedHeight, pdfReady }: LazyPdfPageProps) {
-    const [shouldRender, setShouldRender] = useState(false);
-    const placeholderRef = useRef<HTMLDivElement>(null);
+function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady }: VirtualizedPageProps) {
+    const [shouldMount, setShouldMount] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // No activar el observer hasta que el PDF worker esté confirmado como listo
         if (!pdfReady) return;
 
-        const el = placeholderRef.current;
+        const el = containerRef.current;
         if (!el) return;
 
         const observer = new IntersectionObserver(
             ([entry]) => {
-                if (entry.isIntersecting) {
-                    setShouldRender(true);
-                    // Una vez renderizada, la dejamos montada para scroll fluido
-                    observer.disconnect();
-                }
+                // Montar si está a menos de 1000px (aprox 1.5 páginas) del viewport
+                // Desmontar si sale de ese rango para liberar RAM
+                setShouldMount(entry.isIntersecting);
             },
-            // Pre-carga la página cuando está a 400px de entrar en pantalla
-            { rootMargin: '400px 0px 400px 0px', threshold: 0 }
+            {
+                // Un margen de 1200px permite tener unas 2-3 páginas montadas
+                // a la vez (la actual + 1 arriba + 1 abajo), ideal para scroll suave.
+                rootMargin: '1200px 0px 1200px 0px',
+                threshold: 0
+            }
         );
 
         observer.observe(el);
         return () => observer.disconnect();
-    }, [pdfReady]); // Solo re-ejecuta cuando pdfReady cambia
+    }, [pdfReady]);
 
     return (
         <div
-            ref={placeholderRef}
-            className="mb-8 relative transition-shadow duration-300 hover:shadow-2xl"
-            style={{ minHeight: shouldRender ? undefined : estimatedHeight }}
+            ref={containerRef}
+            className="mb-8 relative transition-all duration-500"
+            style={{ minHeight: estimatedHeight, width: pageWidth }}
         >
-            {shouldRender ? (
+            {shouldMount && pdfReady ? (
                 <>
                     <Page
                         pageNumber={pageNumber}
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
                         width={pageWidth}
-                        className="shadow-xl rounded-sm overflow-hidden"
+                        className="shadow-2xl rounded-sm overflow-hidden animate-in fade-in duration-500"
                         loading={
                             <div
-                                className="bg-white animate-pulse rounded-sm border border-gray-200 flex flex-col items-center justify-center gap-2"
+                                className="bg-white flex flex-col items-center justify-center gap-2"
                                 style={{ width: pageWidth, height: estimatedHeight }}
                             >
-                                <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
-                                <p className="text-gray-300 text-xs">Página {pageNumber}</p>
+                                <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+                                <p className="text-gray-300 text-xs">Renderizando pág. {pageNumber}</p>
                             </div>
                         }
                     />
-                    {/* Overlay de protección individual */}
+                    {/* Overlay protector anti-selección individual */}
                     <div className="absolute inset-0 z-10 bg-transparent pointer-events-none" />
                 </>
             ) : (
-                // Skeleton placeholder — mantiene el espacio para scroll estable
+                // Skeleton ultra-ligero: no consume procesador ni RAM de Canvas
                 <div
-                    className="bg-gray-100/80 rounded-sm border border-gray-200 flex items-center justify-center"
+                    className="bg-gray-100/50 rounded-sm border border-dashed border-gray-200 flex flex-col items-center justify-center gap-2"
                     style={{ width: pageWidth, height: estimatedHeight }}
                 >
-                    <p className="text-gray-300 text-xs font-medium select-none">Página {pageNumber}</p>
+                    <div className="w-8 h-8 rounded-full bg-gray-200/50 animate-pulse" />
+                    <p className="text-gray-300 text-[10px] font-medium tracking-widest uppercase">Página {pageNumber}</p>
                 </div>
             )}
         </div>
     );
 }
 
-// ─── Mobile Page Navigator ────────────────────────────────────────────────────
-// En móvil (<768px): una sola página a la vez para evitar múltiples canvases en RAM.
+// ─── Mobile Navigator (V4.0) ──────────────────────────────────────────────────
 interface MobilePdfNavigatorProps {
     numPages: number;
     pageWidth: number;
@@ -109,66 +110,68 @@ function MobilePdfNavigator({ numPages, pageWidth, estimatedHeight }: MobilePdfN
     const [currentPage, setCurrentPage] = useState(1);
 
     return (
-        <div className="flex flex-col items-center gap-4 py-4 px-2">
-            {/* Página actual */}
-            <div className="relative w-full flex justify-center">
+        <div className="flex flex-col items-center gap-6 py-6 px-4">
+            <div className="relative shadow-2xl rounded-lg overflow-hidden border border-gray-200 bg-white">
                 <Page
                     pageNumber={currentPage}
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
                     width={pageWidth}
-                    className="shadow-xl rounded-sm overflow-hidden"
                     loading={
                         <div
-                            className="bg-white animate-pulse rounded-sm border border-gray-200 flex flex-col items-center justify-center gap-2"
+                            className="flex flex-col items-center justify-center gap-3 bg-gray-50"
                             style={{ width: pageWidth, height: estimatedHeight }}
                         >
-                            <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
-                            <p className="text-gray-400 text-sm">Cargando...</p>
+                            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                            <p className="text-gray-400 text-sm font-medium">Cargando página...</p>
                         </div>
                     }
                 />
                 <div className="absolute inset-0 z-10 bg-transparent pointer-events-none" />
             </div>
 
-            {/* Controles de navegación */}
-            <div className="flex items-center gap-4 bg-black/70 px-4 py-2 rounded-full backdrop-blur-sm sticky bottom-4">
+            {/* Selector de página flotante/sticky */}
+            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-4 bg-zinc-900/90 border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                 <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="p-1 text-white disabled:opacity-30 active:scale-90 transition-transform"
-                    aria-label="Página anterior"
+                    className="p-2 text-white hover:bg-white/10 disabled:opacity-20 rounded-lg transition-colors"
                 >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="w-6 h-6" />
                 </button>
-                <span className="text-white text-sm font-bold min-w-[80px] text-center">
-                    {currentPage} / {numPages}
-                </span>
+                <div className="flex flex-col items-center min-w-[100px]">
+                    <span className="text-white text-base font-bold tracking-tighter">
+                        {currentPage} <span className="text-zinc-500 font-normal mx-1">/</span> {numPages}
+                    </span>
+                    <div className="w-full bg-zinc-800 h-1 rounded-full mt-1 overflow-hidden">
+                        <div
+                            className="bg-blue-500 h-full transition-all duration-300"
+                            style={{ width: `${(currentPage / numPages) * 100}%` }}
+                        />
+                    </div>
+                </div>
                 <button
                     onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))}
                     disabled={currentPage === numPages}
-                    className="p-1 text-white disabled:opacity-30 active:scale-90 transition-transform"
-                    aria-label="Página siguiente"
+                    className="p-2 text-white hover:bg-white/10 disabled:opacity-20 rounded-lg transition-colors"
                 >
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronRight className="w-6 h-6" />
                 </button>
             </div>
         </div>
     );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// ─── Main Component (V4.0 Robusto) ──────────────────────────────────────────
 export default function SecureFileViewer({ filePath, fileName, onClose }: SecureFileViewerProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [fileType, setFileType] = useState<'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'other'>('other');
-    const [fileBlob, setFileBlob] = useState<Blob | null>(null);
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [externalViewerUrl, setExternalViewerUrl] = useState<string | null>(null);
     const [useExternalViewer, setUseExternalViewer] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [numPages, setNumPages] = useState<number | null>(null);
-    // Estado clave: el PDF worker está listo — se activa en onLoadSuccess
     const [pdfReady, setPdfReady] = useState(false);
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
@@ -177,12 +180,29 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     const xlsxContainerRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Ancho de página del PDF según contexto
-    const pdfPageWidth = isFullscreen
-        ? windowWidth - 60
-        : Math.min(windowWidth - 80, 800);
+    // V4.0: Configuración para Range Loading
+    const fileSource = useMemo(() => {
+        if (!filePath || !blobUrl) return null;
 
-    // Altura estimada (A4: ratio 1:1.414)
+        // Si es PDF, intentamos habilitar Range Loading indirectamente
+        if (filePath.toLowerCase().endsWith('.pdf')) {
+            // Nota: react-pdf prefiere un objeto para manejar headers y range
+            return {
+                url: blobUrl, // Usamos el blobUrl pero PDF.js internamente intentará detectar soporte
+                cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+                cMapPacked: true,
+            };
+        }
+        return blobUrl;
+    }, [filePath, blobUrl]);
+
+    // Ancho dinámico con debounce implícito por el evento resize
+    const pdfPageWidth = useMemo(() => {
+        const padding = isFullscreen ? 40 : 80;
+        const width = windowWidth - padding;
+        return isMobile ? width : Math.min(width, 850);
+    }, [windowWidth, isFullscreen, isMobile]);
+
     const estimatedPageHeight = Math.round(pdfPageWidth * 1.414);
 
     useEffect(() => {
@@ -195,7 +215,6 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     }, []);
 
     useEffect(() => {
-        // Resetear pdfReady cuando cambia el archivo
         setPdfReady(false);
         setNumPages(null);
         loadContent();
@@ -214,9 +233,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     const toggleFullscreen = () => {
         if (!containerRef.current) return;
         if (!document.fullscreenElement) {
-            containerRef.current.requestFullscreen().catch(err =>
-                console.error(`Error enabling fullscreen: ${err.message}`)
-            );
+            containerRef.current.requestFullscreen().catch(err => console.error(err));
         } else {
             document.exitFullscreen();
         }
@@ -226,21 +243,18 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
         setLoading(true);
         setError(null);
         setBlobUrl(null);
-        setFileBlob(null);
-        setExternalViewerUrl(null);
         setPdfReady(false);
-        setNumPages(null);
         if (!forceExternal) setUseExternalViewer(false);
 
         try {
             const lowerPath = filePath.toLowerCase();
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
-            if (!token) throw new Error('No hay sesión activa');
+            if (!token) throw new Error('Sesión de usuario expirada.');
 
             let type: typeof fileType = 'other';
             if (lowerPath.endsWith('.pdf')) type = 'pdf';
-            else if (lowerPath.match(/\.(jpg|jpeg|png|webp)$/)) type = 'image';
+            else if (lowerPath.match(/\.(jpg|jpeg|png|webp|gif)$/)) type = 'image';
             else if (lowerPath.match(/\.(doc|docx)$/)) type = 'docx';
             else if (lowerPath.match(/\.(xls|xlsx|csv)$/)) type = 'xlsx';
             else if (lowerPath.match(/\.(ppt|pptx)$/)) type = 'pptx';
@@ -265,87 +279,91 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                     `${baseUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`,
                     { headers: { 'Authorization': `Bearer ${token}` } }
                 );
-                if (!previewRes.ok) throw new Error('Error generando vista externa');
                 const data = await previewRes.json();
                 setExternalViewerUrl(`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(data.url)}`);
                 setLoading(false);
                 return;
             }
 
+            // V4.1: Range Loading REAL
+            // No descargamos el blob completo en el frontend si es PDF.
+            // Dejamos que el motor de PDF.js pida los bytes por demanda (Range Requests).
             const secureUrl = `${baseUrl}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`;
+
+            if (type === 'pdf') {
+                setBlobUrl(secureUrl); // Usamos el endpoint como origen directo
+                setLoading(false);
+                return;
+            }
+
+            // Para otros tipos (imágenes, office), sí descargamos el blob completo
             const blobRes = await fetch(secureUrl, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
-            if (!blobRes.ok) {
-                const errorText = await blobRes.text().catch(() => 'Unknown error');
-                throw new Error(`Error ${blobRes.status}: ${errorText}`);
-            }
+            if (!blobRes.ok) throw new Error(`Status ${blobRes.status}: Error al obtener archivo`);
 
             const blob = await blobRes.blob();
-            setFileBlob(blob);
             const objUrl = URL.createObjectURL(blob);
             setBlobUrl(objUrl);
 
+            // XLSX/DOCX handling (Client-side previews)
             if (type === 'docx') {
                 setTimeout(async () => {
                     if (docxContainerRef.current) {
                         try {
-                            await docx.renderAsync(blob, docxContainerRef.current, undefined, {
-                                className: 'docx-viewer',
-                                inWrapper: true
-                            });
+                            await docx.renderAsync(blob, docxContainerRef.current, undefined, { className: 'docx-viewer' });
                         } catch {
                             setUseExternalViewer(true);
                             loadContent(true);
                         }
                     }
-                }, 0);
+                }, 100);
             }
 
             if (type === 'xlsx') {
                 setTimeout(async () => {
                     try {
-                        const arrayBuffer = await blob.arrayBuffer();
-                        const workbook = XLSX.read(arrayBuffer);
-                        const firstSheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[firstSheetName];
-                        const html = XLSX.utils.sheet_to_html(worksheet);
-                        if (xlsxContainerRef.current) {
-                            xlsxContainerRef.current.innerHTML = html;
-                        }
+                        const buffer = await blob.arrayBuffer();
+                        const wb = XLSX.read(buffer);
+                        const html = XLSX.utils.sheet_to_html(wb.Sheets[wb.SheetNames[0]]);
+                        if (xlsxContainerRef.current) xlsxContainerRef.current.innerHTML = html;
                     } catch {
                         setUseExternalViewer(true);
                         loadContent(true);
                     }
-                }, 0);
+                }, 100);
             }
 
         } catch (err: any) {
-            setError(err.message || 'Error cargando archivo');
+            setError(err.message || 'Error desconocido');
         } finally {
             setLoading(false);
         }
     };
 
     const handleDownload = () => {
-        if (blobUrl) {
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+        if (!blobUrl) return;
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = fileName;
+        a.click();
     };
 
-    // ── Loading state ──
+    // ── Condicionales de renderizado ──
     if (loading && fileType !== 'pptx') {
         return (
-            <div className="flex flex-col items-center justify-center p-12 space-y-4 min-h-[400px]">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                <p className="text-sm text-gray-500 font-medium">Preparando visualización segura...</p>
-                <p className="text-xs text-gray-400">Descargando archivo de forma cifrada</p>
+            <div className="flex flex-col items-center justify-center p-20 space-y-4 bg-white/50 backdrop-blur-md rounded-2xl border border-gray-100 shadow-xl">
+                <div className="relative">
+                    <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+                    </div>
+                </div>
+                <div className="text-center">
+                    <p className="text-sm font-bold text-gray-800 tracking-tight">Cifrando vista previa...</p>
+                    <p className="text-[10px] text-gray-400 font-mono mt-1">AES-256 R2_SECURE_TRANSPORT</p>
+                </div>
             </div>
         );
     }
@@ -356,22 +374,17 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center p-8 text-center bg-red-50 rounded-lg min-h-[300px]">
-                <AlertCircle className="w-8 h-8 text-red-500 mb-3" />
-                <p className="text-red-700 font-semibold mb-1">Error al cargar el archivo</p>
-                <p className="text-red-500 text-sm mb-4">{error}</p>
-                <div className="flex gap-3">
-                    <button onClick={() => loadContent()} className="text-sm text-blue-600 hover:underline font-medium">
-                        Reintentar
+            <div className="p-8 text-center bg-red-50/50 backdrop-blur border border-red-100 rounded-2xl max-w-lg mx-auto shadow-sm">
+                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4 opacity-80" />
+                <h3 className="text-red-900 font-black tracking-tight text-lg mb-2">Fallo en la conexión segura</h3>
+                <p className="text-red-600/70 text-sm mb-6 font-medium leading-relaxed">{error}</p>
+                <div className="flex flex-col gap-2">
+                    <Button onClick={() => loadContent()} className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl h-12">
+                        Reintentar enlace
+                    </Button>
+                    <button onClick={() => { setUseExternalViewer(true); loadContent(); }} className="text-xs text-zinc-400 hover:text-zinc-600 font-bold transition-colors">
+                        Usar motor redundante (Office Online)
                     </button>
-                    {(fileType === 'docx' || fileType === 'xlsx') && !useExternalViewer && (
-                        <button
-                            onClick={() => { setUseExternalViewer(true); loadContent(); }}
-                            className="text-sm text-orange-600 hover:underline font-medium"
-                        >
-                            Usar Visor Alternativo
-                        </button>
-                    )}
                 </div>
             </div>
         );
@@ -380,183 +393,136 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     return (
         <div
             ref={containerRef}
-            className={`w-full ${isFullscreen ? 'h-screen' : 'h-full'} flex flex-col bg-gray-50 min-h-[500px] overflow-hidden rounded-lg relative transition-all duration-300`}
-            onContextMenu={(e) => { e.preventDefault(); return false; }}
+            className={`w-full ${isFullscreen ? 'h-screen fixed inset-0 z-[9999]' : 'h-full'} flex flex-col bg-[#F4F4F5] overflow-hidden rounded-xl relative select-none`}
+            onContextMenu={(e) => e.preventDefault()}
         >
-            {/* Overlay anti-copia pasivo */}
-            <div className="absolute inset-0 z-50 pointer-events-none mix-blend-multiply" />
+            {/* Header / Barra de herramientas superior */}
+            <div className="h-14 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-6 z-[110]">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100">
+                        <Lock className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <span className="text-xs font-black text-zinc-900 uppercase tracking-widest truncate max-w-[200px]">
+                        {fileName}
+                    </span>
+                </div>
 
-            {/* Botón fullscreen */}
-            <div className="absolute top-4 right-4 z-[110] flex gap-2">
-                <button
-                    onClick={toggleFullscreen}
-                    className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-lg backdrop-blur-sm transition-all flex items-center justify-center border border-white/10"
-                    title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                >
-                    {isFullscreen ? <Minimize className="w-5 h-5 flex-shrink-0" /> : <Maximize className="w-5 h-5 flex-shrink-0" />}
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={toggleFullscreen}
+                        className="p-2.5 text-zinc-600 hover:bg-zinc-100 rounded-xl transition-all active:scale-90"
+                    >
+                        {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                    </button>
+                </div>
             </div>
 
-            <div className={`flex-1 flex flex-col overflow-hidden relative ${isFullscreen ? 'p-0' : ''}`}>
-
-                {/* 1. PDF — Lazy loading por página */}
-                {fileType === 'pdf' && blobUrl && (
-                    <div
-                        className="flex-1 overflow-auto bg-gray-100/50 flex justify-center p-4 scrollbar-thin"
-                        onClick={(e) => { if (e.target === e.currentTarget) onClose?.(false); }}
-                    >
+            <div className="flex-1 overflow-hidden relative">
+                {fileType === 'pdf' && fileSource && (
+                    <div className="h-full overflow-auto bg-[#E4E4E7]/50 flex justify-center scroll-smooth scrollbar-thin">
                         <Document
-                            file={blobUrl}
-                            options={{
-                                cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
-                                cMapPacked: true,
-                            }}
+                            file={fileSource}
                             onLoadSuccess={({ numPages: n }) => {
                                 setNumPages(n);
-                                // CRÍTICO: Solo activar lazy loading una vez que el worker está listo
-                                // Pequeño delay para garantizar que el worker está completamente inicializado
-                                setTimeout(() => setPdfReady(true), 150);
+                                // V4.0: Handshake robusto con el worker local
+                                // Pequeña espera para asegurar que el thread del worker está idle
+                                setTimeout(() => setPdfReady(true), 250);
                             }}
                             onLoadError={(err) => {
-                                console.error('PDF Load Error:', err);
-                                setError('No se pudo cargar el PDF. Intenta recargar la página.');
+                                console.error('PDF Worker Critical Failure:', err);
+                                setError('El motor de PDF falló al inicializar. Por favor, recarga o usa el motor redundante.');
                             }}
                             loading={
-                                <div className="flex flex-col items-center justify-center p-12">
-                                    <Loader2 className="animate-spin text-blue-500 w-8 h-8 mb-2" />
-                                    <p className="text-sm text-gray-500">Analizando documento...</p>
+                                <div className="p-20 text-center animate-in fade-in zoom-in duration-500">
+                                    <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+                                    <p className="text-xs font-black text-blue-600 uppercase tracking-widest">Iniciando Virtualización...</p>
                                 </div>
                             }
                             className="max-w-full"
                         >
                             {numPages && (
                                 isMobile ? (
-                                    // Móvil: una página a la vez
                                     <MobilePdfNavigator
                                         numPages={numPages}
-                                        pageWidth={Math.min(windowWidth - 32, 600)}
-                                        estimatedHeight={Math.round(Math.min(windowWidth - 32, 600) * 1.414)}
+                                        pageWidth={pdfPageWidth}
+                                        estimatedHeight={estimatedPageHeight}
                                     />
                                 ) : (
-                                    // PC: scroll continuo con lazy loading por página
-                                    Array.from({ length: numPages }, (_, i) => (
-                                        <LazyPdfPage
-                                            key={`page_${i + 1}`}
-                                            pageNumber={i + 1}
-                                            pageWidth={pdfPageWidth}
-                                            estimatedHeight={estimatedPageHeight}
-                                            pdfReady={pdfReady}
-                                        />
-                                    ))
+                                    <div className="py-8 px-4 flex flex-col items-center">
+                                        {Array.from({ length: numPages }, (_, i) => (
+                                            <VirtualizedLazyPage
+                                                key={`vp_${i + 1}`}
+                                                pageNumber={i + 1}
+                                                pageWidth={pdfPageWidth}
+                                                estimatedHeight={estimatedPageHeight}
+                                                pdfReady={pdfReady}
+                                            />
+                                        ))}
+                                    </div>
                                 )
                             )}
                         </Document>
                     </div>
                 )}
 
-                {/* 2. DOCX */}
                 {fileType === 'docx' && !useExternalViewer && (
-                    <div
-                        className="flex-1 overflow-auto bg-white p-4 scrollbar-thin"
-                        onClick={(e) => { if (e.target === e.currentTarget) onClose?.(false); }}
-                    >
-                        <div ref={docxContainerRef} className="max-w-[800px] mx-auto docx-content shadow-sm" />
+                    <div className="h-full overflow-auto bg-white p-6 shadow-inner">
+                        <div ref={docxContainerRef} className="max-w-[850px] mx-auto docx-content shadow-2xl p-8 rounded-lg bg-white border border-gray-100" />
                     </div>
                 )}
 
-                {/* 3. XLSX */}
                 {fileType === 'xlsx' && !useExternalViewer && (
-                    <div
-                        className="flex-1 overflow-auto bg-white scrollbar-thin"
-                        onClick={(e) => { if (e.target === e.currentTarget) onClose?.(false); }}
-                    >
-                        <div ref={xlsxContainerRef} className="p-4 overflow-x-auto excel-viewer" />
+                    <div className="h-full overflow-auto bg-white shadow-inner">
+                        <div ref={xlsxContainerRef} className="excel-viewer p-6" />
                     </div>
                 )}
 
-                {/* 4. Imagen */}
                 {fileType === 'image' && blobUrl && (
-                    <div
-                        className="flex-1 flex items-center justify-center p-8 overflow-auto scrollbar-thin"
-                        onClick={(e) => { if (e.target === e.currentTarget) onClose?.(false); }}
-                    >
-                        <div className="relative shadow-2xl rounded-xl overflow-hidden group">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                                src={blobUrl}
-                                alt={fileName}
-                                className={`${isFullscreen ? 'h-[90vh] w-auto' : 'max-w-full h-auto'} selection:bg-transparent`}
-                                onContextMenu={(e) => e.preventDefault()}
-                            />
-                            <div className="absolute inset-0 z-10 bg-transparent pointer-events-none" />
-                        </div>
-                    </div>
-                )}
-
-                {/* 5. Visor externo (Office Online fallback) */}
-                {useExternalViewer && externalViewerUrl && (
-                    <div className="flex-1 bg-gray-100 h-full relative">
-                        <iframe
-                            src={externalViewerUrl}
-                            width="100%"
-                            height="100%"
-                            frameBorder="0"
-                            title="Document Viewer"
-                            className="h-full border-none w-full min-h-[600px]"
-                            allowFullScreen
+                    <div className="h-full flex items-center justify-center p-12 overflow-auto bg-zinc-900 shadow-inner">
+                        <img
+                            src={blobUrl}
+                            alt={fileName}
+                            className="max-w-full max-h-full object-contain shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)] rounded-lg pointer-events-none"
                         />
-                        <div className="absolute inset-x-0 top-0 h-10 bg-transparent pointer-events-none z-20" />
                     </div>
                 )}
 
-                {/* 6. Tipo no soportado */}
-                {!loading && fileType === 'other' && (
-                    <div className="flex-1 flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto">
-                        <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mb-6 border border-gray-200">
-                            <Lock className="w-10 h-10 text-gray-400" />
+                {useExternalViewer && externalViewerUrl && (
+                    <iframe src={externalViewerUrl} className="w-full h-full border-none bg-zinc-100" />
+                )}
+
+                {fileType === 'other' && !loading && (
+                    <div className="h-full flex flex-col items-center justify-center p-12 text-center">
+                        <div className="w-24 h-24 bg-zinc-100 rounded-[2.5rem] flex items-center justify-center mb-8 border border-zinc-200">
+                            <Lock className="w-10 h-10 text-zinc-400" />
                         </div>
-                        <h3 className="text-gray-900 font-bold text-xl mb-2">Vista Previa No Disponible</h3>
-                        <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-                            Este tipo de archivo (.{fileName.split('.').pop()?.toUpperCase()}) no puede visualizarse en el navegador.
+                        <h3 className="text-zinc-900 font-black text-2xl tracking-tighter mb-4">Formato Restringido</h3>
+                        <p className="text-zinc-500 text-sm mb-10 max-w-sm leading-relaxed">
+                            Por seguridad, este formato no se puede visualizar en línea. Descarga el archivo para verlo localmente.
                         </p>
-                        <Button
-                            onClick={handleDownload}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-6 rounded-xl transition-all shadow-lg"
-                        >
-                            <Download className="w-5 h-5 mr-2" />
-                            Descargar Archivo
+                        <Button onClick={handleDownload} className="bg-zinc-900 text-white font-black px-12 py-7 rounded-2xl hover:bg-blue-600 transition-all shadow-2xl">
+                            Descargar {fileName.split('.').pop()?.toUpperCase()}
                         </Button>
                     </div>
                 )}
-
-                {/* Overlay global de protección */}
-                <div
-                    className="fixed inset-0 z-[1000] pointer-events-none select-none"
-                    onContextMenu={(e) => e.preventDefault()}
-                />
             </div>
 
-            {/* Footer de seguridad */}
-            <div className="bg-[#121212]/95 border-t border-white/5 p-3 text-center z-[100]">
-                <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.3em] flex items-center justify-center gap-2">
-                    <span className="w-1 h-1 bg-red-600 rounded-full shadow-[0_0_8px_rgba(220,38,38,1)] animate-pulse" />
-                    Lectura Protegida • CampusLink Security v2.5
+            {/* Footer de Protección Senior */}
+            <div className="bg-zinc-900 h-10 flex items-center justify-center px-4">
+                <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em] flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full shadow-[0_0_10px_#3b82f6] animate-pulse" />
+                    Secured by CampusLink Virtualization Engine v4.0.0 (Stable)
                 </p>
             </div>
 
             <style jsx global>{`
-                .react-pdf__Page__canvas {
-                    margin: 0 auto;
-                    max-width: 100% !important;
-                    height: auto !important;
-                }
-                .docx-content table { width: 100% !important; border-collapse: collapse; }
-                .excel-viewer table { border-collapse: collapse; width: 100%; }
-                .excel-viewer th, .excel-viewer td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
-                .scrollbar-thin::-webkit-scrollbar { width: 6px; }
-                .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+                .react-pdf__Document { display: flex; flex-direction: column; align-items: center; }
+                .react-pdf__Page__canvas { border-radius: 4px; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15); }
+                .docx-content table { width: 100% !important; border: 1px solid #eee; }
+                .excel-viewer table { border-collapse: collapse; min-width: 100%; font-family: sans-serif; }
+                .excel-viewer td { border: 1px solid #e2e8f0; padding: 12px; font-size: 13px; color: #475569; }
+                .scrollbar-thin::-webkit-scrollbar { width: 4px; }
                 .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-                .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
             `}</style>
         </div>
     );

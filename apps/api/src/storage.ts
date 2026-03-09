@@ -303,17 +303,11 @@ storageRouter.get('/public-stream', async (c) => {
 storageRouter.get('/secure-url', async (c) => {
     const path = c.req.query('path')
     const bucketName = c.req.query('bucket') || 'course-materials'
+    const rangeHeader = c.req.header('Range')
 
-    // console.log(`📂 Storage request: bucket=${bucketName}, path=${path}`)
+    if (!path) return c.json({ error: 'Falta path' }, 400)
 
-    if (!path) {
-        return c.json({ error: 'Falta el parámetro "path"' }, 400)
-    }
-
-    // Seleccionar el bucket correcto
     let bucket: R2Bucket | undefined
-
-    // Normalizar nombres de bucket (aceptar con guion bajo o guion)
     const normalizedBucket = bucketName.replace(/_/g, '-')
 
     switch (normalizedBucket) {
@@ -323,51 +317,46 @@ storageRouter.get('/secure-url', async (c) => {
         case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
         case 'grupos': bucket = c.env.GRUPOS; break;
         case 'thumbnails': bucket = c.env.THUMBNAILS; break;
-        default:
-            // console.log(`❌ Bucket inválido: ${bucketName}`)
-            return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
+        default: return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
     }
 
-    if (!bucket) {
-        return c.json({ error: 'Bucket no configurado' }, 500)
-    }
+    if (!bucket) return c.json({ error: 'Bucket no configurado' }, 500)
 
     try {
-        const object = await bucket.get(path)
+        // Soporte de Range Requests para PDF.js y optimización de grandes archivos
+        const object = await bucket.get(path, {
+            range: rangeHeader,
+        })
 
-        if (object === null) {
-            return c.json({ error: 'Archivo no encontrado' }, 404)
-        }
+        if (object === null) return c.json({ error: 'Archivo no encontrado' }, 404)
 
         const headers = new Headers()
         object.writeHttpMetadata(headers)
         headers.set('etag', object.httpEtag)
+        headers.set('Accept-Ranges', 'bytes')
 
-        // CORS headers
-        const origin = c.req.header('Origin')
-        let allowedOrigin = c.env.ALLOWED_ORIGIN
-
-        if (origin) {
-            if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.endsWith('.pages.dev') || origin === c.env.ALLOWED_ORIGIN) {
-                allowedOrigin = origin
+        let status = 200
+        if (rangeHeader && 'range' in object && object.range) {
+            const r = object.range as { offset?: number; length?: number; suffix?: number };
+            if (r.offset !== undefined && r.length !== undefined) {
+                headers.set('Content-Range', `bytes ${r.offset}-${r.offset + r.length - 1}/${object.size}`)
+                status = 206
             }
         }
 
-        headers.set('Access-Control-Allow-Origin', allowedOrigin)
+        // CORS headers robustos
+        const origin = c.req.header('Origin') || c.env.ALLOWED_ORIGIN
+        headers.set('Access-Control-Allow-Origin', origin)
         headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
-        headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        headers.set('Access-Control-Expose-Headers', 'Content-Length, Content-Type')
-
+        headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Range')
+        headers.set('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Content-Range, Accept-Ranges')
         headers.set('Content-Disposition', 'inline')
 
-        return new Response(object.body, { headers })
+        return new Response(object.body, { headers, status })
 
     } catch (e: any) {
-        console.error(`❌ Error obteniendo archivo:`, e)
+        console.error(`❌ Error en secure-url:`, e)
         return c.json({ error: e.message }, 500)
     }
 })
-
-
-
 export default storageRouter
