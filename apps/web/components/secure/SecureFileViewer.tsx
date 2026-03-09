@@ -255,8 +255,11 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                     <div className="flex-1 overflow-auto bg-gray-100/50 flex justify-center p-4 scrollbar-thin" onClick={(e) => { if (e.target === e.currentTarget) onClose?.(false); }}>
                         <Document
                             file={pdfFile}
-                            cMapUrl={`https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`}
-                            cMapPacked={true}
+                            options={{
+                                cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+                                cMapPacked: true,
+                                standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+                            }}
                             onLoadSuccess={({ numPages }) => {
                                 setNumPages(numPages);
                             }}
