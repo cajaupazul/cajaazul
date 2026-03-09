@@ -153,6 +153,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     const [numPages, setNumPages] = useState<number | null>(null);
     const [pdfReady, setPdfReady] = useState(false);
     const [containerWidth, setContainerWidth] = useState(0); // V4.4: Ancho dinámico real
+    const [docxScale, setDocxScale] = useState(1); // V4.5: Escala para DOCX
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
@@ -201,6 +202,25 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
 
         return () => observer.disconnect();
     }, []);
+
+    // V4.5: Efecto para recalcular escala de DOCX cuando cambia el ancho o el contenido
+    useEffect(() => {
+        if (fileType === 'docx' && docxContainerRef.current && containerWidth > 0) {
+            const timer = setTimeout(() => {
+                const docEl = docxContainerRef.current?.querySelector('.docx-viewer') as HTMLElement;
+                if (docEl) {
+                    const docWidth = docEl.offsetWidth || 800;
+                    const availableWidth = containerWidth - (isMobile ? 16 : 48); // Margen de seguridad
+                    if (docWidth > availableWidth) {
+                        setDocxScale(availableWidth / docWidth);
+                    } else {
+                        setDocxScale(1);
+                    }
+                }
+            }, 500); // Esperar a que docx-preview termine de renderizar
+            return () => clearTimeout(timer);
+        }
+    }, [fileType, containerWidth, isMobile, blobUrl]);
 
     useEffect(() => {
         setPdfReady(false);
@@ -295,7 +315,12 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                 setTimeout(async () => {
                     if (docxContainerRef.current) {
                         try {
-                            await docx.renderAsync(blob, docxContainerRef.current, undefined, { className: 'docx-viewer' });
+                            await docx.renderAsync(blob, docxContainerRef.current, undefined, {
+                                className: 'docx-viewer',
+                                ignoreLastRenderedPageBreak: false
+                            });
+                            // Trigger re-scale after render
+                            setDocxScale(0.99);
                         } catch { setUseExternalViewer(true); loadContent(true); }
                     }
                 }, 100);
@@ -409,7 +434,17 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                 )}
 
                 {fileType === 'docx' && !useExternalViewer && (
-                    <div className="h-full overflow-auto bg-white p-6 shadow-inner"><div ref={docxContainerRef} className="max-w-[850px] mx-auto docx-content shadow-2xl p-8 rounded-lg bg-white border border-gray-100" /></div>
+                    <div className="h-full overflow-auto bg-zinc-100/50 flex flex-col items-center">
+                        <div
+                            ref={docxContainerRef}
+                            className="docx-content-wrapper transition-transform duration-500 origin-top"
+                            style={{
+                                transform: `scale(${docxScale})`,
+                                width: 'fit-content',
+                                margin: '20px auto'
+                            }}
+                        />
+                    </div>
                 )}
                 {fileType === 'xlsx' && !useExternalViewer && (
                     <div className="h-full overflow-auto bg-white shadow-inner"><div ref={xlsxContainerRef} className="excel-viewer p-6" /></div>
@@ -432,13 +467,19 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
             </div>
 
             <div className="bg-zinc-900 h-10 flex items-center justify-center">
-                <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Advanced Virtualization Engine v4.4 Stable</p>
+                <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Advanced Virtualization Engine v4.5 Stable</p>
             </div>
 
             <style jsx global>{`
                 .react-pdf__Document { display: flex; flex-direction: column; align-items: center; }
                 .react-pdf__Page__canvas { border-radius: 4px; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15); }
-                .docx-content table { width: 100% !important; border: 1px solid #eee; }
+                .docx-content-wrapper .docx-viewer { 
+                    background: white; 
+                    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+                    border-radius: 8px;
+                    padding: ${isMobile ? '8px' : '40px'} !important;
+                }
+                .docx-content-wrapper table { width: 100% !important; border: 1px solid #eee; }
                 .excel-viewer table { border-collapse: collapse; min-width: 100%; }
                 .excel-viewer td { border: 1px solid #e2e8f0; padding: 12px; font-size: 13px; }
             `}</style>
