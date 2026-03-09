@@ -36,7 +36,8 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     const xlsxContainerRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const pdfFile = useMemo(() => fileBlob || blobUrl, [fileBlob, blobUrl]);
+    // Only use blobUrl (string) for PDF - never pass Blob directly as it causes ArrayBuffer detachment
+    const pdfFile = blobUrl;
 
     useEffect(() => {
         const handleResize = () => setWindowWidth(window.innerWidth);
@@ -258,7 +259,6 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                             options={{
                                 cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
                                 cMapPacked: true,
-                                standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
                             }}
                             onLoadSuccess={({ numPages }) => {
                                 setNumPages(numPages);
