@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Loader2, AlertCircle, Download, Lock, Maximize, Minimize, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, AlertCircle, Download, Lock, Maximize, Minimize, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Document, Page, pdfjs } from 'react-pdf';
 import * as docx from 'docx-preview';
@@ -9,8 +9,7 @@ import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import SecurePptxViewer from './SecurePptxViewer';
 
-// V4.2: Configuración del worker local. 
-// Es CRÍTICO que el worker y la librería tengan la misma versión bit-por-bit.
+// V4.2+: Configuración del worker local.
 if (typeof window !== 'undefined') {
     pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 }
@@ -69,7 +68,7 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady 
                         loading={
                             <div className="bg-white flex flex-col items-center justify-center gap-2" style={{ width: pageWidth, height: estimatedHeight }}>
                                 <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
-                                <p className="text-gray-300 text-xs">Pág. {pageNumber}</p>
+                                <p className="text-gray-300 text-xs text-center px-4">Pág. {pageNumber}</p>
                             </div>
                         }
                     />
@@ -85,7 +84,7 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady 
     );
 }
 
-// ─── Mobile Navigator ─────────────────────────────────────────────────────────
+// ─── Mobile Navigator (For Large Files) ───────────────────────────────────────
 interface MobilePdfNavigatorProps {
     numPages: number;
     pageWidth: number;
@@ -146,30 +145,31 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     const [error, setError] = useState<string | null>(null);
     const [fileType, setFileType] = useState<'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'other'>('other');
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
-    const [sessionToken, setSessionToken] = useState<string | null>(null); // V4.2: Auth para Range Requests
+    const [sessionToken, setSessionToken] = useState<string | null>(null);
+    const [fileSize, setFileSize] = useState<number>(0); // V4.6: Inteligencia por tamaño
+    const [docxScale, setDocxScale] = useState(1);
     const [externalViewerUrl, setExternalViewerUrl] = useState<string | null>(null);
     const [useExternalViewer, setUseExternalViewer] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [numPages, setNumPages] = useState<number | null>(null);
     const [pdfReady, setPdfReady] = useState(false);
-    const [containerWidth, setContainerWidth] = useState(0); // V4.4: Ancho dinámico real
-    const [docxScale, setDocxScale] = useState(1); // V4.5: Escala para DOCX
+    const [containerWidth, setContainerWidth] = useState(0);
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
     const xlsxContainerRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // V4.2: Re-introducción de headers HTTP para que PDF.js pueda realizar Range Requests autenticados
+    // V4.6+: Inteligencia de navegación basada en tamaño
+    // PDFs < 5MB = Scroll continuo | >= 5MB = Página por página (Móvil)
+    const isLargeFile = useMemo(() => fileSize >= 5 * 1024 * 1024, [fileSize]);
+
     const fileSource = useMemo(() => {
         if (!blobUrl || !sessionToken) return null;
-
         if (filePath.toLowerCase().endsWith('.pdf')) {
             return {
                 url: blobUrl,
-                httpHeaders: {
-                    'Authorization': `Bearer ${sessionToken}`
-                },
+                httpHeaders: { 'Authorization': `Bearer ${sessionToken}` },
                 withCredentials: true,
                 cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
                 cMapPacked: true,
@@ -180,7 +180,6 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
 
     const pdfPageWidth = useMemo(() => {
         if (containerWidth === 0) return 300;
-        // V4.4: Usamos el ancho real del contenedor menos un margen de seguridad mínimo (2px para bordes)
         const safetyMargin = isMobile ? 4 : (isFullscreen ? 40 : 80);
         const availableWidth = containerWidth - safetyMargin;
         return isMobile ? availableWidth : Math.min(availableWidth, 850);
@@ -195,29 +194,24 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                 setIsMobile(entry.contentRect.width < 768);
             }
         });
-
-        if (containerRef.current) {
-            observer.observe(containerRef.current);
-        }
-
+        if (containerRef.current) observer.observe(containerRef.current);
         return () => observer.disconnect();
     }, []);
 
-    // V4.5: Efecto para recalcular escala de DOCX cuando cambia el ancho o el contenido
     useEffect(() => {
         if (fileType === 'docx' && docxContainerRef.current && containerWidth > 0) {
             const timer = setTimeout(() => {
                 const docEl = docxContainerRef.current?.querySelector('.docx-viewer') as HTMLElement;
                 if (docEl) {
                     const docWidth = docEl.offsetWidth || 800;
-                    const availableWidth = containerWidth - (isMobile ? 16 : 48); // Margen de seguridad
+                    const availableWidth = containerWidth - (isMobile ? 16 : 48);
                     if (docWidth > availableWidth) {
                         setDocxScale(availableWidth / docWidth);
                     } else {
                         setDocxScale(1);
                     }
                 }
-            }, 500); // Esperar a que docx-preview termine de renderizar
+            }, 500);
             return () => clearTimeout(timer);
         }
     }, [fileType, containerWidth, isMobile, blobUrl]);
@@ -260,7 +254,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
             if (!token) throw new Error('Sesión de usuario expirada.');
-            setSessionToken(token); // Guardamos token para PDF.js
+            setSessionToken(token);
 
             let type: typeof fileType = 'other';
             if (lowerPath.endsWith('.pdf')) type = 'pdf';
@@ -297,14 +291,22 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
 
             const secureUrl = `${baseUrl}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`;
 
+            // V4.6+: Obtener tamaño real del archivo vía HEAD
+            try {
+                const headRes = await fetch(secureUrl, {
+                    method: 'HEAD',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const length = headRes.headers.get('Content-Length');
+                if (length) setFileSize(parseInt(length));
+            } catch (e) { console.warn("Falló detección de tamaño, usando modo seguro (Páginas)"); setFileSize(10 * 1024 * 1024); }
+
             if (type === 'pdf') {
-                // V4.2: Para PDF usamos la URL de la API directamente (con headers de auth via Document prop)
                 setBlobUrl(secureUrl);
                 setLoading(false);
                 return;
             }
 
-            // Descarga normal para el resto
             const blobRes = await fetch(secureUrl, { headers: { 'Authorization': `Bearer ${token}` } });
             if (!blobRes.ok) throw new Error(`Status ${blobRes.status}: Error al obtener archivo`);
             const blob = await blobRes.blob();
@@ -319,7 +321,6 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                                 className: 'docx-viewer',
                                 ignoreLastRenderedPageBreak: false
                             });
-                            // Trigger re-scale after render
                             setDocxScale(0.99);
                         } catch { setUseExternalViewer(true); loadContent(true); }
                     }
@@ -382,24 +383,37 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
     return (
         <div
             ref={containerRef}
-            className={`w-full ${isFullscreen ? 'h-screen fixed inset-0 z-[9999]' : 'h-full'} flex flex-col bg-[#F4F4F5] overflow-hidden rounded-xl relative select-none`}
+            className={`w-full ${isFullscreen ? 'h-screen fixed inset-0 z-[9999]' : 'h-full'} flex flex-col bg-[#F4F4F5] overflow-hidden rounded-xl relative select-none shadow-2xl`}
             onContextMenu={(e) => e.preventDefault()}
         >
-            <div className="h-14 bg-white/90 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-6 z-[110]">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100 italic font-black text-blue-600">v4</div>
-                    <span className="text-xs font-black text-zinc-900 uppercase tracking-widest truncate max-w-[200px]">{fileName}</span>
+            {/* V4.6+: Encabezado inteligente (se oculta en fullscreen) */}
+            {!isFullscreen && (
+                <div className="h-14 bg-white/90 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-6 z-[110]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100 italic font-black text-blue-600">v4</div>
+                        <span className="text-xs font-black text-zinc-900 uppercase tracking-widest truncate max-w-[200px]">{fileName}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button onClick={toggleFullscreen} className="p-2.5 text-zinc-600 hover:bg-zinc-100 rounded-xl transition-all active:scale-95">
+                            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                        </button>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={toggleFullscreen} className="p-2.5 text-zinc-600 hover:bg-zinc-100 rounded-xl transition-all active:scale-95">
-                        {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-                    </button>
-                </div>
-            </div>
+            )}
 
-            <div className="flex-1 overflow-hidden relative">
+            {/* V4.6+: Botón de cierre flotante solo en Fullscreen */}
+            {isFullscreen && (
+                <button
+                    onClick={toggleFullscreen}
+                    className="fixed top-6 right-6 z-[200] p-4 bg-zinc-900/50 text-white rounded-full backdrop-blur-xl border border-white/10 hover:bg-zinc-900 hover:scale-110 transition-all shadow-2xl group"
+                >
+                    <X className="w-6 h-6 group-active:scale-90" />
+                </button>
+            )}
+
+            <div className={`flex-1 overflow-hidden relative ${isFullscreen ? 'bg-zinc-950' : 'bg-[#E4E4E7]/50'}`}>
                 {fileType === 'pdf' && fileSource && (
-                    <div className="h-full overflow-auto bg-[#E4E4E7]/50 flex flex-col items-center scroll-smooth scrollbar-none">
+                    <div className="h-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none">
                         <Document
                             file={fileSource}
                             onLoadSuccess={({ numPages: n }) => {
@@ -409,17 +423,16 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                             onLoadError={(err) => {
                                 console.error('CRITICAL PDF ERROR:', err);
                                 if (err && typeof err === 'object') {
-                                    console.log('Error Properties:', Object.keys(err));
-                                    setError(`Fallo de motor (v4.2): ${JSON.stringify(err)}`);
+                                    setError(`Fallo de motor (v4.6): ${JSON.stringify(err)}`);
                                 } else {
                                     setError('Error de motor local. Prueba "Reintentar" o usa "Motor Microsoft".');
                                 }
                             }}
-                            loading={<div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto" /><p className="text-xs font-bold text-blue-600 mt-4 uppercase tracking-[0.2em]">Iniciando Virtualización...</p></div>}
+                            loading={<div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto" /><p className="text-xs font-bold text-blue-600 mt-4 uppercase tracking-[0.2em]">Iniciando Inteligencia...</p></div>}
                             className="max-w-full"
                         >
                             {numPages && (
-                                isMobile ? (
+                                isMobile && isLargeFile ? (
                                     <MobilePdfNavigator numPages={numPages} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} />
                                 ) : (
                                     <div className="py-8 px-4 flex flex-col items-center">
@@ -441,7 +454,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                             style={{
                                 transform: `scale(${docxScale})`,
                                 width: 'fit-content',
-                                margin: '20px auto'
+                                margin: isFullscreen ? '0' : '20px auto'
                             }}
                         />
                     </div>
@@ -466,22 +479,27 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                 )}
             </div>
 
-            <div className="bg-zinc-900 h-10 flex items-center justify-center">
-                <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Advanced Virtualization Engine v4.5 Stable</p>
-            </div>
+            {/* V4.6+: Pie de página inteligente (se oculta en fullscreen) */}
+            {!isFullscreen && (
+                <div className="bg-zinc-900 h-10 flex items-center justify-center">
+                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Advanced Virtualization Engine v4.6 Stable</p>
+                </div>
+            )}
 
             <style jsx global>{`
                 .react-pdf__Document { display: flex; flex-direction: column; align-items: center; }
-                .react-pdf__Page__canvas { border-radius: 4px; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15); }
+                .react-pdf__Page__canvas { border-radius: 4px; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25); }
                 .docx-content-wrapper .docx-viewer { 
                     background: white; 
                     box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-                    border-radius: 8px;
+                    border-radius: 4px;
                     padding: ${isMobile ? '8px' : '40px'} !important;
                 }
                 .docx-content-wrapper table { width: 100% !important; border: 1px solid #eee; }
                 .excel-viewer table { border-collapse: collapse; min-width: 100%; }
                 .excel-viewer td { border: 1px solid #e2e8f0; padding: 12px; font-size: 13px; }
+                .scrollbar-none::-webkit-scrollbar { display: none; }
+                .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
         </div>
     );
