@@ -285,7 +285,8 @@ storageRouter.get('/public-stream', async (c) => {
         // Headers críticos para Microsoft Viewer
         // Microsoft necesita saber el tamaño y tipo para renderizar correctamente
         // Cache corto para permitir range-requests eficientes
-        headers.set('Cache-Control', 'public, max-age=1800')
+        // V5.6: Cache más agresivo (3600s = 1h) para evitar re-descargas en móviles
+        headers.set('Cache-Control', 'public, max-age=3600')
         headers.set('Content-Disposition', `inline; filename="${payload.p.split('/').pop()}"`)
         headers.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox")
 
@@ -348,6 +349,9 @@ storageRouter.get('/secure-url', async (c) => {
                 status = 206
             }
         }
+
+        // V5.6: Cache consistente de 1 hora
+        headers.set('Cache-Control', 'public, max-age=3600')
 
         // Dejar que Hono maneje el CORS global, pero asegurar headers críticos para PDF.js
         headers.set('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Content-Range, Accept-Ranges')

@@ -45,7 +45,8 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
                 setShouldMount(entry.isIntersecting);
             },
             {
-                rootMargin: '2500px 0px 2500px 0px',
+                // V5.6: Margen adaptativo: 800px en móvil (ahorro RAM) | 2500px en PC (fluidez)
+                rootMargin: isMobile ? '800px 0px 800px 0px' : '2500px 0px 2500px 0px',
                 threshold: 0
             }
         );
@@ -71,6 +72,8 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
                         renderForms={false}
+                        // V5.6: Escala optimizada para móvil (reduce RAM)
+                        scale={isMobile ? 1.5 : 2}
                         onRenderSuccess={(page) => {
                             setActualHeight(page.height);
                         }}
@@ -522,7 +525,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             {/* V4.6+: Pie de página inteligente (se oculta en fullscreen) */}
             {!isFullscreen && (
                 <div className="bg-zinc-900 h-10 flex items-center justify-center">
-                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Hybrid Engine v5.0 Stable</p>
+                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Hybrid Engine v5.6 Stable</p>
                 </div>
             )}
 
