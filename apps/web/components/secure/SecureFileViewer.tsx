@@ -72,8 +72,9 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
                         renderForms={false}
-                        // V5.6: Escala optimizada para móvil (reduce RAM)
-                        scale={isMobile ? 1.5 : 2}
+                        // V5.7: Optimización de RAM vía resolución (Pixel Ratio) en lugar de escala (Zoom)
+                        // Esto mantiene el encuadre perfecto pero aligera el canvas interno en móviles.
+                        devicePixelRatio={isMobile ? 1 : 2}
                         onRenderSuccess={(page) => {
                             setActualHeight(page.height);
                         }}
