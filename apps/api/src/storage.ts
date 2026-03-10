@@ -328,35 +328,42 @@ storageRouter.get('/secure-url', async (c) => {
             range: rangeHeader,
         })
 
-        if (object === null) return c.json({ error: 'Archivo no encontrado' }, 404)
+        if (object === null) {
+            console.warn(`⚠️ Archivo no encontrado en R2: ${path}`)
+            return c.json({ error: 'Archivo no encontrado' }, 404)
+        }
 
         const headers = new Headers()
         object.writeHttpMetadata(headers)
         headers.set('etag', object.httpEtag)
         headers.set('Accept-Ranges', 'bytes')
+        headers.set('Content-Disposition', 'inline')
 
         let status = 200
-        if (rangeHeader && 'range' in object && object.range) {
-            const r = object.range as { offset?: number; length?: number; suffix?: number };
+        // Cloudflare R2: Si se pidió un rango y se obtuvo un objeto parcial, objeto.range tendrá los datos
+        if (rangeHeader && object.range) {
+            const r = object.range as any;
             if (r.offset !== undefined && r.length !== undefined) {
                 headers.set('Content-Range', `bytes ${r.offset}-${r.offset + r.length - 1}/${object.size}`)
                 status = 206
             }
         }
 
-        // CORS headers robustos
-        const origin = c.req.header('Origin') || c.env.ALLOWED_ORIGIN
-        headers.set('Access-Control-Allow-Origin', origin)
-        headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
-        headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Range')
+        // Dejar que Hono maneje el CORS global, pero asegurar headers críticos para PDF.js
         headers.set('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Content-Range, Accept-Ranges')
-        headers.set('Content-Disposition', 'inline')
 
-        return new Response(object.body, { headers, status })
+        return new Response(object.body, {
+            headers,
+            status
+        })
 
     } catch (e: any) {
-        console.error(`❌ Error en secure-url:`, e)
-        return c.json({ error: e.message }, 500)
+        console.error(`❌ CRITICAL ERROR en secure-url [${path}]:`, e)
+        return c.json({
+            error: 'Internal Server Error',
+            details: e.message,
+            path: path
+        }, 500)
     }
 })
 export default storageRouter
