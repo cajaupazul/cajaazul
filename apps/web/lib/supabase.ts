@@ -132,6 +132,7 @@ export type Material = {
   tipo: string;
   descargas: number;
   thumbnail_url: string | null;
+  use_advanced_viewer: boolean;
   created_at: string;
   profiles?: Profile;
   courses?: Course;

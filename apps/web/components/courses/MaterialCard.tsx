@@ -4,11 +4,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FileText, FileImage, LayoutPanelLeft, FileSpreadsheet, FileBox, ExternalLink, MoreVertical, Calendar, User, UploadCloud } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getStorageUrl, Material } from '@/lib/supabase';
+import { supabase, getStorageUrl, Material } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Zap, ZapOff, Loader2 } from 'lucide-react';
+import { useProfile } from '@/lib/profile-context';
 
 interface MaterialCardProps {
     material: Material;
@@ -25,6 +26,32 @@ export default function MaterialCard({
     canDelete = false,
     viewMode = 'grid'
 }: MaterialCardProps) {
+    const { profile } = useProfile();
+    const [isUpdatingViewer, setIsUpdatingViewer] = React.useState(false);
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
+
+    const toggleAdvancedViewer = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!isAdmin || isUpdatingViewer) return;
+
+        setIsUpdatingViewer(true);
+        try {
+            const { error } = await supabase
+                .from('materials')
+                .update({ use_advanced_viewer: !material.use_advanced_viewer })
+                .eq('id', material.id);
+
+            if (error) throw error;
+            // No necesitamos refrescar manual si hay realtime o si el componente padre maneja el estado
+            // Pero como es un cambio estructural, el usuario lo verá al re-abrir o vía realtime
+            material.use_advanced_viewer = !material.use_advanced_viewer;
+        } catch (err) {
+            console.error('Error updating viewer mode:', err);
+        } finally {
+            setIsUpdatingViewer(false);
+        }
+    };
+
     const materialType = material.tipo?.toLowerCase() || '';
     const isEnlace = materialType === 'enlace';
 
@@ -243,11 +270,33 @@ export default function MaterialCard({
                             {format(new Date(material.created_at), 'd MMM, yyyy', { locale: es })}
                         </div>
 
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="p-1 px-2 rounded-lg bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase">
-                                Ver
+                        <div className="flex items-center gap-2">
+                            {material.use_advanced_viewer && (
+                                <div className="flex items-center gap-1 text-[9px] font-black text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-500/20 animate-pulse">
+                                    <Zap className="w-2.5 h-2.5 fill-current" />
+                                    PRO
+                                </div>
+                            )}
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="p-1 px-2 rounded-lg bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase">
+                                    Ver
+                                </div>
                             </div>
                         </div>
+
+                        {isAdmin && (
+                            <button
+                                onClick={toggleAdvancedViewer}
+                                disabled={isUpdatingViewer}
+                                className={`p-2 rounded-xl transition-all shadow-sm border z-30 ${material.use_advanced_viewer
+                                    ? 'bg-amber-500/20 text-amber-500 border-amber-500/30'
+                                    : 'bg-zinc-800/10 text-zinc-400 border-zinc-500/10 hover:bg-zinc-800/20'
+                                    }`}
+                                title={material.use_advanced_viewer ? "Desactivar Motor Pro" : "Activar Motor Pro (Paging/Virtualizado)"}
+                            >
+                                {isUpdatingViewer ? <Loader2 className="w-4 h-4 animate-spin" /> : (material.use_advanced_viewer ? <Zap className="w-4 h-4 fill-current" /> : <ZapOff className="w-4 h-4" />)}
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

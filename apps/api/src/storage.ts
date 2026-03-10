@@ -286,7 +286,7 @@ storageRouter.get('/public-stream', async (c) => {
         // Microsoft necesita saber el tamaño y tipo para renderizar correctamente
         // Cache corto para permitir range-requests eficientes
         headers.set('Cache-Control', 'public, max-age=1800')
-        headers.set('Content-Disposition', `attachment; filename="${payload.p.split('/').pop()}"`)
+        headers.set('Content-Disposition', `inline; filename="${payload.p.split('/').pop()}"`)
         headers.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox")
 
         return new Response(object.body, { headers })

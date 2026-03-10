@@ -17,6 +17,7 @@ if (typeof window !== 'undefined') {
 interface SecureFileViewerProps {
     filePath: string;
     fileName: string;
+    useAdvancedViewer?: boolean;
     onClose?: (open: false) => void;
 }
 
@@ -140,11 +141,13 @@ function MobilePdfNavigator({ numPages, pageWidth, estimatedHeight }: MobilePdfN
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function SecureFileViewer({ filePath, fileName, onClose }: SecureFileViewerProps) {
+export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer = false, onClose }: SecureFileViewerProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [fileType, setFileType] = useState<'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'other'>('other');
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
+    const [nativePreviewUrl, setNativePreviewUrl] = useState<string | null>(null);
+    const [showAdvanced, setShowAdvanced] = useState(useAdvancedViewer);
     const [sessionToken, setSessionToken] = useState<string | null>(null);
     const [fileSize, setFileSize] = useState<number>(0); // V4.6: Inteligencia por tamaño
     const [docxScale, setDocxScale] = useState(1);
@@ -225,7 +228,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
             if (blobUrl && blobUrl.startsWith('blob:')) URL.revokeObjectURL(blobUrl);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filePath]);
+    }, [filePath, showAdvanced]);
 
     useEffect(() => {
         const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -302,7 +305,17 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
             } catch (e) { console.warn("Falló detección de tamaño, usando modo seguro (Páginas)"); setFileSize(10 * 1024 * 1024); }
 
             if (type === 'pdf') {
-                setBlobUrl(secureUrl);
+                if (!showAdvanced) {
+                    // Modo Nativo: Obtener URL firmada para el iframe
+                    const previewRes = await fetch(
+                        `${baseUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`,
+                        { headers: { 'Authorization': `Bearer ${token}` } }
+                    );
+                    const data = await previewRes.json();
+                    setNativePreviewUrl(data.url);
+                } else {
+                    setBlobUrl(secureUrl);
+                }
                 setLoading(false);
                 return;
             }
@@ -412,37 +425,45 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
             )}
 
             <div className={`flex-1 overflow-hidden relative ${isFullscreen ? 'bg-zinc-950' : 'bg-[#E4E4E7]/50'}`}>
-                {fileType === 'pdf' && fileSource && (
-                    <div className="h-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none">
-                        <Document
-                            file={fileSource}
-                            onLoadSuccess={({ numPages: n }) => {
-                                setNumPages(n);
-                                setTimeout(() => setPdfReady(true), 150);
-                            }}
-                            onLoadError={(err) => {
-                                console.error('CRITICAL PDF ERROR:', err);
-                                if (err && typeof err === 'object') {
-                                    setError(`Fallo de motor (v4.6): ${JSON.stringify(err)}`);
-                                } else {
-                                    setError('Error de motor local. Prueba "Reintentar" o usa "Motor Microsoft".');
-                                }
-                            }}
-                            loading={<div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto" /><p className="text-xs font-bold text-blue-600 mt-4 uppercase tracking-[0.2em]">Iniciando Inteligencia...</p></div>}
-                            className="max-w-full"
-                        >
-                            {numPages && (
-                                isMobile && isLargeFile ? (
-                                    <MobilePdfNavigator numPages={numPages} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} />
-                                ) : (
-                                    <div className="flex flex-col items-center">
-                                        {Array.from({ length: numPages }, (_, i) => (
-                                            <VirtualizedLazyPage key={`vp_${i + 1}`} pageNumber={i + 1} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} pdfReady={pdfReady} />
-                                        ))}
-                                    </div>
-                                )
-                            )}
-                        </Document>
+                {fileType === 'pdf' && (
+                    <div className="h-full w-full relative">
+                        {!showAdvanced ? (
+                            <iframe
+                                src={`${nativePreviewUrl}#toolbar=0&navpanes=0`}
+                                className="w-full h-full border-none bg-white"
+                                title={fileName}
+                            />
+                        ) : (
+                            fileSource && (
+                                <div className="h-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none">
+                                    <Document
+                                        file={fileSource}
+                                        onLoadSuccess={({ numPages: n }) => {
+                                            setNumPages(n);
+                                            setTimeout(() => setPdfReady(true), 150);
+                                        }}
+                                        onLoadError={(err) => {
+                                            console.error('CRITICAL PDF ERROR:', err);
+                                            setError('Error de motor local. Prueba "Reintentar" o desactiva "Modo Pro".');
+                                        }}
+                                        loading={<div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto" /><p className="text-xs font-bold text-blue-600 mt-4 uppercase tracking-[0.2em]">Iniciando Motor Pro...</p></div>}
+                                        className="max-w-full"
+                                    >
+                                        {numPages && (
+                                            isMobile && isLargeFile ? (
+                                                <MobilePdfNavigator numPages={numPages} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} />
+                                            ) : (
+                                                <div className="flex flex-col items-center">
+                                                    {Array.from({ length: numPages }, (_, i) => (
+                                                        <VirtualizedLazyPage key={`vp_${i + 1}`} pageNumber={i + 1} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} pdfReady={pdfReady} />
+                                                    ))}
+                                                </div>
+                                            )
+                                        )}
+                                    </Document>
+                                </div>
+                            )
+                        )}
                     </div>
                 )}
 
@@ -482,7 +503,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
             {/* V4.6+: Pie de página inteligente (se oculta en fullscreen) */}
             {!isFullscreen && (
                 <div className="bg-zinc-900 h-10 flex items-center justify-center">
-                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Advanced Virtualization Engine v4.7 Stable</p>
+                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Hybrid Engine v5.0 Stable</p>
                 </div>
             )}
 

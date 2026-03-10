@@ -14,9 +14,10 @@ interface SecureFileModalProps {
     onClose: () => void;
     filePath: string | null;
     fileName: string | null;
+    useAdvancedViewer?: boolean;
 }
 
-export default function SecureFileModal({ isOpen, onClose, filePath, fileName }: SecureFileModalProps) {
+export default function SecureFileModal({ isOpen, onClose, filePath, fileName, useAdvancedViewer }: SecureFileModalProps) {
     useEffect(() => {
         if (isOpen) {
             window.history.pushState({ secureModal: true }, '');
@@ -44,7 +45,7 @@ export default function SecureFileModal({ isOpen, onClose, filePath, fileName }:
                     <DialogTitle>Visor de Documento Seguro</DialogTitle>
                     <DialogDescription>Visualización protegida del archivo seleccionado</DialogDescription>
                 </div>
-                <SecureFileViewer filePath={filePath} fileName={fileName || 'Documento'} onClose={() => handleOpenChange(false)} />
+                <SecureFileViewer filePath={filePath} fileName={fileName || 'Documento'} useAdvancedViewer={useAdvancedViewer} onClose={() => handleOpenChange(false)} />
             </DialogContent>
         </Dialog>
     );

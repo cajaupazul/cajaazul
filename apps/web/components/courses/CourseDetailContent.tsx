@@ -35,7 +35,7 @@ export default function CourseDetailContent({
     const searchParams = useSearchParams();
     const [materials, setMaterials] = useState<any[]>(initialMaterials);
     const [activeTab, setActiveTab] = useState<TabType>('todos');
-    const [viewingFile, setViewingFile] = useState<{ path: string; name: string } | null>(null);
+    const [viewingFile, setViewingFile] = useState<{ path: string; name: string; useAdvanced?: boolean } | null>(null);
     const [selectedProfessorId, setSelectedProfessorId] = useState<string>(searchParams.get('professor') || 'all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [showAdminManager, setShowAdminManager] = useState(false);
@@ -242,7 +242,11 @@ export default function CourseDetailContent({
                                 if (material.tipo?.toLowerCase() === 'enlace') {
                                     window.open(material.url_archivo, '_blank');
                                 } else {
-                                    setViewingFile({ path: material.url_archivo, name: material.titulo });
+                                    setViewingFile({
+                                        path: material.url_archivo,
+                                        name: material.titulo,
+                                        useAdvanced: material.use_advanced_viewer
+                                    });
                                 }
                             }}
                             canDelete={
@@ -269,7 +273,11 @@ export default function CourseDetailContent({
                             if (material.tipo?.toLowerCase() === 'enlace') {
                                 window.open(material.url_archivo, '_blank');
                             } else {
-                                setViewingFile({ path: material.url_archivo, name: material.titulo });
+                                setViewingFile({
+                                    path: material.url_archivo,
+                                    name: material.titulo,
+                                    useAdvanced: material.use_advanced_viewer
+                                });
                             }
                         }}
                         canDelete={
@@ -519,6 +527,7 @@ export default function CourseDetailContent({
                 onClose={() => setViewingFile(null)}
                 filePath={viewingFile?.path || null}
                 fileName={viewingFile?.name || null}
+                useAdvancedViewer={viewingFile?.useAdvanced}
             />
             {/* Admin Manager Modal */}
             {showAdminManager && (
