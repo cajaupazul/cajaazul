@@ -54,7 +54,7 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady 
     return (
         <div
             ref={containerRef}
-            className="mb-8 relative transition-all duration-500"
+            className="mb-1.5 relative transition-all duration-500"
             style={{ minHeight: estimatedHeight, width: pageWidth }}
         >
             {shouldMount && pdfReady ? (
@@ -435,7 +435,7 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
                                 isMobile && isLargeFile ? (
                                     <MobilePdfNavigator numPages={numPages} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} />
                                 ) : (
-                                    <div className="py-8 px-4 flex flex-col items-center">
+                                    <div className="flex flex-col items-center">
                                         {Array.from({ length: numPages }, (_, i) => (
                                             <VirtualizedLazyPage key={`vp_${i + 1}`} pageNumber={i + 1} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} pdfReady={pdfReady} />
                                         ))}
@@ -482,13 +482,13 @@ export default function SecureFileViewer({ filePath, fileName, onClose }: Secure
             {/* V4.6+: Pie de página inteligente (se oculta en fullscreen) */}
             {!isFullscreen && (
                 <div className="bg-zinc-900 h-10 flex items-center justify-center">
-                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Advanced Virtualization Engine v4.6 Stable</p>
+                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Advanced Virtualization Engine v4.7 Stable</p>
                 </div>
             )}
 
             <style jsx global>{`
                 .react-pdf__Document { display: flex; flex-direction: column; align-items: center; }
-                .react-pdf__Page__canvas { border-radius: 4px; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25); }
+                .react-pdf__Page__canvas { border-radius: 0px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
                 .docx-content-wrapper .docx-viewer { 
                     background: white; 
                     box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
