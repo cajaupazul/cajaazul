@@ -32,6 +32,7 @@ interface VirtualizedPageProps {
 
 function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady, isMobile }: VirtualizedPageProps) {
     const [shouldMount, setShouldMount] = useState(false);
+    const [actualHeight, setActualHeight] = useState(estimatedHeight);
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -44,7 +45,7 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
                 setShouldMount(entry.isIntersecting);
             },
             {
-                rootMargin: '1200px 0px 1200px 0px',
+                rootMargin: '2500px 0px 2500px 0px',
                 threshold: 0
             }
         );
@@ -56,8 +57,12 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
     return (
         <div
             ref={containerRef}
-            className={`relative transition-all duration-500 ${isMobile ? 'mb-0' : 'mb-1.5'}`}
-            style={{ minHeight: estimatedHeight, width: pageWidth }}
+            className={`relative transition-all duration-500 overflow-hidden ${isMobile ? 'mb-0' : 'mb-3'}`}
+            style={{
+                minHeight: shouldMount ? 'auto' : actualHeight,
+                height: shouldMount ? 'auto' : actualHeight,
+                width: pageWidth
+            }}
         >
             {shouldMount && pdfReady ? (
                 <>
@@ -65,21 +70,28 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
                         pageNumber={pageNumber}
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
+                        renderForms={false}
+                        onRenderSuccess={(page) => {
+                            setActualHeight(page.height);
+                        }}
                         width={pageWidth}
                         className={`${isMobile ? '' : 'shadow-2xl rounded-sm'} overflow-hidden animate-in fade-in duration-500`}
                         loading={
-                            <div className="bg-white flex flex-col items-center justify-center gap-2" style={{ width: pageWidth, height: estimatedHeight }}>
+                            <div className="bg-white flex flex-col items-center justify-center gap-2" style={{ width: pageWidth, height: actualHeight }}>
                                 <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
-                                <p className="text-gray-300 text-xs text-center px-4">Pág. {pageNumber}</p>
+                                <p className="text-gray-300 text-xs text-center px-4 font-medium uppercase tracking-[0.2em]">Cargando Pág. {pageNumber}</p>
                             </div>
                         }
                     />
                     <div className="absolute inset-0 z-10 bg-transparent pointer-events-none" />
                 </>
             ) : (
-                <div className="bg-gray-100/50 rounded-sm border border-dashed border-gray-200 flex flex-col items-center justify-center gap-2" style={{ width: pageWidth, height: estimatedHeight }}>
-                    <div className="w-8 h-8 rounded-full bg-gray-200/50 animate-pulse" />
-                    <p className="text-gray-300 text-[10px] font-medium uppercase tracking-widest">Página {pageNumber}</p>
+                <div
+                    className="bg-white/40 flex flex-col items-center justify-center gap-2"
+                    style={{ width: pageWidth, height: actualHeight }}
+                >
+                    <div className="w-8 h-8 rounded-full border-2 border-zinc-200 border-t-zinc-400 animate-spin" />
+                    <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-[0.3em]">Preparando {pageNumber}</p>
                 </div>
             )}
         </div>
@@ -515,7 +527,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             )}
 
             <style jsx global>{`
-                .react-pdf__Document { display: flex; flex-direction: column; align-items: center; }
+                .react-pdf__Document { display: flex; flex-direction: column; align-items: center; gap: 0; }
                 .react-pdf__Page__canvas { border-radius: 0px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
                 .docx-content-wrapper .docx-viewer { 
                     background: white; 
