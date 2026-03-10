@@ -149,7 +149,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [nativePreviewUrl, setNativePreviewUrl] = useState<string | null>(null);
     const [showAdvanced, setShowAdvanced] = useState(useAdvancedViewer);
-    const [isMobileDevice, setIsMobileDevice] = useState(false); // Estado para forzar re-renderizado de lógica
+    const [isMobileDevice, setIsMobileDevice] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
     const [sessionToken, setSessionToken] = useState<string | null>(null);
     const [fileSize, setFileSize] = useState<number>(0); // V4.6: Inteligencia por tamaño
     const [docxScale, setDocxScale] = useState(1);
