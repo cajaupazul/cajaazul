@@ -27,9 +27,10 @@ interface VirtualizedPageProps {
     pageWidth: number;
     estimatedHeight: number;
     pdfReady: boolean;
+    isMobile: boolean;
 }
 
-function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady }: VirtualizedPageProps) {
+function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady, isMobile }: VirtualizedPageProps) {
     const [shouldMount, setShouldMount] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +56,7 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady 
     return (
         <div
             ref={containerRef}
-            className="mb-1.5 relative transition-all duration-500"
+            className={`relative transition-all duration-500 ${isMobile ? 'mb-0' : 'mb-1.5'}`}
             style={{ minHeight: estimatedHeight, width: pageWidth }}
         >
             {shouldMount && pdfReady ? (
@@ -65,7 +66,7 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady 
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
                         width={pageWidth}
-                        className="shadow-2xl rounded-sm overflow-hidden animate-in fade-in duration-500"
+                        className={`${isMobile ? '' : 'shadow-2xl rounded-sm'} overflow-hidden animate-in fade-in duration-500`}
                         loading={
                             <div className="bg-white flex flex-col items-center justify-center gap-2" style={{ width: pageWidth, height: estimatedHeight }}>
                                 <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
@@ -96,8 +97,8 @@ function MobilePdfNavigator({ numPages, pageWidth, estimatedHeight }: MobilePdfN
     const [currentPage, setCurrentPage] = useState(1);
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-full w-full gap-6 py-4 pb-28 px-0.5">
-            <div className="relative shadow-2xl rounded-sm overflow-hidden border border-zinc-200 bg-white">
+        <div className="flex flex-col items-center justify-center min-h-full w-full gap-6 py-4 pb-28 px-0">
+            <div className="relative overflow-hidden bg-white">
                 <Page
                     pageNumber={currentPage}
                     renderTextLayer={false}
@@ -148,6 +149,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [nativePreviewUrl, setNativePreviewUrl] = useState<string | null>(null);
     const [showAdvanced, setShowAdvanced] = useState(useAdvancedViewer);
+    const [isMobileDevice, setIsMobileDevice] = useState(false); // Estado para forzar re-renderizado de lógica
     const [sessionToken, setSessionToken] = useState<string | null>(null);
     const [fileSize, setFileSize] = useState<number>(0); // V4.6: Inteligencia por tamaño
     const [docxScale, setDocxScale] = useState(1);
@@ -183,10 +185,10 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
     const pdfPageWidth = useMemo(() => {
         if (containerWidth === 0) return 300;
-        const safetyMargin = isMobile ? 4 : (isFullscreen ? 40 : 80);
+        const safetyMargin = isMobileDevice ? 0 : (isFullscreen ? 40 : 80);
         const availableWidth = containerWidth - safetyMargin;
-        return isMobile ? availableWidth : Math.min(availableWidth, 850);
-    }, [containerWidth, isFullscreen, isMobile]);
+        return isMobileDevice ? availableWidth : Math.min(availableWidth, 850);
+    }, [containerWidth, isFullscreen, isMobileDevice]);
 
     const estimatedPageHeight = Math.round(pdfPageWidth * 1.414);
 
@@ -194,7 +196,9 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
         const observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 setContainerWidth(entry.contentRect.width);
-                setIsMobile(entry.contentRect.width < 768);
+                const mobile = entry.contentRect.width < 768;
+                setIsMobile(mobile);
+                setIsMobileDevice(mobile);
             }
         });
         if (containerRef.current) observer.observe(containerRef.current);
@@ -228,7 +232,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             if (blobUrl && blobUrl.startsWith('blob:')) URL.revokeObjectURL(blobUrl);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filePath, showAdvanced]);
+    }, [filePath, showAdvanced, isMobileDevice]);
 
     useEffect(() => {
         const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -305,7 +309,9 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             } catch (e) { console.warn("Falló detección de tamaño, usando modo seguro (Páginas)"); setFileSize(10 * 1024 * 1024); }
 
             if (type === 'pdf') {
-                if (!showAdvanced) {
+                // SI es móvil, FORZAMOS el visor avanzado (PDF.js) para evitar el botón "Abrir" de los navegadores móviles
+                // SI es PC, respetamos el toggle del admin (Híbrido)
+                if (!showAdvanced && !isMobileDevice) {
                     // Modo Nativo: Obtener URL firmada para el iframe
                     const previewRes = await fetch(
                         `${baseUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`,
@@ -314,6 +320,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                     const data = await previewRes.json();
                     setNativePreviewUrl(data.url);
                 } else {
+                    // MODO PDF.js (Pro)
                     setBlobUrl(secureUrl);
                 }
                 setLoading(false);
@@ -427,7 +434,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             <div className={`flex-1 overflow-hidden relative ${isFullscreen ? 'bg-zinc-950' : 'bg-[#E4E4E7]/50'}`}>
                 {fileType === 'pdf' && (
                     <div className="h-full w-full relative">
-                        {!showAdvanced ? (
+                        {(!showAdvanced && !isMobileDevice) ? (
                             <iframe
                                 src={`${nativePreviewUrl}#toolbar=0&navpanes=0`}
                                 className="w-full h-full border-none bg-white"
@@ -447,7 +454,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                                             setError('Error de motor local. Prueba "Reintentar" o desactiva "Modo Pro".');
                                         }}
                                         loading={<div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto" /><p className="text-xs font-bold text-blue-600 mt-4 uppercase tracking-[0.2em]">Iniciando Motor Pro...</p></div>}
-                                        className="max-w-full"
+                                        className="max-w-full border-none"
                                     >
                                         {numPages && (
                                             isMobile && isLargeFile ? (
@@ -455,7 +462,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                                             ) : (
                                                 <div className="flex flex-col items-center">
                                                     {Array.from({ length: numPages }, (_, i) => (
-                                                        <VirtualizedLazyPage key={`vp_${i + 1}`} pageNumber={i + 1} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} pdfReady={pdfReady} />
+                                                        <VirtualizedLazyPage key={`vp_${i + 1}`} pageNumber={i + 1} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} pdfReady={pdfReady} isMobile={isMobileDevice} />
                                                     ))}
                                                 </div>
                                             )
