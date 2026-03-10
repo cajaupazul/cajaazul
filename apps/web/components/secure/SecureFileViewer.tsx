@@ -72,9 +72,8 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
                         renderForms={false}
-                        // V5.7: Optimización de RAM vía resolución (Pixel Ratio) en lugar de escala (Zoom)
-                        // Esto mantiene el encuadre perfecto pero aligera el canvas interno en móviles.
-                        devicePixelRatio={isMobile ? 1 : 2}
+                        // V5.8: Calidad Cristalina (Fin de píxeles)
+                        devicePixelRatio={typeof window !== 'undefined' ? window.devicePixelRatio : 2}
                         onRenderSuccess={(page) => {
                             setActualHeight(page.height);
                         }}
@@ -113,20 +112,25 @@ function MobilePdfNavigator({ numPages, pageWidth, estimatedHeight }: MobilePdfN
     const [currentPage, setCurrentPage] = useState(1);
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-full w-full gap-6 py-4 pb-28 px-0">
-            <div className="relative overflow-hidden bg-white">
-                <Page
-                    pageNumber={currentPage}
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                    width={pageWidth}
-                    loading={
-                        <div className="flex flex-col items-center justify-center gap-3 bg-gray-50" style={{ width: pageWidth, height: estimatedHeight }}>
-                            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                        </div>
-                    }
-                />
-                <div className="absolute inset-0 z-10 bg-transparent pointer-events-none" />
+        <div className="flex flex-col items-center justify-start min-h-full w-full bg-zinc-100/30">
+            <div className="w-full flex-1 flex items-center justify-center py-6 px-0 overflow-hidden">
+                <div className="relative shadow-2xl bg-white animate-in zoom-in-95 duration-500">
+                    <Page
+                        pageNumber={currentPage}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        renderForms={false}
+                        devicePixelRatio={typeof window !== 'undefined' ? window.devicePixelRatio : 2}
+                        width={pageWidth}
+                        loading={
+                            <div className="flex flex-col items-center justify-center gap-4 bg-zinc-50" style={{ width: pageWidth, height: estimatedHeight }}>
+                                <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.3em]">Cargando Pág. {currentPage}</p>
+                            </div>
+                        }
+                    />
+                    <div className="absolute inset-0 z-10 bg-transparent pointer-events-none" />
+                </div>
             </div>
 
             <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-4 bg-zinc-900/95 border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-xl shadow-2xl">
@@ -183,7 +187,8 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
     // V4.6+: Inteligencia de navegación basada en tamaño
     // PDFs < 5MB = Scroll continuo | >= 5MB = Página por página (Móvil)
-    const isLargeFile = useMemo(() => fileSize >= 5 * 1024 * 1024, [fileSize]);
+    // V5.8: scroll naturalmente todo. Umbral subido a 20MB.
+    const isLargeFile = useMemo(() => fileSize >= 20 * 1024 * 1024, [fileSize]);
 
     const fileSource = useMemo(() => {
         if (!blobUrl || !sessionToken) return null;
@@ -526,7 +531,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             {/* V4.6+: Pie de página inteligente (se oculta en fullscreen) */}
             {!isFullscreen && (
                 <div className="bg-zinc-900 h-10 flex items-center justify-center">
-                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Hybrid Engine v5.6 Stable</p>
+                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Hybrid Engine v5.8 Stable</p>
                 </div>
             )}
 
