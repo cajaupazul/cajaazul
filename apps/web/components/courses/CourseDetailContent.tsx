@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2, Pencil, Upload, List, Calculator } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import AdminMaterialManager from './AdminMaterialManager';
 import { PLACEHOLDERS } from '@/lib/constants';
@@ -39,6 +39,7 @@ export default function CourseDetailContent({
     const [selectedProfessorId, setSelectedProfessorId] = useState<string>(searchParams.get('professor') || 'all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [showAdminManager, setShowAdminManager] = useState(false);
+    const [showCalculatorModal, setShowCalculatorModal] = useState(false);
 
     // Sync state with url param
     useEffect(() => {
@@ -356,20 +357,30 @@ export default function CourseDetailContent({
                                 <h4 className="text-xs font-bold text-bb-text-secondary uppercase tracking-wider">Filtrar por profesor</h4>
                             </div>
                             <div className="flex flex-col sm:flex-row gap-3">
-                                <Autocomplete
-                                    items={allProfessors.map(p => p.nombre)}
-                                    value={selectedProfessorId === 'all' ? '' : (allProfessors.find(p => p.id === selectedProfessorId)?.nombre || '')}
-                                    onChange={(val) => {
-                                        if (!val) {
-                                            setSelectedProfessorId('all');
-                                        } else {
-                                            const prof = allProfessors.find(p => p.nombre === val);
-                                            if (prof) setSelectedProfessorId(prof.id);
-                                        }
-                                    }}
-                                    placeholder="Buscar por profesor..."
-                                    className="w-full sm:w-80"
-                                />
+                                <div className="flex flex-1 items-center gap-2">
+                                    <Autocomplete
+                                        items={allProfessors.map(p => p.nombre)}
+                                        value={selectedProfessorId === 'all' ? '' : (allProfessors.find(p => p.id === selectedProfessorId)?.nombre || '')}
+                                        onChange={(val) => {
+                                            if (!val) {
+                                                setSelectedProfessorId('all');
+                                            } else {
+                                                const prof = allProfessors.find(p => p.nombre === val);
+                                                if (prof) setSelectedProfessorId(prof.id);
+                                            }
+                                        }}
+                                        placeholder="Buscar por profesor..."
+                                        className="flex-1 sm:w-80"
+                                    />
+                                    {/* V6.0: Calculadora integrada en móvil junto al buscador */}
+                                    <button
+                                        onClick={() => setShowCalculatorModal(true)}
+                                        className="sm:hidden p-3 bg-bb-darker/50 border border-bb-border rounded-xl text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 h-11 transition-all active:scale-95"
+                                        title="Calculadora de Notas"
+                                    >
+                                        <Calculator className="w-5 h-5 flex-shrink-0" />
+                                    </button>
+                                </div>
                                 {selectedProfessorId !== 'all' && (
                                     <Button
                                         variant="ghost"
@@ -420,9 +431,9 @@ export default function CourseDetailContent({
                                         <List className="w-4 h-4" strokeWidth={2.5} />
                                     </button>
                                 </div>
-                                <div className="flex items-center gap-2 bg-bb-darker/50 p-1 rounded-xl border border-bb-border">
+                                <div className="hidden sm:flex items-center gap-2 bg-bb-darker/50 p-1 rounded-xl border border-bb-border">
                                     <button
-                                        onClick={() => alert('Calculadora de Notas próximamente...')}
+                                        onClick={() => setShowCalculatorModal(true)}
                                         className="p-2 rounded-lg transition-all text-bb-text-secondary hover:text-blue-400 hover:bg-blue-400/10"
                                         title="Calculadora de Notas"
                                     >
@@ -548,6 +559,42 @@ export default function CourseDetailContent({
                     courseName={course.nombre}
                 />
             )}
+
+            {/* V6.0: Modal de Calculadora de Notas */}
+            <AnimatePresence>
+                {showCalculatorModal && (
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowCalculatorModal(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative bg-bb-card border border-bb-border p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center"
+                        >
+                            <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/20">
+                                <Calculator className="w-10 h-10 text-blue-400" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-bb-text mb-2 tracking-tight">Calculadora de Notas</h3>
+                            <p className="text-bb-text-secondary text-sm mb-8 leading-relaxed">
+                                Esta herramienta te permitirá simular tus promedios de forma automática basándose en el sílabo del curso. <br /><br />
+                                <span className="text-blue-400 font-bold uppercase tracking-widest text-[10px]">¡Lanzamiento próximamente!</span>
+                            </p>
+                            <Button
+                                onClick={() => setShowCalculatorModal(false)}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
+                            >
+                                Entendido
+                            </Button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
