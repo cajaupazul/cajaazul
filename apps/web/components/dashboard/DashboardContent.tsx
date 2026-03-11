@@ -18,6 +18,7 @@ import BouncingBalls from '@/components/BouncingBalls';
 import { useTheme } from '@/lib/theme-context';
 import { Profile, Course, getStorageUrl } from '@/lib/supabase';
 import OptionsSelector from '@/components/OptionsSelector';
+import AnnouncementPopup from '@/components/announcements/AnnouncementPopup';
 
 interface DashboardContentProps {
     profile: Profile | null;
@@ -61,6 +62,7 @@ export default function DashboardContent({
     return (
         <div className="min-h-screen bg-bb-dark p-4 md:p-8 relative overflow-hidden transition-colors duration-300">
             <BouncingBalls />
+            <AnnouncementPopup />
 
             <motion.div
                 className="max-w-7xl mx-auto relative z-10"

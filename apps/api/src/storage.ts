@@ -11,6 +11,7 @@ type Bindings = {
     GRUPOS: R2Bucket
     COURSE_IMAGES: R2Bucket
     THUMBNAILS: R2Bucket
+    ANNOUNCEMENTS: R2Bucket
     // NO R2_ACCESS_KEYS required (Native Bindings)
 }
 
@@ -95,6 +96,7 @@ storageRouter.put('/upload', async (c) => {
         case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
         case 'grupos': bucket = c.env.GRUPOS; break;
         case 'thumbnails': bucket = c.env.THUMBNAILS; break;
+        case 'announcements': bucket = c.env.ANNOUNCEMENTS; break;
         default:
             return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
     }
