@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2, Pencil, Upload, List } from 'lucide-react';
+import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2, Pencil, Upload, List, Calculator } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import AdminMaterialManager from './AdminMaterialManager';
@@ -418,6 +418,15 @@ export default function CourseDetailContent({
                                         title="Vista Lista"
                                     >
                                         <List className="w-4 h-4" strokeWidth={2.5} />
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-2 bg-bb-darker/50 p-1 rounded-xl border border-bb-border">
+                                    <button
+                                        onClick={() => alert('Calculadora de Notas próximamente...')}
+                                        className="p-2 rounded-lg transition-all text-bb-text-secondary hover:text-blue-400 hover:bg-blue-400/10"
+                                        title="Calculadora de Notas"
+                                    >
+                                        <Calculator className="w-4 h-4" />
                                     </button>
                                 </div>
                                 <Link
