@@ -331,12 +331,12 @@ export default function ProfilePage() {
           </a>
         )}
 
-        {editing && !uploadingBackground && (
+        {editing && !uploadingBackground && (isAdmin || inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND) || !sidebarVisibility['Tienda']) && (
           <button
             onClick={() => {
               if (inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND) || isAdmin) {
                 bgInputRef.current?.click();
-              } else {
+              } else if (!sidebarVisibility['Tienda']) {
                 router.push('/dashboard/store');
               }
             }}
@@ -344,7 +344,7 @@ export default function ProfilePage() {
           >
             <div className="flex items-center gap-2">
               <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
-              {(!inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND) && !isAdmin) && (
+              {(!inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND) && !isAdmin) && !sidebarVisibility['Tienda'] && (
                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/20 text-amber-500 text-[8px] font-black uppercase">
                   Tienda
                 </div>
@@ -691,8 +691,8 @@ export default function ProfilePage() {
                   );
                 })}
 
-              {/* Only show custom upload if store is not hidden for users, or if admin */}
-              {(isAdmin || !sidebarVisibility['Tienda']) && (
+              {/* Only show custom upload if user has permission, is admin, or if store is not hidden for users */}
+              {(isAdmin || inventory.includes(PERMISSIONS.CUSTOM_AVATAR) || !sidebarVisibility['Tienda']) && (
                 <div className="col-span-full mt-4 pt-4 border-t border-white/5">
                   <p className="text-[10px] font-bold text-bb-text-secondary uppercase tracking-widest mb-3 opacity-60">Personalización Pro</p>
                   <div
@@ -700,7 +700,7 @@ export default function ProfilePage() {
                       if (inventory.includes(PERMISSIONS.CUSTOM_AVATAR) || isAdmin) {
                         avatarInputRef.current?.click();
                         setIsAvatarSelectorOpen(false);
-                      } else {
+                      } else if (!sidebarVisibility['Tienda']) {
                         router.push('/dashboard/store');
                       }
                     }}
