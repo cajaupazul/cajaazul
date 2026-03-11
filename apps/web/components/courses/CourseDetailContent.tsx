@@ -110,11 +110,6 @@ export default function CourseDetailContent({
         router.push(`/dashboard/courses/new?id=${course.id}`);
     };
 
-    // Helper for natural alphanumeric sorting (e.g., 2 before 10)
-    const naturalSort = useMemo(() => {
-        const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-        return (a: any, b: any) => collator.compare(a.titulo || '', b.titulo || '');
-    }, []);
 
     // Base materials list filtered ONLY by professor (for counts)
     const materialsForCounts = useMemo(() => {
@@ -123,8 +118,8 @@ export default function CourseDetailContent({
             // Include materials from the selected professor OR those marked as General (null)
             results = results.filter(m => m.professor_id === selectedProfessorId || m.professor_id === null);
         }
-        return [...results].sort(naturalSort);
-    }, [materials, selectedProfessorId, naturalSort]);
+        return results;
+    }, [materials, selectedProfessorId]);
 
     // Derived lists for COUNTS (stable across tabs)
     const syllabusCount = useMemo(() => {
@@ -159,9 +154,8 @@ export default function CourseDetailContent({
         ).length;
     }, [materialsForCounts]);
 
-    // Filtered lists for DISPLAY (depends on active tab)
     const filteredMaterials = useMemo(() => {
-        const base = materialsForCounts; // Already sorted naturally
+        const base = materialsForCounts; // Already sorted by upload order from DB
 
         if (activeTab === 'silabo') {
             return base.filter(m =>
