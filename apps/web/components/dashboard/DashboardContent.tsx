@@ -10,15 +10,26 @@ import {
     Calendar,
     Zap,
     ArrowRight,
-    Sparkles
+    Sparkles,
+    Megaphone,
+    PlusCircle
 } from 'lucide-react';
-import { motion, Variants } from 'framer-motion';
+import { motion, Variants, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import BouncingBalls from '@/components/BouncingBalls';
 import { useTheme } from '@/lib/theme-context';
 import { Profile, Course, getStorageUrl } from '@/lib/supabase';
 import OptionsSelector from '@/components/OptionsSelector';
 import AnnouncementPopup from '@/components/announcements/AnnouncementPopup';
+import AnnouncementsManager from '@/components/admin/AnnouncementsManager';
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle,
+    DialogDescription 
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 interface DashboardContentProps {
     profile: Profile | null;
@@ -58,6 +69,9 @@ export default function DashboardContent({
     const router = useRouter();
     const { colors } = useTheme();
     const [greeting] = useState(getGreeting());
+    const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+
+    const isAdmin = profile?.role === 'admin';
 
     return (
         <div className="min-h-screen bg-bb-dark p-4 md:p-8 relative overflow-hidden transition-colors duration-300">
@@ -92,6 +106,15 @@ export default function DashboardContent({
                         </div>
                     </div>
                     <div className="flex gap-3">
+                        {isAdmin && (
+                            <Button 
+                                onClick={() => setIsAdminModalOpen(true)}
+                                className="bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center gap-2 px-4 py-2 rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-95"
+                            >
+                                <PlusCircle className="w-5 h-5" />
+                                <span className="hidden sm:inline">Subir Banner</span>
+                            </Button>
+                        )}
                         {/* El bloque 'Nivel Estudiante' fue removido para un diseño más limpio */}
                     </div>
                 </motion.div>
@@ -100,7 +123,23 @@ export default function DashboardContent({
                     <OptionsSelector />
                 </motion.div>
 
-
+                {/* Admin Modal for Announcements */}
+                <Dialog open={isAdminModalOpen} onOpenChange={setIsAdminModalOpen}>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-bb-dark border-bb-border text-bb-text p-0">
+                        <div className="p-6">
+                            <DialogHeader className="mb-6">
+                                <DialogTitle className="text-2xl font-black flex items-center gap-2">
+                                    <Megaphone className="text-blue-500" />
+                                    Gestión de Anuncios y Carrusel
+                                </DialogTitle>
+                                <DialogDescription className="text-bb-text-secondary italic">
+                                    Las imágenes subidas aquí aparecerán en el Popup y en las tarjetas del carrusel dinámico.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <AnnouncementsManager isAdminView={true} />
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </motion.div>
         </div>
     );

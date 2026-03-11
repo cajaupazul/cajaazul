@@ -3,6 +3,7 @@
 CREATE TABLE IF NOT EXISTS public.announcements (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     title text NOT NULL,
+    subtitle text, -- Para el carrusel
     image_url text NOT NULL,
     link_url text,
     is_active boolean DEFAULT true,

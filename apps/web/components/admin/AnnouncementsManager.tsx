@@ -13,6 +13,7 @@ import { Trash2, Plus, Image as ImageIcon, ExternalLink, Loader2, Save, Check, A
 interface Announcement {
     id: string;
     title: string;
+    subtitle: string;
     image_url: string;
     link_url: string;
     is_active: boolean;
@@ -21,13 +22,18 @@ interface Announcement {
     created_at: string;
 }
 
-export default function AnnouncementsManager() {
+interface AnnouncementsManagerProps {
+    isAdminView?: boolean;
+}
+
+export default function AnnouncementsManager({ isAdminView = false }: AnnouncementsManagerProps) {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [loading, setLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
 
     // New announcement form state
     const [newTitle, setNewTitle] = useState('');
+    const [newSubtitle, setNewSubtitle] = useState('');
     const [newLink, setNewLink] = useState('');
     const [newPriority, setNewPriority] = useState(0);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -75,6 +81,7 @@ export default function AnnouncementsManager() {
                 .from('announcements')
                 .insert([{
                     title: newTitle,
+                    subtitle: newSubtitle,
                     image_url: imageUrl,
                     link_url: newLink,
                     priority: newPriority,
@@ -85,6 +92,7 @@ export default function AnnouncementsManager() {
 
             alert('Anuncio creado con éxito');
             setNewTitle('');
+            setNewSubtitle('');
             setNewLink('');
             setNewPriority(0);
             setSelectedFile(null);
@@ -154,6 +162,15 @@ export default function AnnouncementsManager() {
                                 value={newTitle} 
                                 onChange={(e) => setNewTitle(e.target.value)} 
                                 placeholder="Ej: Nueva Promoción VIP" 
+                                className="bg-bb-darker border-bb-border mt-1"
+                            />
+                        </div>
+                        <div>
+                            <Label>Subtítulo (Para el carrusel)</Label>
+                            <Input 
+                                value={newSubtitle} 
+                                onChange={(e) => setNewSubtitle(e.target.value)} 
+                                placeholder="Ej: Obtén beneficios exclusivos" 
                                 className="bg-bb-darker border-bb-border mt-1"
                             />
                         </div>

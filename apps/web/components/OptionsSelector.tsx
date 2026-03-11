@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Trophy, BookOpen, Users, Calendar, Star } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trophy, BookOpen, Users, Calendar, Star, Megaphone } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface OptionData {
     id: number;
@@ -12,54 +13,89 @@ interface OptionData {
     defaultColor: string;
 }
 
+const DEFAULT_OPTIONS: OptionData[] = [
+    {
+        id: 1000,
+        background: '/options/option-bg-1.jpg',
+        icon: Trophy,
+        main: 'Sede Principal',
+        sub: 'Instalaciones modernas para tu desarrollo',
+        defaultColor: '#ED5565',
+    },
+    {
+        id: 1001,
+        background: '/options/option-bg-2.jpg',
+        icon: BookOpen,
+        main: 'Campus Central',
+        sub: 'Espacios de estudio y colaboración',
+        defaultColor: '#FC6E51',
+    },
+    {
+        id: 1002,
+        background: '/options/option-bg-3.jpg',
+        icon: Users,
+        main: 'Intercambio',
+        sub: 'Conoce estudiantes de todo el mundo',
+        defaultColor: '#FFCE54',
+    },
+    {
+        id: 1003,
+        background: '/options/option-bg-4.png',
+        icon: Star,
+        main: 'Comité Consultivo',
+        sub: 'Líderes que guían nuestra visión',
+        defaultColor: '#2ECC71',
+    },
+    {
+        id: 1004,
+        background: '/options/option-bg-5.webp',
+        icon: Calendar,
+        main: 'Vida Estudiantil',
+        sub: 'Eventos y actividades exclusivas',
+        defaultColor: '#5D9CEC',
+    },
+];
+
 const OptionsSelector: React.FC = () => {
-    const [activeOption, setActiveOption] = useState<number>(0);
+    const [activeOption, setActiveOption] = useState<number | string>(1000);
+    const [options, setOptions] = useState<OptionData[]>(DEFAULT_OPTIONS);
 
-    const optionsData: OptionData[] = [
-        {
-            id: 0,
-            background: '/options/option-bg-1.jpg',
-            icon: Trophy,
-            main: 'Sede Principal',
-            sub: 'Instalaciones modernas para tu desarrollo',
-            defaultColor: '#ED5565',
-        },
-        {
-            id: 1,
-            background: '/options/option-bg-2.jpg',
-            icon: BookOpen,
-            main: 'Campus Central',
-            sub: 'Espacios de estudio y colaboración',
-            defaultColor: '#FC6E51',
-        },
-        {
-            id: 2,
-            background: '/options/option-bg-3.jpg',
-            icon: Users,
-            main: 'Intercambio',
-            sub: 'Conoce estudiantes de todo el mundo',
-            defaultColor: '#FFCE54',
-        },
-        {
-            id: 3,
-            background: '/options/option-bg-4.png',
-            icon: Star,
-            main: 'Comité Consultivo',
-            sub: 'Líderes que guían nuestra visión',
-            defaultColor: '#2ECC71',
-        },
-        {
-            id: 4,
-            background: '/options/option-bg-5.webp',
-            icon: Calendar,
-            main: 'Vida Estudiantil',
-            sub: 'Eventos y actividades exclusivas',
-            defaultColor: '#5D9CEC',
-        },
-    ];
+    useEffect(() => {
+        const fetchAnnouncements = async () => {
+            const { data, error } = await supabase
+                .from('announcements')
+                .select('*')
+                .eq('is_active', true)
+                .order('priority', { ascending: false });
 
-    const handleOptionClick = (optionId: number) => {
-        setActiveOption(optionId);
+            if (!error && data && data.length > 0) {
+                const dynamicOptions: OptionData[] = data.map((ad: any) => ({
+                    id: ad.id,
+                    background: ad.image_url,
+                    icon: Megaphone, // Icono por defecto para anuncios
+                    main: ad.title,
+                    sub: ad.subtitle || 'Anuncio destacado',
+                    defaultColor: '#3B82F6', // Color por defecto para anuncios
+                    link: ad.link_url
+                }));
+                
+                // Mezclar anuncios al principio, seguidos de los default
+                setOptions([...dynamicOptions, ...DEFAULT_OPTIONS]);
+                setActiveOption(dynamicOptions[0].id);
+            }
+        };
+
+        fetchAnnouncements();
+    }, []);
+
+    const handleOptionClick = (option: OptionData) => {
+        setActiveOption(option.id);
+        if (option.id.toString().length > 4 && (option as any).link) {
+            // Si es un anuncio dinámico y tiene link, abrir en nueva pestaña al hacer click si ya está activo
+            if (activeOption === option.id) {
+                window.open((option as any).link, '_blank');
+            }
+        }
     };
 
     const styles = `
@@ -277,14 +313,14 @@ const OptionsSelector: React.FC = () => {
 
             <div className="options-container">
                 <div className="options-wrapper">
-                    {optionsData.map((option) => (
+                    {options.map((option) => (
                         <div
                             key={option.id}
-                            className={`option-item ${activeOption === option.id ? 'active' : ''}`}
+                            className={`option-item ${activeOption === option.id ? 'active' : ''} ${option.id.toString().length > 4 ? 'is-announcement' : ''}`}
                             style={{
                                 backgroundImage: `url(${option.background})`,
                             }}
-                            onClick={() => handleOptionClick(option.id)}
+                            onClick={() => handleOptionClick(option)}
                         >
                             <div className="option-shadow"></div>
                             <div className="option-label">
