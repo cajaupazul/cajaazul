@@ -186,6 +186,7 @@ storageRouter.delete('/delete', async (c) => {
         case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
         case 'grupos': bucket = c.env.GRUPOS; break;
         case 'thumbnails': bucket = c.env.THUMBNAILS; break;
+        case 'announcements': bucket = c.env.ANNOUNCEMENTS; break;
         default:
             return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
     }
@@ -270,6 +271,7 @@ storageRouter.get('/public-stream', async (c) => {
             case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
             case 'grupos': bucket = c.env.GRUPOS; break;
             case 'thumbnails': bucket = c.env.THUMBNAILS; break;
+            case 'announcements': bucket = c.env.ANNOUNCEMENTS; break;
             default: return c.json({ error: 'Bucket inválido' }, 400);
         }
 
@@ -320,6 +322,7 @@ storageRouter.get('/secure-url', async (c) => {
         case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break;
         case 'grupos': bucket = c.env.GRUPOS; break;
         case 'thumbnails': bucket = c.env.THUMBNAILS; break;
+        case 'announcements': bucket = c.env.ANNOUNCEMENTS; break;
         default: return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
     }
 
