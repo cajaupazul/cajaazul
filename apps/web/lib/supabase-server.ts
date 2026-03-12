@@ -4,8 +4,20 @@ import { cookies } from 'next/headers'
 export async function createClient() {
     const cookieStore = await cookies()
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!url || !key) {
+        if (process.env.NODE_ENV === 'development') {
+            console.warn('[SERVER_SUPABASE] Missing Supabase URL or Key');
+        }
+        // Return a mock or handle the error gracefully for build-time pre-rendering
+        return createServerClient(
+            'https://placeholder.supabase.co',
+            'placeholder',
+            { cookies: { get: () => undefined, set: () => {}, remove: () => {} } }
+        );
+    }
 
     if (process.env.NODE_ENV === 'development') {
         console.log('[SERVER_SUPABASE] Initializing client...');
