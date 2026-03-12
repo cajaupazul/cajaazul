@@ -1009,19 +1009,27 @@ export default function ProfessorRatingsContent({
                                             <p className="w-full text-[10px] font-bold text-bb-text-secondary uppercase tracking-widest mb-1 opacity-60">
                                                 Otras materias que enseña:
                                             </p>
-                                            {coursesTaught
-                                                .filter(c => c.id !== selectedCourseId)
-                                                .map(course => (
-                                                    <Link
-                                                        key={course.id}
-                                                        href={`/dashboard/professors/view?id=${professor.id}&courseId=${course.id}&course=${encodeURIComponent(course.nombre)}`}
-                                                        className="bg-bb-sidebar/30 hover:bg-bb-hover text-bb-text-secondary hover:text-white px-3 py-1 rounded-lg border border-bb-border transition-all text-[11px] font-bold flex items-center gap-1.5"
-                                                    >
-                                                        <LayoutPanelLeft className="w-3 h-3 text-blue-400/50" />
-                                                        {course.nombre}
-                                                    </Link>
-                                                ))
-                                            }
+                                            {(() => {
+                                                const seenNames = new Set();
+                                                return coursesTaught
+                                                    .filter(c => {
+                                                        const isSelected = c.id === selectedCourseId || c.nombre === selectedCourse;
+                                                        const nameKey = c.nombre.toLowerCase().trim();
+                                                        if (isSelected || seenNames.has(nameKey)) return false;
+                                                        seenNames.add(nameKey);
+                                                        return true;
+                                                    })
+                                                    .map(course => (
+                                                        <Link
+                                                            key={course.id}
+                                                            href={`/dashboard/professors/view?id=${professor.id}&courseId=${course.id}&course=${encodeURIComponent(course.nombre)}`}
+                                                            className="bg-bb-sidebar/30 hover:bg-bb-hover text-bb-text-secondary hover:text-white px-3 py-1 rounded-lg border border-bb-border transition-all text-[11px] font-bold flex items-center gap-1.5"
+                                                        >
+                                                            <LayoutPanelLeft className="w-3 h-3 text-blue-400/50" />
+                                                            {course.nombre}
+                                                        </Link>
+                                                    ));
+                                            })()}
                                         </div>
                                     )}
                                 </motion.div>
