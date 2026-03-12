@@ -978,57 +978,49 @@ export default function ProfessorRatingsContent({
                                     transition={{ delay: 0.3 }}
                                     className="flex flex-wrap gap-2 justify-center md:justify-start"
                                 >
-                                    {selectedCourse && (
-                                        <div className="flex items-center gap-1 group/current">
-                                            <span className="bg-green-500/20 backdrop-blur-md text-green-400 px-4 py-1.5 rounded-full border border-green-500/30 uppercase tracking-wider text-xs font-bold shadow-lg shadow-green-900/10 flex items-center gap-2">
-                                                <Sparkles className="w-3 h-3" />
-                                                {selectedCourse}
-                                            </span>
-                                            {profile?.role === 'admin' && (
-                                                <button
-                                                    onClick={() => handleDeleteCourse(selectedCourse)}
-                                                    className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors opacity-0 group-hover/current:opacity-100"
-                                                    title="Desvincular este curso"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {professor.facultad && professor.facultad !== 'General' && (
-                                        <span className="bg-bb-sidebar/50 backdrop-blur-md text-bb-text-secondary px-4 py-1.5 rounded-full border border-bb-border flex items-center gap-2 text-xs font-medium">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]" />
-                                            {professor.facultad}
-                                        </span>
-                                    )}
-
-                                    {/* Otros cursos que enseña */}
-                                    {coursesTaught.length > 1 && (
-                                        <div className="flex flex-wrap gap-2 mt-2 w-full">
+                                    {/* Lista de cursos que enseña */}
+                                    {coursesTaught.length > 0 && (
+                                        <div className="flex flex-wrap items-center gap-2 mt-2 w-full">
                                             <p className="w-full text-[10px] font-bold text-bb-text-secondary uppercase tracking-widest mb-1 opacity-60">
-                                                Otras materias que enseña:
+                                                Materias que enseña:
                                             </p>
                                             {(() => {
                                                 const seenNames = new Set();
                                                 return coursesTaught
                                                     .filter(c => {
-                                                        const isSelected = c.id === selectedCourseId || c.nombre === selectedCourse;
                                                         const nameKey = c.nombre.toLowerCase().trim();
-                                                        if (isSelected || seenNames.has(nameKey)) return false;
+                                                        if (seenNames.has(nameKey)) return false;
                                                         seenNames.add(nameKey);
                                                         return true;
                                                     })
-                                                    .map(course => (
-                                                        <Link
-                                                            key={course.id}
-                                                            href={`/dashboard/professors/view?id=${professor.id}&courseId=${course.id}&course=${encodeURIComponent(course.nombre)}`}
-                                                            className="bg-bb-sidebar/30 hover:bg-bb-hover text-bb-text-secondary hover:text-white px-3 py-1 rounded-lg border border-bb-border transition-all text-[11px] font-bold flex items-center gap-1.5"
-                                                        >
-                                                            <LayoutPanelLeft className="w-3 h-3 text-blue-400/50" />
-                                                            {course.nombre}
-                                                        </Link>
-                                                    ));
+                                                    .map(course => {
+                                                        const isSelected = course.id === selectedCourseId || course.nombre === selectedCourse;
+                                                        return (
+                                                            <div key={course.id} className="flex items-center gap-1 group/current">
+                                                                <Link
+                                                                    href={`/dashboard/professors/view?id=${professor.id}&courseId=${course.id}&course=${encodeURIComponent(course.nombre)}`}
+                                                                    className={cn(
+                                                                        "px-3 py-1 rounded-lg border transition-all text-[11px] font-bold flex items-center gap-1.5",
+                                                                        isSelected
+                                                                            ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-lg shadow-yellow-900/10"
+                                                                            : "bg-bb-sidebar/30 hover:bg-bb-hover text-bb-text-secondary hover:text-white border-bb-border"
+                                                                    )}
+                                                                >
+                                                                    <LayoutPanelLeft className={cn("w-3 h-3", isSelected ? "text-yellow-500" : "text-blue-400/50")} />
+                                                                    {course.nombre}
+                                                                </Link>
+                                                                {isSelected && profile?.role === 'admin' && (
+                                                                    <button
+                                                                        onClick={() => handleDeleteCourse(course.nombre)}
+                                                                        className="p-1 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors opacity-0 group-hover/current:opacity-100"
+                                                                        title="Desvincular este curso"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    });
                                             })()}
                                         </div>
                                     )}
