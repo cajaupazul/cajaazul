@@ -25,44 +25,6 @@ function CourseDetailWrapper() {
       .trim();
   };
 
-  // Helper function to perform ultra-strict matching on course names
-  const isCleanMatch = (professorCourses: string[], targetCourse: string) => {
-    if (!targetCourse) return false;
-    const targetNorm = normalizeString(targetCourse);
-
-    return professorCourses.some(course => {
-      const courseNorm = normalizeString(course);
-      if (courseNorm === targetNorm) return true;
-
-      // Split professor courses by common delimiters and check for exact segment match
-      const segments = courseNorm.split(/[,;|•/]/).map(s => s.trim()).filter(Boolean);
-      return segments.some(segment => segment === targetNorm);
-    });
-  };
-
-  // Helper function to add professors to the local map, checking for strict course name matches
-  const addProfToMap = (profs: any[], map: Map<string, any>, courseNameClean: string, forceInclude: boolean = false) => {
-    profs.forEach(p => {
-      if (!p || map.has(p.id)) return; // Skip if null/undefined or already added
-
-      // If it's explicitly linked (e.g., junction table), we skip the name check
-      if (forceInclude) {
-        map.set(p.id, p);
-        return;
-      }
-
-      // For other sources, apply strict clean match logic
-      const allProfCourses = [
-        p.especialidad,
-        ...(p.otros_cursos ? (Array.isArray(p.otros_cursos) ? p.otros_cursos : [p.otros_cursos]) : [])
-      ].filter(Boolean);
-
-      if (isCleanMatch(allProfCourses, courseNameClean)) {
-        map.set(p.id, p);
-      }
-    });
-  };
-
   useEffect(() => {
     if (!courseId) {
       setLoading(false);
@@ -90,8 +52,7 @@ function CourseDetailWrapper() {
         // 2. Parallel fetch for associated data
         const [
           { data: materialsData },
-          { data: junctionData },
-          { data: profsData },
+          { data: linkedData },
           { data: sessionData }
         ] = await Promise.all([
           supabase.from('materials')
@@ -99,11 +60,14 @@ function CourseDetailWrapper() {
             .eq('course_id', courseId)
             .order('created_at', { ascending: false }),
           supabase.from('course_professors')
-            .select('professor_id')
+            .select(`
+              professor_id,
+              professors (
+                *,
+                professor_ratings (puntuacion, course_name)
+              )
+            `)
             .eq('course_id', courseId),
-          supabase.from('professors')
-            .select('*, professor_ratings(puntuacion, course_name)')
-            .limit(1000), // Fetch a good pool for matching
           supabase.auth.getUser()
         ]);
 
@@ -121,7 +85,6 @@ function CourseDetailWrapper() {
 
         // 4. Unified Professor Merging
         const professorsMap = new Map();
-        const linkedProfIds = new Set(junctionData?.map(cp => cp.professor_id) || []);
 
         // Count materials per professor for THIS course
         const materialsPerProf = new Map<string, number>();
@@ -131,41 +94,28 @@ function CourseDetailWrapper() {
           }
         });
 
-        (profsData || []).forEach(p => {
-          const isLinked = linkedProfIds.has(p.id);
+        (linkedData || []).forEach((item: any) => {
+          const p = item.professors;
+          if (!p) return;
+
           const materialCount = materialsPerProf.get(p.id) || 0;
           const isContributor = materialCount > 0;
 
-          const profCourses = [
-            p.especialidad,
-            ...(p.otros_cursos ? (typeof p.otros_cursos === 'string' ? p.otros_cursos.split(/[,;|•/]/) : (Array.isArray(p.otros_cursos) ? p.otros_cursos : [p.otros_cursos])) : [])
-          ].filter(Boolean);
-
-          const matchesName = isCleanMatch(profCourses, courseNameClean);
-          
           // STRICT Rating Filter: Only include ratings for THIS course
           const courseSpecificRatings = (p.professor_ratings || []).filter((r: any) => 
             r.course_name && normalizeString(r.course_name) === normalizeString(courseNameClean)
           );
           
           const hasCourseRatings = courseSpecificRatings.length > 0;
+          const avg = hasCourseRatings 
+            ? courseSpecificRatings.reduce((sum: number, r: any) => sum + r.puntuacion, 0) / courseSpecificRatings.length 
+            : 0;
 
-          // Inclusion Logic: Ultra-Strict as per final user request
-          // - ONLY include if the professor has this course explicitly in their specialty or other courses
-          // - Ignore junction table links if the text doesn't match
-          const shouldInclude = matchesName;
-
-          if (shouldInclude) {
-            const avg = hasCourseRatings 
-              ? courseSpecificRatings.reduce((sum: number, r: any) => sum + r.puntuacion, 0) / courseSpecificRatings.length 
-              : 0;
-
-            professorsMap.set(p.id, {
-              ...p,
-              averageRating: avg,
-              hasMaterials: isContributor
-            });
-          }
+          professorsMap.set(p.id, {
+            ...p,
+            averageRating: avg,
+            hasMaterials: isContributor
+          });
         });
 
         const finalProfs = Array.from(professorsMap.values());
