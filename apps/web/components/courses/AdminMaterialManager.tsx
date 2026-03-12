@@ -21,6 +21,7 @@ interface Material {
     created_at: string;
     user_id: string;
     professor_id: string | null;
+    thumbnail_url?: string;
     profiles?: {
         id: string;
         full_name?: string;
@@ -113,6 +114,11 @@ export default function AdminMaterialManager({
             // Delete from storage first
             const { deleteFileFromR2 } = await import('@/lib/r2-storage');
             await deleteFileFromR2('course-materials', material.url_archivo);
+
+            // Borrar miniatura si existe
+            if (material.thumbnail_url) {
+                await deleteFileFromR2('thumbnails', material.thumbnail_url);
+            }
 
             const { error } = await supabase
                 .from('materials')
