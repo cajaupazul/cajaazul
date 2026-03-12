@@ -1,0 +1,2722 @@
+[
+  {
+    "nombre": "PARDO GRAU, Cecilia Maria Luisa",
+    "especialidad": "Antiguo Perú, Arqueología, Museos y Nuevas Tecnologías",
+    "otros_cursos": "Arte y diseño prehispánico. Naturaleza y legado, Introducción a las Humanidades Digitales"
+  },
+  {
+    "nombre": "DEL MASTRO PUCCIO, Cesare Anibal",
+    "especialidad": "Antropología Filosófica",
+    "otros_cursos": "Filosofía, Introducción a la Política, Filosofia y Economía"
+  },
+  {
+    "nombre": "ESPINOSA WINDER, Francisco",
+    "especialidad": "Comunicación Digital",
+    "otros_cursos": "Lectura Crítica de la Prensa Digital y en las Redes Sociales"
+  },
+  {
+    "nombre": "PIEDRA VALDEZ, Jose Leopoldo",
+    "especialidad": "Dios, Existencia Humana y Sociedad",
+    "otros_cursos": "Ética"
+  },
+  {
+    "nombre": "VARGAS DELLA CASA, Rosa Elvira",
+    "especialidad": "Ética",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "QUIROZ MEZA, Danitza Dejanira",
+    "especialidad": "Ética",
+    "otros_cursos": "Filosofía"
+  },
+  {
+    "nombre": "PONCE BOGINO, Hector Alberto",
+    "especialidad": "Ética",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "EGOAVIL RIOS, Jean Christian",
+    "especialidad": "Ética",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "HINOSTROZA RIVERA, Dino Arturo",
+    "especialidad": "Ética",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "IVANOFF SABOGAL, Christian",
+    "especialidad": "Ética",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ARANA ALENCASTRE, Jean Luis",
+    "especialidad": "Ética",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VILLARAN CONTAVALLI, ALONSO MANUEL",
+    "especialidad": "Ética",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DEXTRE UZATEGUI, Sergio Guillermo",
+    "especialidad": "Ética",
+    "otros_cursos": "Filosofía"
+  },
+  {
+    "nombre": "MORENO GONZALEZ, Rafael",
+    "especialidad": "Ética",
+    "otros_cursos": "Filosofía"
+  },
+  {
+    "nombre": "CARRIÓN CARAVEDO, Úrsula",
+    "especialidad": "Filosofía",
+    "otros_cursos": "Filosofia Política, Lenguaje II"
+  },
+  {
+    "nombre": "LASTRES DAMMERT, Pamela Maria",
+    "especialidad": "Filosofía",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "IBAÑEZ BLANCAS, Franklin Ernesto",
+    "especialidad": "Filosofía",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ASTUDILLO TORRES, Deyvi Harold",
+    "especialidad": "Filosofía",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FONSECA ARIZA, Juan Adoniran",
+    "especialidad": "Historia Crítica del Perú",
+    "otros_cursos": "Religiones, Culturas y Economía"
+  },
+  {
+    "nombre": "INJOQUE RONCEROS, Freddy Miguel",
+    "especialidad": "Historia Crítica del Perú",
+    "otros_cursos": "Pensamiento Social Contemporáneo, Análisis de Datos Geográficos"
+  },
+  {
+    "nombre": "LIZARME VILLCAS, Nashely Yuvitza",
+    "especialidad": "Historia Crítica del Perú",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MONSALVE ZANATTI, Martin Alberto",
+    "especialidad": "Historia Económica del Perú",
+    "otros_cursos": "Historia y Filosofía de la Ciencia"
+  },
+  {
+    "nombre": "CAMACHO GAVIDIA, Abel Fernando",
+    "especialidad": "Historia Económica del Perú",
+    "otros_cursos": "Historia Económica y Empresarial"
+  },
+  {
+    "nombre": "CASAS TRAGODARA, Carlos Augusto",
+    "especialidad": "Historia Económica del Perú",
+    "otros_cursos": "Econometría II, Macroeconomía de Corto Plazo, Macroeconomía III"
+  },
+  {
+    "nombre": "RODRIGUEZ SATIZABAL, Beatriz Helena",
+    "especialidad": "Historia Económica y Empresarial",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CARRASCO WESTON, Jose Manuel",
+    "especialidad": "Historia Económica y Empresarial",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BARRETO VELAZQUEZ, Norberto",
+    "especialidad": "Historia Económica y Empresarial",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CABREJOS PORTOCARRERO, Jose Ignacio",
+    "especialidad": "Historia Económica y Empresarial",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PEREZ MARTINEZ, Angel Ruben",
+    "especialidad": "Historia y Filosofía de la Ciencia",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GUADALUPE MENDIZABAL, Cesar Augusto",
+    "especialidad": "Historia y Filosofía de la Ciencia",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BARRON AYLLON, Manuel Fernando",
+    "especialidad": "Introducción a la Política, Filosofia y Economía",
+    "otros_cursos": "Econometría I, Microeconomía II"
+  },
+  {
+    "nombre": "PEREZ , Leda Margarita",
+    "especialidad": "Introducción a la Política, Filosofia y Economía",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "NASSI PERIC, Bruno Fernando",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Lenguaje II"
+  },
+  {
+    "nombre": "LANDA ROJAS, Luis Enrique",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Lenguaje II, Nivelación en Lenguaje"
+  },
+  {
+    "nombre": "QUIROZ VELA, Juan Enrique",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Nivelación en Lenguaje"
+  },
+  {
+    "nombre": "MORIMOTO SONE, Maria Lourdes",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MONTAUBAN DEL SOLAR, Michele Marie",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GAUGER QUIROZ, Juan Manuel",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Nivelación en Lenguaje"
+  },
+  {
+    "nombre": "PINASCO ESPINOSA, Sandra Gabriella",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "HELGUERO MORALES, Lorenzo Pedro",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Lenguaje II"
+  },
+  {
+    "nombre": "MADALENGOITIA BARUA, Maria Gracia",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Nivelación en Lenguaje"
+  },
+  {
+    "nombre": "PEREZ DEL SOLAR TOLA, Pedro Carlos Hilarion",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Lenguaje II"
+  },
+  {
+    "nombre": "CALDERÓN BAIOCCHI, Juan Humberto",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Lenguaje II, Nivelación en Lenguaje"
+  },
+  {
+    "nombre": "MERINO SILICANI DE ALVAREZ, Rosanna Maria",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Nivelación en Lenguaje"
+  },
+  {
+    "nombre": "CARRILLO PASTOR, Giuliana Maria",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Lenguaje II, Nivelación en Lenguaje"
+  },
+  {
+    "nombre": "GUTIERREZ MEZA, José Elías",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GUICH RODRIGUEZ, Jose Abelardo",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Lenguaje II, Nivelación en Lenguaje"
+  },
+  {
+    "nombre": "ZAPATA FAJARDO, Jaime Israel",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Lenguaje II"
+  },
+  {
+    "nombre": "MORILLO SOTOMAYOR, Alex",
+    "especialidad": "Lenguaje I",
+    "otros_cursos": "Lenguaje II, Nivelación en Lenguaje"
+  },
+  {
+    "nombre": "HUATUCO POMALAZA, Rocio Milagros",
+    "especialidad": "Lenguaje II",
+    "otros_cursos": "Nivelación en Lenguaje"
+  },
+  {
+    "nombre": "SALCEDO REYES, Ana Lucia",
+    "especialidad": "Lenguaje II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FERRUCCI MONTOYA, Gabriela Ida",
+    "especialidad": "Lenguaje II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "WIESSE REBAGLIATI, Jorge Raul",
+    "especialidad": "Literatura",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GATTI MURRIEL, Carlos Antonio",
+    "especialidad": "Literatura Universal",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VARGAS VILCA, Mariano Daniel",
+    "especialidad": "Nivelación en Lenguaje",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ARMAS ASIN, Fernando Alberto",
+    "especialidad": "Religiones, Culturas y Economía",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ROMERO PINTO, Ezequiel Eduardo",
+    "especialidad": "Religiones, Culturas y Economía",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FLORES PAZ, Rafael Antonio",
+    "especialidad": "Religiones, Culturas y Economía",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ATO DEL AVELLANAL CARRERA, Manuel Antonio",
+    "especialidad": "Religiones, Culturas y Economía",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ARIAS CUBA, Ybeth Merly",
+    "especialidad": "Religiones, Culturas y Economía",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CARO JAHNCKE, Andres Javier",
+    "especialidad": "Análisis Económico de la Competencia",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ALVAREZ RODRICH, Augusto Anibal",
+    "especialidad": "Análisis Político Relevante para la Perspectiva Económica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GARCIA RAMOS, Yboon Victoria",
+    "especialidad": "Análisis Real y Convexo",
+    "otros_cursos": "Matemáticas IV"
+  },
+  {
+    "nombre": "QUISPE ROJAS, Alexander Wilder",
+    "especialidad": "Data Science con Python",
+    "otros_cursos": "Inferencia Causal y Machine Learning"
+  },
+  {
+    "nombre": "PRIALE UGAS, Miguel Enrique",
+    "especialidad": "Diseño y Evaluación Social de Proyectos",
+    "otros_cursos": "Economía General I"
+  },
+  {
+    "nombre": "BASURTO PRECIADO, Maria Pia",
+    "especialidad": "Econometría Aplicada",
+    "otros_cursos": "Econometría II"
+  },
+  {
+    "nombre": "CASTRO CARLIN, Juan Francisco",
+    "especialidad": "Econometría I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LAVADO PADILLA, Pablo Augusto",
+    "especialidad": "Econometría I",
+    "otros_cursos": "Econometría II"
+  },
+  {
+    "nombre": "GALARZA CONTRERAS, Elsa Patricia",
+    "especialidad": "Economía Ambiental Aplicada a las Políticas Públicas en el Perú",
+    "otros_cursos": "Microeconomía II"
+  },
+  {
+    "nombre": "GALARZA ARELLANO, Francisco Bruno",
+    "especialidad": "Economía Experimental",
+    "otros_cursos": "Microeconomía II"
+  },
+  {
+    "nombre": "LA SERNA STUDZINSKI, Karlos",
+    "especialidad": "Economía General I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PARODI TRECE, Carlos Alfredo Justo",
+    "especialidad": "Economía General I",
+    "otros_cursos": "Economía Peruana"
+  },
+  {
+    "nombre": "GÓMEZ GAMARRA DE ZEA, ZOILA DEL ROSARIO",
+    "especialidad": "Economía General I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MOLINA CAMPODONICO, Oswaldo",
+    "especialidad": "Economía General I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "AGUIRRE MONTOYA, Julio Cesar",
+    "especialidad": "Economía General I",
+    "otros_cursos": "Organización Industrial"
+  },
+  {
+    "nombre": "HERNANDEZ RUBIÑOS, Mario German",
+    "especialidad": "Economía General I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PEREZ MALCA, Patricia Estela",
+    "especialidad": "Economía General I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MONTESINOS CORDOVA, Jorge Luis",
+    "especialidad": "Economía General I",
+    "otros_cursos": "Economía General II, Evaluación Privada de Proyectos"
+  },
+  {
+    "nombre": "PAREDES SALAZAR, Lizardo Emanuel",
+    "especialidad": "Economía General I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ARAGON PEÑALOZA, Gisella Silvana",
+    "especialidad": "Economía General I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FALEN ZEVALLOS, Luis Eduardo",
+    "especialidad": "Economía General I",
+    "otros_cursos": "Economía General II"
+  },
+  {
+    "nombre": "TALLEDO SANCHEZ, Jacqueline Isabel",
+    "especialidad": "Economía General I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RIVERA GALLEGOS, Gonzalo Javier",
+    "especialidad": "Economía General I",
+    "otros_cursos": "Microeconomía I"
+  },
+  {
+    "nombre": "HERAS RIVERA, Sissi Andrea",
+    "especialidad": "Economía General I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MUÑIZ CAHUANA, Graciela Rocio",
+    "especialidad": "Economía General I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LISBOA VASQUEZ, Claudia Paola",
+    "especialidad": "Economía General I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SEVERINO MUÑOZ, Renzo Cristhyan Enrique",
+    "especialidad": "Economía General I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SALINAS DEPAZ, Cesar Saturnino",
+    "especialidad": "Economía General II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FRANCO VALDIVIA, Eliana",
+    "especialidad": "Economía General II",
+    "otros_cursos": "Investigación Aplicada en Negocios Internacionales"
+  },
+  {
+    "nombre": "DIAZ GAZANI, Guillermo",
+    "especialidad": "Economía General II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SERVAN LOZANO, Sergio",
+    "especialidad": "Economía General II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VEGA DE LA CRUZ, Hugo Yamil",
+    "especialidad": "Economía General II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ROJAS RODRIGUEZ, CARMEN ROSA",
+    "especialidad": "Economía General II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GONZAGA MENA, Bruno Eduardo",
+    "especialidad": "Economía General II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "URRUNAGA PASCO-FONT, Roberto Luis",
+    "especialidad": "Economía Pública",
+    "otros_cursos": "Macroeconomía I"
+  },
+  {
+    "nombre": "MUÑOZ BAZAN, Italo Juan Carlos",
+    "especialidad": "Economía y Estadística Aplicada al Derecho",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ROMERO VEREAU, Daniel Alonso",
+    "especialidad": "Estadística Aplicada",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SALINAS MORRIS, Juan Carlos",
+    "especialidad": "Estadística Aplicada",
+    "otros_cursos": "Análisis Financiero"
+  },
+  {
+    "nombre": "CHIRA BALLENA, Miguel Angel",
+    "especialidad": "Estadística Aplicada",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TRUJILLO GALINDO, Renato Juan",
+    "especialidad": "Estadística Aplicada",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MATEU BULLON, Pedro Fernando",
+    "especialidad": "Estadística I",
+    "otros_cursos": "Estadística II"
+  },
+  {
+    "nombre": "PEREZ SOTELO, Edisson Alonso",
+    "especialidad": "Estadística I",
+    "otros_cursos": "Matemáticas III, Nivelación en Matemáticas"
+  },
+  {
+    "nombre": "RUBIO DONET, Jorge Luis",
+    "especialidad": "Estadística I",
+    "otros_cursos": "Estadística II"
+  },
+  {
+    "nombre": "ANGELES OLIVERA, Julio Hugo",
+    "especialidad": "Estadística I",
+    "otros_cursos": "Estadística II"
+  },
+  {
+    "nombre": "SOTO RODRIGUEZ, Ivan Dennys",
+    "especialidad": "Estadística I",
+    "otros_cursos": "Estadística II"
+  },
+  {
+    "nombre": "LINDO HUERTAS, Elsa Maria",
+    "especialidad": "Estadística I",
+    "otros_cursos": "Estadística II"
+  },
+  {
+    "nombre": "TARAZONA VARGAS, Enver Gerald",
+    "especialidad": "Estadística I",
+    "otros_cursos": "Estadística II"
+  },
+  {
+    "nombre": "OSORIO MAURICIO, Lucila",
+    "especialidad": "Estadística I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CAYCHO HUAMANI, Jose Alberto",
+    "especialidad": "Estadística I",
+    "otros_cursos": "Análisis Multivariado para los Negocios, Investigación de Mercados Aplicada"
+  },
+  {
+    "nombre": "SILVESTRE VALER, Jim Roland",
+    "especialidad": "Estadística I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VALENCIA CHACON, Raphael Felix",
+    "especialidad": "Estadística I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FEBRES HUAMAN, Grimaldo Jose",
+    "especialidad": "Estadística I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SOTO RODRIGUEZ,",
+    "especialidad": "Estadística II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LI NING CHAMAN, Jorge Francisco",
+    "especialidad": "Evaluación Privada de Proyectos",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "KAMICHE ZEGARRA, Joanna Noelia",
+    "especialidad": "Gestión de los Recursos Naturales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MANRIQUE ZEDER, Liseth Cristina",
+    "especialidad": "Gestión de los Recursos Naturales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GUARDIA MUGURUZA, Alejandra",
+    "especialidad": "Green Growth Strategies for Peru and Latin America",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TORRES GOMEZ, Javier Antonio",
+    "especialidad": "Historia del Pensamiento Económico",
+    "otros_cursos": "Macroeconomía I"
+  },
+  {
+    "nombre": "DEL HIERRO CARRILLO, Patricia",
+    "especialidad": "Historia del Pensamiento Económico",
+    "otros_cursos": "Sem. La IA y la Robótica: Ciclos Económicos, Impactos y Respuestas"
+  },
+  {
+    "nombre": "GONZALEZ VIGIL, Luis Fernando",
+    "especialidad": "Investigación Económica I",
+    "otros_cursos": "Investigación Económica II"
+  },
+  {
+    "nombre": "MORON PASTOR, Eduardo Andres",
+    "especialidad": "Macroeconomía I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CUSATO NOVELLI, Antonio",
+    "especialidad": "Macroeconomía I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ORTIZ SOSA, Marco Antonio",
+    "especialidad": "Macroeconomía II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PAWELCZAK , Jakub Mateusz",
+    "especialidad": "Macroeconomía II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CASTILLO AGUIRRE, Luis Eduardo",
+    "especialidad": "Macroeconomía II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PINZON GIRALDO, Alvaro Jose",
+    "especialidad": "Macroeconomía III",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "HERNANDEZ CALDERON, Joao Alejandro",
+    "especialidad": "Macroeconomía Internacional",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MONTORO LLAMOSAS, Carlos Humberto",
+    "especialidad": "Macroeconomía Internacional",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CHAVEZ SARMIENTO, Enrique Idael",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": "Procesos Estocásticos"
+  },
+  {
+    "nombre": "OLANO CRUCES, Mario Fernando",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FLORES SALINAS, JOSE ALBERTO",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": "Matemáticas II, Matemáticas para los Negocios"
+  },
+  {
+    "nombre": "ESCUDERO ACERO, Phamela Stephany",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": "Matemáticas para los Negocios, Nivelación en Matemáticas"
+  },
+  {
+    "nombre": "DAVILA QUESQUEN, Erick Nomberto",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": "Matemáticas II"
+  },
+  {
+    "nombre": "PROLEON PATRICIO, DANIEL GIOVANNI",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ESCALANTE HUAMANÍ, Sonia María",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": "Matemáticas para los Negocios, Nivelación en Matemáticas"
+  },
+  {
+    "nombre": "GUARDALES VASQUEZ, Randdy Arturo",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": "Nivelación en Matemáticas"
+  },
+  {
+    "nombre": "MOLINA TARAZONA, Lucy Smith",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": "Matemáticas II, Nivelación en Matemáticas"
+  },
+  {
+    "nombre": "SINCHE CHOCCA, Nildo",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": "Nivelación en Matemáticas"
+  },
+  {
+    "nombre": "ALCALDE SOSA, Jose Andres",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": "Matemáticas III"
+  },
+  {
+    "nombre": "SALINAS ZAVALA, Christoper Jesus",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": "Matemáticas II, Nivelación en Matemáticas"
+  },
+  {
+    "nombre": "ARREDONDO RUIZ, Manuel Jesus",
+    "especialidad": "Matemáticas I",
+    "otros_cursos": "Pensamiento Sistémico"
+  },
+  {
+    "nombre": "BUENO TANGOA, Orestes Martin",
+    "especialidad": "Matemáticas II",
+    "otros_cursos": "Matemáticas III"
+  },
+  {
+    "nombre": "CHULLUNCUY CENTENO, Andres Vicente",
+    "especialidad": "Matemáticas II",
+    "otros_cursos": "Nivelación en Matemáticas"
+  },
+  {
+    "nombre": "TORRES PEREZ, Elvis",
+    "especialidad": "Matemáticas II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "COTRINA ASTO, John Edwin",
+    "especialidad": "Matemáticas III",
+    "otros_cursos": "Matemáticas IV"
+  },
+  {
+    "nombre": "WINKELRIED QUEZADA, Diego Martin",
+    "especialidad": "Matemáticas III",
+    "otros_cursos": "Investigación Financiera, Sem. Commodities & Volatility, Sem. de Proceso de Mercado"
+  },
+  {
+    "nombre": "VELASQUEZ CASTAÑON, Oswaldo Jose",
+    "especialidad": "Matemáticas III",
+    "otros_cursos": "Álgebra Líneal Aplicada, Programación Avanzada para la Ciencia de Datos"
+  },
+  {
+    "nombre": "MANTILLA GONZALES DE LA COTER, Eduardo Javier",
+    "especialidad": "Matemáticas IV",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "OSORIO UBALDO, Jaime",
+    "especialidad": "Matemáticas para los Negocios",
+    "otros_cursos": "Nivelación en Matemáticas"
+  },
+  {
+    "nombre": "CORTEZ VALDIVIA, Rafael Augusto",
+    "especialidad": "Microeconomía I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RHO , Haedong",
+    "especialidad": "Microeconomía I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CHAVEZ COTRADO, Jorge Francisco",
+    "especialidad": "Microeconomía I",
+    "otros_cursos": "Microeconomía II"
+  },
+  {
+    "nombre": "PORRAS MENDOZA, Linda Janet",
+    "especialidad": "Microeconomía I",
+    "otros_cursos": "Sem. Economía y Gestión de Programas Sociales"
+  },
+  {
+    "nombre": "BONIFAZ FERNANDEZ, Jose Luis",
+    "especialidad": "Microeconomía II",
+    "otros_cursos": "Organización Industrial"
+  },
+  {
+    "nombre": "CERNADES GOMEZ, Jesus",
+    "especialidad": "Nivelación en Matemáticas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VENEGAS PALACIOS, Edgard Kenny",
+    "especialidad": "Nivelación en Matemáticas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GONZALEZ IZQUIERDO, Jorge Domingo",
+    "especialidad": "Política Económica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ARMAS RIVAS, Adrian Alejandro",
+    "especialidad": "Política Económica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ARON SAID, Ana Sofia",
+    "especialidad": "Sem. de la Estrategia a la Implementación de Políticas Públicas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DIAZ GAMARRA, Jose Guillermo",
+    "especialidad": "Sem.Tópicos en Organización Industrial",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ARAOZ FERNANDEZ, Mercedes Rosalba",
+    "especialidad": "Teoría del Comercio Internacional",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ZEVALLOS URQUIETA, Hector Augusto",
+    "especialidad": "Teoría del Comercio Internacional",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CANTA TERREROS, Michel Rodolfo",
+    "especialidad": "Teoría del Desarrollo Económico",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MALDONADO ZAMBRANO, Stanislao Humberto",
+    "especialidad": "Tópicos de Evaluación de Impacto",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BENITES SANCHEZ, Luis Enrique",
+    "especialidad": "Análisis Multivariado para los Negocios",
+    "otros_cursos": "Analítica de Datos para los Negocios"
+  },
+  {
+    "nombre": "DONGO ROMAN, Andie Bryan",
+    "especialidad": "Análisis Multivariado para los Negocios",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GARCIA CESPEDES, Carlos Jeffer",
+    "especialidad": "Análisis Multivariado para los Negocios",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PORRAS CERRON, Jaime Carlos",
+    "especialidad": "Análisis Multivariado para los Negocios",
+    "otros_cursos": "Fundamentos de Analítica"
+  },
+  {
+    "nombre": "CASTILLO ISISOLA, Frank Josue",
+    "especialidad": "Análisis Multivariado para los Negocios",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VASQUEZ ORE, Marco Antonio",
+    "especialidad": "Analítica de Datos para los Negocios",
+    "otros_cursos": "Macros en Excel para No Programadores, Nivelación en Informática"
+  },
+  {
+    "nombre": "MAEHARA ALIAGA, Yoshitomi Eduardo",
+    "especialidad": "Analítica de Datos para los Negocios",
+    "otros_cursos": "Herramientas de Programación"
+  },
+  {
+    "nombre": "BUSTAMANTE BAUTISTA, Beatriz Esther",
+    "especialidad": "Analítica de Datos para los Negocios",
+    "otros_cursos": "Nivelación en Informática"
+  },
+  {
+    "nombre": "RAMOS PERALTA, Karim Mabel",
+    "especialidad": "Analítica de Datos para los Negocios",
+    "otros_cursos": "Nivelación en Informática"
+  },
+  {
+    "nombre": "REATEGUI SCHWARZ, Gerardo",
+    "especialidad": "Asset-Light Business Models",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VILLACORTA HOLGUIN, Katherine Lilia",
+    "especialidad": "Business Agility",
+    "otros_cursos": "Design Thinking and Technological Innovation"
+  },
+  {
+    "nombre": "PERALTA MANSILLA, Norma Gisela",
+    "especialidad": "Business Agility",
+    "otros_cursos": "Emprendimiento e Innovación, Proyección Social"
+  },
+  {
+    "nombre": "FLORES CASTRO, Juan Alejandro",
+    "especialidad": "Creación de Valor y Toma de Decisiones",
+    "otros_cursos": "Diseño Organizacional y Estrategia, Gestión de la Innovación"
+  },
+  {
+    "nombre": "Díaz Rojas, Carlos Andres",
+    "especialidad": "Creación de Valor y Toma de Decisiones",
+    "otros_cursos": "Métodos Cuantitativos para la Gestión en las Organizaciones, Sistemas de Información y Análisis de Datos"
+  },
+  {
+    "nombre": "LAFOSSE QUINTANA, Wilfredo Jesus",
+    "especialidad": "Creación de Valor y Toma de Decisiones",
+    "otros_cursos": "Dirección Estratégica"
+  },
+  {
+    "nombre": "PAIVA ZARZAR, Roberto Alcides",
+    "especialidad": "Dirección Estratégica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PALACIOS MATOS, Maria Del Pilar Amelia",
+    "especialidad": "Dirección Estratégica",
+    "otros_cursos": "Gestion del Capital Humano, Liderazgo, Transformación Digital y Gestión del Cambio"
+  },
+  {
+    "nombre": "UEYONAHARA MATZUMOTO, Jorge Antonio",
+    "especialidad": "Diseño de Negocios Circulares y Desafío Climático",
+    "otros_cursos": "Gestión de la Sostenibilidad Social y Ambiental en las Empresas, Liderazgo, Sostenibilidad Empresarial y Modelos de Negocios Circulares"
+  },
+  {
+    "nombre": "REBAZA CARO, Nancy",
+    "especialidad": "Diseño Organizacional y Estrategia",
+    "otros_cursos": "Fundamentos de las Ciencias Empresariales, Gestión del Cambio y Transformación Cultural, Liderazgo"
+  },
+  {
+    "nombre": "ACUÑA SILLO, Elba Lourdes",
+    "especialidad": "Diseño Organizacional y Estrategia",
+    "otros_cursos": "Estrategia, Fundamentos de las Ciencias Empresariales"
+  },
+  {
+    "nombre": "JAYME MOSQUERA, Guadalupe Desiree",
+    "especialidad": "Diseño Organizacional y Estrategia",
+    "otros_cursos": "Fundamentos de las Ciencias Empresariales, Gestión de Personas, Gestión del Cambio y Transformación Cultural"
+  },
+  {
+    "nombre": "BUTRON PIPOLI, Giuliana Maria",
+    "especialidad": "Diseño Organizacional y Estrategia",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GRANTHON URIARTE, Ronald Jefrie",
+    "especialidad": "Diseño Organizacional y Estrategia",
+    "otros_cursos": "Fundamentos de las Ciencias Empresariales, Liderazgo"
+  },
+  {
+    "nombre": "TRUJILLO SOSA, Jorge Enrique",
+    "especialidad": "Emprendimiento e Innovación",
+    "otros_cursos": "Fundamentos de las Ciencias Empresariales, Proyecto Empresarial"
+  },
+  {
+    "nombre": "SANCHEZ JUGO, Isabel",
+    "especialidad": "Emprendimiento e Innovación",
+    "otros_cursos": "Fundamentos de las Ciencias Empresariales, Comportamiento del Consumidor"
+  },
+  {
+    "nombre": "VILLANUEVA PEREZ, Humberto Jesus",
+    "especialidad": "Emprendimiento e Innovación",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VILLEGAS VALLADARES, Shirley Rubi",
+    "especialidad": "Emprendimiento e Innovación",
+    "otros_cursos": "Proyecto Empresarial"
+  },
+  {
+    "nombre": "BELTRÁN PUERTA, Jorge",
+    "especialidad": "Emprendimiento e Innovación",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RIVAS VELARDE, Andrea Carolina",
+    "especialidad": "Emprendimiento e Innovación",
+    "otros_cursos": "Marketing Estratégico"
+  },
+  {
+    "nombre": "RODRIGUEZ CORNEJO, Juan Carlos",
+    "especialidad": "Formación y Desarrollo del Talento",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CORNEJO ALVAREZ DE ESQUIVES, Ana Lourdes",
+    "especialidad": "Fundamentos de las Ciencias Empresariales",
+    "otros_cursos": "Proyecto Empresarial"
+  },
+  {
+    "nombre": "WEINBERGER VILLARAN, Karen Edith",
+    "especialidad": "Fundamentos de las Ciencias Empresariales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DEL CASTILLO MORY, Elsa Catalina",
+    "especialidad": "Fundamentos de las Ciencias Empresariales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MANOSALVA MENDOZA, Maritza Elva Juana",
+    "especialidad": "Fundamentos de las Ciencias Empresariales",
+    "otros_cursos": "Gestión del Cambio y Transformación Cultural"
+  },
+  {
+    "nombre": "MEDINA WONG, Gwendolyne",
+    "especialidad": "Fundamentos de las Ciencias Empresariales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ANTICONA SUAREZ, Erick Olson",
+    "especialidad": "Gestión de la Cadena de Suministros",
+    "otros_cursos": "Gestión de Operaciones en las Organizaciones, Proyecto Empresarial, Logística Internacional, Tecnologías Aplicadas a la Distribución Física Internacional"
+  },
+  {
+    "nombre": "OLIVEIRA CAMBIASO, Daniel Alessandro",
+    "especialidad": "Gestión de la Cadena de Suministros",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CHICHIZOLA FAJARDO, Cristina Elizabeth",
+    "especialidad": "Gestión de la Cadena de Suministros",
+    "otros_cursos": "Gestión de Operaciones en las Organizaciones, Métodos Cuantitativos para la Gestión en las Organizaciones"
+  },
+  {
+    "nombre": "PECASTAING , Nicolas",
+    "especialidad": "Gestión de la Sostenibilidad Social y Ambiental en las Empresas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PRIALE VALLE, Maria Angela",
+    "especialidad": "Gestión de la Sostenibilidad Social y Ambiental en las Empresas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TEJADA MATOS, Susana Rocío",
+    "especialidad": "Gestión de la Sostenibilidad Social y Ambiental en las Empresas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SARAVIA VERGARA, Enrique Andres",
+    "especialidad": "Gestión de Operaciones en las Organizaciones",
+    "otros_cursos": "Métodos Cuantitativos para la Gestión en las Organizaciones"
+  },
+  {
+    "nombre": "LARIOS FRANCIA, Rosa Patricia",
+    "especialidad": "Gestión de Operaciones en las Organizaciones",
+    "otros_cursos": "Gestión y Emprendimiento en la Industria Musical, Investigación Aplicada a los Negocios"
+  },
+  {
+    "nombre": "ESQUIVES GUERRA, Marcial Ruben",
+    "especialidad": "Gestión de Personas",
+    "otros_cursos": "Gestión del Cambio y Transformación Cultural, Liderazgo, Selección y Evaluación de Personal"
+  },
+  {
+    "nombre": "FUCHS ANGELES, Rosa Maria",
+    "especialidad": "Gestión de Personas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "OTINIANO CARBONELL, Martin Carlos",
+    "especialidad": "Gestión de Personas",
+    "otros_cursos": "Gestión del Cambio y Transformación Cultural"
+  },
+  {
+    "nombre": "CAMPOS FERNANDEZ, Luis Enrique",
+    "especialidad": "Gestión de Riesgos según el PMI",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BRAVO MONTEVERDE, Guido Humberto",
+    "especialidad": "Gestión del Cambio y Transformación Cultural",
+    "otros_cursos": "Liderazgo"
+  },
+  {
+    "nombre": "ESCRIBENS OLAECHEA, Mario Eduardo",
+    "especialidad": "Gestion del Capital Humano",
+    "otros_cursos": "Introducción a la Ingeniería, Tecnología y Negocios Digitales"
+  },
+  {
+    "nombre": "GOMEZ CHANGA, Sarita Julia",
+    "especialidad": "Gestión Estratégica de Organizaciones Deportivas",
+    "otros_cursos": "Liderazgo, Marketing Deportivo"
+  },
+  {
+    "nombre": "MOSCOSO ZAMBRANO, Renzo Mauricio",
+    "especialidad": "Gestión Estratégica de Organizaciones Deportivas",
+    "otros_cursos": "Marketing Deportivo"
+  },
+  {
+    "nombre": "Alpaca",
+    "especialidad": "Gestión y Emprendimiento en la Industria Musical",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CHAVEZ CARRUITERO, Jimmy Rosendo",
+    "especialidad": "Innovación y Gestión en Negocios Digitales",
+    "otros_cursos": "Sistemas de Información y Análisis de Datos"
+  },
+  {
+    "nombre": "LINARES TORRES, Freddy",
+    "especialidad": "Innovación y Gestión en Negocios Digitales",
+    "otros_cursos": "Digital Product Design & Metrics, Neuromarketing"
+  },
+  {
+    "nombre": "GARCIA FRY, Andrea",
+    "especialidad": "Innovación y Gestión en Negocios Digitales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ESPINEL HUERTAS DEL PINO, Maria Pia",
+    "especialidad": "Innovación y Gestión en Negocios Digitales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CANO LANZA, Ana Maria",
+    "especialidad": "Investigación Aplicada a los Negocios",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CHAVES CUZZI, Daniela Maria",
+    "especialidad": "Liderazgo",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "HERAUD GOICOCHEA, Sylvia",
+    "especialidad": "Liderazgo",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "Vivanco Loomer, Luis Miguel",
+    "especialidad": "Liderazgo",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "Vargas Soto, Veronica",
+    "especialidad": "Liderazgo",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CASTRO SEGURA, Barbara",
+    "especialidad": "Liderazgo",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SALVADOR , Elisa",
+    "especialidad": "Managing Innovation and Creativity - Negotiation for International Managers",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DAVALOS CHACON, Jorge Elias",
+    "especialidad": "Métodos Cuantitativos para la Gestión en las Organizaciones",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BRESCIANI CHAVEZ, Fernando Manuel",
+    "especialidad": "Métodos Cuantitativos para la Gestión en las Organizaciones",
+    "otros_cursos": "Fundamentos de Finanzas"
+  },
+  {
+    "nombre": "GALVEZ PAIBA, Blanca Eliana",
+    "especialidad": "Proyecto Empresarial",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ARANDA IPINCE, Duilio Angel",
+    "especialidad": "Sistemas de Información y Análisis de Datos",
+    "otros_cursos": "Arquitectura del Sistema de Información, Nivelación en Informática, Power BI: Transforma y Visualiza Datos para Decisiones Informadas"
+  },
+  {
+    "nombre": "INFANTE CHAVEZ, Jorge Ricardo",
+    "especialidad": "Sistemas de Información y Análisis de Datos",
+    "otros_cursos": "Arquitectura del Sistema de Información, Excel Avanzado para la Gestión Empresarial, Nivelación en Informática"
+  },
+  {
+    "nombre": "CASAFRANCA ROSAS, Juan Carlos",
+    "especialidad": "Toma de Decisiones - Simulador: Blue Ocean Strategy",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VALDIVIA CORRALES, Gustavo",
+    "especialidad": "Antropología",
+    "otros_cursos": "Antropología Económica"
+  },
+  {
+    "nombre": "CASTELLANOS DEL PORTAL, Themis Aidee",
+    "especialidad": "Antropología",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "Hidalgo Bonicelli, Alejandra Lucia",
+    "especialidad": "Antropología",
+    "otros_cursos": "Investigación Académica"
+  },
+  {
+    "nombre": "PAGAN SANCHEZ, Antonio Jose",
+    "especialidad": "China Contemporánea: Sociedad, Política y Relaciones Internacionales",
+    "otros_cursos": "Relaciones Internacionales"
+  },
+  {
+    "nombre": "PASTOR TORRES, Gustavo Ricardo",
+    "especialidad": "Ciencia Política",
+    "otros_cursos": "Investigación Académica, Pensamiento Social Contemporáneo"
+  },
+  {
+    "nombre": "VERGARA PANIAGUA, Alberto",
+    "especialidad": "Ciencia Política",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BLYDAL , Carl Johan",
+    "especialidad": "Ciencia Política",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LANEGRA QUISPE, Ivan Kriss",
+    "especialidad": "Ciencia Política",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MARIUS VASQUEZ, Paola",
+    "especialidad": "Ciencia Política",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ENCINAS ZEVALLOS, Daniel",
+    "especialidad": "Ciencia Política",
+    "otros_cursos": "Política Comparada"
+  },
+  {
+    "nombre": "AVALOS BARRIO DE MENDOZA, Vicente Daniel",
+    "especialidad": "Ciencia Política",
+    "otros_cursos": "Pensamiento Social Contemporáneo"
+  },
+  {
+    "nombre": "GODOY MEJIA, Jose Alejandro",
+    "especialidad": "Ciencia Política",
+    "otros_cursos": "Investigación Académica"
+  },
+  {
+    "nombre": "NOLES COTITO, Mariela Ines",
+    "especialidad": "Ciencia Política",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BARRENECHEA CARPIO, Rodrigo",
+    "especialidad": "Ciudadanía y Democratización",
+    "otros_cursos": "Poder e Instituciones"
+  },
+  {
+    "nombre": "CHENG MATSUNO, Vanessa Cecilia",
+    "especialidad": "Contemporary Public Administration Seminar",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TACUCHE MORENO, Luis Enrique",
+    "especialidad": "Discriminación y Políticas Públicas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SANBORN , Cynthia Ann",
+    "especialidad": "Economía Politica Internacional",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FLORES NORIEGA DE BENITES, Eva Paulina",
+    "especialidad": "Investigación Académica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DEBENEDETTI LUJAN, Bruno Edoardo",
+    "especialidad": "Investigación Académica",
+    "otros_cursos": "Destrezas Legales I, Sem. de Tesis"
+  },
+  {
+    "nombre": "GIESECKE CHERO, Micaela",
+    "especialidad": "Investigación Académica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CASTILLO THORNE, Krishna David",
+    "especialidad": "Investigación Académica",
+    "otros_cursos": "Sociología"
+  },
+  {
+    "nombre": "DEL MASTRO VECCHIONE, Marco Hugo",
+    "especialidad": "Investigación Académica",
+    "otros_cursos": "Pensamiento Social Contemporáneo"
+  },
+  {
+    "nombre": "SETLAK , Magdalena Anna",
+    "especialidad": "Investigación Académica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GUTIERREZ COTTLE, Maria Cristina",
+    "especialidad": "Investigación Académica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VALLEJO RIVERA, Elizabeth Rocio",
+    "especialidad": "Investigación Académica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GORENSTEIN RIVERA, SHARON",
+    "especialidad": "Investigación Académica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PIZARRO BAUMANN, Maria Jimena",
+    "especialidad": "Investigación Académica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "STIGLICH VARGAS, Maria Elizabeth",
+    "especialidad": "Investigación Académica",
+    "otros_cursos": "Sicología"
+  },
+  {
+    "nombre": "CRUZADO SILVERII, Miguel Gabriel",
+    "especialidad": "Pensamiento Social Contemporáneo",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "KOGAN COGAN, Liuba",
+    "especialidad": "Pensamiento Social Contemporáneo",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PROTZEL DE AMAT, Jaime Javier",
+    "especialidad": "Pensamiento Social Contemporáneo",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PEREZ RECALDE , Guadalupe",
+    "especialidad": "Pensamiento Social Contemporáneo",
+    "otros_cursos": "Procesos sociopolíticos de América Latina a través del Cine, Sociología"
+  },
+  {
+    "nombre": "MARIANI , Santiago",
+    "especialidad": "Procesos sociopolíticos de América Latina a través del Cine",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PEÑA ANAYA, Maria Luisa",
+    "especialidad": "Proyección Social",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VARELA GARCIA, Cinthia Patricia Alexandra",
+    "especialidad": "Proyección Social",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VIDAL IZAGUIRRE, Patricia Estela",
+    "especialidad": "Proyección Social",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ZUÑIGA BRAVO, Martha Eliana",
+    "especialidad": "Proyección Social",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FLORES GUZMAN, ROSIO MILAGRO",
+    "especialidad": "Proyección Social",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BAMBAREN LUKIS, Fernando Armando",
+    "especialidad": "Relaciones Internacionales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MENESES GONZALES, Gonzalo Alfredo",
+    "especialidad": "Sicología",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RODRIGUEZ CUADROS DE MURO, Lorena",
+    "especialidad": "Sicología",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "YOSHIDA GOTO, Erika",
+    "especialidad": "Sicología",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "OTINIANO CAMPOS, Fiorella",
+    "especialidad": "Sicología",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SOLANO SILVA, Dante Junior",
+    "especialidad": "Sicología",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BIELICH SALAZAR, Claudia Teresa",
+    "especialidad": "Sociología",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "COBIAN OVALLE DE PLAZA, Maria Beatriz",
+    "especialidad": "Sociología",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MEDRANO GARCIA, Fabricio Manuel",
+    "especialidad": "Aspectos Jurídicos para los Negocios",
+    "otros_cursos": "Derecho Laboral y Tributario"
+  },
+  {
+    "nombre": "PANTIGOSO VELLOSO DA SILVEIRA, Francisco",
+    "especialidad": "Aspectos Tributarios para la Empresa",
+    "otros_cursos": "Derecho Laboral y Tributario"
+  },
+  {
+    "nombre": "DE LA TORRE ONOFRE, Christian Raul",
+    "especialidad": "Auditoría",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SOTO MUJICA, José Carlos Humberto",
+    "especialidad": "Constitución y Formalización de MYPES",
+    "otros_cursos": "Fundamentos de Contabilidad"
+  },
+  {
+    "nombre": "ALVA GONZALES, Edgar Paul",
+    "especialidad": "Contabilidad de Costos",
+    "otros_cursos": "Contabilidad de Gestión"
+  },
+  {
+    "nombre": "YAÑEZ QUIROZ, Mario Alberto",
+    "especialidad": "Contabilidad Financiera Aplicada",
+    "otros_cursos": "Fundamentos de Contabilidad"
+  },
+  {
+    "nombre": "JARA MIRANDA, Renan Geoffrey",
+    "especialidad": "Contabilidad Financiera Intermedia",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CHONG LEON, Esteban",
+    "especialidad": "Contabilidad Financiera Intermedia",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "QUEVEDO ALEJOS, Maria Isabel Alejandra",
+    "especialidad": "Contabilidad Financiera Intermedia",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ASTORGA DE LA CRUZ, Brandelt Jesús",
+    "especialidad": "Contabilidad Financiera Intermedia",
+    "otros_cursos": "Investigación para Contadores"
+  },
+  {
+    "nombre": "MARADIEGUE , SANTIAGO ALBERTO",
+    "especialidad": "Contabilidad Financiera Intermedia",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ROSAS AMBROSIO, Annel Victoria",
+    "especialidad": "Contabilidad Financiera Intermedia",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ARIAS PICON, Norma Beatriz",
+    "especialidad": "Contabilidad Financiera Intermedia",
+    "otros_cursos": "Fundamentos de Contabilidad, Management Accounting"
+  },
+  {
+    "nombre": "CACERES LOAYZA, Rosa Graciela",
+    "especialidad": "Contabilidad Financiera Intermedia",
+    "otros_cursos": "Fundamentos de Contabilidad"
+  },
+  {
+    "nombre": "RUIZ HURTADO, Pedro Cesar",
+    "especialidad": "Contabilidad Financiera Intermedia",
+    "otros_cursos": "Evaluación Financiera de las Organizaciones, Evaluación Financiera para No Contadores"
+  },
+  {
+    "nombre": "ESCOBAR ESPINO, Roberto Diego",
+    "especialidad": "Contabilidad para la Toma de Decisiones",
+    "otros_cursos": "Fundamentos de Contabilidad"
+  },
+  {
+    "nombre": "SILVA TORRALVA, Hans Jhordan",
+    "especialidad": "Contabilidad para la Toma de Decisiones",
+    "otros_cursos": "Fundamentos de Contabilidad, Gestión y Costos Estratégicos"
+  },
+  {
+    "nombre": "MATEO UNCHUPAICO, Maria Victoria",
+    "especialidad": "Contabilidad para la Toma de Decisiones",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LOMBARDI VALLE, GINA ANGELA",
+    "especialidad": "Contabilidad para la Toma de Decisiones",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ONTON LOPEZ, Renzo Jesus",
+    "especialidad": "Contabilidad y Finanzas Avanzadas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RUIZ LLACSAHUANGA, Ketty Margarita",
+    "especialidad": "Control Interno y Gestión de Riesgo",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RUIZ PALOMINO, Cesar",
+    "especialidad": "Evaluación Financiera de las Organizaciones",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CASTELLANOS NAVARRETE, Laura Mariela",
+    "especialidad": "Evaluación Financiera de las Organizaciones",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ABREGU NAVEROS, Johana",
+    "especialidad": "Evaluación Financiera de las Organizaciones",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RIVERO PONCE DE LEON, Eduardo Ruben",
+    "especialidad": "Fundamentos de Contabilidad",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CHAVEZ CARDEÑA, Cesar Augusto",
+    "especialidad": "Fundamentos de Contabilidad",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ZELADA ROLLER, Vilma Francisca",
+    "especialidad": "Fundamentos de Contabilidad",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "QUIÑONES BOZA, Horacio",
+    "especialidad": "Fundamentos de Contabilidad",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MATSUNO FUCHIGAMI, Ana Cecilia",
+    "especialidad": "Fundamentos de Contabilidad",
+    "otros_cursos": "Principle of Accounting"
+  },
+  {
+    "nombre": "VELASQUEZ RELAYZE, Jose Luis",
+    "especialidad": "Gestión de la Información y Métricas de Sostenibilidad Empresarial",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BENAVIDES GONZALES, Javier Arturo",
+    "especialidad": "Inteligencia Artificial Generativa Aplicada a la Información Financiera",
+    "otros_cursos": "Valoración Estratégica de Intangibles y Activos del Conocimiento"
+  },
+  {
+    "nombre": "BAAKLINI , Pascale",
+    "especialidad": "International Financial Reporting",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ZEGARRA BENAVIDES, Carmen Cecilia",
+    "especialidad": "Normas Contables Internacionales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GARCIA REYES, Karin Maria",
+    "especialidad": "SAP Hana para la Gestión de la Información",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CASTRO ARANA, Javier",
+    "especialidad": "Tributación Aplicada I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "QUISPE CHUMPE, Emerzon",
+    "especialidad": "Tributación Aplicada II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LLONTOP MEJIA, Miguel Angel",
+    "especialidad": "Agentes Inteligentes",
+    "otros_cursos": "Gestión de Proyectos"
+  },
+  {
+    "nombre": "ROJAS VILLANUEVA, Uwe",
+    "especialidad": "Algoritmos y Estructura de Datos",
+    "otros_cursos": "Herramientas de Programacion con Python, Principios de Machine Learning, Técnicas Avanzadas para el Análisis de Datos"
+  },
+  {
+    "nombre": "FABIAN ARTEAGA, Junior John",
+    "especialidad": "Analítica de la Web",
+    "otros_cursos": "Deep Learning, Ingeniería de Datos, SQL para la Toma de Decisiones"
+  },
+  {
+    "nombre": "TOVAR GALARRETA, Juan Carlos",
+    "especialidad": "Big Data Analytics",
+    "otros_cursos": "Computación de Alto Desempeño y Cloud Computing"
+  },
+  {
+    "nombre": "AMADO GARFIAS, Alonso",
+    "especialidad": "Business Analytics",
+    "otros_cursos": "Infraestructura Tecnológica, Machine Learning"
+  },
+  {
+    "nombre": "WAM BALTODANO, Javier Guillermo",
+    "especialidad": "Business Intelligence",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "AGUIRRE RUIZ, Jose Jonathan",
+    "especialidad": "Ciberseguridad",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ESPEZUA LLERENA, Soledad",
+    "especialidad": "Data Mining",
+    "otros_cursos": "Nivelación en Informática"
+  },
+  {
+    "nombre": "VALERA GARCIA, Paulo Enrique",
+    "especialidad": "Desarrollo de Soluciones Empresariales",
+    "otros_cursos": "Infraestructura Tecnológica, Ingeniería de Datos"
+  },
+  {
+    "nombre": "HUAMAN LINARES, Jose",
+    "especialidad": "Desarrollo de Soluciones Empresariales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "WONG POGGI, Jennifer Karina",
+    "especialidad": "Design Thinking and Technological Innovation",
+    "otros_cursos": "Metodologías Ágiles"
+  },
+  {
+    "nombre": "HIUMETTRI BLANCO, Victor Kervin",
+    "especialidad": "Design Thinking and Technological Innovation",
+    "otros_cursos": "Emprendimiento Tecnológico, Innovación, Tecnologías y Emprendimiento: El caso de Silicon Valley, Metodologías Ágiles, Marketing Digital y Redes Sociales"
+  },
+  {
+    "nombre": "RAMIREZ VINATEA, Jimena",
+    "especialidad": "Design Thinking and Technological Innovation",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MARTINEZ QUIÑE, Lourdes",
+    "especialidad": "Design Thinking and Technological Innovation",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FANG CHONG, Sergio Enrique",
+    "especialidad": "Emprendimiento Tecnológico",
+    "otros_cursos": "Trabajo Final de Ingeniería Empresarial"
+  },
+  {
+    "nombre": "LAZARTE AGUIRRE, Luz Andrea",
+    "especialidad": "Emprendimiento Tecnológico",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DIAZ DOMINGUEZ, Carlos Manuel",
+    "especialidad": "Excel Avanzado para la Gestión Empresarial",
+    "otros_cursos": "Nivelación en Informática"
+  },
+  {
+    "nombre": "STUCCHI PORTOCARRERO, Luciano",
+    "especialidad": "Física",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CARBAJAL VIGO, Saneli Alcides",
+    "especialidad": "Física",
+    "otros_cursos": "Introducción a la Cosmología y la Ciencia de la Vida, Pensamiento Sistémico"
+  },
+  {
+    "nombre": "QUIROZ GONZALEZ, Jorge Luis Martín",
+    "especialidad": "Física",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LAZO LAZO, Juan Guillermo",
+    "especialidad": "Formulación y Evaluación de Proyectos",
+    "otros_cursos": "Investigación de Operaciones"
+  },
+  {
+    "nombre": "GONZALEZ PALOMINO, JORGE MARTIN",
+    "especialidad": "Formulación y Evaluación de Proyectos",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MAEHARA ALIAGA DE BENITES, Rocio Paola",
+    "especialidad": "Fundamentos de Analítica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CUMPA OBREGON, Nelson Enrique",
+    "especialidad": "Gerencia de Ingeniería de Valor",
+    "otros_cursos": "Inteligencia Artificial Aplicada a la Cadena de Suministros, Procesos de Distribución, Procesos de Producción"
+  },
+  {
+    "nombre": "STUART ALVARADO, Maria Gabriela",
+    "especialidad": "Gerencia de Ingeniería de Valor",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PALOMINO GARCIA, Jorge Ciro",
+    "especialidad": "Gestión de Proyectos",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "AYMA QUIRITA, Victor Hugo",
+    "especialidad": "Herramientas de Programación",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MUÑOZ CASILDO, Nehil Indalicio",
+    "especialidad": "Herramientas de Programación",
+    "otros_cursos": "Ingeniería de Datos"
+  },
+  {
+    "nombre": "QUISPE AYALA, Martha Roxana",
+    "especialidad": "Herramientas de Programación",
+    "otros_cursos": "Nivelación en Informática"
+  },
+  {
+    "nombre": "SIERRA FLORES, Luis Miguel",
+    "especialidad": "Herramientas de Programación",
+    "otros_cursos": "Investigación de Operaciones"
+  },
+  {
+    "nombre": "CARRILLO THORNE, Juan Diego",
+    "especialidad": "Historia Crítica del Diseño",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SICCHA AYVAR, Hobber Aristides",
+    "especialidad": "Infraestructura Tecnológica",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GARMENDIA FOSSA, Francisco Antonio",
+    "especialidad": "Ingeniería de Procesos",
+    "otros_cursos": "Procesos de Suministros, Trabajo Final de Ingeniería Empresarial, Gestión Internacional de Empresas"
+  },
+  {
+    "nombre": "CHICHIZOLA PORRAS, Victor Augusto",
+    "especialidad": "Ingeniería de Procesos",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TALAVERA LOPEZ, Alvaro Gustavo",
+    "especialidad": "Inteligencia Computacional",
+    "otros_cursos": "Trabajo Final de Ingeniería de la Información I"
+  },
+  {
+    "nombre": "RODRIGUEZ SATIZABAL, Simon Andres",
+    "especialidad": "Introducción a la Cosmología y la Ciencia de la Vida",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PELAYO BALDARRAGO, Mara Elizabeth",
+    "especialidad": "Introducción a la Cosmología y la Ciencia de la Vida",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CHONG CHONG, Mario Gustavo",
+    "especialidad": "Introducción a la Ingeniería",
+    "otros_cursos": "Procesos de Distribución"
+  },
+  {
+    "nombre": "ORTIZ VALENCIA, Alejandro Leopoldo",
+    "especialidad": "Introducción a la Ingeniería",
+    "otros_cursos": "Metodologías Ágiles, Transformación Digital y Gestión del Cambio"
+  },
+  {
+    "nombre": "MACHUCA DE PINA, Juan Manuel",
+    "especialidad": "Investigación de Operaciones",
+    "otros_cursos": "Matemáticas Discretas para la Computación"
+  },
+  {
+    "nombre": "LIBAQUE SAENZ, Christian Fernando",
+    "especialidad": "Métodos de Investigación Cuantitativa",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BRAVO ORELLANA, Edgardo Ricardo",
+    "especialidad": "Métodos de Investigación Cuantitativa",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SENMACHE SARMIENTO, Jose Manuel Martin",
+    "especialidad": "Nivelación en Informática",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ZALDIVAR PEÑA, Doris Adriana",
+    "especialidad": "Nivelación en Informática",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TORRES SUAREZ, Rolando Martin",
+    "especialidad": "Nivelación en Informática",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PÉREZ - GODOY BALLÓN, Luis Alberto",
+    "especialidad": "Pensamiento Sistémico",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SALCEDO MANSILLA, Jorge Manuel",
+    "especialidad": "Procesos de Producción",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RIVERO CESPEDES, Luis Felipe",
+    "especialidad": "Procesos de Producción",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CORNEJO RIVERO, Alvaro Alexander",
+    "especialidad": "Prototipea tu Idea con Impresión 3D",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SZOSTEK , Agnieszka",
+    "especialidad": "Sem. Defining Powerful Experience Strategy",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "JURBURG MELNIK, Daniel Andres",
+    "especialidad": "Sem. Defining Powerful Experience Strategy",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FLORCZAK , Waldemar Han",
+    "especialidad": "Sem. Introduction to Operational Research",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LUNA , Ana Eugenia",
+    "especialidad": "Tecnología para el Desarrollo Sostenible",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SOTOMAYOR CABRERA, Aristides",
+    "especialidad": "Tecnología para el Desarrollo Sostenible",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RODRIGUEZ SERRA, Michelle",
+    "especialidad": "Tecnología y Negocios Digitales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DROGUETT QUEZADA, Nicolas Patricio",
+    "especialidad": "Tecnología y Negocios Digitales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "HAAKER MASSA, Aisa",
+    "especialidad": "Tecnología y Negocios Digitales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ALIAGA ALIAGA, Walter",
+    "especialidad": "Trabajo Final de Ingeniería Empresarial",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RETAMOZO ESCOBAR, Jaliya",
+    "especialidad": "Acto Jurídico",
+    "otros_cursos": "Responsabilidad Extracontractual"
+  },
+  {
+    "nombre": "CHAVEZ VERASTEGUI, Christian",
+    "especialidad": "Acto Jurídico",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PIEROLA CASTRO, Noe Fernando Nicolas",
+    "especialidad": "AI Regulation: A Global and Comparative Perspective",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ZUÑIGA PALOMINO, Mario Augusto",
+    "especialidad": "Análisis Económico del Derecho",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ESPEJO DONAIRE, Andrea Patricia",
+    "especialidad": "Arbitraje",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TOVAR GIL, Maria Del Carmen Violeta",
+    "especialidad": "Arbitraje",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FERRERO DIAZ, Javier Ignacio",
+    "especialidad": "Arbitraje",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "HUANCO PISCOCHE,",
+    "especialidad": "Arbitraje",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "HUANCO PISCOCHE, Henry Wilder",
+    "especialidad": "Contratos",
+    "otros_cursos": "Derechos Reales"
+  },
+  {
+    "nombre": "MADRID HORNA, Victor",
+    "especialidad": "Contratos",
+    "otros_cursos": "Obligaciones"
+  },
+  {
+    "nombre": "SORIA AGUILAR, Alfredo Fernando",
+    "especialidad": "Contratos Especiales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GABRIEL RIVERA, Jose Luis",
+    "especialidad": "Contratos Especiales",
+    "otros_cursos": "Economía y Derecho"
+  },
+  {
+    "nombre": "VASQUEZ REBAZA,",
+    "especialidad": "Contratos Especiales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "NUÑOVERO CISNEROS, Lucia Betty",
+    "especialidad": "Criminología y Derecho Penitenciario",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PEREZ",
+    "especialidad": "Criminología y Derecho Penitenciario",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TIRADO BARRERA, Jose Antonio",
+    "especialidad": "Derecho Administrativo I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GOMEZ APAC, Hugo Ramiro",
+    "especialidad": "Derecho Administrativo I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MORI TORRES, Natalia Vanessa",
+    "especialidad": "Derecho Administrativo II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FARFAN SOUSA, Ronnie Ado",
+    "especialidad": "Derecho Administrativo II",
+    "otros_cursos": "Sem. de Derecho Administrativo y Regulación"
+  },
+  {
+    "nombre": "ARMESTAR BRUNO, Gloria Maria",
+    "especialidad": "Derecho Civil y Comercial",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RAMIREZ OTERO, Lorena Cecilia",
+    "especialidad": "Derecho Civil y Comercial",
+    "otros_cursos": "Sociedades"
+  },
+  {
+    "nombre": "PARODI LUNA, Maria Beatriz",
+    "especialidad": "Derecho Civil y Comercial",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FERRANTE , Alfredo",
+    "especialidad": "Sem. Derecho Comparado: Aspectos Prácticos y Metodológicos",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LIZARRAGA VERA-PORTOCARRERO, Anthony",
+    "especialidad": "Derecho Concursal",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ALBAN GONZALEZ, Javier Ignacio",
+    "especialidad": "Derecho Constitucional General",
+    "otros_cursos": "Derecho Procesal Constitucional"
+  },
+  {
+    "nombre": "NEYRA ZEGARRA, Ana Cristina",
+    "especialidad": "Derecho Constitucional General",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PLACIDO VILCACHAGUA, Alex Fernando",
+    "especialidad": "Derecho de Familia y Sucesiones",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MARES RUIZ, Carla Elena",
+    "especialidad": "Derecho de la Empresa",
+    "otros_cursos": "Derecho Tributario I"
+  },
+  {
+    "nombre": "RUIZ COLMENARES,",
+    "especialidad": "Derecho de la Empresa",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VASSALLO BURNEO, Nicolas",
+    "especialidad": "Derecho Internacional Privado",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ZELADA ACUÑA, Carlos Joel",
+    "especialidad": "Derecho Internacional Público",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PRELLE MAYURI, Herbert Victor Ricardo",
+    "especialidad": "Derecho Laboral I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TOYAMA MIYAGUSUKU, Jorge Luis",
+    "especialidad": "Derecho Laboral I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CASTILLO FUENTES, Diego Sebastian",
+    "especialidad": "Derecho Laboral I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LORA ALVAREZ, German Lino",
+    "especialidad": "Derecho Laboral I",
+    "otros_cursos": "Derecho Laboral y Tributario"
+  },
+  {
+    "nombre": "CASTRO POSADAS, Eric Christian",
+    "especialidad": "Derecho Laboral II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GILDEMEISTER RUIZ HUIDOBRO, Alfredo",
+    "especialidad": "Derecho Laboral y Tributario",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SALAZAR TIRADO,",
+    "especialidad": "Derecho Laboral y Tributario",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GARCIA BELAUNDE SALDIAS, Diego",
+    "especialidad": "Derecho para los Negocios Internacionales",
+    "otros_cursos": "Negociaciones Comerciales Internacionales"
+  },
+  {
+    "nombre": "CARO JOHN, Jose Antonio",
+    "especialidad": "Derecho Penal",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "REAÑO PESCHIERA, José",
+    "especialidad": "Derecho Penal",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BENDEZU BARNUEVO, Rocci Fiorella",
+    "especialidad": "Derecho Penal",
+    "otros_cursos": "Derecho Penal Económico"
+  },
+  {
+    "nombre": "CUBA COPELLO, YVO CAMILO",
+    "especialidad": "Derecho Procesal Civil",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RIVAS CASO, Gino Elvio",
+    "especialidad": "Derecho Procesal Civil",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CAMPOS BERNAL, Heber Joel",
+    "especialidad": "Derecho Procesal Constitucional",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CAYO RIVERA SCHREIBER, Maria Jimena Soledad /",
+    "especialidad": "Derecho Procesal Penal",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DIAZ TENORIO, Diego Arturo",
+    "especialidad": "Derecho Tributario I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "HUERTAS LIZARZABURU, Martha Cristina",
+    "especialidad": "Derecho Tributario I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "POLO CHIROQUE, ROBERTO EDWARD",
+    "especialidad": "Derecho Tributario II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RUIZ COLMENARES, Melissa Sarahi",
+    "especialidad": "Derecho Tributario II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RAVINA SANCHEZ, Raul Fernando",
+    "especialidad": "Derechos Reales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GINES CASTELLET, Nuria",
+    "especialidad": "Derechos Reales y Contratos: Teoría Clásica y Transformaciones Contemporáneas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ALONSO HERRERA, Jorge Ivan",
+    "especialidad": "Destrezas Legales y Económicas para Litigar en Libre Competencia",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ZUÑIGA PALOMINO,",
+    "especialidad": "Destrezas Legales y Económicas para Litigar en Libre Competencia",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "URBINA LOVON, Erick Edwin",
+    "especialidad": "Economía y Derecho",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "IPARRAGUIRRE ROMERO, Gianfranco",
+    "especialidad": "Economía y Derecho",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LEON LUNA,",
+    "especialidad": "Economía y Derecho",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "COGORNO FALCONE, Sandro Agustin",
+    "especialidad": "Fusiones y Adquisiciones",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CORTINA MENDOZA, Roxana Marina",
+    "especialidad": "Inglés Jurídico",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BARDALES MENDOZA, Enrique Rosendo",
+    "especialidad": "Instituciones de Derecho Mercantil",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ZUÑIGA SCHRODER, Humberto Angel",
+    "especialidad": "Introducción al Derecho",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "OLIVOS CELIS, Milagros Katherine",
+    "especialidad": "Introducción al Derecho",
+    "otros_cursos": "Personas del Derecho Civil"
+  },
+  {
+    "nombre": "TALAVERA CANO, Andres Alvaro",
+    "especialidad": "Introducción al Derecho",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VASQUEZ REBAZA, Walter Humberto",
+    "especialidad": "Obligaciones",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BRAVO ARANA, Grismi Claudia",
+    "especialidad": "Organizaciones Internacionales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CLAROS ABARCA, Roberto Fernando",
+    "especialidad": "Organizaciones Internacionales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "NEIRA LUCAR, Melissa Judith",
+    "especialidad": "Personas del Derecho Civil",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ALIAGA FARFAN, Jeanette Sofia",
+    "especialidad": "Regulación Bancaria y Mercado de Capitales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ABAD YUPANQUI, Samuel Bernardo",
+    "especialidad": "Sem. de Derecho Constitucional",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "FREITAS CABANILLAS, Rodrigo Andrés",
+    "especialidad": "Técnicas de Persuasión y Moot Court",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "HUANCO",
+    "especialidad": "Técnicas de Persuasión y Moot Court",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "REAÑO PESCHIERA, José Leandro",
+    "especialidad": "Tendencias Jurisprudenciales del Derecho Penal Económico",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SIMONS PINO, Adrian Marcius",
+    "especialidad": "Teoría General del Proceso",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CHIRINOS VIDAURRAZAGA, Gonzalo Guillermo",
+    "especialidad": "Teoría General del Proceso",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MALPARTIDA TABUCHI, Daniel Humberto",
+    "especialidad": "Análisis Financiero",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LUNA VICTORIA CONTRERAS, Rolando Alfonso",
+    "especialidad": "Análisis y Gestión de Riesgos",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RAUNELLI MONTERO, Jose Carlos",
+    "especialidad": "Análisis y Gestión de Riesgos",
+    "otros_cursos": "Finanzas Cuantitativas, Fundamentos de Finanzas"
+  },
+  {
+    "nombre": "MONGRUT MONTALVAN, Samuel Arturo",
+    "especialidad": "Economía Financiera I",
+    "otros_cursos": "Finanzas Corporativas II"
+  },
+  {
+    "nombre": "CARBAJAL ZAPATA, Jeferson Davy",
+    "especialidad": "Economía Financiera I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CORNEJO LIMO, Luis Bruno",
+    "especialidad": "Economía Financiera I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "POZO SANCHEZ, Jorge Antonio",
+    "especialidad": "Economía Financiera II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "WATSON ALVARADO, Jean Paul",
+    "especialidad": "Economía Financiera II",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DEFILIPPI ANGELDONIS, Enzo Fabrizio",
+    "especialidad": "Finanzas Corporativas I",
+    "otros_cursos": "Renta Variable"
+  },
+  {
+    "nombre": "YAMAN , Serhat",
+    "especialidad": "Finanzas Corporativas I",
+    "otros_cursos": "Renta Fija"
+  },
+  {
+    "nombre": "ROBLES FLORES, Luis Miguel",
+    "especialidad": "Finanzas Corporativas I",
+    "otros_cursos": "Fundamentos de Finanzas"
+  },
+  {
+    "nombre": "PANDURO PARDO, Julio Antonio",
+    "especialidad": "Finanzas Corporativas I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CORDOVA LOPEZ, Juan Pablo",
+    "especialidad": "Finanzas Corporativas I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TELLO YZAGUIRRE, Andre Luis",
+    "especialidad": "Finanzas Corporativas I",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RUIZ PEREZ, Jose Luis",
+    "especialidad": "Finanzas Sostenibles",
+    "otros_cursos": "Microeconomía Financiera"
+  },
+  {
+    "nombre": "RUNCIMAN SAETTONE, Guillermo Alfredo",
+    "especialidad": "Finanzas y Abundancia",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SIANCAS SOTELO, Francis Junior",
+    "especialidad": "Fundamentos de Finanzas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ALVAREZ DROBUSH, Alexei Darwinovich",
+    "especialidad": "Fundamentos de Finanzas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CRUZ CASTAÑEDA, Vivian",
+    "especialidad": "Fundamentos de Finanzas",
+    "otros_cursos": "Instrumentos Derivados"
+  },
+  {
+    "nombre": "ARIAS VERNAL, Carlos Augusto",
+    "especialidad": "Fundamentos de Finanzas",
+    "otros_cursos": "Sem. de Ethics in Finance"
+  },
+  {
+    "nombre": "VARGAS VILCHEZ, Enver Enrique",
+    "especialidad": "Fundamentos de Finanzas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VAIZ NEYRA, Luis Oscar",
+    "especialidad": "Fundamentos de Finanzas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ARCE ROEL, Luis Enrique",
+    "especialidad": "Fundamentos de Finanzas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DOOR OSELE, Daniela",
+    "especialidad": "Fundamentos de Finanzas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TAM CUBA, Sasha Prince",
+    "especialidad": "Fundamentos de Finanzas",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "QUEVEDO SANCHEZ, Gregorio Vladimir",
+    "especialidad": "Fundamentos de Finanzas",
+    "otros_cursos": "Sem. Valorización de Empresas"
+  },
+  {
+    "nombre": "GABILONDO ALVAREZ, Sergio Alejandro",
+    "especialidad": "Gestión Financiera",
+    "otros_cursos": "Proyectos de Inversión"
+  },
+  {
+    "nombre": "LLADO MARQUEZ, Jorge Eduardo",
+    "especialidad": "International Finance",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VILLAFUERTE",
+    "especialidad": "International Finance",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MENDIBURU DIAZ, Carlos Hugo",
+    "especialidad": "Macroeconomía Financiera",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "OGATA SHIMOKAWA DE KANAMORI, Clara Elena",
+    "especialidad": "Mercado de Capitales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CASTELLANOS ROBLES, Enrique Guillermo",
+    "especialidad": "Negociación Financiera",
+    "otros_cursos": "Riesgo Crediticio"
+  },
+  {
+    "nombre": "RODRIGUEZ CASANOVA, Gianina",
+    "especialidad": "Negociación Financiera",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VALENZUELA HUARCAYA, Adriana",
+    "especialidad": "Riesgo Crediticio",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DE LA CUBA RESTANI, Mauricio Fernando",
+    "especialidad": "Sem. Crisis Financiera Internacional",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BERGGRUN PRECIADO, Luis",
+    "especialidad": "Sem. Cuantitativo de Riesgo Crediticio",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SANCHO ROJAS, Alejandro Antonio",
+    "especialidad": "Seminario de Administración de Riesgo en Banca",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TANTALEAN VALDIVIESO, Elizabeth Marie",
+    "especialidad": "Sem. de Alternative Investment",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MONTENEGRO LEE, Ruben Angel",
+    "especialidad": "Sem. de Dark Finance",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "OLIVARES CANCHARI, Jose Andres",
+    "especialidad": "Sem. de Estrategias de Fondeo",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TORRES GOMEZ, Victor Manuel",
+    "especialidad": "Sem. de Financial Modeling",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DIAZ GALINDO, Fanny Mariana",
+    "especialidad": "Sem. de Fintech",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "RUIZ DE LA CRUZ, Fernando Miguel",
+    "especialidad": "Sem. de Leveraged Buyouts",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LAU PUN, Federico",
+    "especialidad": "Sem. de Project Finance",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MATUTE QUIROGA, Juan Andres",
+    "especialidad": "Sem. de Sports Finance",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PONCE HEREDIA, Juan Jose",
+    "especialidad": "Sem. Investments Tools and Case Studies",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LUCEN VALDIVIA, Fernando",
+    "especialidad": "Sem. Real Estate",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SANCHEZ CHAVEZ, Elio Javier",
+    "especialidad": "Sem. Sistema de Pensiones",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LEON , Vicente Manuel",
+    "especialidad": "Sistemas Financieros",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LIZARZABURU BARTRA, Adriana Lastenia",
+    "especialidad": "Sistemas Financieros",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PANCORBO VALDIVIA, Sergio Omar",
+    "especialidad": "Sistemas Financieros",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MOSQUEIRA LOAYZA, Javier Edilberto",
+    "especialidad": "Account Management - Gestión de Clientes Clave",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PEINADO BRAVO, Maria Estrella Del Pilar",
+    "especialidad": "Administración del Comercio Internacional",
+    "otros_cursos": "Fundamentos Económicos y Organizacionales para los Negocios"
+  },
+  {
+    "nombre": "HERNANI MERINO, Martin Nelson",
+    "especialidad": "Comportamiento del Consumidor",
+    "otros_cursos": "Investigación en Marketing I"
+  },
+  {
+    "nombre": "KOBAYASHI ANDO, María Elena",
+    "especialidad": "Cross Cultural & International Management",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PINTO GUILLEN, Maria Jose",
+    "especialidad": "Cross Cultural & International Management",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MALCA GUAYLUPO, Oscar Enrique",
+    "especialidad": "Dirección Internacional de Empresas",
+    "otros_cursos": "Estrategias de Internacionalización"
+  },
+  {
+    "nombre": "MONGE VARGAS, Mariana",
+    "especialidad": "Diseño Conductual",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ESPINOZA MATOS, José Francisco",
+    "especialidad": "E-commerce",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CARBONELL ROSSO, María De Las Mercedes",
+    "especialidad": "Estrategias de Branding",
+    "otros_cursos": "Marketing Sostenible, Pricing"
+  },
+  {
+    "nombre": "LIZARZABURU VELASQUEZ, Carlos Enrique",
+    "especialidad": "Estrategias de Comunicación y Promoción",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "PENNANO VILLANUEVA, Carla",
+    "especialidad": "Fundamentos de Marketing",
+    "otros_cursos": "International Marketing, Marketing Estratégico"
+  },
+  {
+    "nombre": "RIVAS VELARDE,",
+    "especialidad": "Fundamentos de Marketing",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "POZO YABAR, Natalia Sofia",
+    "especialidad": "Gestión Comercial",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MEUNIER , Bernard",
+    "especialidad": "Gestión de Mercados Globales",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SAKODA MIZUSHIMA, Diego",
+    "especialidad": "Gestión de Productos",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LADINES AZALIA, Juan Carlos",
+    "especialidad": "Gestión del Comercio Internacional",
+    "otros_cursos": "International Affairs"
+  },
+  {
+    "nombre": "GARCIA JERI, Oswaldo Carlos",
+    "especialidad": "Gestión del Comercio Internacional",
+    "otros_cursos": "Gestión Internacional de Empresas"
+  },
+  {
+    "nombre": "ARRIETA PADILLA, Gabriel Lewis",
+    "especialidad": "Gestión del Comercio Internacional",
+    "otros_cursos": "Teoría del Comercio Internacional y Procesos de Integración"
+  },
+  {
+    "nombre": "PEREZ DE ARMAS, Emilio",
+    "especialidad": "Gestión Estratégica Comercial, Métricas y Ética",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ACOSTA RUIZ, Vanessa Mirtha",
+    "especialidad": "Gestión Internacional de Empresas",
+    "otros_cursos": "Global Branding"
+  },
+  {
+    "nombre": "MORI CLEMENT, Yadira Isbi",
+    "especialidad": "Gestión Sostenible de la Oferta Exportable",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DEL SOLAR ESCARDO, Diego",
+    "especialidad": "Global Food & Agribusiness Strategies",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VEGA FARRO, Elizabeth",
+    "especialidad": "Growth Hacking",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "EDEH , Jude Ndubuisi",
+    "especialidad": "Innovation, Competitiveness & Export Performance",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "LIMONGI FRANCA COELHO, Ricardo",
+    "especialidad": "Intelligent Marketing: Creativity and Innovation in the Age of AI",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CALMET GUTIERREZ, Maria Angela",
+    "especialidad": "Intercultural Competence",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "VARGAS DE LA JARA, Marisol",
+    "especialidad": "International Affairs",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DIAZ DIAZ, Dagoberto Luis",
+    "especialidad": "International Business Plan",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ALVARADO RUIZ, Paola Alessandra",
+    "especialidad": "International Business Plan",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "KALMURAND , Katrin",
+    "especialidad": "International Human Resources Management",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "CARRERAS MERINO, Andrea",
+    "especialidad": "International Human Resources Management",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MELLADO SILVA, Maria Antonieta Rosario",
+    "especialidad": "Investigación de Mercados",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TALAVERA SALDARRIAGA, Willy Martin Enrique",
+    "especialidad": "Investigación de Mercados",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ZUÑIGA LAZO, Jenny Lorena",
+    "especialidad": "Investigación de Mercados",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "TUTAYA ZEVALLOS, Renan Jesus",
+    "especialidad": "Investigación de Mercados",
+    "otros_cursos": "Marketing Estratégico"
+  },
+  {
+    "nombre": "GOMEZ ALVIS, ELIZABETH INGRID",
+    "especialidad": "Investigación de Mercados",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MANRIQUE PONCE, Christian Gerardo",
+    "especialidad": "Marketing B2B",
+    "otros_cursos": "Marketing de Contenido, Métricas y Analítica de Marketing"
+  },
+  {
+    "nombre": "CLAUX FREITAS, Lorena",
+    "especialidad": "Marketing de Servicios",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MAYORGA GUTIERREZ, David Jesus",
+    "especialidad": "Marketing Estratégico",
+    "otros_cursos": "Plan de Marketing"
+  },
+  {
+    "nombre": "FELICIANO NISHIKAWA, Jose Carlos",
+    "especialidad": "Marketing Internacional en China y Asia-Pacífico",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "GONZALES ARBAIZA, Maricruz Del Pilar",
+    "especialidad": "Marketing Personal para el Mundo Labóral",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "SCHWALB HELGUERO, Maria Matilde",
+    "especialidad": "Marketing Sostenible",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "ROMAN YSEKI, Jorge Hiroshi",
+    "especialidad": "MVPs and Innovation for Global Markets",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "MARROU LOAYZA, Julio Estuardo",
+    "especialidad": "Pensamiento Crítico para Marketing",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "DE VEGA DE UNCETA, Alejandro",
+    "especialidad": "Storytelling: Cómo conectar emocionalmente con los consumidores a través de las historias",
+    "otros_cursos": null
+  },
+  {
+    "nombre": "BRAGAGNINI OLIVER, Rizal Andres",
+    "especialidad": "Trade Marketing",
+    "otros_cursos": null
+  }
+]
