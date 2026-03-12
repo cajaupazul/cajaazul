@@ -501,7 +501,7 @@ export default function CourseDetailContent({
                                                     <div className="min-w-0 flex-1">
                                                         <p className="font-bold text-sm text-bb-text truncate group-hover:text-blue-400 transition-colors">{prof.nombre}</p>
                                                         <p className="text-[10px] text-bb-text-secondary truncate mt-0.5">
-                                                            {course.nombre}
+                                                            {prof.especialidad || course.nombre}
                                                         </p>
                                                     </div>
                                                 </div>

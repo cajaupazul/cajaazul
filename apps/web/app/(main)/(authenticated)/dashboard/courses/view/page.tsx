@@ -35,7 +35,7 @@ function CourseDetailWrapper() {
       if (courseNorm === targetNorm) return true;
 
       // Split professor courses by common delimiters and check for exact segment match
-      const segments = courseNorm.split(/[,;|•]/).map(s => s.trim()).filter(Boolean);
+      const segments = courseNorm.split(/[,;|•/]/).map(s => s.trim()).filter(Boolean);
       return segments.some(segment => segment === targetNorm);
     });
   };
@@ -138,15 +138,16 @@ function CourseDetailWrapper() {
 
           const profCourses = [
             p.especialidad,
-            ...(p.otros_cursos ? (Array.isArray(p.otros_cursos) ? p.otros_cursos : [p.otros_cursos]) : [])
+            ...(p.otros_cursos ? (typeof p.otros_cursos === 'string' ? p.otros_cursos.split(/[,;|•/]/) : (Array.isArray(p.otros_cursos) ? p.otros_cursos : [p.otros_cursos])) : [])
           ].filter(Boolean);
 
           const matchesName = isCleanMatch(profCourses, courseNameClean);
 
           // Inclusion Logic:
           // - Always include if linked in junction table (manual link)
-          // - Include if match by name OR if they have materials for this course
-          if (isLinked || matchesName || isContributor) {
+          // - Include if match by name (stricter detection)
+          // - Note: Professors with materials but no official link/name match are no longer listed globally
+          if (isLinked || matchesName) {
             const ratings = (p.professor_ratings || []).filter((r: any) => 
               !r.course_name || normalizeString(r.course_name) === normalizeString(courseNameClean)
             );

@@ -143,7 +143,11 @@ function ProfessorRatingsWrapper() {
             const profCourses = [];
             if (p.especialidad) profCourses.push(p.especialidad.trim().toLowerCase());
             if (p.otros_cursos) {
-              p.otros_cursos.split(',').forEach((c: string) => profCourses.push(c.trim().toLowerCase()));
+              const otherSegments = p.otros_cursos.split(/[,;|•/]/);
+              otherSegments.forEach((c: string) => {
+                const clean = c.trim().toLowerCase();
+                if (clean) profCourses.push(clean);
+              });
             }
 
             const isExactMatch = profCourses.includes(targetCourseLower);
