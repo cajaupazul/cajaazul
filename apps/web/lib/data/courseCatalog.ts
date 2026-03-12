@@ -81,6 +81,7 @@ export const courseCatalog = [
     "Teoría de la Regulación Económica",
     "Teoría del Comercio Internacional",
     "Teoría del Desarrollo Económico",
+    "PROCESOS ESTOCÁSTICOS",
     "Análisis Multivariado para los Negocios",
     "Analítica de Datos para los Negocios",
     "Business Agility",
