@@ -30,7 +30,7 @@ for (let i = 0; i < lines.length; i++) {
       if (!profToCourses.has(cleanName)) {
         profToCourses.set(cleanName, new Set());
       }
-      profToCourses.get(cleanName).add(currentCourse);
+      profToCourses.get(cleanName)!.add(currentCourse);
     }
   }
 }
