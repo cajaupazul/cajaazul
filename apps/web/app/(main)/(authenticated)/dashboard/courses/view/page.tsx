@@ -113,7 +113,7 @@ function CourseDetailWrapper() {
         if (sessionData?.user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('role')
+            .select('id, role')
             .eq('id', sessionData.user.id)
             .single();
           setCurrentUser(profile);
