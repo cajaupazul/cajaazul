@@ -150,15 +150,10 @@ function CourseDetailWrapper() {
           
           const hasCourseRatings = courseSpecificRatings.length > 0;
 
-          // Inclusion Logic:
+          // Inclusion Logic: Simplified as per user request
           // - Include if match by name (Trust explicitly defined specialties)
-          // - Include if linked AND has active participation (materials or ratings for this course)
-          // - (Special case: if linked but no materials/ratings, we check if they HAVE ANY specialty. 
-          //   If they have a DIFFERENT specialty and no participation here, they are "ghosts")
-          
-          const hasDifferentSpecialty = p.especialidad && !isCleanMatch([p.especialidad], courseNameClean);
-          
-          const shouldInclude = matchesName || (isLinked && (isContributor || hasCourseRatings || !hasDifferentSpecialty));
+          // - Include if linked officially in the DB (Trust the junction table)
+          const shouldInclude = isLinked || matchesName;
 
           if (shouldInclude) {
             const avg = hasCourseRatings 
@@ -168,7 +163,7 @@ function CourseDetailWrapper() {
             professorsMap.set(p.id, {
               ...p,
               averageRating: avg,
-              hasMaterials: isContributor // This professor has active materials for this course
+              hasMaterials: isContributor
             });
           }
         });
