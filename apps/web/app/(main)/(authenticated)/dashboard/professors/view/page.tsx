@@ -23,6 +23,8 @@ function ProfessorRatingsWrapper() {
   const [comments, setComments] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [frameMap, setFrameMap] = useState<Record<string, any>>({});
+  const [effectiveCourseId, setEffectiveCourseId] = useState<string | null>(null);
+  const [effectiveCourseName, setEffectiveCourseName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!professorId) {
@@ -55,22 +57,57 @@ function ProfessorRatingsWrapper() {
           .select('courses(id, nombre)')
           .eq('professor_id', professorId);
         
-        const finalCourses = coursesTaughtData?.map((ct: any) => ct.courses).filter(Boolean) || [];
+        const finalCourses: {id: string, nombre: string}[] = [];
+        const seenNames = new Set<string>();
+
+        if (coursesTaughtData) {
+          coursesTaughtData.forEach((ct: any) => {
+            if (ct.courses && !seenNames.has(ct.courses.nombre.toLowerCase().trim())) {
+              seenNames.add(ct.courses.nombre.toLowerCase().trim());
+              finalCourses.push(ct.courses);
+            }
+          });
+        }
+
+        // Add text-based courses from especialidad and otros_cursos
+        if (currentProf.especialidad && !seenNames.has(currentProf.especialidad.trim().toLowerCase())) {
+          seenNames.add(currentProf.especialidad.trim().toLowerCase());
+          finalCourses.push({ id: `virtual-esp`, nombre: currentProf.especialidad.trim() });
+        }
+        
+        if (currentProf.otros_cursos) {
+          const others = currentProf.otros_cursos.split(',').map((c: string) => c.trim()).filter(Boolean);
+          others.forEach((o: string, idx: number) => {
+            if (!seenNames.has(o.toLowerCase())) {
+              seenNames.add(o.toLowerCase());
+              finalCourses.push({ id: `virtual-oth-${idx}`, nombre: o });
+            }
+          });
+        }
+        
         setCoursesTaught(finalCourses);
 
         // 3. Resolve effective course ID
-        let effectiveCourseId = contextCourseId;
+        let currentEffectiveCourseId = contextCourseId;
+        let currentEffectiveCourseName = selectedCourseName;
         
         // Fallback to name if ID is missing but name is present
-        if (!effectiveCourseId && selectedCourseName) {
-          const matched = finalCourses.find(c => c.nombre.toLowerCase() === selectedCourseName.toLowerCase());
-          if (matched) effectiveCourseId = matched.id;
+        if (!currentEffectiveCourseId && currentEffectiveCourseName) {
+          const matched = finalCourses.find(c => c.nombre.toLowerCase() === currentEffectiveCourseName?.toLowerCase());
+          if (matched && !matched.id.startsWith('virtual-')) currentEffectiveCourseId = matched.id;
         }
 
         // Final fallback: use the first course they teach or whatever is available
-        if (!effectiveCourseId && finalCourses.length > 0) {
-          effectiveCourseId = finalCourses[0].id;
+        if (!currentEffectiveCourseId && !currentEffectiveCourseName && finalCourses.length > 0) {
+          const first = finalCourses[0];
+          currentEffectiveCourseName = first.nombre;
+          if (!first.id.startsWith('virtual-')) currentEffectiveCourseId = first.id;
         }
+
+        const isVirtualActive = finalCourses.find(c => c.nombre.toLowerCase() === currentEffectiveCourseName?.toLowerCase())?.id.startsWith('virtual-');
+        
+        setEffectiveCourseId(currentEffectiveCourseId);
+        setEffectiveCourseName(currentEffectiveCourseName);
 
         // 4. Fetch context-specific data in parallel
         const promises: any[] = [
@@ -108,17 +145,22 @@ function ProfessorRatingsWrapper() {
 
         // 5. Filter data by effectiveCourseId
         // This ensures the independent profile feel
-        const filteredRatings = effectiveCourseId 
-          ? (ratingsData || []).filter((r: any) => r.course_id === effectiveCourseId)
-          : (ratingsData || []);
+        const filteredRatings = (ratingsData || []).filter((r: any) => {
+          if (currentEffectiveCourseId) return r.course_id === currentEffectiveCourseId;
+          if (isVirtualActive && currentEffectiveCourseName) return r.course_name?.toLowerCase() === currentEffectiveCourseName.toLowerCase();
+          return true;
+        });
         
-        const filteredMaterials = effectiveCourseId
-          ? (materialsData || []).filter((m: any) => m.course_id === effectiveCourseId)
-          : (materialsData || []);
+        const filteredMaterials = (materialsData || []).filter((m: any) => {
+          if (currentEffectiveCourseId) return m.course_id === currentEffectiveCourseId;
+          return false;
+        });
         
-        const filteredComments = effectiveCourseId
-          ? (commentsData || []).filter((c: any) => c.course_id === effectiveCourseId)
-          : (commentsData || []);
+        const filteredComments = (commentsData || []).filter((c: any) => {
+          if (currentEffectiveCourseId) return c.course_id === currentEffectiveCourseId;
+          if (isVirtualActive && currentEffectiveCourseName) return c.course_name?.toLowerCase() === currentEffectiveCourseName.toLowerCase();
+          return true;
+        });
 
         setRatings(filteredRatings);
         setMaterials(filteredMaterials);
@@ -197,7 +239,8 @@ function ProfessorRatingsWrapper() {
       initialMaterials={materials}
       coursesTaught={coursesTaught}
       initialComments={comments}
-      selectedCourse={selectedCourseName}
+      selectedCourse={effectiveCourseName}
+      selectedCourseId={effectiveCourseId}
       profile={profile}
       frameMap={frameMap}
     />
