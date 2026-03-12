@@ -48,8 +48,17 @@ function ProfessorRatingsWrapper() {
         if (!user) return;
 
         // 2. Fetch data in parallel
-        // If we am inside a specific course context, find other professors for THAT course
-        // otherwise use the professor's default specialty
+        // Resolve course ID if context is provided
+        let targetCourseId = null;
+        if (selectedCourse) {
+          const { data: matchedCourse } = await supabase
+            .from('courses')
+            .select('id')
+            .ilike('nombre', selectedCourse)
+            .single();
+          if (matchedCourse) targetCourseId = matchedCourse.id;
+        }
+
         const queryCourse = selectedCourse || currentProf.especialidad;
         const orQuery = queryCourse
           ? `especialidad.ilike."%${queryCourse}%",otros_cursos.ilike."%${queryCourse}%"`
@@ -59,6 +68,7 @@ function ProfessorRatingsWrapper() {
           { data: allProfRecords },
           { data: ratingsData },
           relatedProfessorsRes,
+          linkedProfessorsRes,
           { data: materialsData },
           { data: coursesTaughtData },
           { data: commentsData },
@@ -78,6 +88,11 @@ function ProfessorRatingsWrapper() {
               .or(orQuery)
               .neq('id', professorId)
               .limit(100)
+            : Promise.resolve({ data: [] as any[], error: null }),
+          targetCourseId
+            ? supabase.from('course_professors')
+              .select('professors(id, nombre, especialidad, facultad)')
+              .eq('course_id', targetCourseId)
             : Promise.resolve({ data: [] as any[], error: null }),
           supabase.from('materials')
             .select('*, courses(id, nombre)')
@@ -107,14 +122,23 @@ function ProfessorRatingsWrapper() {
         setProfile(userProfile);
         setCoursesTaught(coursesTaughtData?.map((ct: any) => ct.courses).filter(Boolean) || []);
 
-        // Related professors - Strict Filtering
+        // Related professors - Strict Filtering & Merging
         const targetCourseLower = (selectedCourse || currentProf.especialidad || '').trim().toLowerCase();
         const relatedMap = new Map();
 
+        // Add from junction table first (most accurate)
+        (linkedProfessorsRes?.data || []).forEach((lp: any) => {
+          const p = lp.professors;
+          if (!p) return;
+          const normalizedName = p.nombre.trim().toLowerCase();
+          if (normalizedName !== currentProf.nombre.trim().toLowerCase()) {
+            relatedMap.set(normalizedName, p);
+          }
+        });
+
+        // Supplement with text-based search
         (relatedProfessorsRes?.data || []).forEach((p: any) => {
           const normalizedName = p.nombre.trim().toLowerCase();
-
-          // Only include if it's not the same professor AND matches the course exactly
           if (normalizedName !== currentProf.nombre.trim().toLowerCase() && !relatedMap.has(normalizedName)) {
             const profCourses = [];
             if (p.especialidad) profCourses.push(p.especialidad.trim().toLowerCase());

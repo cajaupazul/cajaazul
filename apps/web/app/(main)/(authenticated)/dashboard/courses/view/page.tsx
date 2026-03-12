@@ -102,7 +102,7 @@ function CourseDetailWrapper() {
             .select('professor_id')
             .eq('course_id', courseId),
           supabase.from('professors')
-            .select('*, professor_ratings(puntuacion)')
+            .select('*, professor_ratings(puntuacion, course_name)')
             .limit(1000), // Fetch a good pool for matching
           supabase.auth.getUser()
         ]);
@@ -147,7 +147,9 @@ function CourseDetailWrapper() {
           // - Always include if linked in junction table (manual link)
           // - Include if match by name OR if they have materials for this course
           if (isLinked || matchesName || isContributor) {
-            const ratings = p.professor_ratings || [];
+            const ratings = (p.professor_ratings || []).filter((r: any) => 
+              !r.course_name || normalizeString(r.course_name) === normalizeString(courseNameClean)
+            );
             const avg = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.puntuacion, 0) / ratings.length : 0;
             professorsMap.set(p.id, {
               ...p,
