@@ -150,10 +150,10 @@ function CourseDetailWrapper() {
           
           const hasCourseRatings = courseSpecificRatings.length > 0;
 
-          // Inclusion Logic: Simplified as per user request
-          // - Include if match by name (Trust explicitly defined specialties)
-          // - Include if linked officially in the DB (Trust the junction table)
-          const shouldInclude = isLinked || matchesName;
+          // Inclusion Logic: Ultra-Strict as per final user request
+          // - ONLY include if the professor has this course explicitly in their specialty or other courses
+          // - Ignore junction table links if the text doesn't match
+          const shouldInclude = matchesName;
 
           if (shouldInclude) {
             const avg = hasCourseRatings 

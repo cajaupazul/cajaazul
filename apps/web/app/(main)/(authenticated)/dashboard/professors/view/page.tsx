@@ -132,7 +132,7 @@ function ProfessorRatingsWrapper() {
         setProfile(userProfile);
         setCoursesTaught(coursesTaughtData?.map((ct: any) => ct.courses).filter(Boolean) || []);
 
-        // Related professors - Strict Filtering & Merging
+        // Related professors - Ultra-Strict Filtering & Merging
         const targetCourseName = selectedCourse || currentProf.especialidad || '';
         const targetNorm = normalizeStringStatic(targetCourseName);
         const relatedMap = new Map();
@@ -145,20 +145,19 @@ function ProfessorRatingsWrapper() {
           return profCourses.includes(targetNorm);
         };
 
-        // Add from junction table (Trust database link but verify with name match if specialty exists)
+        // Add from junction table ONLY if they also match the name
         (linkedProfessorsRes?.data || []).forEach((lp: any) => {
           const p = lp.professors;
           if (!p) return;
           const normalizedName = p.nombre.trim().toLowerCase();
           if (normalizedName !== currentProf.nombre.trim().toLowerCase()) {
-            // Apply a safety check: if specialty exists and doesn't match, they might be "ghosts"
-            if (isProfessorMatching(p) || !p.especialidad) {
+            if (isProfessorMatching(p)) {
               relatedMap.set(normalizedName, p);
             }
           }
         });
 
-        // Supplement with text-based search (Always strict exact match)
+        // Supplement with text-based search (Already strictly exact match)
         (relatedProfessorsRes?.data || []).forEach((p: any) => {
           const normalizedName = p.nombre.trim().toLowerCase();
           if (normalizedName !== currentProf.nombre.trim().toLowerCase() && !relatedMap.has(normalizedName)) {
