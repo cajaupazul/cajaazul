@@ -23,6 +23,16 @@ function ProfessorRatingsWrapper() {
   const [profile, setProfile] = useState<any>(null);
   const [frameMap, setFrameMap] = useState<Record<string, any>>({});
 
+  // Helper to normalize strings (remove accents, lowercase, trim)
+  const normalizeStringStatic = (str: string) => {
+    if (!str) return '';
+    return str
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  };
+
   useEffect(() => {
     if (!professorId) {
       setLoading(false);
@@ -123,35 +133,36 @@ function ProfessorRatingsWrapper() {
         setCoursesTaught(coursesTaughtData?.map((ct: any) => ct.courses).filter(Boolean) || []);
 
         // Related professors - Strict Filtering & Merging
-        const targetCourseLower = (selectedCourse || currentProf.especialidad || '').trim().toLowerCase();
+        const targetCourseName = selectedCourse || currentProf.especialidad || '';
+        const targetNorm = normalizeStringStatic(targetCourseName);
         const relatedMap = new Map();
 
-        // Add from junction table first (most accurate)
+        const isProfessorMatching = (p: any) => {
+          const profCourses = [
+            p.especialidad,
+            ...(p.otros_cursos ? (typeof p.otros_cursos === 'string' ? p.otros_cursos.split(/[,;|•/]/) : (Array.isArray(p.otros_cursos) ? p.otros_cursos : [p.otros_cursos])) : [])
+          ].filter(Boolean).map(c => normalizeStringStatic(String(c)));
+          return profCourses.includes(targetNorm);
+        };
+
+        // Add from junction table (Trust database link but verify with name match if specialty exists)
         (linkedProfessorsRes?.data || []).forEach((lp: any) => {
           const p = lp.professors;
           if (!p) return;
           const normalizedName = p.nombre.trim().toLowerCase();
           if (normalizedName !== currentProf.nombre.trim().toLowerCase()) {
-            relatedMap.set(normalizedName, p);
+            // Apply a safety check: if specialty exists and doesn't match, they might be "ghosts"
+            if (isProfessorMatching(p) || !p.especialidad) {
+              relatedMap.set(normalizedName, p);
+            }
           }
         });
 
-        // Supplement with text-based search
+        // Supplement with text-based search (Always strict exact match)
         (relatedProfessorsRes?.data || []).forEach((p: any) => {
           const normalizedName = p.nombre.trim().toLowerCase();
           if (normalizedName !== currentProf.nombre.trim().toLowerCase() && !relatedMap.has(normalizedName)) {
-            const profCourses = [];
-            if (p.especialidad) profCourses.push(p.especialidad.trim().toLowerCase());
-            if (p.otros_cursos) {
-              const otherSegments = p.otros_cursos.split(/[,;|•/]/);
-              otherSegments.forEach((c: string) => {
-                const clean = c.trim().toLowerCase();
-                if (clean) profCourses.push(clean);
-              });
-            }
-
-            const isExactMatch = profCourses.includes(targetCourseLower);
-            if (isExactMatch) {
+            if (isProfessorMatching(p)) {
               relatedMap.set(normalizedName, p);
             }
           }

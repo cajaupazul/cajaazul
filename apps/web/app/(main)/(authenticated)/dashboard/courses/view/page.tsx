@@ -142,16 +142,29 @@ function CourseDetailWrapper() {
           ].filter(Boolean);
 
           const matchesName = isCleanMatch(profCourses, courseNameClean);
+          
+          // STRICT Rating Filter: Only include ratings for THIS course
+          const courseSpecificRatings = (p.professor_ratings || []).filter((r: any) => 
+            r.course_name && normalizeString(r.course_name) === normalizeString(courseNameClean)
+          );
+          
+          const hasCourseRatings = courseSpecificRatings.length > 0;
 
           // Inclusion Logic:
-          // - Always include if linked in junction table (manual link)
-          // - Include if match by name (stricter detection)
-          // - Note: Professors with materials but no official link/name match are no longer listed globally
-          if (isLinked || matchesName) {
-            const ratings = (p.professor_ratings || []).filter((r: any) => 
-              !r.course_name || normalizeString(r.course_name) === normalizeString(courseNameClean)
-            );
-            const avg = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.puntuacion, 0) / ratings.length : 0;
+          // - Include if match by name (Trust explicitly defined specialties)
+          // - Include if linked AND has active participation (materials or ratings for this course)
+          // - (Special case: if linked but no materials/ratings, we check if they HAVE ANY specialty. 
+          //   If they have a DIFFERENT specialty and no participation here, they are "ghosts")
+          
+          const hasDifferentSpecialty = p.especialidad && !isCleanMatch([p.especialidad], courseNameClean);
+          
+          const shouldInclude = matchesName || (isLinked && (isContributor || hasCourseRatings || !hasDifferentSpecialty));
+
+          if (shouldInclude) {
+            const avg = hasCourseRatings 
+              ? courseSpecificRatings.reduce((sum: number, r: any) => sum + r.puntuacion, 0) / courseSpecificRatings.length 
+              : 0;
+
             professorsMap.set(p.id, {
               ...p,
               averageRating: avg,
