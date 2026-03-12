@@ -151,6 +151,7 @@ interface ProfessorRatingsContentProps {
     coursesTaught?: { id: string; nombre: string }[];
     initialComments: ProfessorComment[];
     selectedCourse?: string | null;
+    selectedCourseId?: string | null;
     profile: Profile | null;
     frameMap?: Record<string, any>;
 }
@@ -449,21 +450,14 @@ export default function ProfessorRatingsContent({
     coursesTaught = [],
     initialComments = [],
     selectedCourse = null,
+    selectedCourseId = null,
     profile,
     frameMap = {}
 }: ProfessorRatingsContentProps) {
     const router = useRouter();
     const { colors } = useTheme();
-    const [ratings, setRatings] = useState<Rating[]>(() =>
-        selectedCourse
-            ? initialRatings.filter(r => r.course_name?.toLowerCase() === selectedCourse?.toLowerCase())
-            : initialRatings
-    );
-    const [comments, setComments] = useState<ProfessorComment[]>(() =>
-        selectedCourse
-            ? initialComments.filter(c => c.course_name?.toLowerCase() === selectedCourse?.toLowerCase())
-            : initialComments
-    );
+    const [ratings, setRatings] = useState<Rating[]>(initialRatings);
+    const [comments, setComments] = useState<ProfessorComment[]>(initialComments);
     const [commentText, setCommentText] = useState('');
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -544,16 +538,9 @@ export default function ProfessorRatingsContent({
     // Sync state with props when Server Component re-renders
     useEffect(() => {
         setMaterials(initialMaterials);
-        const filteredComments = selectedCourse
-            ? initialComments.filter(c => c.course_name?.toLowerCase() === selectedCourse?.toLowerCase())
-            : initialComments;
-        setComments(filteredComments);
-
-        const filteredRatings = selectedCourse
-            ? initialRatings.filter(r => r.course_name?.toLowerCase() === selectedCourse?.toLowerCase())
-            : initialRatings;
-        setRatings(filteredRatings);
-    }, [initialMaterials, initialComments, initialRatings, selectedCourse]);
+        setComments(initialComments);
+        setRatings(initialRatings);
+    }, [initialMaterials, initialComments, initialRatings]);
 
     // Realtime Subscriptions
     useEffect(() => {
@@ -705,8 +692,9 @@ export default function ProfessorRatingsContent({
             claridad: formData.claridad,
             facilidad: formData.facilidad,
             recommended: formData.recommended,
+            course_id: selectedCourseId,
             course_name: selectedCourse
-        }, { onConflict: 'professor_id,user_id,course_name' });
+        }, { onConflict: 'professor_id,user_id,course_id' });
 
         if (!error) {
             setCreateDialogOpen(false);
@@ -730,6 +718,7 @@ export default function ProfessorRatingsContent({
             user_id: user.id,
             contenido: textToSubmit.trim(),
             parent_id: parentId,
+            course_id: selectedCourseId,
             course_name: selectedCourse
         });
 
@@ -990,24 +979,16 @@ export default function ProfessorRatingsContent({
                                     className="flex flex-wrap gap-2 justify-center md:justify-start"
                                 >
                                     {selectedCourse && (
-                                        <span className="bg-green-500/20 backdrop-blur-md text-green-400 px-4 py-1.5 rounded-full border border-green-500/30 uppercase tracking-wider text-xs font-bold shadow-lg shadow-green-900/10 flex items-center gap-2">
-                                            <Sparkles className="w-3 h-3" />
-                                            {selectedCourse}
-                                        </span>
-                                    )}
-                                    {professor.especialidad && professor.especialidad !== 'General' && !selectedCourse && (
-                                        <div className="flex items-center gap-1">
-                                            <Link
-                                                href={`/dashboard/professors/view?id=${professorLinkMapping[professor.especialidad.toLowerCase()] || professor.id}&course=${encodeURIComponent(professor.especialidad)}`}
-                                                className="bg-blue-500/20 backdrop-blur-md text-blue-500 px-4 py-1.5 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-all uppercase tracking-wider text-xs font-bold shadow-lg shadow-blue-900/10"
-                                            >
-                                                {professor.especialidad.toUpperCase()}
-                                            </Link>
+                                        <div className="flex items-center gap-1 group/current">
+                                            <span className="bg-green-500/20 backdrop-blur-md text-green-400 px-4 py-1.5 rounded-full border border-green-500/30 uppercase tracking-wider text-xs font-bold shadow-lg shadow-green-900/10 flex items-center gap-2">
+                                                <Sparkles className="w-3 h-3" />
+                                                {selectedCourse}
+                                            </span>
                                             {profile?.role === 'admin' && (
                                                 <button
-                                                    onClick={() => handleDeleteCourse(professor.especialidad!)}
-                                                    className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors"
-                                                    title="Eliminar este curso"
+                                                    onClick={() => handleDeleteCourse(selectedCourse)}
+                                                    className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors opacity-0 group-hover/current:opacity-100"
+                                                    title="Desvincular este curso"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </button>
@@ -1020,6 +1001,28 @@ export default function ProfessorRatingsContent({
                                             <div className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]" />
                                             {professor.facultad}
                                         </span>
+                                    )}
+
+                                    {/* Otros cursos que enseña */}
+                                    {coursesTaught.length > 1 && (
+                                        <div className="flex flex-wrap gap-2 mt-2 w-full">
+                                            <p className="w-full text-[10px] font-bold text-bb-text-secondary uppercase tracking-widest mb-1 opacity-60">
+                                                Otras materias que enseña:
+                                            </p>
+                                            {coursesTaught
+                                                .filter(c => c.id !== selectedCourseId)
+                                                .map(course => (
+                                                    <Link
+                                                        key={course.id}
+                                                        href={`/dashboard/professors/view?id=${professor.id}&courseId=${course.id}&course=${encodeURIComponent(course.nombre)}`}
+                                                        className="bg-bb-sidebar/30 hover:bg-bb-hover text-bb-text-secondary hover:text-white px-3 py-1 rounded-lg border border-bb-border transition-all text-[11px] font-bold flex items-center gap-1.5"
+                                                    >
+                                                        <LayoutPanelLeft className="w-3 h-3 text-blue-400/50" />
+                                                        {course.nombre}
+                                                    </Link>
+                                                ))
+                                            }
+                                        </div>
                                     )}
                                 </motion.div>
                             </div>
@@ -1233,8 +1236,8 @@ export default function ProfessorRatingsContent({
                                         <Button
                                             className="mt-4 bg-bb-darker border border-bb-border hover:bg-bb-hover font-bold h-8 text-bb-text active:scale-95 transition-transform text-xs uppercase tracking-wide"
                                             onClick={() => {
-                                                const primaryCourseId = professor.especialidad ? courseMapping[professor.especialidad.toLowerCase()] : null;
-                                                const uploadUrl = `/dashboard/professors/upload?id=${professor.id}${primaryCourseId ? `&courseId=${primaryCourseId}` : ''}`;
+                                                const finalCourseId = selectedCourseId || (professor.especialidad ? courseMapping[professor.especialidad.toLowerCase()] : null);
+                                                const uploadUrl = `/dashboard/professors/upload?id=${professor.id}${finalCourseId ? `&courseId=${finalCourseId}` : ''}`;
                                                 router.push(uploadUrl);
                                             }}
                                         >
@@ -1245,44 +1248,7 @@ export default function ProfessorRatingsContent({
                                 )}
                             </div>
 
-                            <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
-                                <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-                                    </svg>
-                                    Otros Cursos
-                                </h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {aggregatedOtherCourses.length > 0 ? (
-                                        aggregatedOtherCourses.map((curso: string, idx: number) => {
-                                            const trimmedCurso = curso.trim();
-                                            const targetId = professorLinkMapping[trimmedCurso.toLowerCase()] || professor.id;
-
-                                            return (
-                                                <div key={idx} className="flex items-center gap-1">
-                                                    <Link
-                                                        href={`/dashboard/professors/view?id=${targetId}&course=${encodeURIComponent(trimmedCurso)}`}
-                                                        className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 text-sm font-medium hover:bg-purple-500/20 transition-colors uppercase"
-                                                    >
-                                                        {trimmedCurso.toUpperCase()}
-                                                    </Link>
-                                                    {profile?.role === 'admin' && (
-                                                        <button
-                                                            onClick={() => handleDeleteCourse(trimmedCurso)}
-                                                            className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors"
-                                                            title="Eliminar este curso"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            );
-                                        })
-                                    ) : (
-                                        <p className="text-sm text-bb-text-secondary">No se encontraron otros cursos.</p>
-                                    )}
-                                </div>
-                            </div>
+                            {/* Section removed: replaced by internal navigation in header */}
                         </div>
 
                         <div className="space-y-6">

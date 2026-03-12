@@ -9,7 +9,8 @@ function ProfessorRatingsWrapper() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const professorId = searchParams.get('id');
-  const selectedCourse = searchParams.get('course');
+  const contextCourseId = searchParams.get('courseId');
+  const selectedCourseName = searchParams.get('course'); // Fallback/Legacy
   const [loading, setLoading] = useState(true);
   const [professor, setProfessor] = useState<any>(null);
   const [ratings, setRatings] = useState<any[]>([]);
@@ -23,16 +24,6 @@ function ProfessorRatingsWrapper() {
   const [profile, setProfile] = useState<any>(null);
   const [frameMap, setFrameMap] = useState<Record<string, any>>({});
 
-  // Helper to normalize strings (remove accents, lowercase, trim)
-  const normalizeStringStatic = (str: string) => {
-    if (!str) return '';
-    return str
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
-  };
-
   useEffect(() => {
     if (!professorId) {
       setLoading(false);
@@ -41,6 +32,7 @@ function ProfessorRatingsWrapper() {
 
     async function fetchData() {
       try {
+        setLoading(true);
         // 1. Fetch professor details
         const { data: currentProf, error: profError } = await supabase
           .from('professors')
@@ -50,33 +42,38 @@ function ProfessorRatingsWrapper() {
 
         if (profError || !currentProf) {
           console.error('Professor not found');
+          setLoading(false);
           return;
         }
         setProfessor(currentProf);
 
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
 
-        // 2. Fetch data in parallel
-        // Resolve course ID if context is provided
-        let targetCourseId = null;
-        if (selectedCourse) {
-          const { data: matchedCourse } = await supabase
-            .from('courses')
-            .select('id')
-            .ilike('nombre', selectedCourse)
-            .single();
-          if (matchedCourse) targetCourseId = matchedCourse.id;
+        // 2. Fetch all courses taught by this professor (to find effective course)
+        const { data: coursesTaughtData } = await supabase
+          .from('course_professors')
+          .select('courses(id, nombre)')
+          .eq('professor_id', professorId);
+        
+        const finalCourses = coursesTaughtData?.map((ct: any) => ct.courses).filter(Boolean) || [];
+        setCoursesTaught(finalCourses);
+
+        // 3. Resolve effective course ID
+        let effectiveCourseId = contextCourseId;
+        
+        // Fallback to name if ID is missing but name is present
+        if (!effectiveCourseId && selectedCourseName) {
+          const matched = finalCourses.find(c => c.nombre.toLowerCase() === selectedCourseName.toLowerCase());
+          if (matched) effectiveCourseId = matched.id;
         }
 
-        const [
-          { data: ratingsData },
-          { data: materialsData },
-          { data: coursesTaughtData },
-          { data: commentsData },
-          { data: userProfile },
-          { data: framesData }
-        ] = await Promise.all([
+        // Final fallback: use the first course they teach or whatever is available
+        if (!effectiveCourseId && finalCourses.length > 0) {
+          effectiveCourseId = finalCourses[0].id;
+        }
+
+        // 4. Fetch context-specific data in parallel
+        const promises: any[] = [
           supabase.from('professor_ratings')
             .select('*, profiles(nombre, avatar_url, background_url, active_frame_key, bio, created_at, puntos, es_vip)')
             .eq('professor_id', professorId)
@@ -85,26 +82,50 @@ function ProfessorRatingsWrapper() {
             .select('*, courses(id, nombre)')
             .eq('professor_id', professorId)
             .order('created_at', { ascending: false }),
-          supabase.from('course_professors')
-            .select('courses(id, nombre)')
-            .eq('professor_id', professorId),
           supabase.from('professor_comments')
             .select('*, profiles(nombre, avatar_url, background_url, active_frame_key, bio, created_at, puntos, es_vip)')
             .eq('professor_id', professorId)
             .order('created_at', { ascending: false }),
-          supabase.from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single(),
           supabase.from('shop_items')
             .select('*')
             .eq('type', 'profile_frame')
             .eq('is_active', true)
-        ]);
+        ];
 
-        // If no course context was provided per URL, pick the first course they teach for "Related Professors"
-        const effectiveCourseId = targetCourseId || (coursesTaughtData as any)?.[0]?.courses?.id;
+        if (user) {
+          promises.push(supabase.from('profiles').select('*').eq('id', user.id).single());
+        } else {
+          promises.push(Promise.resolve({ data: null }));
+        }
 
+        const [
+          { data: ratingsData },
+          { data: materialsData },
+          { data: commentsData },
+          { data: framesData },
+          { data: userProfile }
+        ] = await Promise.all(promises);
+
+        // 5. Filter data by effectiveCourseId
+        // This ensures the independent profile feel
+        const filteredRatings = effectiveCourseId 
+          ? (ratingsData || []).filter((r: any) => r.course_id === effectiveCourseId)
+          : (ratingsData || []);
+        
+        const filteredMaterials = effectiveCourseId
+          ? (materialsData || []).filter((m: any) => m.course_id === effectiveCourseId)
+          : (materialsData || []);
+        
+        const filteredComments = effectiveCourseId
+          ? (commentsData || []).filter((c: any) => c.course_id === effectiveCourseId)
+          : (commentsData || []);
+
+        setRatings(filteredRatings);
+        setMaterials(filteredMaterials);
+        setComments(filteredComments);
+        setProfile(userProfile);
+
+        // Related professors - Restricted to same course
         let linkedProfessorsData: any[] = [];
         if (effectiveCourseId) {
           const { data: lpRes } = await supabase.from('course_professors')
@@ -115,14 +136,6 @@ function ProfessorRatingsWrapper() {
           linkedProfessorsData = lpRes || [];
         }
 
-        // Process data
-        setRatings(ratingsData || []);
-        setMaterials(materialsData || []);
-        setComments(commentsData || []);
-        setProfile(userProfile);
-        setCoursesTaught(coursesTaughtData?.map((ct: any) => ct.courses).filter(Boolean) || []);
-
-        // Related professors - Strictly Relational
         const relatedMap = new Map();
         linkedProfessorsData.forEach((lp: any) => {
           const p = lp.professors;
@@ -132,14 +145,10 @@ function ProfessorRatingsWrapper() {
 
         // Frame map
         const fMap: Record<string, any> = {};
-        framesData?.forEach(f => {
+        framesData?.forEach((f: any) => {
           if (f.frame_key) fMap[f.frame_key] = f;
         });
         setFrameMap(fMap);
-
-        // Course & Professor link mapping - Strictly Relational
-        const finalCourses = coursesTaughtData?.map((ct: any) => ct.courses).filter(Boolean) || [];
-        setCoursesTaught(finalCourses);
 
         const cMapping: Record<string, string> = {};
         finalCourses.forEach((c: any) => {
@@ -158,7 +167,7 @@ function ProfessorRatingsWrapper() {
     }
 
     fetchData();
-  }, [professorId, selectedCourse]);
+  }, [professorId, contextCourseId, selectedCourseName]);
 
   if (loading) {
     return (
@@ -188,7 +197,7 @@ function ProfessorRatingsWrapper() {
       initialMaterials={materials}
       coursesTaught={coursesTaught}
       initialComments={comments}
-      selectedCourse={selectedCourse}
+      selectedCourse={selectedCourseName}
       profile={profile}
       frameMap={frameMap}
     />
