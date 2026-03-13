@@ -46,15 +46,26 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
     const [duplicateError, setDuplicateError] = useState(false);
     const [suggestions, setSuggestions] = useState<Professor[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [existingProfessorId, setExistingProfessorId] = useState<string | null>(null);
+    const [existingProfessorData, setExistingProfessorData] = useState<Professor | null>(null);
     const suggestionRef = useRef<HTMLDivElement>(null);
 
     const [formData, setFormData] = useState({
         nombre: '',
-        especialidad: '', // Materia Principal
+        especialidad: '', // Se usa ahora siempre como la materia que se está intentando agregar
         facultad: '',
         email: '',
         otros_cursos: '',
     });
+
+    // Reset existing ID if user modifies name after selection
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData(prev => ({ ...prev, nombre: e.target.value }));
+        if (existingProfessorId) {
+            setExistingProfessorId(null);
+            setExistingProfessorData(null);
+        }
+    };
 
     // Close suggestions when clicking outside
     useEffect(() => {
@@ -118,10 +129,25 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
     useEffect(() => {
         const checkDuplicate = async () => {
             const name = formData.nombre.trim();
-            const specialty = formData.especialidad.trim();
+            const specialty = formData.especialidad.trim().toUpperCase();
             if (name.length > 3 && specialty.length > 2) {
                 setChecking(true);
 
+                if (existingProfessorData) {
+                    // Check logic based strictly on the selected professor's current courses
+                    const currentMain = (existingProfessorData.especialidad || '').toUpperCase();
+                    const currentOthers = (existingProfessorData.otros_cursos || '').toUpperCase().split(',').map(s => s.trim());
+                    
+                    if (currentMain === specialty || currentOthers.includes(specialty)) {
+                        setDuplicateError(true);
+                    } else {
+                        setDuplicateError(false);
+                    }
+                    setChecking(false);
+                    return;
+                }
+
+                // Normal check for completely new professors
                 const { data, error } = await supabase
                     .from('professors')
                     .select('id, especialidad')
@@ -142,7 +168,7 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
 
         const timer = setTimeout(checkDuplicate, 400);
         return () => clearTimeout(timer);
-    }, [formData.nombre, formData.especialidad]);
+    }, [formData.nombre, formData.especialidad, existingProfessorData]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
@@ -150,13 +176,17 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
     };
 
     const handleSelectSuggestion = (prof: Professor) => {
-        setFormData({
+        setExistingProfessorId(prof.id);
+        setExistingProfessorData(prof);
+        setFormData(prev => ({
+            ...prev,
             nombre: (prof.nombre || '').toUpperCase(),
-            especialidad: (prof.especialidad || '').toUpperCase(),
+            // No sobreescribir la especialidad, ya que será la NUEVA materia a registrar
             facultad: (prof.facultad || '').toUpperCase(),
             email: (prof.email || '').toUpperCase(),
+            // Mantener el raw string de sus cursos actuales
             otros_cursos: (prof.otros_cursos || '').toUpperCase(),
-        });
+        }));
         setShowSuggestions(false);
     };
 
@@ -183,7 +213,7 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
             return;
         }
         if (!formData.especialidad.trim()) {
-            alert('Por favor, selecciona o ingresa la materia principal.');
+            alert('Por favor, selecciona o ingresa la materia a vincular.');
             return;
         }
         if (!formData.facultad.trim()) {
@@ -193,20 +223,87 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
 
         setLoading(true);
         try {
-            const { data, error } = await supabase.from('professors').insert({
-                nombre: formData.nombre.trim().toUpperCase(),
-                especialidad: formData.especialidad.trim().toUpperCase(),
-                facultad: formData.facultad.trim().toUpperCase() || null,
-                email: formData.email.trim() || null,
-                otros_cursos: formData.otros_cursos.trim().toUpperCase() || null,
-                background_image_url: getRandomBackgroundImage(),
-                avatar_url: '/profes/tl.webp', // Default avatar
-            }).select().single();
+            const newMateria = formData.especialidad.trim().toUpperCase();
+            let finalProfessorId = existingProfessorId;
+            let finalProfessorObj = null;
 
-            if (error) throw error;
+            // 1. Get Course ID for linking (Fetch or create)
+            let courseId = null;
+            const { data: coursesData } = await supabase
+                .from('courses')
+                .select('id')
+                .ilike('nombre', newMateria)
+                .limit(1);
 
-            if (data) {
-                addProfessor(data);
+            if (coursesData && coursesData.length > 0) {
+                courseId = coursesData[0].id;
+            } else {
+                // Course doesn't exist, we must create it dynamically (rare, but protects integrity)
+                const { data: newCourse } = await supabase.from('courses').insert({
+                    nombre: newMateria,
+                    codigo: null,
+                    facultad: formData.facultad.trim().toUpperCase()
+                }).select('id').single();
+                if (newCourse) courseId = newCourse.id;
+            }
+
+            if (!courseId) throw new Error('No se pudo resolver el ID de la materia.');
+
+            // 2. Professor Handling
+            if (existingProfessorId && existingProfessorData) {
+                // UPDATE EXISTING PROFESSOR
+                // Append the new course to otros_cursos
+                const previousCourses = (existingProfessorData.otros_cursos || '').split(',').map(s => s.trim()).filter(Boolean);
+                if (!previousCourses.includes(newMateria) && (existingProfessorData.especialidad?.toUpperCase() !== newMateria)) {
+                    previousCourses.push(newMateria);
+                }
+                const updatedOtrosCursos = previousCourses.join(', ');
+
+                const { data, error } = await supabase.from('professors').update({
+                    otros_cursos: updatedOtrosCursos || null,
+                }).eq('id', existingProfessorId).select().single();
+
+                if (error) throw error;
+                finalProfessorObj = data;
+                
+            } else {
+                // CREATE NEW PROFESSOR
+                const { data, error } = await supabase.from('professors').insert({
+                    nombre: formData.nombre.trim().toUpperCase(),
+                    especialidad: newMateria, // Aquí sí se inserta como especialidad primaria
+                    facultad: formData.facultad.trim().toUpperCase() || null,
+                    email: formData.email.trim() || null,
+                    otros_cursos: formData.otros_cursos.trim().toUpperCase() || null,
+                    background_image_url: getRandomBackgroundImage(),
+                    avatar_url: '/profes/tl.webp', // Default avatar
+                }).select().single();
+
+                if (error) throw error;
+                finalProfessorObj = data;
+                finalProfessorId = data.id;
+            }
+
+            // 3. Create relational mapping
+            if (finalProfessorId && courseId) {
+                // Prevent duplicate relationship via upsert/ignore or simply querying first
+                const { data: existingLink } = await supabase
+                    .from('course_professors')
+                    .select('id')
+                    .eq('course_id', courseId)
+                    .eq('professor_id', finalProfessorId)
+                    .limit(1);
+
+                if (!existingLink || existingLink.length === 0) {
+                    await supabase.from('course_professors').insert({
+                        course_id: courseId,
+                        professor_id: finalProfessorId
+                    });
+                }
+            }
+
+            // 4. Update UI using DashboardContext
+            if (finalProfessorObj) {
+                addProfessor(finalProfessorObj);
             }
 
             if (onSuccess) {
@@ -253,11 +350,11 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
                                     <Input
                                         id="nombre"
                                         value={formData.nombre}
-                                        onChange={handleChange}
+                                        onChange={handleNameChange}
                                         onFocus={() => formData.nombre.length >= 1 && setShowSuggestions(true)}
                                         placeholder="ESCRIBE PARA BUSCAR..."
                                         required
-                                        className="bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-xl pl-10 uppercase"
+                                        className={`bg-bb-darker border-bb-border text-bb-text h-12 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all rounded-xl pl-10 uppercase ${existingProfessorId ? 'border-blue-500/50 ring-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.1)]' : ''}`}
                                         autoComplete="off"
                                     />
                                     <Search className="absolute left-3 top-3.5 w-5 h-5 text-gray-500" />
@@ -349,7 +446,7 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
                             </div>
 
                             <Autocomplete
-                                label="Materia Principal *"
+                                label={existingProfessorId ? "Nueva Materia a Vincular *" : "Materia Principal *"}
                                 placeholder="EJ: CÁLCULO I"
                                 items={courseCatalog}
                                 value={formData.especialidad}
@@ -429,11 +526,11 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                 >
-                                    <div className="flex items-center gap-3 text-green-400 text-sm font-bold bg-green-500/10 p-5 rounded-2xl border border-green-500/20 uppercase">
-                                        <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center shrink-0">
+                                    <div className={`flex items-center gap-3 ${existingProfessorId ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' : 'text-green-400 bg-green-500/10 border-green-500/20'} text-sm font-bold p-5 rounded-2xl border uppercase`}>
+                                        <div className={`w-8 h-8 rounded-lg ${existingProfessorId ? 'bg-blue-500/20' : 'bg-green-500/20'} flex items-center justify-center shrink-0`}>
                                             <CheckCircle2 className="w-5 h-5" />
                                         </div>
-                                        ESTE PROFESOR Y MATERIA ESTÁN DISPONIBLES PARA REGISTRO.
+                                        {existingProfessorId ? 'ESTE PROFESOR EXISTE Y LA NUEVA MATERIA PUEDE SER AÑADIDA A SU PERFIL.' : 'ESTE PROFESOR NUEVO Y MATERIA ESTÁN DISPONIBLES PARA REGISTRO.'}
                                     </div>
                                 </motion.div>
                             )}
@@ -459,7 +556,9 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
                                         GUARDANDO...
                                     </>
                                 ) : (
-                                    'GUARDAR PROFESOR'
+                                    <div className="flex items-center justify-center w-full">
+                                        {existingProfessorId ? 'VINCULAR MATERIA AL PROFESOR' : 'GUARDAR PROFESOR NUEVO'}
+                                    </div>
                                 )}
                             </Button>
                         </div>
