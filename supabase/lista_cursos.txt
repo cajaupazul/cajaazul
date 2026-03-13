@@ -1,0 +1,4480 @@
+Secc	Docentes
+CURSOS ACADÉMICOS	
+120266 - Antiguo Perú, Arqueología, Museos y Nuevas Tecnologías	
+A	PARDO GRAU, Cecilia Maria Luisa
+	
+120253 - Antropología Filosófica	
+A	DEL MASTRO PUCCIO, Cesare Anibal
+	
+	
+	
+120280 - Arte y diseño prehispánico. Naturaleza y legado	
+A	PARDO GRAU, Cecilia Maria Luisa
+	
+120270 - Comunicación Digital	
+A	ESPINOSA WINDER, Francisco
+	
+	
+	
+120289 - Dios, Existencia Humana y Sociedad	
+A	PIEDRA VALDEZ, Jose Leopoldo
+	
+120133 - Ética	
+A	VARGAS DELLA CASA, Rosa Elvira
+	
+	
+	
+B	QUIROZ MEZA, Danitza Dejanira
+	
+	
+	
+C	PONCE BOGINO, Hector Alberto
+	
+C	PONCE BOGINO, Hector Alberto
+	
+D	PIEDRA VALDEZ, Jose Leopoldo
+	
+	
+	
+E	EGOAVIL RIOS, Jean Christian
+	
+	
+	
+F	HINOSTROZA RIVERA, Dino Arturo
+	
+	
+	
+G	IVANOFF SABOGAL, Christian
+	
+	
+	
+H	HINOSTROZA RIVERA, Dino Arturo
+	
+	
+	
+I	VARGAS DELLA CASA, Rosa Elvira
+	
+	
+	
+J	ARANA ALENCASTRE, Jean Luis
+	
+	
+	
+K	ARANA ALENCASTRE, Jean Luis
+	
+	
+	
+L	EGOAVIL RIOS, Jean Christian
+	
+L	EGOAVIL RIOS, Jean Christian
+	
+M	EGOAVIL RIOS, Jean Christian
+	
+	
+	
+N	EGOAVIL RIOS, Jean Christian
+	
+	
+	
+O	VILLARAN CONTAVALLI, ALONSO MANUEL
+	
+	
+	
+P	EGOAVIL RIOS, Jean Christian
+	
+	
+	
+Q	DEXTRE UZATEGUI, Sergio Guillermo
+	
+	
+	
+R	MORENO GONZALEZ, Rafael
+	
+	
+	
+S	MORENO GONZALEZ, Rafael
+	
+	
+	
+T	QUIROZ MEZA, Danitza Dejanira
+	
+	
+	
+U	QUIROZ MEZA, Danitza Dejanira
+	
+U	QUIROZ MEZA, Danitza Dejanira
+	
+V	PONCE BOGINO, Hector Alberto
+	
+	
+	
+W	PONCE BOGINO, Hector Alberto
+	
+	
+	
+X	PONCE BOGINO, Hector Alberto
+	
+	
+	
+Y	VILLARAN CONTAVALLI, ALONSO MANUEL
+	
+	
+	
+Z	DEXTRE UZATEGUI, Sergio Guillermo
+	
+	
+	
+129007 - Filosofía	
+A	CARRIÓN CARAVEDO, Úrsula
+	
+B	QUIROZ MEZA, Danitza Dejanira
+	
+C	LASTRES DAMMERT, Pamela Maria
+	
+D	IBAÑEZ BLANCAS, Franklin Ernesto
+	
+E	QUIROZ MEZA, Danitza Dejanira
+	
+F	DEL MASTRO PUCCIO, Cesare Anibal
+	
+G	ASTUDILLO TORRES, Deyvi Harold
+G	ASTUDILLO TORRES, Deyvi Harold
+H	MORENO GONZALEZ, Rafael
+	
+I	DEXTRE UZATEGUI, Sergio Guillermo
+	
+J	ASTUDILLO TORRES, Deyvi Harold
+	
+K	MORENO GONZALEZ, Rafael
+	
+L	DEXTRE UZATEGUI, Sergio Guillermo
+	
+M	DEXTRE UZATEGUI, Sergio Guillermo
+	
+120273 - Filosofia Política	
+A	CARRIÓN CARAVEDO, Úrsula
+	
+	
+	
+122005 - Historia Crítica del Perú	
+A	FONSECA ARIZA, Juan Adoniran
+	
+	
+	
+B	INJOQUE RONCEROS, Freddy Miguel
+	
+	
+	
+C	INJOQUE RONCEROS, Freddy Miguel
+	
+	
+	
+D	LIZARME VILLCAS, Nashely Yuvitza
+	
+	
+	
+E	LIZARME VILLCAS, Nashely Yuvitza
+E	LIZARME VILLCAS, Nashely Yuvitza
+	
+	
+120269 - Historia Económica del Perú	
+A	MONSALVE ZANATTI, Martin Alberto / CAMACHO GAVIDIA, Abel Fernando / CASAS TRAGODARA, Carlos Augusto
+	
+120070 - Historia Económica y Empresarial	
+A	RODRIGUEZ SATIZABAL, Beatriz Helena
+	
+B	CARRASCO WESTON, Jose Manuel
+	
+C	BARRETO VELAZQUEZ, Norberto
+	
+D	BARRETO VELAZQUEZ, Norberto
+	
+E	CARRASCO WESTON, Jose Manuel
+	
+F	CARRASCO WESTON, Jose Manuel
+	
+G	BARRETO VELAZQUEZ, Norberto
+	
+H	RODRIGUEZ SATIZABAL, Beatriz Helena
+	
+I	CAMACHO GAVIDIA, Abel Fernando
+	
+J	CABREJOS PORTOCARRERO, Jose Ignacio
+	
+124019 - Historia y Filosofía de la Ciencia	
+A	PEREZ MARTINEZ, Angel Ruben
+	
+	
+	
+B	MONSALVE ZANATTI, Martin Alberto
+	
+B	MONSALVE ZANATTI, Martin Alberto
+	
+C	GUADALUPE MENDIZABAL, Cesar Augusto
+	
+	
+	
+D	MONSALVE ZANATTI, Martin Alberto
+	
+	
+	
+120260 - Introducción a la Política, Filosofia y Economía	
+A	DEL MASTRO PUCCIO, Cesare Anibal / BARRON AYLLON, Manuel Fernando / PEREZ , Leda Margarita
+	
+	
+	
+120244 - Introducción a las Humanidades Digitales	
+A	PARDO GRAU, Cecilia Maria Luisa
+	
+	
+	
+120252 - Lectura Crítica de la Prensa Digital y en las Redes Sociales	
+A	ESPINOSA WINDER, Francisco
+	
+	
+	
+120001 - Lenguaje I	
+A	NASSI PERIC, Bruno Fernando
+	
+	
+	
+B	LANDA ROJAS, Luis Enrique
+	
+	
+	
+C	QUIROZ VELA, Juan Enrique
+C	QUIROZ VELA, Juan Enrique
+	
+	
+D	MORIMOTO SONE, Maria Lourdes
+	
+	
+	
+E	MONTAUBAN DEL SOLAR, Michele Marie
+	
+	
+	
+F	GAUGER QUIROZ, Juan Manuel
+	
+	
+	
+G	PINASCO ESPINOSA, Sandra Gabriella
+	
+	
+	
+H	HELGUERO MORALES, Lorenzo Pedro
+	
+	
+	
+I	MADALENGOITIA BARUA, Maria Gracia
+	
+	
+	
+J	QUIROZ VELA, Juan Enrique
+	
+	
+	
+K	PEREZ DEL SOLAR TOLA, Pedro Carlos Hilarion
+	
+	
+	
+L	CALDERÓN BAIOCCHI, Juan Humberto
+L	CALDERÓN BAIOCCHI, Juan Humberto
+	
+	
+M	PEREZ DEL SOLAR TOLA, Pedro Carlos Hilarion
+	
+	
+	
+N	"MERINO SILICANI DE ALVAREZ, Rosanna Maria
+Victoria Andrea"
+	
+	
+	
+O	CARRILLO PASTOR, Giuliana Maria
+	
+	
+	
+P	HELGUERO MORALES, Lorenzo Pedro
+	
+	
+	
+Q	GUTIERREZ MEZA, José Elías
+	
+	
+	
+R	GUICH RODRIGUEZ, Jose Abelardo
+	
+	
+	
+S	ZAPATA FAJARDO, Jaime Israel
+	
+	
+	
+T	CALDERÓN BAIOCCHI, Juan Humberto
+	
+	
+	
+U	MORILLO SOTOMAYOR, Alex
+U	MORILLO SOTOMAYOR, Alex
+	
+	
+120006 - Lenguaje II	
+A	PEREZ DEL SOLAR TOLA, Pedro Carlos Hilarion
+	
+	
+	
+B	GUICH RODRIGUEZ, Jose Abelardo
+	
+	
+	
+C	HELGUERO MORALES, Lorenzo Pedro
+	
+	
+	
+D	LANDA ROJAS, Luis Enrique
+	
+	
+	
+E	CARRILLO PASTOR, Giuliana Maria
+	
+	
+	
+F	NASSI PERIC, Bruno Fernando
+	
+	
+	
+G	MORILLO SOTOMAYOR, Alex
+	
+	
+	
+H	HUATUCO POMALAZA, Rocio Milagros
+	
+	
+	
+I	CALDERÓN BAIOCCHI, Juan Humberto
+	
+	
+	
+J	GUICH RODRIGUEZ, Jose Abelardo
+	
+	
+	
+K	SALCEDO REYES, Ana Lucia
+	
+	
+	
+L	ZAPATA FAJARDO, Jaime Israel
+	
+	
+	
+M	CARRIÓN CARAVEDO, Úrsula
+	
+	
+	
+N	FERRUCCI MONTOYA, Gabriela Ida
+	
+	
+	
+O	FERRUCCI MONTOYA, Gabriela Ida
+	
+	
+	
+124020 - Literatura	
+A	WIESSE REBAGLIATI, Jorge Raul
+	
+127039 - Literatura Universal	
+A	GATTI MURRIEL, Carlos Antonio
+	
+120000 - Nivelación en Lenguaje	
+A	CARRILLO PASTOR, Giuliana Maria
+A	CARRILLO PASTOR, Giuliana Maria
+	
+	
+B	MORILLO SOTOMAYOR, Alex
+	
+	
+	
+C	GAUGER QUIROZ, Juan Manuel
+	
+	
+	
+D	HUATUCO POMALAZA, Rocio Milagros
+	
+	
+	
+E	MADALENGOITIA BARUA, Maria Gracia
+	
+	
+	
+F	"MERINO SILICANI DE ALVAREZ, Rosanna Maria
+Victoria Andrea"
+	
+	
+	
+G	CALDERÓN BAIOCCHI, Juan Humberto
+	
+	
+	
+H	HUATUCO POMALAZA, Rocio Milagros
+	
+	
+	
+I	GUICH RODRIGUEZ, Jose Abelardo
+	
+	
+	
+J	GAUGER QUIROZ, Juan Manuel
+J	GAUGER QUIROZ, Juan Manuel
+	
+	
+K	QUIROZ VELA, Juan Enrique
+	
+	
+	
+L	LANDA ROJAS, Luis Enrique
+	
+	
+	
+M	MADALENGOITIA BARUA, Maria Gracia
+	
+	
+	
+N	"MERINO SILICANI DE ALVAREZ, Rosanna Maria
+Victoria Andrea"
+	
+	
+	
+O	CARRILLO PASTOR, Giuliana Maria
+	
+	
+	
+P	QUIROZ VELA, Juan Enrique
+	
+	
+	
+Q	MORILLO SOTOMAYOR, Alex
+	
+	
+	
+R	HUATUCO POMALAZA, Rocio Milagros
+	
+	
+	
+S	VARGAS VILCA, Mariano Daniel
+S	VARGAS VILCA, Mariano Daniel
+	
+	
+T	"MERINO SILICANI DE ALVAREZ, Rosanna Maria
+Victoria Andrea"
+	
+	
+	
+U	VARGAS VILCA, Mariano Daniel
+	
+	
+	
+120290 - Religiones, Culturas y Economía	
+A	ARMAS ASIN, Fernando Alberto
+	
+	
+	
+B	ROMERO PINTO, Ezequiel Eduardo
+	
+	
+	
+	
+C	FLORES PAZ, Rafael Antonio
+	
+	
+	
+D	FLORES PAZ, Rafael Antonio
+	
+	
+	
+E	ROMERO PINTO, Ezequiel Eduardo
+	
+	
+	
+F	FLORES PAZ, Rafael Antonio
+	
+	
+F	FLORES PAZ, Rafael Antonio
+G	ATO DEL AVELLANAL CARRERA, Manuel Antonio
+	
+	
+	
+H	FONSECA ARIZA, Juan Adoniran
+	
+	
+	
+I	ARMAS ASIN, Fernando Alberto
+	
+	
+	
+J	FONSECA ARIZA, Juan Adoniran
+	
+	
+	
+K	ROMERO PINTO, Ezequiel Eduardo
+	
+	
+	
+L	FONSECA ARIZA, Juan Adoniran
+	
+	
+	
+M	ARIAS CUBA, Ybeth Merly
+	
+	
+	
+Secc	Docentes
+CURSOS ACADÉMICOS	
+130454 - Análisis Económico de la Competencia	
+A	CARO JAHNCKE, Andres Javier
+130289 - Análisis Político Relevante para la Perspectiva Económica	
+A	ALVAREZ RODRICH, Augusto Anibal
+130537 - Análisis Real y Convexo	
+A	GARCIA RAMOS, Yboon Victoria
+	
+130564 - Data Science con Python	
+A	QUISPE ROJAS, Alexander Wilder
+	
+130639 - Diseño y Evaluación Social de Proyectos	
+A	PRIALE UGAS, Miguel Enrique
+	
+	
+130538 - Econometría Aplicada	
+A	BASURTO PRECIADO, Maria Pia
+	
+	
+	
+	
+130424 - Econometría I	
+A	BARRON AYLLON, Manuel Fernando
+	
+	
+	
+	
+B	CASTRO CARLIN, Juan Francisco
+B	CASTRO CARLIN, Juan Francisco
+	
+	
+	
+	
+C	LAVADO PADILLA, Pablo Augusto
+	
+	
+	
+	
+138425 - Econometría II	
+A	BASURTO PRECIADO, Maria Pia
+	
+	
+	
+	
+B	CASAS TRAGODARA, Carlos Augusto
+	
+	
+	
+	
+C	LAVADO PADILLA, Pablo Augusto
+	
+	
+	
+	
+130619 - Economía Ambiental Aplicada a las Políticas Públicas en el Perú	
+A	GALARZA CONTRERAS, Elsa Patricia
+	
+130614 - Economía Experimental	
+A	GALARZA ARELLANO, Francisco Bruno
+	
+	
+132641 - Economía General I	
+A	LA SERNA STUDZINSKI, Karlos
+	
+	
+	
+	
+B	LA SERNA STUDZINSKI, Karlos
+	
+	
+	
+	
+C	PARODI TRECE, Carlos Alfredo Justo
+	
+	
+	
+	
+D	GÓMEZ GAMARRA DE ZEA, ZOILA DEL ROSARIO
+	
+	
+	
+	
+E	MOLINA CAMPODONICO, Oswaldo
+	
+	
+	
+	
+F	AGUIRRE MONTOYA, Julio Cesar
+	
+	
+	
+	
+G	HERNANDEZ RUBIÑOS, Mario German
+	
+	
+	
+	
+H	PRIALE UGAS, Miguel Enrique
+	
+	
+	
+	
+I	PEREZ MALCA, Patricia Estela
+	
+	
+	
+	
+J	MONTESINOS CORDOVA, Jorge Luis
+	
+	
+	
+	
+K	PAREDES SALAZAR, Lizardo Emanuel
+	
+	
+	
+	
+L	PAREDES SALAZAR, Lizardo Emanuel
+	
+	
+	
+	
+M	PAREDES SALAZAR, Lizardo Emanuel
+	
+	
+	
+	
+N	ARAGON PEÑALOZA, Gisella Silvana
+	
+	
+	
+	
+O	FALEN ZEVALLOS, Luis Eduardo
+O	FALEN ZEVALLOS, Luis Eduardo
+	
+	
+	
+P	TALLEDO SANCHEZ, Jacqueline Isabel
+	
+	
+	
+	
+Q	TALLEDO SANCHEZ, Jacqueline Isabel
+	
+	
+	
+	
+R	RIVERA GALLEGOS, Gonzalo Javier
+	
+	
+	
+	
+S	RIVERA GALLEGOS, Gonzalo Javier
+	
+	
+	
+	
+T	HERAS RIVERA, Sissi Andrea
+	
+	
+	
+	
+U	HERAS RIVERA, Sissi Andrea
+	
+	
+	
+	
+V	MUÑIZ CAHUANA, Graciela Rocio
+	
+V	MUÑIZ CAHUANA, Graciela Rocio
+	
+	
+W	LISBOA VASQUEZ, Claudia Paola
+	
+	
+	
+	
+X	SEVERINO MUÑOZ, Renzo Cristhyan Enrique
+	
+	
+	
+	
+Y	SEVERINO MUÑOZ, Renzo Cristhyan Enrique
+	
+	
+	
+	
+130642 - Economía General II	
+A	SALINAS DEPAZ, Cesar Saturnino
+	
+	
+	
+	
+B	SALINAS DEPAZ, Cesar Saturnino
+	
+	
+	
+	
+C	FRANCO VALDIVIA, Eliana
+	
+	
+	
+	
+D	FRANCO VALDIVIA, Eliana
+	
+D	FRANCO VALDIVIA, Eliana
+	
+	
+E	FRANCO VALDIVIA, Eliana
+	
+	
+	
+	
+F	DIAZ GAZANI, Guillermo
+	
+	
+	
+	
+G	MONTESINOS CORDOVA, Jorge Luis
+	
+	
+	
+	
+H	MONTESINOS CORDOVA, Jorge Luis
+	
+	
+	
+	
+I	SERVAN LOZANO, Sergio
+	
+	
+	
+	
+J	SERVAN LOZANO, Sergio
+	
+	
+	
+	
+K	FALEN ZEVALLOS, Luis Eduardo
+	
+	
+K	FALEN ZEVALLOS, Luis Eduardo
+	
+L	FALEN ZEVALLOS, Luis Eduardo
+	
+	
+	
+	
+M	VEGA DE LA CRUZ, Hugo Yamil
+	
+	
+	
+	
+N	ROJAS RODRIGUEZ, CARMEN ROSA
+	
+	
+	
+	
+O	GONZAGA MENA, Bruno Eduardo
+	
+	
+	
+	
+130462 - Economía Peruana	
+A	PARODI TRECE, Carlos Alfredo Justo
+130043 - Economía Pública	
+A	URRUNAGA PASCO-FONT, Roberto Luis
+	
+130466 - Economía y Estadística Aplicada al Derecho	
+A	MUÑOZ BAZAN, Italo Juan Carlos
+	
+	
+	
+130223 - Estadística Aplicada	
+A	ROMERO VEREAU, Daniel Alonso
+	
+	
+	
+	
+B	SALINAS MORRIS, Juan Carlos
+	
+	
+	
+	
+C	CHIRA BALLENA, Miguel Angel
+	
+	
+	
+	
+D	TRUJILLO GALINDO, Renato Juan
+	
+	
+	
+	
+E	SALINAS MORRIS, Juan Carlos
+	
+	
+	
+	
+130224 - Estadística I	
+A	MATEU BULLON, Pedro Fernando
+	
+	
+	
+	
+B	PEREZ SOTELO, Edisson Alonso
+	
+	
+	
+B	PEREZ SOTELO, Edisson Alonso
+C	RUBIO DONET, Jorge Luis
+	
+	
+	
+	
+D	RUBIO DONET, Jorge Luis
+	
+	
+	
+	
+E	ANGELES OLIVERA, Julio Hugo
+	
+	
+	
+	
+F	ANGELES OLIVERA, Julio Hugo
+	
+	
+	
+	
+G	ANGELES OLIVERA, Julio Hugo
+	
+	
+	
+	
+H	SOTO RODRIGUEZ, Ivan Dennys
+	
+	
+	
+	
+I	SOTO RODRIGUEZ, Ivan Dennys
+	
+	
+	
+	
+J	SOTO RODRIGUEZ, Ivan Dennys
+	
+	
+	
+	
+K	LINDO HUERTAS, Elsa Maria
+	
+	
+	
+	
+L	LINDO HUERTAS, Elsa Maria
+	
+	
+	
+	
+M	LINDO HUERTAS, Elsa Maria
+	
+	
+	
+	
+N	TARAZONA VARGAS, Enver Gerald
+	
+	
+	
+	
+O	TARAZONA VARGAS, Enver Gerald
+	
+	
+	
+	
+P	TARAZONA VARGAS, Enver Gerald
+	
+	
+	
+	
+Q	OSORIO MAURICIO, Lucila
+Q	OSORIO MAURICIO, Lucila
+	
+	
+	
+R	OSORIO MAURICIO, Lucila
+	
+	
+	
+	
+S	CAYCHO HUAMANI, Jose Alberto
+	
+	
+	
+	
+T	SILVESTRE VALER, Jim Roland
+	
+	
+	
+	
+U	SILVESTRE VALER, Jim Roland
+	
+	
+	
+	
+V	VALENCIA CHACON, Raphael Felix
+	
+	
+	
+	
+W	VALENCIA CHACON, Raphael Felix
+	
+	
+	
+	
+X	FEBRES HUAMAN, Grimaldo Jose
+	
+X	FEBRES HUAMAN, Grimaldo Jose
+	
+	
+Y	FEBRES HUAMAN, Grimaldo Jose
+	
+	
+	
+	
+130225 - Estadística II	
+A	RUBIO DONET, Jorge Luis
+	
+	
+	
+	
+B	MATEU BULLON, Pedro Fernando
+	
+	
+	
+	
+C	RUBIO DONET, Jorge Luis
+	
+	
+	
+	
+D	RUBIO DONET, Jorge Luis
+	
+	
+	
+	
+E	ANGELES OLIVERA, Julio Hugo
+	
+	
+	
+	
+F	ANGELES OLIVERA, Julio Hugo
+F	ANGELES OLIVERA, Julio Hugo
+	
+	
+	
+G	SOTO RODRIGUEZ, Ivan Dennys
+	
+	
+	
+	
+H	SOTO RODRIGUEZ, Ivan Dennys
+	
+	
+	
+	
+I	"LINDO HUERTAS, Elsa Maria / SOTO RODRIGUEZ,
+Ivan Dennys"
+	
+	
+	
+	
+J	LINDO HUERTAS, Elsa Maria
+	
+	
+	
+	
+K	LINDO HUERTAS, Elsa Maria
+	
+	
+	
+	
+L	TARAZONA VARGAS, Enver Gerald
+	
+	
+	
+	
+M	TARAZONA VARGAS, Enver Gerald
+	
+M	TARAZONA VARGAS, Enver Gerald
+	
+	
+133016 - Evaluación Privada de Proyectos	
+A	LI NING CHAMAN, Jorge Francisco
+	
+	
+	
+B	LI NING CHAMAN, Jorge Francisco
+	
+	
+	
+C	MONTESINOS CORDOVA, Jorge Luis
+	
+	
+	
+D	MONTESINOS CORDOVA, Jorge Luis
+	
+	
+	
+135645 - Gestión de los Recursos Naturales	
+A	KAMICHE ZEGARRA, Joanna Noelia
+	
+	
+	
+B	MANRIQUE ZEDER, Liseth Cristina
+	
+	
+	
+130556 - Green Growth Strategies for Peru and Latin America	
+A	GUARDIA MUGURUZA, Alejandra
+	
+135015 - Historia del Pensamiento Económico	
+A	TORRES GOMEZ, Javier Antonio
+	
+	
+	
+B	DEL HIERRO CARRILLO, Patricia
+	
+	
+	
+130543 - Inferencia Causal y Machine Learning	
+A	QUISPE ROJAS, Alexander Wilder
+	
+131566 - Investigación Económica I	
+A	GONZALEZ VIGIL, Luis Fernando
+	
+130567 - Investigación Económica II	
+A	GONZALEZ VIGIL, Luis Fernando
+130559 - Macroeconomía de Corto Plazo	
+A	CASAS TRAGODARA, Carlos Augusto
+	
+	
+	
+	
+134203 - Macroeconomía I	
+A	TORRES GOMEZ, Javier Antonio
+	
+	
+	
+	
+B	URRUNAGA PASCO-FONT, Roberto Luis
+	
+	
+	
+B	URRUNAGA PASCO-FONT, Roberto Luis
+C	MORON PASTOR, Eduardo Andres
+	
+	
+	
+	
+D	CUSATO NOVELLI, Antonio
+	
+	
+	
+	
+132204 - Macroeconomía II	
+A	ORTIZ SOSA, Marco Antonio
+	
+	
+	
+	
+	
+	
+B	PAWELCZAK , Jakub Mateusz
+	
+	
+	
+	
+C	PAWELCZAK , Jakub Mateusz
+	
+	
+	
+	
+D	CASTILLO AGUIRRE, Luis Eduardo
+	
+	
+	
+	
+130648 - Macroeconomía III	
+A	CASAS TRAGODARA, Carlos Augusto
+	
+	
+	
+	
+B	PINZON GIRALDO, Alvaro Jose
+	
+	
+	
+	
+C	PINZON GIRALDO, Alvaro Jose
+	
+	
+	
+	
+130227 - Macroeconomía Internacional	
+A	HERNANDEZ CALDERON, Joao Alejandro
+	
+	
+	
+B	HERNANDEZ CALDERON, Joao Alejandro
+	
+	
+	
+C	MONTORO LLAMOSAS, Carlos Humberto
+	
+	
+	
+138649 - Matemáticas I	
+A	CHAVEZ SARMIENTO, Enrique Idael
+	
+	
+	
+	
+B	OLANO CRUCES, Mario Fernando
+	
+B	OLANO CRUCES, Mario Fernando
+	
+	
+	
+C	FLORES SALINAS, JOSE ALBERTO
+	
+	
+	
+	
+D	FLORES SALINAS, JOSE ALBERTO
+	
+	
+	
+	
+	
+E	ESCUDERO ACERO, Phamela Stephany
+	
+	
+	
+	
+	
+F	ESCUDERO ACERO, Phamela Stephany
+	
+	
+	
+	
+	
+G	DAVILA QUESQUEN, Erick Nomberto
+	
+	
+	
+	
+H	DAVILA QUESQUEN, Erick Nomberto
+	
+	
+	
+H	DAVILA QUESQUEN, Erick Nomberto
+	
+I	PROLEON PATRICIO, DANIEL GIOVANNI
+	
+	
+	
+	
+	
+J	PROLEON PATRICIO, DANIEL GIOVANNI
+	
+	
+	
+	
+K	ESCALANTE HUAMANÍ, Sonia María
+	
+	
+	
+	
+	
+L	ESCALANTE HUAMANÍ, Sonia María
+	
+	
+	
+	
+	
+M	GUARDALES VASQUEZ, Randdy Arturo
+	
+	
+	
+	
+N	GUARDALES VASQUEZ, Randdy Arturo
+	
+	
+	
+	
+O	MOLINA TARAZONA, Lucy Smith
+O	MOLINA TARAZONA, Lucy Smith
+	
+	
+	
+	
+	
+	
+P	MOLINA TARAZONA, Lucy Smith
+	
+	
+	
+	
+	
+Q	MOLINA TARAZONA, Lucy Smith
+	
+	
+	
+	
+	
+R	SINCHE CHOCCA, Nildo
+	
+	
+	
+	
+	
+S	SINCHE CHOCCA, Nildo
+	
+	
+	
+	
+	
+T	SINCHE CHOCCA, Nildo
+	
+	
+	
+	
+T	SINCHE CHOCCA, Nildo
+U	ALCALDE SOSA, Jose Andres
+	
+	
+	
+	
+	
+V	ALCALDE SOSA, Jose Andres
+	
+	
+	
+	
+W	SALINAS ZAVALA, Christoper Jesus
+	
+	
+	
+	
+	
+X	ARREDONDO RUIZ, Manuel Jesus
+	
+	
+	
+	
+	
+Y	ARREDONDO RUIZ, Manuel Jesus
+	
+	
+	
+	
+Z	ARREDONDO RUIZ, Manuel Jesus
+	
+	
+	
+	
+	
+131650 - Matemáticas II	
+A	BUENO TANGOA, Orestes Martin
+	
+	
+	
+	
+	
+B	DAVILA QUESQUEN, Erick Nomberto
+	
+	
+	
+	
+C	DAVILA QUESQUEN, Erick Nomberto
+	
+	
+	
+	
+	
+D	DAVILA QUESQUEN, Erick Nomberto
+	
+	
+	
+	
+E	FLORES SALINAS, JOSE ALBERTO
+	
+	
+	
+	
+F	MOLINA TARAZONA, Lucy Smith
+	
+	
+	
+	
+	
+G	CHULLUNCUY CENTENO, Andres Vicente
+	
+	
+G	CHULLUNCUY CENTENO, Andres Vicente
+	
+	
+H	CHULLUNCUY CENTENO, Andres Vicente
+	
+	
+	
+	
+I	CHULLUNCUY CENTENO, Andres Vicente
+	
+	
+	
+	
+	
+J	SALINAS ZAVALA, Christoper Jesus
+	
+	
+	
+	
+K	SALINAS ZAVALA, Christoper Jesus
+	
+	
+	
+	
+	
+L	TORRES PEREZ, Elvis
+	
+	
+	
+	
+M	TORRES PEREZ, Elvis
+	
+	
+	
+	
+	
+130233 - Matemáticas III	
+A	COTRINA ASTO, John Edwin
+	
+	
+	
+	
+B	WINKELRIED QUEZADA, Diego Martin
+	
+	
+	
+	
+C	BUENO TANGOA, Orestes Martin
+	
+	
+	
+	
+D	PEREZ SOTELO, Edisson Alonso
+	
+	
+	
+	
+E	PEREZ SOTELO, Edisson Alonso
+	
+	
+	
+	
+F	ALCALDE SOSA, Jose Andres
+	
+	
+	
+	
+G	VELASQUEZ CASTAÑON, Oswaldo Jose
+	
+	
+	
+	
+H	VELASQUEZ CASTAÑON, Oswaldo Jose
+	
+	
+	
+	
+130229 - Matemáticas IV	
+A	GARCIA RAMOS, Yboon Victoria
+	
+	
+	
+	
+B	COTRINA ASTO, John Edwin
+	
+	
+	
+	
+C	MANTILLA GONZALES DE LA COTER, Eduardo Javier
+	
+	
+	
+	
+D	MANTILLA GONZALES DE LA COTER, Eduardo Javier
+	
+	
+	
+	
+130230 - Matemáticas para los Negocios	
+A	ESCALANTE HUAMANÍ, Sonia María
+	
+	
+	
+	
+B	FLORES SALINAS, JOSE ALBERTO
+	
+	
+	
+B	FLORES SALINAS, JOSE ALBERTO
+	
+C	ESCUDERO ACERO, Phamela Stephany
+	
+	
+	
+	
+	
+D	OSORIO UBALDO, Jaime
+	
+	
+	
+	
+	
+138201 - Microeconomía I	
+A	CORTEZ VALDIVIA, Rafael Augusto
+	
+	
+	
+	
+B	CORTEZ VALDIVIA, Rafael Augusto
+	
+	
+	
+	
+C	RHO , Haedong
+	
+	
+	
+	
+D	RHO , Haedong
+	
+	
+	
+	
+E	CHAVEZ COTRADO, Jorge Francisco
+E	CHAVEZ COTRADO, Jorge Francisco
+	
+	
+	
+F	RIVERA GALLEGOS, Gonzalo Javier
+	
+	
+	
+	
+G	PORRAS MENDOZA, Linda Janet
+	
+	
+	
+	
+134427 - Microeconomía II	
+A	GALARZA CONTRERAS, Elsa Patricia
+	
+	
+	
+	
+B	GALARZA ARELLANO, Francisco Bruno
+	
+	
+	
+	
+C	BONIFAZ FERNANDEZ, Jose Luis
+	
+	
+	
+	
+D	BARRON AYLLON, Manuel Fernando
+	
+	
+	
+	
+E	CHAVEZ COTRADO, Jorge Francisco
+E	CHAVEZ COTRADO, Jorge Francisco
+	
+	
+	
+134654 - Nivelación en Matemáticas	
+A	PEREZ SOTELO, Edisson Alonso
+	
+	
+	
+	
+B	ESCUDERO ACERO, Phamela Stephany
+	
+	
+	
+	
+C	ESCUDERO ACERO, Phamela Stephany
+	
+	
+	
+	
+D	ESCALANTE HUAMANÍ, Sonia María
+	
+	
+	
+E	ESCALANTE HUAMANÍ, Sonia María
+	
+	
+	
+	
+F	OSORIO UBALDO, Jaime
+	
+	
+	
+G	OSORIO UBALDO, Jaime
+	
+	
+G	OSORIO UBALDO, Jaime
+	
+H	GUARDALES VASQUEZ, Randdy Arturo
+	
+	
+	
+I	GUARDALES VASQUEZ, Randdy Arturo
+	
+	
+	
+	
+J	GUARDALES VASQUEZ, Randdy Arturo
+	
+	
+	
+	
+K	CERNADES GOMEZ, Jesus
+	
+	
+	
+	
+L	CERNADES GOMEZ, Jesus
+	
+	
+	
+	
+M	CHULLUNCUY CENTENO, Andres Vicente
+	
+	
+	
+N	CHULLUNCUY CENTENO, Andres Vicente
+	
+	
+	
+	
+O	SINCHE CHOCCA, Nildo
+O	SINCHE CHOCCA, Nildo
+	
+	
+	
+P	SINCHE CHOCCA, Nildo
+	
+	
+	
+	
+Q	SALINAS ZAVALA, Christoper Jesus
+	
+	
+	
+	
+R	SALINAS ZAVALA, Christoper Jesus
+	
+	
+	
+S	VENEGAS PALACIOS, Edgard Kenny
+	
+	
+	
+T	VENEGAS PALACIOS, Edgard Kenny
+	
+	
+	
+	
+U	OSORIO UBALDO, Jaime
+	
+	
+	
+	
+V	MOLINA TARAZONA, Lucy Smith
+	
+	
+	
+W	
+	
+	
+	
+X	
+	
+	
+	
+	
+130232 - Organización Industrial	
+A	AGUIRRE MONTOYA, Julio Cesar
+	
+	
+	
+B	BONIFAZ FERNANDEZ, Jose Luis
+	
+	
+	
+132655 - Política Económica	
+A	GONZALEZ IZQUIERDO, Jorge Domingo
+	
+	
+	
+B	ARMAS RIVAS, Adrian Alejandro
+	
+	
+	
+130540 - Procesos Estocásticos	
+A	CHAVEZ SARMIENTO, Enrique Idael
+	
+130578 - Sem. de la Estrategia a la Implementación de Políticas Públicas	
+A	ARON SAID, Ana Sofia
+130372 - Sem. Economía y Gestión de Programas Sociales	
+A	PORRAS MENDOZA, Linda Janet
+130618 - Sem. La IA y la Robótica: Ciclos Económicos, Impactos y Respuestas	
+A	DEL HIERRO CARRILLO, Patricia
+130587 - Sem.Tópicos en Organización Industrial	
+A	DIAZ GAMARRA, Jose Guillermo
+130656 - Teoría del Comercio Internacional	
+A	ARAOZ FERNANDEZ, Mercedes Rosalba
+	
+	
+	
+B	ARAOZ FERNANDEZ, Mercedes Rosalba
+	
+	
+	
+C	ZEVALLOS URQUIETA, Hector Augusto
+	
+	
+	
+130665 - Teoría del Desarrollo Económico	
+A	CANTA TERREROS, Michel Rodolfo
+	
+130563 - Tópicos de Evaluación de Impacto	
+A	MALDONADO ZAMBRANO, Stanislao Humberto
+Secc	Docentes
+CURSOS ACADÉMICOS	
+141036 - Análisis Multivariado para los Negocios	
+A	BENITES SANCHEZ, Luis Enrique
+	
+	
+	
+	
+B	CAYCHO HUAMANI, Jose Alberto
+	
+	
+	
+	
+C	DONGO ROMAN, Andie Bryan
+	
+	
+	
+	
+D	DONGO ROMAN, Andie Bryan
+	
+	
+	
+	
+E	GARCIA CESPEDES, Carlos Jeffer
+	
+	
+	
+	
+F	PORRAS CERRON, Jaime Carlos
+	
+	
+	
+	
+G	CASTILLO ISISOLA, Frank Josue
+	
+	
+	
+	
+142277 - Analítica de Datos para los Negocios	
+A	BENITES SANCHEZ, Luis Enrique
+	
+	
+	
+B	VASQUEZ ORE, Marco Antonio
+	
+	
+	
+C	MAEHARA ALIAGA, Yoshitomi Eduardo
+	
+	
+	
+D	MAEHARA ALIAGA, Yoshitomi Eduardo
+	
+	
+	
+E	BUSTAMANTE BAUTISTA, Beatriz Esther
+	
+	
+	
+F	BUSTAMANTE BAUTISTA, Beatriz Esther
+	
+	
+	
+G	RAMOS PERALTA, Karim Mabel
+	
+	
+	
+142460 - Asset-Light Business Models	
+A	REATEGUI SCHWARZ, Gerardo
+142280 - Business Agility	
+A	VILLACORTA HOLGUIN, Katherine Lilia
+	
+B	PERALTA MANSILLA, Norma Gisela
+	
+142077 - Creación de Valor y Toma de Decisiones	
+A	FLORES CASTRO, Juan Alejandro
+	
+	
+B	FLORES CASTRO, Juan Alejandro
+	
+	
+C	Díaz Rojas, Carlos Andres
+	
+	
+D	LAFOSSE QUINTANA, Wilfredo Jesus
+	
+	
+149078 - Dirección Estratégica	
+A	PAIVA ZARZAR, Roberto Alcides
+	
+	
+	
+B	PAIVA ZARZAR, Roberto Alcides
+	
+B	PAIVA ZARZAR, Roberto Alcides
+	
+C	PALACIOS MATOS, Maria Del Pilar Amelia
+	
+	
+	
+D	LAFOSSE QUINTANA, Wilfredo Jesus
+	
+	
+	
+E	PALACIOS MATOS, Maria Del Pilar Amelia
+	
+	
+	
+142315 - Diseño de Negocios Circulares y Desafío Climático	
+A	UEYONAHARA MATZUMOTO, Jorge Antonio
+142081 - Diseño Organizacional y Estrategia	
+A	REBAZA CARO, Nancy
+	
+	
+	
+B	FLORES CASTRO, Juan Alejandro
+	
+	
+	
+C	REBAZA CARO, Nancy
+	
+	
+	
+D	ACUÑA SILLO, Elba Lourdes
+	
+	
+	
+E	ACUÑA SILLO, Elba Lourdes
+	
+	
+	
+F	JAYME MOSQUERA, Guadalupe Desiree
+	
+	
+	
+G	BUTRON PIPOLI, Giuliana Maria
+	
+	
+	
+H	GRANTHON URIARTE, Ronald Jefrie
+	
+	
+	
+142082 - Emprendimiento e Innovación	
+A	TRUJILLO SOSA, Jorge Enrique
+	
+B	
+	
+C	SANCHEZ JUGO, Isabel
+	
+D	VILLANUEVA PEREZ, Humberto Jesus
+	
+E	VILLANUEVA PEREZ, Humberto Jesus
+	
+F	PERALTA MANSILLA, Norma Gisela
+	
+G	VILLEGAS VALLADARES, Shirley Rubi
+	
+H	VILLEGAS VALLADARES, Shirley Rubi
+	
+I	BELTRÁN PUERTA, Jorge
+	
+J	RIVAS VELARDE, Andrea Carolina
+J	RIVAS VELARDE, Andrea Carolina
+142083 - Estrategia	
+A	ACUÑA SILLO, Elba Lourdes
+	
+	
+	
+B	ACUÑA SILLO, Elba Lourdes
+	
+	
+	
+141748 - Formación y Desarrollo del Talento	
+A	RODRIGUEZ CORNEJO, Juan Carlos
+	
+141038 - Fundamentos de las Ciencias Empresariales	
+A	CORNEJO ALVAREZ DE ESQUIVES, Ana Lourdes
+	
+	
+	
+B	WEINBERGER VILLARAN, Karen Edith
+	
+	
+	
+C	DEL CASTILLO MORY, Elsa Catalina
+	
+	
+	
+D	TRUJILLO SOSA, Jorge Enrique
+	
+	
+	
+E	GRANTHON URIARTE, Ronald Jefrie
+	
+	
+	
+F	GRANTHON URIARTE, Ronald Jefrie
+	
+	
+	
+G	MANOSALVA MENDOZA, Maritza Elva Juana
+	
+	
+	
+H	MANOSALVA MENDOZA, Maritza Elva Juana
+	
+	
+	
+I	ACUÑA SILLO, Elba Lourdes
+	
+	
+	
+J	ACUÑA SILLO, Elba Lourdes
+	
+	
+	
+K	REBAZA CARO, Nancy
+	
+	
+	
+L	SANCHEZ JUGO, Isabel
+	
+	
+	
+M	MEDINA WONG, Gwendolyne
+	
+	
+	
+N	JAYME MOSQUERA, Guadalupe Desiree
+	
+	
+	
+O	
+	
+	
+	
+141041 - Gestión de la Cadena de Suministros	
+A	ANTICONA SUAREZ, Erick Olson
+	
+	
+	
+B	ANTICONA SUAREZ, Erick Olson
+	
+	
+	
+C	OLIVEIRA CAMBIASO, Daniel Alessandro
+	
+	
+	
+D	
+	
+	
+	
+E	CHICHIZOLA FAJARDO, Cristina Elizabeth
+	
+	
+	
+146771 - Gestión de la Innovación	
+A	FLORES CASTRO, Juan Alejandro
+142085 - Gestión de la Sostenibilidad Social y Ambiental en las Empresas	
+A	PECASTAING , Nicolas
+	
+B	PECASTAING , Nicolas
+	
+C	PRIALE VALLE, Maria Angela
+	
+D	PRIALE VALLE, Maria Angela
+	
+E	TEJADA MATOS, Susana Rocío
+	
+F	UEYONAHARA MATZUMOTO, Jorge Antonio
+	
+142084 - Gestión de Operaciones en las Organizaciones	
+A	SARAVIA VERGARA, Enrique Andres
+	
+	
+	
+B	SARAVIA VERGARA, Enrique Andres
+	
+	
+	
+C	LARIOS FRANCIA, Rosa Patricia
+	
+	
+	
+D	ANTICONA SUAREZ, Erick Olson
+	
+	
+	
+E	CHICHIZOLA FAJARDO, Cristina Elizabeth
+E	CHICHIZOLA FAJARDO, Cristina Elizabeth
+	
+	
+144741 - Gestión de Personas	
+A	ESQUIVES GUERRA, Marcial Ruben
+	
+	
+	
+B	FUCHS ANGELES, Rosa Maria
+	
+	
+	
+C	FUCHS ANGELES, Rosa Maria
+	
+	
+	
+D	OTINIANO CARBONELL, Martin Carlos
+	
+	
+	
+E	JAYME MOSQUERA, Guadalupe Desiree
+	
+	
+	
+142314 - Gestión de Riesgos según el PMI	
+A	CAMPOS FERNANDEZ, Luis Enrique
+	
+142094 -  Gestión del Cambio y Transformación Cultural	
+A	OTINIANO CARBONELL, Martin Carlos
+	
+	
+	
+B	REBAZA CARO, Nancy
+	
+	
+	
+C	MANOSALVA MENDOZA, Maritza Elva Juana
+	
+	
+	
+D	ESQUIVES GUERRA, Marcial Ruben
+	
+	
+	
+E	BRAVO MONTEVERDE, Guido Humberto
+	
+	
+	
+F	JAYME MOSQUERA, Guadalupe Desiree
+	
+	
+	
+142097 - Gestion del Capital Humano	
+A	ESCRIBENS OLAECHEA, Mario Eduardo
+	
+	
+	
+B	PALACIOS MATOS, Maria Del Pilar Amelia
+	
+	
+	
+142285 - Gestión Estratégica de Organizaciones Deportivas	
+A	GOMEZ CHANGA, Sarita Julia / MOSCOSO ZAMBRANO, Renzo Mauricio
+142462 - Gestión y Emprendimiento en la Industria Musical	
+A	
+"142466 - Innovación Social y Sostenible en la Cadena de Valor Textil: La Ruta de
+la Alpaca"	
+A	LARIOS FRANCIA, Rosa Patricia
+	
+	
+	
+	
+	
+	
+142091 - Innovación y Gestión en Negocios Digitales	
+A	CHAVEZ CARRUITERO, Jimmy Rosendo
+	
+B	
+	
+C	CHAVEZ CARRUITERO, Jimmy Rosendo
+	
+D	LINARES TORRES, Freddy
+	
+E	GARCIA FRY, Andrea
+	
+F	ESPINEL HUERTAS DEL PINO, Maria Pia
+	
+141042 - Investigación Aplicada a los Negocios	
+A	LARIOS FRANCIA, Rosa Patricia
+	
+B	CANO LANZA, Ana Maria
+	
+C	CANO LANZA, Ana Maria
+	
+D	
+	
+142461 - Leading The Family Business Successfully Across Generations	
+A	
+142095 - Liderazgo	
+A	CHAVES CUZZI, Daniela Maria
+	
+B	HERAUD GOICOCHEA, Sylvia
+	
+C	HERAUD GOICOCHEA, Sylvia
+	
+D	Vivanco Loomer, Luis Miguel
+	
+E	Vargas Soto, Veronica
+	
+F	PALACIOS MATOS, Maria Del Pilar Amelia
+	
+G	GRANTHON URIARTE, Ronald Jefrie
+	
+H	GRANTHON URIARTE, Ronald Jefrie
+	
+I	GOMEZ CHANGA, Sarita Julia
+	
+J	REBAZA CARO, Nancy
+	
+K	BRAVO MONTEVERDE, Guido Humberto
+	
+L	UEYONAHARA MATZUMOTO, Jorge Antonio
+	
+M	CASTRO SEGURA, Barbara
+	
+N	ESQUIVES GUERRA, Marcial Ruben
+	
+O	GOMEZ CHANGA, Sarita Julia
+O	GOMEZ CHANGA, Sarita Julia
+142313 - Macros en Excel para No Programadores	
+A	VASQUEZ ORE, Marco Antonio
+	
+142458 - Managing Innovation and Creativity - Negotiation for International Managers	
+A	SALVADOR , Elisa
+	
+	
+	
+	
+142096 - Métodos Cuantitativos para la Gestión en las Organizaciones	
+A	SARAVIA VERGARA, Enrique Andres
+	
+	
+	
+B	Díaz Rojas, Carlos Andres
+	
+	
+	
+C	DAVALOS CHACON, Jorge Elias
+	
+	
+	
+D	BRESCIANI CHAVEZ, Fernando Manuel
+	
+	
+	
+E	BRESCIANI CHAVEZ, Fernando Manuel
+	
+	
+	
+F	CHICHIZOLA FAJARDO, Cristina Elizabeth
+	
+	
+	
+G	CHICHIZOLA FAJARDO, Cristina Elizabeth
+	
+	
+	
+142100 - Proyecto Empresarial	
+A	CORNEJO ALVAREZ DE ESQUIVES, Ana Lourdes
+	
+	
+B	TRUJILLO SOSA, Jorge Enrique
+	
+	
+C	GALVEZ PAIBA, Blanca Eliana
+	
+	
+D	VILLEGAS VALLADARES, Shirley Rubi
+	
+	
+E	ANTICONA SUAREZ, Erick Olson
+	
+	
+141765 - Selección y Evaluación de Personal	
+A	ESQUIVES GUERRA, Marcial Ruben
+	
+142273 - Sistemas de Información y Análisis de Datos	
+A	Díaz Rojas, Carlos Andres
+	
+A	Díaz Rojas, Carlos Andres
+	
+B	ARANDA IPINCE, Duilio Angel
+	
+	
+	
+C	INFANTE CHAVEZ, Jorge Ricardo
+	
+	
+	
+D	CHAVEZ CARRUITERO, Jimmy Rosendo
+	
+	
+E	ARANDA IPINCE, Duilio Angel
+	
+	
+	
+F	CHAVEZ CARRUITERO, Jimmy Rosendo
+	
+	
+	
+142459 - Sostenibilidad Empresarial y Modelos de Negocios Circulares	
+A	UEYONAHARA MATZUMOTO, Jorge Antonio
+	
+	
+	
+	
+141775 - Toma de Decisiones - Simulador: Blue Ocean Strategy	
+A	CASAFRANCA ROSAS, Juan Carlos
+Secc	Docentes
+CURSOS ACADÉMICOS	
+158143 - Antropología	
+A	VALDIVIA CORRALES, Gustavo
+	
+	
+	
+B	CASTELLANOS DEL PORTAL, Themis Aidee
+	
+	
+	
+C	Hidalgo Bonicelli, Alejandra Lucia
+	
+	
+	
+150273 - Antropología Económica	
+A	VALDIVIA CORRALES, Gustavo
+	
+150255 - China Contemporánea: Sociedad, Política y Relaciones Internacionales	
+A	PAGAN SANCHEZ, Antonio Jose
+	
+150004 - Ciencia Política	
+A	PASTOR TORRES, Gustavo Ricardo
+	
+	
+	
+B	VERGARA PANIAGUA, Alberto
+	
+	
+	
+C	BLYDAL , Carl Johan
+	
+	
+C	BLYDAL , Carl Johan
+D	LANEGRA QUISPE, Ivan Kriss
+	
+	
+	
+E	MARIUS VASQUEZ, Paola
+	
+	
+	
+F	ENCINAS ZEVALLOS, Daniel
+	
+	
+	
+G	AVALOS BARRIO DE MENDOZA, Vicente Daniel
+	
+	
+	
+H	GODOY MEJIA, Jose Alejandro
+	
+	
+	
+I	VERGARA PANIAGUA, Alberto
+	
+	
+	
+J	AVALOS BARRIO DE MENDOZA, Vicente Daniel
+	
+	
+	
+K	GODOY MEJIA, Jose Alejandro
+	
+	
+	
+L	PASTOR TORRES, Gustavo Ricardo
+	
+	
+L	PASTOR TORRES, Gustavo Ricardo
+M	NOLES COTITO, Mariela Ines
+	
+	
+	
+N	PASTOR TORRES, Gustavo Ricardo
+	
+	
+	
+150295 - Ciudadanía y Democratización	
+A	BARRENECHEA CARPIO, Rodrigo
+	
+	
+	
+150287 - Contemporary Public Administration Seminar	
+A	CHENG MATSUNO, Vanessa Cecilia
+	
+	
+	
+	
+150056 - Discriminación y Políticas Públicas	
+A	TACUCHE MORENO, Luis Enrique
+	
+150350 - Economía Politica Internacional	
+A	SANBORN , Cynthia Ann
+	
+	
+	
+150140 - Investigación Académica	
+A	FLORES NORIEGA DE BENITES, Eva Paulina
+	
+B	DEBENEDETTI LUJAN, Bruno Edoardo
+	
+C	GIESECKE CHERO, Micaela
+	
+D	CASTILLO THORNE, Krishna David
+	
+E	DEL MASTRO VECCHIONE, Marco Hugo
+	
+F	GODOY MEJIA, Jose Alejandro
+	
+G	SETLAK , Magdalena Anna
+	
+H	PASTOR TORRES, Gustavo Ricardo
+	
+I	Hidalgo Bonicelli, Alejandra Lucia
+	
+J	GUTIERREZ COTTLE, Maria Cristina
+	
+K	VALLEJO RIVERA, Elizabeth Rocio
+	
+L	GORENSTEIN RIVERA, SHARON
+	
+M	PIZARRO BAUMANN, Maria Jimena
+	
+N	STIGLICH VARGAS, Maria Elizabeth
+	
+O	FLORES NORIEGA DE BENITES, Eva Paulina
+	
+P	SETLAK , Magdalena Anna
+	
+157006 - Pensamiento Social Contemporáneo	
+A	CRUZADO SILVERII, Miguel Gabriel
+	
+	
+	
+B	KOGAN COGAN, Liuba
+	
+	
+B	KOGAN COGAN, Liuba
+C	KOGAN COGAN, Liuba
+	
+	
+	
+D	DEL MASTRO VECCHIONE, Marco Hugo
+	
+	
+	
+E	PASTOR TORRES, Gustavo Ricardo
+	
+	
+	
+F	PASTOR TORRES, Gustavo Ricardo
+	
+	
+	
+G	AVALOS BARRIO DE MENDOZA, Vicente Daniel
+	
+	
+	
+H	PROTZEL DE AMAT, Jaime Javier
+	
+	
+	
+I	PROTZEL DE AMAT, Jaime Javier
+	
+	
+	
+J	PEREZ RECALDE , Guadalupe
+	
+	
+	
+K	PEREZ RECALDE , Guadalupe
+	
+	
+K	PEREZ RECALDE , Guadalupe
+L	INJOQUE RONCEROS, Freddy Miguel
+	
+	
+	
+150277 - Poder e Instituciones	
+A	BARRENECHEA CARPIO, Rodrigo
+	
+	
+	
+150289 - Política Comparada	
+A	ENCINAS ZEVALLOS, Daniel
+	
+	
+	
+150275 - Procesos sociopolíticos de América Latina a través del Cine	
+A	MARIANI , Santiago  / PEREZ RECALDE , Guadalupe
+150013 - Proyección Social	
+A	PEÑA ANAYA, Maria Luisa
+	
+B	VARELA GARCIA, Cinthia Patricia Alexandra
+	
+C	PERALTA MANSILLA, Norma Gisela
+	
+D	VIDAL IZAGUIRRE, Patricia Estela
+	
+E	VIDAL IZAGUIRRE, Patricia Estela
+	
+F	ZUÑIGA BRAVO, Martha Eliana
+	
+G	PERALTA MANSILLA, Norma Gisela
+H	FLORES GUZMAN, ROSIO MILAGRO
+I	FLORES GUZMAN, ROSIO MILAGRO
+J	FLORES GUZMAN, ROSIO MILAGRO
+	
+K	VARELA GARCIA, Cinthia Patricia Alexandra
+	
+150027 - Relaciones Internacionales	
+A	BAMBAREN LUKIS, Fernando Armando
+	
+B	PAGAN SANCHEZ, Antonio Jose
+	
+158000 - Sicología	
+A	STIGLICH VARGAS, Maria Elizabeth
+	
+	
+	
+B	MENESES GONZALES, Gonzalo Alfredo
+	
+	
+	
+C	RODRIGUEZ CUADROS DE MURO, Lorena
+	
+	
+	
+D	YOSHIDA GOTO, Erika
+	
+	
+	
+E	OTINIANO CAMPOS, Fiorella
+	
+	
+E	OTINIANO CAMPOS, Fiorella
+F	SOLANO SILVA, Dante Junior
+	
+	
+	
+158109 - Sociología	
+A	BIELICH SALAZAR, Claudia Teresa
+	
+	
+	
+B	PEREZ RECALDE , Guadalupe
+	
+	
+	
+C	COBIAN OVALLE DE PLAZA, Maria Beatriz
+	
+	
+	
+D	CASTILLO THORNE, Krishna David
+	
+	
+	
+E	BIELICH SALAZAR, Claudia Teresa
+	
+	
+	
+Secc	Docentes
+CURSOS ACADÉMICOS	
+160132 - Aspectos Jurídicos para los Negocios	
+A	MEDRANO GARCIA, Fabricio Manuel
+	
+160139 - Aspectos Tributarios para la Empresa	
+A	"PANTIGOSO VELLOSO DA SILVEIRA, Francisco
+Manuel"
+163059 - Auditoría	
+A	DE LA TORRE ONOFRE, Christian Raul
+	
+	
+	
+160140 - Constitución y Formalización de MYPES	
+A	SOTO MUJICA, José Carlos Humberto
+167060 - Contabilidad de Costos	
+A	ALVA GONZALES, Edgar Paul
+	
+160088 - Contabilidad de Gestión	
+A	ALVA GONZALES, Edgar Paul
+	
+B	ALVA GONZALES, Edgar Paul
+	
+160169 - Contabilidad Financiera Aplicada	
+A	YAÑEZ QUIROZ, Mario Alberto
+	
+	
+	
+160171 - Contabilidad Financiera Intermedia	
+A	JARA MIRANDA, Renan Geoffrey
+	
+	
+	
+	
+B	JARA MIRANDA, Renan Geoffrey
+	
+	
+	
+	
+C	CHONG LEON, Esteban
+	
+	
+	
+	
+D	CHONG LEON, Esteban
+	
+	
+	
+	
+E	CHONG LEON, Esteban
+	
+	
+	
+	
+F	CHONG LEON, Esteban
+	
+	
+	
+	
+G	QUEVEDO ALEJOS, Maria Isabel Alejandra
+	
+	
+	
+G	QUEVEDO ALEJOS, Maria Isabel Alejandra
+H	QUEVEDO ALEJOS, Maria Isabel Alejandra
+	
+	
+	
+	
+I	ASTORGA DE LA CRUZ, Brandelt Jesús
+	
+	
+	
+	
+J	MARADIEGUE , SANTIAGO ALBERTO
+	
+	
+	
+	
+K	MARADIEGUE , SANTIAGO ALBERTO
+	
+	
+	
+	
+L	ROSAS AMBROSIO, Annel Victoria
+	
+	
+	
+	
+M	ARIAS PICON, Norma Beatriz
+	
+	
+	
+	
+N	CACERES LOAYZA, Rosa Graciela
+	
+	
+	
+	
+O	RUIZ HURTADO, Pedro Cesar
+	
+	
+	
+	
+160025 - Contabilidad para la Toma de Decisiones	
+A	ESCOBAR ESPINO, Roberto Diego
+	
+	
+B	SILVA TORRALVA, Hans Jhordan
+	
+	
+C	SILVA TORRALVA, Hans Jhordan
+	
+	
+D	MATEO UNCHUPAICO, Maria Victoria
+	
+	
+E	LOMBARDI VALLE, GINA ANGELA
+	
+	
+160090 - Contabilidad y Finanzas Avanzadas	
+A	ONTON LOPEZ, Renzo Jesus
+	
+	
+	
+160091 - Control Interno y Gestión de Riesgo	
+A	RUIZ LLACSAHUANGA, Ketty Margarita
+	
+	
+	
+160172 - Evaluación Financiera de las Organizaciones	
+A	RUIZ HURTADO, Pedro Cesar
+	
+	
+	
+	
+B	RUIZ HURTADO, Pedro Cesar
+	
+	
+	
+	
+C	RUIZ HURTADO, Pedro Cesar
+	
+	
+	
+	
+D	RUIZ PALOMINO, Cesar
+	
+	
+	
+	
+E	RUIZ PALOMINO, Cesar
+	
+	
+	
+	
+F	CASTELLANOS NAVARRETE, Laura Mariela
+	
+	
+	
+	
+G	ABREGU NAVEROS, Johana
+	
+	
+G	ABREGU NAVEROS, Johana
+	
+160154 - Evaluación Financiera para No Contadores	
+A	RUIZ HURTADO, Pedro Cesar
+160092 - Fundamentos de Contabilidad	
+A	SILVA TORRALVA, Hans Jhordan
+	
+	
+	
+B	SILVA TORRALVA, Hans Jhordan
+	
+	
+	
+C	SILVA TORRALVA, Hans Jhordan
+	
+	
+	
+D	SILVA TORRALVA, Hans Jhordan
+	
+	
+	
+E	RIVERO PONCE DE LEON, Eduardo Ruben
+	
+	
+	
+F	RIVERO PONCE DE LEON, Eduardo Ruben
+	
+	
+	
+G	RIVERO PONCE DE LEON, Eduardo Ruben
+	
+	
+	
+H	ESCOBAR ESPINO, Roberto Diego
+	
+H	ESCOBAR ESPINO, Roberto Diego
+	
+I	ESCOBAR ESPINO, Roberto Diego
+	
+	
+	
+J	ESCOBAR ESPINO, Roberto Diego
+	
+	
+	
+K	ARIAS PICON, Norma Beatriz
+	
+	
+	
+L	ARIAS PICON, Norma Beatriz
+	
+	
+	
+M	ARIAS PICON, Norma Beatriz
+	
+	
+	
+N	SOTO MUJICA, José Carlos Humberto
+	
+	
+	
+O	SOTO MUJICA, José Carlos Humberto
+	
+	
+	
+P	SOTO MUJICA, José Carlos Humberto
+	
+	
+	
+Q	YAÑEZ QUIROZ, Mario Alberto
+	
+Q	YAÑEZ QUIROZ, Mario Alberto
+	
+R	YAÑEZ QUIROZ, Mario Alberto
+	
+	
+	
+S	CHAVEZ CARDEÑA, Cesar Augusto
+	
+	
+	
+T	CHAVEZ CARDEÑA, Cesar Augusto
+	
+	
+	
+U	ZELADA ROLLER, Vilma Francisca
+	
+	
+	
+V	ZELADA ROLLER, Vilma Francisca
+	
+	
+	
+W	CACERES LOAYZA, Rosa Graciela
+	
+	
+	
+X	QUIÑONES BOZA, Horacio
+	
+	
+	
+Y	MATSUNO FUCHIGAMI, Ana Cecilia
+	
+	
+	
+160173 - Gestión de la Información y Métricas de Sostenibilidad Empresarial	
+A	VELASQUEZ RELAYZE, Jose Luis
+	
+	
+160174 - Gestión y Costos Estratégicos	
+A	SILVA TORRALVA, Hans Jhordan
+	
+160314 - Inteligencia Artificial Generativa Aplicada a la Información Financiera	
+A	BENAVIDES GONZALES, Javier Arturo
+160205 - International Financial Reporting	
+A	BAAKLINI , Pascale
+	
+	
+	
+	
+160175 - Investigación para Contadores	
+A	ASTORGA DE LA CRUZ, Brandelt Jesús
+	
+	
+160104 - Management Accounting	
+A	ARIAS PICON, Norma Beatriz
+	
+	
+	
+	
+160099 - Normas Contables Internacionales	
+A	ZEGARRA BENAVIDES, Carmen Cecilia
+	
+	
+	
+169318 - Principle of Accounting	
+A	MATSUNO FUCHIGAMI, Ana Cecilia
+	
+	
+	
+	
+160197 - SAP Hana para la Gestión de la Información	
+A	GARCIA REYES, Karin Maria
+	
+	
+	
+160094 - Tributación Aplicada I	
+A	CASTRO ARANA, Javier
+	
+160096 - Tributación Aplicada II	
+A	QUISPE CHUMPE, Emerzon
+	
+160206 - Valoración Estratégica de Intangibles y Activos del Conocimiento	
+A	BENAVIDES GONZALES, Javier Arturo
+Secc	Docentes
+CURSOS ACADÉMICOS	
+170508 - Agentes Inteligentes	
+A	LLONTOP MEJIA, Miguel Angel
+	
+170324 - Álgebra Líneal Aplicada	
+A	VELASQUEZ CASTAÑON, Oswaldo Jose
+	
+	
+	
+170065 - Algoritmos y Estructura de Datos	
+A	ROJAS VILLANUEVA, Uwe
+	
+	
+	
+170439 - Análisis de Datos Geográficos	
+A	INJOQUE RONCEROS, Freddy Miguel
+	
+	
+	
+170043 - Analítica de la Web	
+A	FABIAN ARTEAGA, Junior John
+	
+A	FABIAN ARTEAGA, Junior John
+	
+170119 - Arquitectura del Sistema de Información	
+A	INFANTE CHAVEZ, Jorge Ricardo
+	
+	
+	
+	
+	
+	
+B	ARANDA IPINCE, Duilio Angel
+	
+	
+	
+	
+	
+	
+C	INFANTE CHAVEZ, Jorge Ricardo
+	
+	
+	
+	
+	
+	
+D	INFANTE CHAVEZ, Jorge Ricardo
+	
+	
+	
+	
+	
+	
+170216 - Big Data Analytics	
+A	TOVAR GALARRETA, Juan Carlos
+	
+A	TOVAR GALARRETA, Juan Carlos
+	
+170507 - Business Analytics	
+A	AMADO GARFIAS, Alonso
+	
+170342 - Business Intelligence	
+A	WAM BALTODANO, Javier Guillermo
+	
+	
+	
+	
+170509 - Ciberseguridad	
+A	AGUIRRE RUIZ, Jose Jonathan
+	
+170353 - Computación de Alto Desempeño y Cloud Computing	
+A	TOVAR GALARRETA, Juan Carlos
+	
+	
+	
+170327 - Data Mining	
+A	ESPEZUA LLERENA, Soledad
+	
+	
+	
+170328 - Deep Learning	
+A	FABIAN ARTEAGA, Junior John
+	
+	
+	
+170212 - Desarrollo de Soluciones Empresariales	
+A	VALERA GARCIA, Paulo Enrique
+	
+	
+	
+	
+B	HUAMAN LINARES, Jose
+	
+	
+	
+	
+170329 - Design Thinking and Technological Innovation	
+A	WONG POGGI, Jennifer Karina
+	
+	
+	
+B	HIUMETTRI BLANCO, Victor Kervin
+	
+	
+	
+C	WONG POGGI, Jennifer Karina
+	
+	
+	
+D	RAMIREZ VINATEA, Jimena
+	
+	
+	
+E	VILLACORTA HOLGUIN, Katherine Lilia
+	
+	
+	
+F	MARTINEZ QUIÑE, Lourdes
+F	MARTINEZ QUIÑE, Lourdes
+	
+	
+170330 - Emprendimiento Tecnológico	
+A	HIUMETTRI BLANCO, Victor Kervin
+	
+	
+	
+B	FANG CHONG, Sergio Enrique
+	
+	
+	
+C	HIUMETTRI BLANCO, Victor Kervin
+	
+	
+	
+D	LAZARTE AGUIRRE, Luz Andrea
+	
+	
+	
+170425 - Excel Avanzado para la Gestión Empresarial	
+A	INFANTE CHAVEZ, Jorge Ricardo
+	
+B	DIAZ DOMINGUEZ, Carlos Manuel
+	
+170137 - Física	
+A	STUCCHI PORTOCARRERO, Luciano
+	
+	
+	
+	
+	
+B	CARBAJAL VIGO, Saneli Alcides
+	
+	
+	
+	
+	
+C	QUIROZ GONZALEZ, Jorge Luis Martín
+	
+	
+	
+	
+	
+D	CARBAJAL VIGO, Saneli Alcides
+	
+	
+	
+	
+	
+179062 - Formulación y Evaluación de Proyectos	
+A	LAZO LAZO, Juan Guillermo
+A	LAZO LAZO, Juan Guillermo
+	
+	
+B	GONZALEZ PALOMINO, JORGE MARTIN
+	
+	
+	
+170336 - Fundamentos de Analítica	
+A	MAEHARA ALIAGA DE BENITES, Rocio Paola
+	
+	
+	
+B	MAEHARA ALIAGA DE BENITES, Rocio Paola
+	
+	
+	
+C	PORRAS CERRON, Jaime Carlos
+	
+	
+	
+170343 - Gerencia de Ingeniería de Valor	
+A	CUMPA OBREGON, Nelson Enrique
+	
+	
+	
+B	STUART ALVARADO, Maria Gabriela
+	
+	
+	
+170345 - Gestión de Proyectos	
+A	PALOMINO GARCIA, Jorge Ciro
+	
+	
+	
+B	LLONTOP MEJIA, Miguel Angel
+	
+	
+	
+170335 - Herramientas de Programación	
+A	AYMA QUIRITA, Victor Hugo
+	
+	
+	
+	
+	
+	
+B	MUÑOZ CASILDO, Nehil Indalicio
+	
+	
+	
+	
+	
+	
+	
+	
+	
+C	QUISPE AYALA, Martha Roxana
+	
+	
+	
+	
+	
+	
+	
+	
+	
+D	QUISPE AYALA, Martha Roxana
+	
+	
+	
+	
+	
+	
+	
+	
+	
+E	MAEHARA ALIAGA, Yoshitomi Eduardo
+	
+	
+	
+	
+	
+	
+	
+	
+	
+F	SIERRA FLORES, Luis Miguel
+	
+	
+	
+	
+	
+	
+	
+	
+	
+G	MAEHARA ALIAGA, Yoshitomi Eduardo
+	
+	
+	
+	
+	
+	
+170307 - Herramientas de Programacion con Python	
+A	ROJAS VILLANUEVA, Uwe
+	
+170441 - Historia Crítica del Diseño	
+A	CARRILLO THORNE, Juan Diego
+	
+	
+	
+170331 - Infraestructura Tecnológica	
+A	VALERA GARCIA, Paulo Enrique
+	
+	
+	
+	
+	
+B	SICCHA AYVAR, Hobber Aristides
+	
+	
+	
+B	SICCHA AYVAR, Hobber Aristides
+	
+C	AMADO GARFIAS, Alonso
+	
+	
+	
+	
+	
+170179 - Ingeniería de Datos	
+A	VALERA GARCIA, Paulo Enrique
+	
+	
+	
+	
+B	FABIAN ARTEAGA, Junior John
+	
+	
+	
+	
+C	MUÑOZ CASILDO, Nehil Indalicio
+	
+	
+	
+	
+D	VALERA GARCIA, Paulo Enrique
+	
+	
+	
+	
+170135 - Ingeniería de Procesos	
+A	GARMENDIA FOSSA, Francisco Antonio
+	
+	
+	
+	
+B	CHICHIZOLA PORRAS, Victor Augusto
+	
+	
+	
+	
+C	CHICHIZOLA PORRAS, Victor Augusto
+	
+	
+	
+	
+170496 - Innovación, Tecnologías y Emprendimiento: El caso de Silicon Valley	
+A	HIUMETTRI BLANCO, Victor Kervin
+	
+	
+	
+	
+	
+	
+170498 - Inteligencia Artificial Aplicada a la Cadena de Suministros	
+A	CUMPA OBREGON, Nelson Enrique
+	
+170339 - Inteligencia Computacional	
+A	TALAVERA LOPEZ, Alvaro Gustavo
+	
+	
+A	TALAVERA LOPEZ, Alvaro Gustavo
+170354 - Introducción a la Cosmología y la Ciencia de la Vida	
+A	CARBAJAL VIGO, Saneli Alcides
+	
+	
+	
+B	CARBAJAL VIGO, Saneli Alcides
+	
+	
+	
+C	RODRIGUEZ SATIZABAL, Simon Andres
+	
+	
+	
+D	RODRIGUEZ SATIZABAL, Simon Andres
+	
+	
+	
+E	PELAYO BALDARRAGO, Mara Elizabeth
+	
+	
+	
+170211 - Introducción a la Ingeniería	
+A	CHONG CHONG, Mario Gustavo
+	
+	
+	
+	
+	
+	
+B	ORTIZ VALENCIA, Alejandro Leopoldo
+	
+	
+	
+	
+	
+B	ORTIZ VALENCIA, Alejandro Leopoldo
+C	ESCRIBENS OLAECHEA, Mario Eduardo
+	
+	
+	
+	
+	
+	
+D	ESCRIBENS OLAECHEA, Mario Eduardo
+	
+	
+	
+	
+	
+	
+E	ESCRIBENS OLAECHEA, Mario Eduardo
+	
+	
+	
+	
+	
+	
+F	ORTIZ VALENCIA, Alejandro Leopoldo
+	
+	
+	
+	
+	
+	
+170352 - Investigación de Operaciones	
+A	LAZO LAZO, Juan Guillermo
+	
+A	LAZO LAZO, Juan Guillermo
+	
+	
+B	MACHUCA DE PINA, Juan Manuel
+	
+	
+	
+	
+C	SIERRA FLORES, Luis Miguel
+	
+	
+	
+	
+170338 - Machine Learning	
+A	AMADO GARFIAS, Alonso
+	
+	
+	
+170333 - Matemáticas Discretas para la Computación	
+A	MACHUCA DE PINA, Juan Manuel
+	
+	
+	
+170344 - Metodologías Ágiles	
+A	ORTIZ VALENCIA, Alejandro Leopoldo
+	
+	
+	
+B	HIUMETTRI BLANCO, Victor Kervin
+	
+	
+	
+C	WONG POGGI, Jennifer Karina
+	
+	
+	
+170351 - Métodos de Investigación Cuantitativa	
+A	LIBAQUE SAENZ, Christian Fernando
+	
+	
+	
+	
+	
+B	BRAVO ORELLANA, Edgardo Ricardo
+	
+	
+	
+	
+	
+C	LIBAQUE SAENZ, Christian Fernando
+	
+	
+	
+	
+	
+170131 - Nivelación en Informática	
+A	ESPEZUA LLERENA, Soledad
+	
+	
+	
+A	ESPEZUA LLERENA, Soledad
+B	BUSTAMANTE BAUTISTA, Beatriz Esther
+	
+	
+	
+	
+C	VASQUEZ ORE, Marco Antonio
+	
+	
+	
+	
+D	ARANDA IPINCE, Duilio Angel
+	
+	
+	
+	
+E	ARANDA IPINCE, Duilio Angel
+	
+	
+	
+	
+F	DIAZ DOMINGUEZ, Carlos Manuel
+	
+	
+	
+	
+G	DIAZ DOMINGUEZ, Carlos Manuel
+	
+	
+	
+	
+I	INFANTE CHAVEZ, Jorge Ricardo
+	
+	
+	
+	
+J	RAMOS PERALTA, Karim Mabel
+	
+	
+	
+	
+K	RAMOS PERALTA, Karim Mabel
+	
+	
+	
+	
+L	RAMOS PERALTA, Karim Mabel
+	
+	
+	
+	
+M	SENMACHE SARMIENTO, Jose Manuel Martin
+	
+	
+	
+	
+N	SENMACHE SARMIENTO, Jose Manuel Martin
+	
+	
+	
+	
+O	VASQUEZ ORE, Marco Antonio
+	
+	
+	
+	
+P	ZALDIVAR PEÑA, Doris Adriana
+	
+	
+	
+	
+Q	ZALDIVAR PEÑA, Doris Adriana
+Q	ZALDIVAR PEÑA, Doris Adriana
+	
+	
+	
+R	QUISPE AYALA, Martha Roxana
+	
+	
+	
+	
+S	SENMACHE SARMIENTO, Jose Manuel Martin
+	
+	
+	
+	
+T	VASQUEZ ORE, Marco Antonio
+	
+	
+	
+	
+U	TORRES SUAREZ, Rolando Martin
+	
+	
+	
+	
+V	TORRES SUAREZ, Rolando Martin
+	
+	
+	
+	
+W	QUISPE AYALA, Martha Roxana
+	
+	
+	
+	
+X	DIAZ DOMINGUEZ, Carlos Manuel
+	
+X	DIAZ DOMINGUEZ, Carlos Manuel
+	
+	
+170334 - Pensamiento Sistémico	
+A	CARBAJAL VIGO, Saneli Alcides
+	
+	
+	
+B	PÉREZ - GODOY BALLÓN, Luis Alberto
+	
+	
+	
+C	PÉREZ - GODOY BALLÓN, Luis Alberto
+	
+	
+	
+D	PÉREZ - GODOY BALLÓN, Luis Alberto
+	
+	
+	
+E	ARREDONDO RUIZ, Manuel Jesus
+	
+	
+	
+170442 - Power BI: Transforma y Visualiza Datos para Decisiones Informadas	
+A	ARANDA IPINCE, Duilio Angel
+	
+170423 - Principios de Machine Learning	
+A	ROJAS VILLANUEVA, Uwe
+	
+	
+170341 - Procesos de Distribución	
+A	CHONG CHONG, Mario Gustavo
+	
+	
+	
+	
+	
+B	CUMPA OBREGON, Nelson Enrique
+	
+	
+	
+	
+	
+170340 - Procesos de Producción	
+A	CUMPA OBREGON, Nelson Enrique
+	
+	
+	
+	
+	
+B	SALCEDO MANSILLA, Jorge Manuel
+	
+	
+	
+	
+	
+C	RIVERO CESPEDES, Luis Felipe
+	
+	
+	
+	
+	
+170337 - Procesos de Suministros	
+A	GARMENDIA FOSSA, Francisco Antonio
+	
+	
+	
+	
+	
+B	GARMENDIA FOSSA, Francisco Antonio
+	
+	
+	
+	
+	
+170107 - Programación Avanzada para la Ciencia de Datos	
+A	VELASQUEZ CASTAÑON, Oswaldo Jose
+	
+	
+	
+170427 - Prototipea tu Idea con Impresión 3D	
+A	CORNEJO RIVERO, Alvaro Alexander
+B	CORNEJO RIVERO, Alvaro Alexander
+170503 - Sem. Defining Powerful Experience Strategy	
+A	SZOSTEK , Agnieszka
+	
+	
+	
+	
+"170504 - Sem. Gestión de las Operaciones y Transformación Digital para la
+Mejora Sostenible de Procesos"	
+A	JURBURG MELNIK, Daniel Andres
+	
+	
+	
+	
+170505 - Sem. Introduction to Operational Research	
+A	FLORCZAK , Waldemar Han
+	
+	
+	
+	
+170506 - SQL para la Toma de Decisiones	
+A	FABIAN ARTEAGA, Junior John
+	
+170449 - Técnicas Avanzadas para el Análisis de Datos	
+A	ROJAS VILLANUEVA, Uwe
+	
+170346 - Tecnología para el Desarrollo Sostenible	
+A	LUNA , Ana Eugenia
+	
+	
+	
+	
+B	SOTOMAYOR CABRERA, Aristides
+	
+	
+	
+	
+C	LUNA , Ana Eugenia
+	
+	
+	
+	
+170350 - Tecnología y Negocios Digitales	
+A	RODRIGUEZ SERRA, Michelle
+	
+	
+	
+B	RODRIGUEZ SERRA, Michelle
+	
+	
+	
+C	DROGUETT QUEZADA, Nicolas Patricio
+	
+	
+	
+D	HAAKER MASSA, Aisa
+	
+	
+	
+E	ESCRIBENS OLAECHEA, Mario Eduardo
+	
+	
+	
+170348 - Trabajo Final de Ingeniería de la Información I	
+A	TALAVERA LOPEZ, Alvaro Gustavo
+	
+170130 - Trabajo Final de Ingeniería Empresarial	
+A	ALIAGA ALIAGA, Walter
+	
+	
+B	GARMENDIA FOSSA, Francisco Antonio
+	
+	
+C	FANG CHONG, Sergio Enrique
+	
+	
+170347 - Transformación Digital y Gestión del Cambio	
+A	ORTIZ VALENCIA, Alejandro Leopoldo
+	
+	
+	
+B	PALACIOS MATOS, Maria Del Pilar Amelia
+	
+	
+	
+Secc	Docentes
+CURSOS ACADÉMICOS	
+185099 - Acto Jurídico	
+A	RETAMOZO ESCOBAR, Jaliya
+	
+	
+	
+	
+B	CHAVEZ VERASTEGUI, Christian
+	
+	
+	
+180376 - AI Regulation: A Global and Comparative Perspective	
+A	PIEROLA CASTRO, Noe Fernando Nicolas
+182047 - Análisis Económico del Derecho	
+A	ZUÑIGA PALOMINO, Mario Augusto
+	
+	
+186045 - Arbitraje	
+A	ESPEJO DONAIRE, Andrea Patricia / TOVAR GIL, Maria Del Carmen Violeta
+	
+	
+	
+B	"FERRERO DIAZ, Javier Ignacio / HUANCO PISCOCHE,
+Henry Wilder"
+	
+	
+	
+180265 - Contratos	
+A	HUANCO PISCOCHE, Henry Wilder
+	
+	
+	
+B	MADRID HORNA, Victor
+	
+	
+	
+180333 - Contratos Especiales	
+A	SORIA AGUILAR, Alfredo Fernando
+	
+	
+B	"GABRIEL RIVERA, Jose Luis / VASQUEZ REBAZA,
+Walter Humberto"
+	
+	
+180331 - Criminología y Derecho Penitenciario	
+A	"NUÑOVERO CISNEROS, Lucia Betty / PEREZ
+GUADALUPE, Jose Luis"
+187019 - Derecho Administrativo I	
+A	TIRADO BARRERA, Jose Antonio
+	
+	
+	
+B	GOMEZ APAC, Hugo Ramiro
+	
+	
+	
+189097 - Derecho Administrativo II	
+A	MORI TORRES, Natalia Vanessa
+	
+	
+	
+B	FARFAN SOUSA, Ronnie Ado
+	
+	
+	
+180266 - Derecho Civil y Comercial	
+A	ARMESTAR BRUNO, Gloria Maria
+	
+	
+	
+B	RAMIREZ OTERO, Lorena Cecilia
+	
+	
+	
+C	PARODI LUNA, Maria Beatriz
+	
+	
+	
+D	ARMESTAR BRUNO, Gloria Maria
+	
+	
+	
+180404 - Sem. Derecho Comparado: Aspectos Prácticos y Metodológicos	
+A	FERRANTE , Alfredo
+	
+	
+	
+	
+184062 - Derecho Concursal	
+A	LIZARRAGA VERA-PORTOCARRERO, Anthony
+180086 - Derecho Constitucional General	
+A	ALBAN GONZALEZ, Javier Ignacio
+	
+	
+	
+B	NEYRA ZEGARRA, Ana Cristina
+	
+	
+	
+188027 - Derecho de Familia y Sucesiones	
+A	PLACIDO VILCACHAGUA, Alex Fernando
+	
+	
+	
+B	PLACIDO VILCACHAGUA, Alex Fernando
+	
+	
+	
+180122 - Derecho de la Empresa	
+A	"MARES RUIZ, Carla Elena / RUIZ COLMENARES,
+Melissa Sarahi"
+	
+	
+	
+182128 - Derecho Internacional Privado	
+A	VASSALLO BURNEO, Nicolas
+	
+	
+180070 - Derecho Internacional Público	
+A	ZELADA ACUÑA, Carlos Joel
+	
+	
+	
+B	ZELADA ACUÑA, Carlos Joel
+	
+	
+	
+180088 - Derecho Laboral I	
+A	PRELLE MAYURI, Herbert Victor Ricardo / TOYAMA MIYAGUSUKU, Jorge Luis
+	
+	
+	
+B	CASTILLO FUENTES, Diego Sebastian
+	
+	
+	
+C	LORA ALVAREZ, German Lino
+	
+	
+	
+180089 - Derecho Laboral II	
+A	CASTRO POSADAS, Eric Christian
+	
+	
+180268 - Derecho Laboral y Tributario	
+A	GILDEMEISTER RUIZ HUIDOBRO, Alfredo
+	
+	
+	
+B	"PANTIGOSO VELLOSO DA SILVEIRA, Francisco
+Manuel"
+	
+	
+	
+C	MEDRANO GARCIA, Fabricio Manuel
+	
+	
+	
+D	"LORA ALVAREZ, German Lino / SALAZAR TIRADO,
+Cesar Rabi"
+D	"LORA ALVAREZ, German Lino / SALAZAR TIRADO,
+Cesar Rabi"
+	
+	
+180092 - Derecho para los Negocios Internacionales	
+A	GARCIA BELAUNDE SALDIAS, Diego
+	
+	
+	
+B	GARCIA BELAUNDE SALDIAS, Diego
+	
+	
+	
+180327 - Derecho Penal	
+A	"CARO JOHN, Jose Antonio / REAÑO PESCHIERA, José
+Leandro"
+	
+	
+	
+B	BENDEZU BARNUEVO, Rocci Fiorella
+	
+	
+	
+181008 - Derecho Penal Económico	
+A	BENDEZU BARNUEVO, Rocci Fiorella
+	
+	
+180321 - Derecho Procesal Civil	
+A	CUBA COPELLO, YVO CAMILO
+	
+	
+	
+B	RIVAS CASO, Gino Elvio
+	
+	
+	
+180315 - Derecho Procesal Constitucional	
+A	ALBAN GONZALEZ, Javier Ignacio
+	
+	
+	
+B	CAMPOS BERNAL, Heber Joel
+	
+	
+	
+180358 - Derecho Procesal Penal	
+A	"CAYO RIVERA SCHREIBER, Maria Jimena Soledad /
+SALAZAR PAIVA, María Milagros"
+	
+	
+	
+180339 - Derecho Tributario I	
+A	DIAZ TENORIO, Diego Arturo / MARES RUIZ, Carla Elena
+	
+	
+	
+B	HUERTAS LIZARZABURU, Martha Cristina
+	
+	
+	
+181000 - Derecho Tributario II	
+A	POLO CHIROQUE, ROBERTO EDWARD
+	
+A	POLO CHIROQUE, ROBERTO EDWARD
+	
+B	RUIZ COLMENARES, Melissa Sarahi
+	
+	
+	
+180017 - Derechos Reales	
+A	RAVINA SANCHEZ, Raul Fernando
+	
+	
+	
+B	HUANCO PISCOCHE, Henry Wilder
+	
+	
+	
+180405 - Derechos Reales y Contratos: Teoría Clásica y Transformaciones Contemporáneas	
+A	GINES CASTELLET, Nuria
+	
+	
+	
+	
+188111 - Destrezas Legales I	
+A	DEBENEDETTI LUJAN, Bruno Edoardo
+180354 - Destrezas Legales y Económicas para Litigar en Libre Competencia	
+A	"ALONSO HERRERA, Jorge Ivan / ZUÑIGA PALOMINO,
+Mario Augusto"
+186108 - Economía y Derecho	
+A	URBINA LOVON, Erick Edwin
+	
+	
+	
+B	GABRIEL RIVERA, Jose Luis
+	
+	
+B	GABRIEL RIVERA, Jose Luis
+C	"IPARRAGUIRRE ROMERO, Gianfranco  / LEON LUNA,
+Luis Miguel Jesus"
+	
+	
+	
+180196 - Fusiones y Adquisiciones	
+A	COGORNO FALCONE, Sandro Agustin
+180378 - Inglés Jurídico	
+A	CORTINA MENDOZA, Roxana Marina
+180276 - Instituciones de Derecho Mercantil	
+A	BARDALES MENDOZA, Enrique Rosendo
+	
+	
+	
+180277 - Introducción al Derecho	
+A	ZUÑIGA SCHRODER, Humberto Angel
+	
+	
+	
+B	OLIVOS CELIS, Milagros Katherine
+	
+	
+	
+C	TALAVERA CANO, Andres Alvaro
+	
+	
+	
+180278 - Obligaciones	
+A	MADRID HORNA, Victor
+	
+	
+	
+B	VASQUEZ REBAZA, Walter Humberto
+	
+	
+	
+180379 - Organizaciones Internacionales	
+A	BRAVO ARANA, Grismi Claudia / CLAROS ABARCA, Roberto Fernando
+180066 - Personas del Derecho Civil	
+A	OLIVOS CELIS, Milagros Katherine
+	
+	
+	
+	
+	
+B	NEIRA LUCAR, Melissa Judith
+	
+	
+	
+185037 - Regulación Bancaria y Mercado de Capitales	
+A	ALIAGA FARFAN, Jeanette Sofia
+	
+	
+	
+180099 - Responsabilidad Extracontractual	
+A	RETAMOZO ESCOBAR, Jaliya
+	
+	
+B	RETAMOZO ESCOBAR, Jaliya
+	
+	
+180377 - Sem. de Derecho Administrativo y Regulación	
+A	FARFAN SOUSA, Ronnie Ado
+180062 - Sem. de Derecho Constitucional	
+A	ABAD YUPANQUI, Samuel Bernardo
+180114 - Sem. de Tesis	
+A	DEBENEDETTI LUJAN, Bruno Edoardo
+	
+	
+180350 - Sociedades	
+A	RAMIREZ OTERO, Lorena Cecilia
+	
+	
+	
+180317 - Técnicas de Persuasión y Moot Court	
+A	"FREITAS CABANILLAS, Rodrigo Andrés / HUANCO
+PISCOCHE, Henry Wilder"
+180355 - Tendencias Jurisprudenciales del Derecho Penal Económico	
+A	REAÑO PESCHIERA, José Leandro
+180282 - Teoría General del Proceso	
+A	SIMONS PINO, Adrian Marcius
+	
+	
+	
+B	CHIRINOS VIDAURRAZAGA, Gonzalo Guillermo
+	
+	
+	
+Secc	Docentes
+CURSOS ACADÉMICOS	
+1F0162 - Análisis Financiero	
+A	SALINAS MORRIS, Juan Carlos
+	
+	
+	
+B	MALPARTIDA TABUCHI, Daniel Humberto
+	
+	
+	
+1F0107 - Análisis y Gestión de Riesgos	
+A	LUNA VICTORIA CONTRERAS, Rolando Alfonso / RAUNELLI MONTERO, Jose Carlos
+	
+	
+	
+	
+1F0228 - Economía Financiera I	
+A	MONGRUT MONTALVAN, Samuel Arturo
+	
+	
+	
+B	CARBAJAL ZAPATA, Jeferson Davy
+	
+	
+	
+C	CORNEJO LIMO, Luis Bruno
+	
+	
+	
+1F0229 - Economía Financiera II	
+A	POZO SANCHEZ, Jorge Antonio
+	
+	
+	
+B	WATSON ALVARADO, Jean Paul
+	
+	
+	
+1F0120 - Finanzas Corporativas I	
+A	DEFILIPPI ANGELDONIS, Enzo Fabrizio
+	
+	
+	
+	
+B	YAMAN , Serhat
+	
+	
+	
+	
+C	ROBLES FLORES, Luis Miguel
+	
+	
+	
+	
+	
+D	PANDURO PARDO, Julio Antonio
+	
+	
+	
+	
+	
+E	PANDURO PARDO, Julio Antonio
+	
+	
+	
+	
+F	CORDOVA LOPEZ, Juan Pablo
+	
+	
+	
+	
+G	TELLO YZAGUIRRE, Andre Luis
+	
+	
+	
+	
+1F0110 - Finanzas Corporativas II	
+A	MONGRUT MONTALVAN, Samuel Arturo
+	
+1F0111 - Finanzas Cuantitativas	
+A	RAUNELLI MONTERO, Jose Carlos
+	
+	
+	
+	
+1F0324 - Finanzas Sostenibles	
+A	RUIZ PEREZ, Jose Luis
+	
+	
+	
+1F0275 - Finanzas y Abundancia	
+A	RUNCIMAN SAETTONE, Guillermo Alfredo
+	
+B	RUNCIMAN SAETTONE, Guillermo Alfredo
+B	RUNCIMAN SAETTONE, Guillermo Alfredo
+1F0112 - Fundamentos de Finanzas	
+A	ROBLES FLORES, Luis Miguel
+	
+	
+	
+B	ROBLES FLORES, Luis Miguel
+	
+	
+	
+C	RAUNELLI MONTERO, Jose Carlos
+	
+	
+	
+D	RAUNELLI MONTERO, Jose Carlos
+	
+	
+	
+E	BRESCIANI CHAVEZ, Fernando Manuel
+	
+	
+	
+F	BRESCIANI CHAVEZ, Fernando Manuel
+	
+	
+	
+G	SIANCAS SOTELO, Francis Junior
+	
+	
+	
+H	SIANCAS SOTELO, Francis Junior
+	
+	
+	
+I	ALVAREZ DROBUSH, Alexei Darwinovich
+	
+	
+	
+J	CRUZ CASTAÑEDA, Vivian
+	
+	
+	
+K	ARIAS VERNAL, Carlos Augusto
+	
+	
+	
+L	VARGAS VILCHEZ, Enver Enrique
+	
+	
+	
+M	VAIZ NEYRA, Luis Oscar
+	
+	
+	
+N	ARCE ROEL, Luis Enrique
+	
+	
+	
+O	DOOR OSELE, Daniela
+	
+	
+	
+P	TAM CUBA, Sasha Prince
+	
+	
+	
+Q	QUEVEDO SANCHEZ, Gregorio Vladimir
+	
+	
+	
+1F0351 - Gestión Financiera	
+A	GABILONDO ALVAREZ, Sergio Alejandro
+	
+1F0113 - Instrumentos Derivados	
+A	CRUZ CASTAÑEDA, Vivian
+	
+	
+	
+1F0326 - International Finance	
+A	"LLADO MARQUEZ, Jorge Eduardo / VILLAFUERTE
+VIRA, Diego Santiago"
+	
+	
+	
+1F0060 - Investigación Financiera	
+A	WINKELRIED QUEZADA, Diego Martin
+1F0114 - Macroeconomía Financiera	
+A	MENDIBURU DIAZ, Carlos Hugo
+	
+	
+	
+	
+1F0013 - Mercado de Capitales	
+A	OGATA SHIMOKAWA DE KANAMORI, Clara Elena
+	
+1F0069 - Microeconomía Financiera	
+A	RUIZ PEREZ, Jose Luis
+	
+	
+	
+	
+1F0230 - Negociación Financiera	
+A	CASTELLANOS ROBLES, Enrique Guillermo / RODRIGUEZ CASANOVA, Gianina
+	
+	
+	
+1F0426 - Proyectos de Inversión	
+A	GABILONDO ALVAREZ, Sergio Alejandro
+	
+1F0115 - Renta Fija	
+A	YAMAN , Serhat
+	
+	
+	
+1F0116 - Renta Variable	
+A	DEFILIPPI ANGELDONIS, Enzo Fabrizio
+	
+	
+	
+1F0117 - Riesgo Crediticio	
+A	CASTELLANOS ROBLES, Enrique Guillermo / VALENZUELA HUARCAYA, Adriana
+	
+A	CASTELLANOS ROBLES, Enrique Guillermo / VALENZUELA HUARCAYA, Adriana
+	
+1F0432 - Sem. Commodities & Volatility	
+A	WINKELRIED QUEZADA, Diego Martin
+1F0045 - Sem. Crisis Financiera Internacional	
+A	DE LA CUBA RESTANI, Mauricio Fernando
+1F0350 - Sem. Cuantitativo de Riesgo Crediticio	
+A	BERGGRUN PRECIADO, Luis
+	
+	
+	
+	
+1F0021 - Seminario de Administración de Riesgo en Banca	
+A	SANCHO ROJAS, Alejandro Antonio
+1F0200 - Sem. de Alternative Investment	
+A	TANTALEAN VALDIVIESO, Elizabeth Marie
+1F0272 - Sem. de Dark Finance	
+A	MONTENEGRO LEE, Ruben Angel
+1F0325 - Sem. de Estrategias de Fondeo	
+A	OLIVARES CANCHARI, Jose Andres
+1F0373 - Sem. de Ethics in Finance	
+A	ARIAS VERNAL, Carlos Augusto
+1F0280 - Sem. de Financial Modeling	
+A	TORRES GOMEZ, Victor Manuel
+1F0202 - Sem. de Fintech	
+A	DIAZ GALINDO, Fanny Mariana
+1F0433 - Sem. de Leveraged Buyouts	
+A	RUIZ DE LA CRUZ, Fernando Miguel
+1F0374 - Sem. de Proceso de Mercado	
+A	WINKELRIED QUEZADA, Diego Martin
+1F0241 - Sem. de Project Finance	
+A	LAU PUN, Federico
+1F0386 - Sem. de Sports Finance	
+A	MATUTE QUIROGA, Juan Andres
+1F0281 - Sem. de Value Investing	
+A	
+1F0043 - Sem. de Wealth Management	
+A	
+1F0430 - Sem. Investments Tools and Case Studies	
+A	PONCE HEREDIA, Juan Jose
+1F0431 - Sem. Real Estate	
+A	LUCEN VALDIVIA, Fernando
+1F0048 - Sem. Sistema de Pensiones	
+A	SANCHEZ CHAVEZ, Elio Javier
+1F0027 - Sem. Valorización de Empresas	
+A	QUEVEDO SANCHEZ, Gregorio Vladimir
+1F0124 - Sistemas Financieros	
+A	LEON , Vicente Manuel
+	
+	
+	
+B	LEON , Vicente Manuel
+	
+	
+	
+C	LIZARZABURU BARTRA, Adriana Lastenia
+	
+	
+	
+D	PANCORBO VALDIVIA, Sergio Omar
+	
+	
+	
+Secc	Docentes
+CURSOS ACADÉMICOS	
+1MN344 - Account Management - Gestión de Clientes Clave	
+A	MOSQUEIRA LOAYZA, Javier Edilberto
+1MN366 - Administración del Comercio Internacional	
+A	PEINADO BRAVO, Maria Estrella Del Pilar
+	
+	
+	
+1MN367 - Canales de Distribución	
+A	
+	
+	
+	
+1MN017 - Comportamiento del Consumidor	
+A	HERNANI MERINO, Martin Nelson
+	
+	
+	
+B	SANCHEZ JUGO, Isabel
+	
+	
+	
+C	SANCHEZ JUGO, Isabel
+	
+	
+C	SANCHEZ JUGO, Isabel
+1MN009 - Cross Cultural & International Management	
+A	KOBAYASHI ANDO, María Elena
+	
+	
+B	PINTO GUILLEN, Maria Jose
+	
+	
+	
+1MN643 - Digital Product Design & Metrics	
+A	LINARES TORRES, Freddy
+1MN006 - Dirección Internacional de Empresas	
+A	MALCA GUAYLUPO, Oscar Enrique
+	
+	
+	
+1MN644 - Diseño Conductual	
+A	MONGE VARGAS, Mariana
+1MN045 - E-commerce	
+A	ESPINOZA MATOS, José Francisco
+A	ESPINOZA MATOS, José Francisco
+1MN027 - Estrategias de Branding	
+A	CARBONELL ROSSO, María De Las Mercedes
+	
+	
+	
+B	CARBONELL ROSSO, María De Las Mercedes
+	
+	
+	
+1MN368 - Estrategias de Comunicación y Promoción	
+A	LIZARZABURU VELASQUEZ, Carlos Enrique
+	
+	
+	
+1MN402 - Estrategias de Internacionalización	
+A	MALCA GUAYLUPO, Oscar Enrique
+	
+	
+1MN018 - Fundamentos de Marketing	
+A	PENNANO VILLANUEVA, Carla
+	
+	
+	
+B	"PENNANO VILLANUEVA, Carla  / RIVAS VELARDE,
+Andrea Carolina"
+	
+	
+	
+1MN370 - Fundamentos Económicos y Organizacionales para los Negocios	
+A	PEINADO BRAVO, Maria Estrella Del Pilar
+	
+	
+	
+1MN371 - Gestión Comercial	
+A	POZO YABAR, Natalia Sofia
+	
+	
+	
+1MN008 - Gestión de Mercados Globales	
+A	MEUNIER , Bernard
+	
+	
+	
+1MN372 - Gestión de Productos	
+A	SAKODA MIZUSHIMA, Diego
+	
+	
+	
+B	SAKODA MIZUSHIMA, Diego
+	
+	
+	
+1MN015 - Gestión del Comercio Internacional	
+A	LADINES AZALIA, Juan Carlos
+	
+A	LADINES AZALIA, Juan Carlos
+	
+B	GARCIA JERI, Oswaldo Carlos
+	
+	
+	
+C	ARRIETA PADILLA, Gabriel Lewis
+	
+	
+	
+1MN307 - Gestión Estratégica Comercial, Métricas y Ética	
+A	PEREZ DE ARMAS, Emilio
+1MN016 - Gestión Internacional de Empresas	
+A	ACOSTA RUIZ, Vanessa Mirtha
+	
+	
+	
+B	GARCIA JERI, Oswaldo Carlos
+	
+	
+	
+C	GARMENDIA FOSSA, Francisco Antonio
+	
+	
+	
+1MN003 - Gestión Sostenible de la Oferta Exportable	
+A	MORI CLEMENT, Yadira Isbi
+	
+	
+	
+1MN077 - Global Branding	
+A	ACOSTA RUIZ, Vanessa Mirtha
+1MN343 - Global Food & Agribusiness Strategies	
+A	DEL SOLAR ESCARDO, Diego
+1MN395 - Growth Hacking	
+A	VEGA FARRO, Elizabeth
+	
+1MN713 - Innovation, Competitiveness & Export Performance	
+A	EDEH , Jude Ndubuisi
+	
+	
+	
+	
+1MN709 - Intelligent Marketing: Creativity and Innovation in the Age of AI	
+A	LIMONGI FRANCA COELHO, Ricardo
+	
+	
+	
+A	LIMONGI FRANCA COELHO, Ricardo
+1MN646 - Intercultural Competence	
+A	CALMET GUTIERREZ, Maria Angela
+1MN007 - International Affairs	
+A	LADINES AZALIA, Juan Carlos
+	
+	
+	
+B	VARGAS DE LA JARA, Marisol
+	
+	
+	
+1MN014 - International Business Plan	
+A	DIAZ DIAZ, Dagoberto Luis
+	
+B	ALVARADO RUIZ, Paola Alessandra
+	
+1MN375 - International Human Resources Management	
+A	KALMURAND , Katrin
+	
+A	KALMURAND , Katrin
+B	CARRERAS MERINO, Andrea
+	
+	
+	
+1MN049 - International Marketing	
+A	PENNANO VILLANUEVA, Carla
+	
+	
+1MN376 - Investigación Aplicada en Negocios Internacionales	
+A	FRANCO VALDIVIA, Eliana
+	
+1MN020 - Investigación de Mercados	
+A	MELLADO SILVA, Maria Antonieta Rosario
+	
+	
+	
+B	TALAVERA SALDARRIAGA, Willy Martin Enrique
+	
+	
+	
+C	ZUÑIGA LAZO, Jenny Lorena
+	
+	
+	
+D	TUTAYA ZEVALLOS, Renan Jesus
+	
+	
+	
+E	GOMEZ ALVIS, ELIZABETH INGRID
+E	GOMEZ ALVIS, ELIZABETH INGRID
+	
+	
+1MN022 - Investigación de Mercados Aplicada	
+A	CAYCHO HUAMANI, Jose Alberto
+	
+	
+	
+1MN377 - Investigación en Marketing I	
+A	HERNANI MERINO, Martin Nelson
+	
+	
+	
+1MN005 - Logística Internacional	
+A	ANTICONA SUAREZ, Erick Olson
+	
+	
+	
+1MN379 - Marketing B2B	
+A	MANRIQUE PONCE, Christian Gerardo
+	
+	
+1MN388 - Marketing de Contenido	
+A	MANRIQUE PONCE, Christian Gerardo
+	
+	
+1MN086 - Marketing de Servicios	
+A	CLAUX FREITAS, Lorena
+	
+	
+	
+1MN642 - Marketing Deportivo	
+A	GOMEZ CHANGA, Sarita Julia / MOSCOSO ZAMBRANO, Renzo Mauricio
+1MN029 - Marketing Digital y Redes Sociales	
+A	HIUMETTRI BLANCO, Victor Kervin
+	
+1MN035 - Marketing Estratégico	
+A	MAYORGA GUTIERREZ, David Jesus
+	
+	
+	
+B	MAYORGA GUTIERREZ, David Jesus
+	
+	
+	
+C	RIVAS VELARDE, Andrea Carolina
+	
+	
+	
+D	TUTAYA ZEVALLOS, Renan Jesus
+	
+	
+	
+E	TUTAYA ZEVALLOS, Renan Jesus
+	
+	
+	
+F	RIVAS VELARDE, Andrea Carolina
+	
+	
+	
+G	PENNANO VILLANUEVA, Carla
+	
+	
+	
+1MN444 - Marketing Internacional en China y Asia-Pacífico	
+A	FELICIANO NISHIKAWA, Jose Carlos
+1MN579 - Marketing Personal para el Mundo Labóral	
+A	GONZALES ARBAIZA, Maricruz Del Pilar
+1MN380 - Marketing Relacional y CRM	
+A	
+	
+	
+	
+1MN381 - Marketing Sostenible	
+A	SCHWALB HELGUERO, Maria Matilde
+	
+	
+B	CARBONELL ROSSO, María De Las Mercedes
+	
+	
+1MN382 - Métricas y Analítica de Marketing	
+A	MANRIQUE PONCE, Christian Gerardo
+	
+	
+	
+	
+1MN513 - MVPs and Innovation for Global Markets	
+A	ROMAN YSEKI, Jorge Hiroshi
+1MN401 - Negociaciones Comerciales Internacionales	
+A	GARCIA BELAUNDE SALDIAS, Diego
+	
+	
+	
+1MN062 - Neuromarketing	
+A	LINARES TORRES, Freddy
+	
+1MN715 - Pensamiento Crítico para Marketing	
+A	MARROU LOAYZA, Julio Estuardo
+1MN384 - Plan de Marketing	
+A	MAYORGA GUTIERREZ, David Jesus
+	
+1MN385 - Pricing	
+A	CARBONELL ROSSO, María De Las Mercedes
+	
+	
+	
+B	CARBONELL ROSSO, María De Las Mercedes
+	
+	
+	
+1MN710 - Storytelling: Cómo conectar emocionalmente con los consumidores a través de las historias	
+A	DE VEGA DE UNCETA, Alejandro
+	
+	
+	
+	
+1MN358 - Tecnologías Aplicadas a la Distribución Física Internacional	
+A	ANTICONA SUAREZ, Erick Olson
+	
+1MN400 - Teoría del Comercio Internacional y Procesos de Integración	
+A	ARRIETA PADILLA, Gabriel Lewis
+	
+	
+	
+1MN075 - Trade Marketing	
+A	BRAGAGNINI OLIVER, Rizal Andres
