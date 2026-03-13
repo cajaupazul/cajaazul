@@ -169,13 +169,30 @@ function ProfessorRatingsWrapper() {
 
         // Related professors - Restricted to same course
         let linkedProfessorsData: any[] = [];
-        if (effectiveCourseId) {
+        
+        // Try the official relational table if it is a real DB Course ID
+        if (currentEffectiveCourseId && !currentEffectiveCourseId.startsWith('virtual-')) {
           const { data: lpRes } = await supabase.from('course_professors')
             .select('professors(id, nombre, avatar_url, especialidad, facultad)')
-            .eq('course_id', effectiveCourseId)
+            .eq('course_id', currentEffectiveCourseId)
             .neq('professor_id', professorId)
             .limit(10);
+            
           linkedProfessorsData = lpRes || [];
+        }
+
+        // If we didn't find any (maybe it's a virtual course), try text fallbacks
+        if (linkedProfessorsData.length === 0 && currentEffectiveCourseName) {
+           const { data: stringMatchRes } = await supabase.from('professors')
+            .select('id, nombre, avatar_url, especialidad, facultad')
+            .neq('id', professorId)
+            .or(`especialidad.ilike.%${currentEffectiveCourseName}%,otros_cursos.ilike.%${currentEffectiveCourseName}%`)
+            .limit(10);
+            
+            // Map it back to the expected { professors: { ... } } shape
+            if (stringMatchRes) {
+                linkedProfessorsData = stringMatchRes.map((p: any) => ({ professors: p }));
+            }
         }
 
         const relatedMap = new Map();
