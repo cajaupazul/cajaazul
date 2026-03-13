@@ -183,8 +183,14 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
 
     const addProfessor = useCallback((professor: any) => {
         setProfessors(prev => {
-            // Check if professor already exists in list (by ID)
-            if (prev.find(p => p.id === professor.id)) return prev;
+            const index = prev.findIndex(p => p.id === professor.id);
+            if (index >= 0) {
+                // Replaces the existing professor with updated info (e.g. new courses) while keeping ratings intact if omitted
+                const newList = [...prev];
+                newList[index] = { ...newList[index], ...professor };
+                return newList;
+            }
+            // Add new
             return [...prev, professor].sort((a, b) => a.nombre.localeCompare(b.nombre));
         });
     }, []);
