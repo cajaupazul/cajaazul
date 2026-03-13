@@ -25,12 +25,13 @@ interface SecureFileViewerProps {
 interface VirtualizedPageProps {
     pageNumber: number;
     pageWidth: number;
+    scale: number;
     estimatedHeight: number;
     pdfReady: boolean;
     isMobile: boolean;
 }
 
-function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady, isMobile }: VirtualizedPageProps) {
+function VirtualizedLazyPage({ pageNumber, pageWidth, scale, estimatedHeight, pdfReady, isMobile }: VirtualizedPageProps) {
     const [shouldMount, setShouldMount] = useState(false);
     const [actualHeight, setActualHeight] = useState(estimatedHeight);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -60,8 +61,8 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
             ref={containerRef}
             className={`transition-all duration-300 overflow-hidden flex flex-col items-center ${isMobile ? 'mb-2' : 'mb-2'}`}
             style={{
-                minHeight: shouldMount ? 'auto' : actualHeight,
-                height: shouldMount ? 'auto' : actualHeight,
+                minHeight: shouldMount ? 'auto' : actualHeight * scale,
+                height: shouldMount ? 'auto' : actualHeight * scale,
                 width: '100%'
             }}
         >
@@ -75,12 +76,13 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
                         // V5.8: Calidad Cristalina (Fin de píxeles)
                         devicePixelRatio={typeof window !== 'undefined' ? window.devicePixelRatio : 2}
                         onRenderSuccess={(page) => {
-                            setActualHeight(page.height);
+                            setActualHeight(page.originalHeight * (pageWidth / page.originalWidth));
                         }}
                         width={pageWidth}
+                        scale={scale}
                         className={`shadow-md overflow-hidden animate-in fade-in duration-500`}
                         loading={
-                            <div className="bg-white flex flex-col items-center justify-center gap-2" style={{ width: pageWidth, height: actualHeight }}>
+                            <div className="bg-white flex flex-col items-center justify-center gap-2" style={{ width: pageWidth * scale, height: actualHeight * scale }}>
                                 <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
                                 <p className="text-gray-300 text-xs text-center px-4 font-medium uppercase tracking-[0.2em]">Cargando Pág. {pageNumber}</p>
                             </div>
@@ -91,7 +93,7 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
             ) : (
                 <div
                     className="bg-white/40 flex flex-col items-center justify-center gap-2"
-                    style={{ width: pageWidth, height: actualHeight }}
+                    style={{ width: pageWidth * scale, height: actualHeight * scale }}
                 >
                     <div className="w-8 h-8 rounded-full border-2 border-zinc-200 border-t-zinc-400 animate-spin" />
                     <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-[0.3em]">Preparando {pageNumber}</p>
@@ -105,10 +107,11 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
 interface MobilePdfNavigatorProps {
     numPages: number;
     pageWidth: number;
+    scale: number;
     estimatedHeight: number;
 }
 
-function MobilePdfNavigator({ numPages, pageWidth, estimatedHeight }: MobilePdfNavigatorProps) {
+function MobilePdfNavigator({ numPages, pageWidth, scale, estimatedHeight }: MobilePdfNavigatorProps) {
     const [currentPage, setCurrentPage] = useState(1);
 
     return (
@@ -122,8 +125,9 @@ function MobilePdfNavigator({ numPages, pageWidth, estimatedHeight }: MobilePdfN
                         renderForms={false}
                         devicePixelRatio={typeof window !== 'undefined' ? window.devicePixelRatio : 2}
                         width={pageWidth}
+                        scale={scale}
                         loading={
-                            <div className="flex flex-col items-center justify-center gap-4 bg-zinc-50" style={{ width: pageWidth, height: estimatedHeight }}>
+                            <div className="flex flex-col items-center justify-center gap-4 bg-zinc-50" style={{ width: pageWidth * scale, height: estimatedHeight * scale }}>
                                 <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
                                 <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.3em]">Cargando Pág. {currentPage}</p>
                             </div>
@@ -207,15 +211,13 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
     const pdfPageWidth = useMemo(() => {
         if (containerWidth === 0) return 300;
-        const safetyMargin = isMobileDevice ? 0 : (isFullscreen ? 40 : 80);
-        const availableWidth = containerWidth - safetyMargin;
-        const baseWidth = isMobileDevice ? availableWidth : Math.min(availableWidth, isFullscreen ? 1600 : 950);
-        return baseWidth * zoomLevel;
-    }, [containerWidth, isFullscreen, isMobileDevice, zoomLevel]);
+        const safetyMargin = isMobileDevice ? 0 : 20; // 20px padding
+        return containerWidth - safetyMargin; // Fit to width without hard limit
+    }, [containerWidth, isMobileDevice]);
 
     const estimatedPageHeight = Math.round(pdfPageWidth * 1.414);
 
-    const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.25, 3));
+    const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.25, 4));
     const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
 
     useEffect(() => {
@@ -279,26 +281,24 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
         return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
     }, []);
 
-    // Interceptar Zoom del Navegador (Ctrl + Rueda) para aplicar al Documento interno en vez de la UI completa
+    // Interceptar Zoom del Navegador (Ctrl + Rueda) de forma global para bloquear el resize del tab de Chrome
     useEffect(() => {
-        const container = containerRef.current;
-        if (!container) return;
-
         const handleWheel = (e: WheelEvent) => {
             if (e.ctrlKey || e.metaKey) {
-                e.preventDefault(); // Evita que Chrome haga zoom HTML a la página
-                e.stopPropagation();
-                if (e.deltaY < 0) {
-                    setZoomLevel(prev => Math.min(prev + 0.1, 3));
-                } else {
-                    setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
+                // Check if we are inside our document viewer
+                const container = document.getElementById('secure-pdf-scroll-container');
+                if (container && container.contains(e.target as Node)) {
+                    e.preventDefault(); // Stop Chrome from zooming the whole web page
+                    e.stopPropagation();
+                    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                    setZoomLevel(prev => Math.min(Math.max(prev + delta, 0.5), 4));
                 }
             }
         };
 
-        // Must be non-passive to prevent default zooming
-        container.addEventListener('wheel', handleWheel, { passive: false });
-        return () => container.removeEventListener('wheel', handleWheel);
+        // We MUST use passive: false on window to successfully override Chrome's native Ctrl+Scroll zooming
+        window.addEventListener('wheel', handleWheel, { passive: false });
+        return () => window.removeEventListener('wheel', handleWheel);
     }, []);
 
     const toggleFullscreen = () => {
@@ -501,7 +501,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                 {fileType === 'pdf' && (
                     <div className="h-full w-full relative bg-[#525659]">
                         {fileSource && (
-                            <div className="h-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none pb-20 pt-4">
+                            <div id="secure-pdf-scroll-container" className="h-full w-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none pb-20 pt-4">
                                 <Document
                                     file={fileSource}
                                     onLoadSuccess={({ numPages: n }) => {
@@ -517,11 +517,11 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                                 >
                                     {numPages && (
                                         isMobile && isLargeFile ? (
-                                            <MobilePdfNavigator numPages={numPages} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} />
+                                            <MobilePdfNavigator numPages={numPages} pageWidth={pdfPageWidth} scale={zoomLevel} estimatedHeight={estimatedPageHeight} />
                                         ) : (
                                             <div className="flex flex-col items-center">
                                                 {Array.from({ length: numPages }, (_, i) => (
-                                                    <VirtualizedLazyPage key={`vp_${i + 1}`} pageNumber={i + 1} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} pdfReady={pdfReady} isMobile={isMobileDevice} />
+                                                    <VirtualizedLazyPage key={`vp_${i + 1}`} pageNumber={i + 1} pageWidth={pdfPageWidth} scale={zoomLevel} estimatedHeight={estimatedPageHeight} pdfReady={pdfReady} isMobile={isMobileDevice} />
                                                 ))}
                                             </div>
                                         )
