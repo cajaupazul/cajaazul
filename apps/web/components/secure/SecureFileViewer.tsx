@@ -58,11 +58,11 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
     return (
         <div
             ref={containerRef}
-            className={`relative transition-all duration-500 overflow-hidden ${isMobile ? 'mb-0' : 'mb-3'}`}
+            className={`transition-all duration-300 overflow-hidden flex flex-col items-center ${isMobile ? 'mb-2' : 'mb-2'}`}
             style={{
                 minHeight: shouldMount ? 'auto' : actualHeight,
                 height: shouldMount ? 'auto' : actualHeight,
-                width: pageWidth
+                width: '100%'
             }}
         >
             {shouldMount && pdfReady ? (
@@ -78,7 +78,7 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, estimatedHeight, pdfReady,
                             setActualHeight(page.height);
                         }}
                         width={pageWidth}
-                        className={`${isMobile ? '' : 'shadow-2xl rounded-sm'} overflow-hidden animate-in fade-in duration-500`}
+                        className={`shadow-md overflow-hidden animate-in fade-in duration-500`}
                         loading={
                             <div className="bg-white flex flex-col items-center justify-center gap-2" style={{ width: pageWidth, height: actualHeight }}>
                                 <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
@@ -261,6 +261,19 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     }, []);
 
+    // Defensa perimetral contra atajos de teclado (Ctrl+S, Ctrl+P)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.key === 'p' || e.key === 'P' || e.key === 'c' || e.key === 'C')) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.warn('Protección activa: Acción bloqueada.');
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown, { capture: true });
+        return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    }, []);
+
     const toggleFullscreen = () => {
         if (!containerRef.current) return;
         if (!document.fullscreenElement) {
@@ -330,20 +343,9 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             } catch (e) { console.warn("Falló detección de tamaño, usando modo seguro (Páginas)"); setFileSize(10 * 1024 * 1024); }
 
             if (type === 'pdf') {
-                // SI es móvil, FORZAMOS el visor avanzado (PDF.js) para evitar el botón "Abrir" de los navegadores móviles
-                // SI es PC, respetamos el toggle del admin (Híbrido)
-                if (!showAdvanced && !isMobileDevice) {
-                    // Modo Nativo: Obtener URL firmada para el iframe
-                    const previewRes = await fetch(
-                        `${baseUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`,
-                        { headers: { 'Authorization': `Bearer ${token}` } }
-                    );
-                    const data = await previewRes.json();
-                    setNativePreviewUrl(data.url);
-                } else {
-                    // MODO PDF.js (Pro)
-                    setBlobUrl(secureUrl);
-                }
+                // FORZAR SIEMPRE EL MODO AVANZADO (PRO)
+                // Es la única forma de aislar el visor y prevenir la descarga/clic derecho en el iframe nativo del navegador.
+                setBlobUrl(secureUrl);
                 setLoading(false);
                 return;
             }
@@ -454,43 +456,35 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
             <div className={`flex-1 overflow-hidden relative ${isFullscreen ? 'bg-zinc-950' : 'bg-[#E4E4E7]/50'}`}>
                 {fileType === 'pdf' && (
-                    <div className="h-full w-full relative">
-                        {(!showAdvanced && !isMobileDevice) ? (
-                            <iframe
-                                src={`${nativePreviewUrl}#toolbar=0&navpanes=0`}
-                                className="w-full h-full border-none bg-white"
-                                title={fileName}
-                            />
-                        ) : (
-                            fileSource && (
-                                <div className="h-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none">
-                                    <Document
-                                        file={fileSource}
-                                        onLoadSuccess={({ numPages: n }) => {
-                                            setNumPages(n);
-                                            setTimeout(() => setPdfReady(true), 150);
-                                        }}
-                                        onLoadError={(err) => {
-                                            console.error('CRITICAL PDF ERROR:', err);
-                                            setError('Error de motor local. Prueba "Reintentar" o desactiva "Modo Pro".');
-                                        }}
-                                        loading={<div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto" /><p className="text-xs font-bold text-blue-600 mt-4 uppercase tracking-[0.2em]">Iniciando Motor Pro...</p></div>}
-                                        className="max-w-full border-none"
-                                    >
-                                        {numPages && (
-                                            isMobile && isLargeFile ? (
-                                                <MobilePdfNavigator numPages={numPages} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} />
-                                            ) : (
-                                                <div className="flex flex-col items-center">
-                                                    {Array.from({ length: numPages }, (_, i) => (
-                                                        <VirtualizedLazyPage key={`vp_${i + 1}`} pageNumber={i + 1} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} pdfReady={pdfReady} isMobile={isMobileDevice} />
-                                                    ))}
-                                                </div>
-                                            )
-                                        )}
-                                    </Document>
-                                </div>
-                            )
+                    <div className="h-full w-full relative bg-[#525659]">
+                        {fileSource && (
+                            <div className="h-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none">
+                                <Document
+                                    file={fileSource}
+                                    onLoadSuccess={({ numPages: n }) => {
+                                        setNumPages(n);
+                                        setTimeout(() => setPdfReady(true), 150);
+                                    }}
+                                    onLoadError={(err) => {
+                                        console.error('CRITICAL PDF ERROR:', err);
+                                        setError('Error de motor local. Prueba "Reintentar" o desactiva "Modo Pro".');
+                                    }}
+                                    loading={<div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin text-white mx-auto" /><p className="text-xs font-bold text-gray-300 mt-4 uppercase tracking-[0.2em]">Cargando Documento Seguro...</p></div>}
+                                    className="max-w-full border-none"
+                                >
+                                    {numPages && (
+                                        isMobile && isLargeFile ? (
+                                            <MobilePdfNavigator numPages={numPages} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} />
+                                        ) : (
+                                            <div className="flex flex-col items-center">
+                                                {Array.from({ length: numPages }, (_, i) => (
+                                                    <VirtualizedLazyPage key={`vp_${i + 1}`} pageNumber={i + 1} pageWidth={pdfPageWidth} estimatedHeight={estimatedPageHeight} pdfReady={pdfReady} isMobile={isMobileDevice} />
+                                                ))}
+                                            </div>
+                                        )
+                                    )}
+                                </Document>
+                            </div>
                         )}
                     </div>
                 )}
@@ -536,8 +530,24 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             )}
 
             <style jsx global>{`
-                .react-pdf__Document { display: flex; flex-direction: column; align-items: center; gap: 0; }
-                .react-pdf__Page__canvas { border-radius: 0px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+                /* REPLICA VISUAL de Google Chrome PDF Viewer Nativo */
+                .react-pdf__Document { 
+                    display: flex; 
+                    flex-direction: column; 
+                    align-items: center; 
+                    gap: 0; 
+                    padding-top: 16px;
+                    padding-bottom: 300px;
+                    background-color: #525659; /* Color clásico del visor nativo de Chrome */
+                    min-height: 100%;
+                }
+                .react-pdf__Document > div {
+                    margin-bottom: 8px !important;
+                }
+                .react-pdf__Page__canvas { 
+                    border-radius: 0px; 
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important; /* Sombra más pronunciada como Chrome */
+                }
                 .docx-content-wrapper .docx-viewer { 
                     background: white; 
                     box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
