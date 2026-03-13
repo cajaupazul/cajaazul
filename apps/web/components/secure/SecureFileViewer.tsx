@@ -210,8 +210,8 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
         const safetyMargin = isMobileDevice ? 0 : (isFullscreen ? 40 : 80);
         const availableWidth = containerWidth - safetyMargin;
         const baseWidth = isMobileDevice ? availableWidth : Math.min(availableWidth, isFullscreen ? 1600 : 950);
-        return baseWidth * zoomLevel;
-    }, [containerWidth, isFullscreen, isMobileDevice, zoomLevel]);
+        return baseWidth;
+    }, [containerWidth, isFullscreen, isMobileDevice]);
 
     const estimatedPageHeight = Math.round(pdfPageWidth * 1.414);
 
@@ -480,7 +480,8 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                     <div className="h-full w-full relative bg-[#525659]">
                         {fileSource && (
                             <div className="h-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none">
-                                <Document
+                                <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center', transition: 'transform 0.2s ease-out' }}>
+                                    <Document
                                     file={fileSource}
                                     onLoadSuccess={({ numPages: n }) => {
                                         setNumPages(n);
@@ -504,7 +505,8 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                                             </div>
                                         )
                                     )}
-                                </Document>
+                                    </Document>
+                                </div>
                             </div>
                         )}
                     </div>
