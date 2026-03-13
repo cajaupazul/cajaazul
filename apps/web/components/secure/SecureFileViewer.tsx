@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Loader2, AlertCircle, Download, Lock, Maximize, Minimize, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Loader2, AlertCircle, Download, Lock, Maximize, Minimize, ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Document, Page, pdfjs } from 'react-pdf';
 import * as docx from 'docx-preview';
@@ -180,6 +180,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const [pdfReady, setPdfReady] = useState(false);
     const [containerWidth, setContainerWidth] = useState(0);
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+    const [zoomLevel, setZoomLevel] = useState(1);
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
     const xlsxContainerRef = useRef<HTMLDivElement>(null);
@@ -208,10 +209,14 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
         if (containerWidth === 0) return 300;
         const safetyMargin = isMobileDevice ? 0 : (isFullscreen ? 40 : 80);
         const availableWidth = containerWidth - safetyMargin;
-        return isMobileDevice ? availableWidth : Math.min(availableWidth, 850);
-    }, [containerWidth, isFullscreen, isMobileDevice]);
+        const baseWidth = isMobileDevice ? availableWidth : Math.min(availableWidth, isFullscreen ? 1600 : 950);
+        return baseWidth * zoomLevel;
+    }, [containerWidth, isFullscreen, isMobileDevice, zoomLevel]);
 
     const estimatedPageHeight = Math.round(pdfPageWidth * 1.414);
+
+    const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.25, 3));
+    const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
 
     useEffect(() => {
         const observer = new ResizeObserver((entries) => {
@@ -436,6 +441,13 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                         <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100 italic font-black text-blue-600">v4</div>
                         <span className="text-xs font-black text-zinc-900 uppercase tracking-widest truncate max-w-[200px]">{fileName}</span>
                     </div>
+                    {fileType === 'pdf' && (
+                        <div className="hidden md:flex items-center gap-1 bg-zinc-100 p-1 rounded-lg">
+                            <button onClick={handleZoomOut} className="p-1 px-2 text-zinc-600 hover:bg-white rounded transition-colors"><ZoomOut className="w-4 h-4" /></button>
+                            <span className="text-xs font-bold w-12 text-center text-zinc-700 select-none">{Math.round(zoomLevel * 100)}%</span>
+                            <button onClick={handleZoomIn} className="p-1 px-2 text-zinc-600 hover:bg-white rounded transition-colors"><ZoomIn className="w-4 h-4" /></button>
+                        </div>
+                    )}
                     <div className="flex items-center gap-2">
                         <button onClick={toggleFullscreen} className="p-2.5 text-zinc-600 hover:bg-zinc-100 rounded-xl transition-all active:scale-95">
                             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
@@ -444,14 +456,23 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                 </div>
             )}
 
-            {/* V4.6+: Botón de cierre flotante solo en Fullscreen */}
+            {/* V4.6+: Botón de cierre flotante y controles Zoom solo en Fullscreen */}
             {isFullscreen && (
-                <button
-                    onClick={toggleFullscreen}
-                    className="fixed top-6 right-6 z-[200] p-4 bg-zinc-900/50 text-white rounded-full backdrop-blur-xl border border-white/10 hover:bg-zinc-900 hover:scale-110 transition-all shadow-2xl group"
-                >
-                    <X className="w-6 h-6 group-active:scale-90" />
-                </button>
+                <div className="fixed top-6 right-6 z-[200] flex items-center gap-3">
+                    {fileType === 'pdf' && (
+                        <div className="flex items-center gap-1 bg-zinc-900/50 backdrop-blur-xl border border-white/10 p-1.5 rounded-full shadow-2xl">
+                            <button onClick={handleZoomOut} className="w-10 h-10 flex items-center justify-center text-white hover:bg-white/20 rounded-full transition-all"><ZoomOut className="w-5 h-5" /></button>
+                            <span className="text-xs font-bold w-12 text-center text-white select-none">{Math.round(zoomLevel * 100)}%</span>
+                            <button onClick={handleZoomIn} className="w-10 h-10 flex items-center justify-center text-white hover:bg-white/20 rounded-full transition-all"><ZoomIn className="w-5 h-5" /></button>
+                        </div>
+                    )}
+                    <button
+                        onClick={toggleFullscreen}
+                        className="w-12 h-12 flex items-center justify-center bg-zinc-900/50 text-white rounded-full backdrop-blur-xl border border-white/10 hover:bg-zinc-900 hover:scale-110 transition-all shadow-2xl group"
+                    >
+                        <X className="w-6 h-6 group-active:scale-90" />
+                    </button>
+                </div>
             )}
 
             <div className={`flex-1 overflow-hidden relative ${isFullscreen ? 'bg-zinc-950' : 'bg-[#E4E4E7]/50'}`}>
@@ -547,6 +568,8 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                 .react-pdf__Page__canvas { 
                     border-radius: 0px; 
                     box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important; /* Sombra más pronunciada como Chrome */
+                    max-width: 100% !important;
+                    height: auto !important;
                 }
                 .docx-content-wrapper .docx-viewer { 
                     background: white; 
