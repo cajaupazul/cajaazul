@@ -210,8 +210,8 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
         const safetyMargin = isMobileDevice ? 0 : (isFullscreen ? 40 : 80);
         const availableWidth = containerWidth - safetyMargin;
         const baseWidth = isMobileDevice ? availableWidth : Math.min(availableWidth, isFullscreen ? 1600 : 950);
-        return baseWidth;
-    }, [containerWidth, isFullscreen, isMobileDevice]);
+        return baseWidth * zoomLevel;
+    }, [containerWidth, isFullscreen, isMobileDevice, zoomLevel]);
 
     const estimatedPageHeight = Math.round(pdfPageWidth * 1.414);
 
@@ -277,6 +277,28 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
         };
         window.addEventListener('keydown', handleKeyDown, { capture: true });
         return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    }, []);
+
+    // Interceptar Zoom del Navegador (Ctrl + Rueda) para aplicar al Documento interno en vez de la UI completa
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault(); // Evita que Chrome haga zoom HTML a la página
+                e.stopPropagation();
+                if (e.deltaY < 0) {
+                    setZoomLevel(prev => Math.min(prev + 0.1, 3));
+                } else {
+                    setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
+                }
+            }
+        };
+
+        // Must be non-passive to prevent default zooming
+        container.addEventListener('wheel', handleWheel, { passive: false });
+        return () => container.removeEventListener('wheel', handleWheel);
     }, []);
 
     const toggleFullscreen = () => {
@@ -479,9 +501,8 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                 {fileType === 'pdf' && (
                     <div className="h-full w-full relative bg-[#525659]">
                         {fileSource && (
-                            <div className="h-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none">
-                                <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center', transition: 'transform 0.2s ease-out' }}>
-                                    <Document
+                            <div className="h-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none pb-20 pt-4">
+                                <Document
                                     file={fileSource}
                                     onLoadSuccess={({ numPages: n }) => {
                                         setNumPages(n);
@@ -505,8 +526,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                                             </div>
                                         )
                                     )}
-                                    </Document>
-                                </div>
+                                </Document>
                             </div>
                         )}
                     </div>
@@ -559,10 +579,8 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                     flex-direction: column; 
                     align-items: center; 
                     gap: 0; 
-                    padding-top: 16px;
-                    padding-bottom: 300px;
-                    background-color: #525659; /* Color clásico del visor nativo de Chrome */
-                    min-height: 100%;
+                    padding-bottom: 300px; /* Margen infinito inferior estilo Chrome */
+                    width: 100%;
                 }
                 .react-pdf__Document > div {
                     margin-bottom: 8px !important;
@@ -570,8 +588,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                 .react-pdf__Page__canvas { 
                     border-radius: 0px; 
                     box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important; /* Sombra más pronunciada como Chrome */
-                    max-width: 100% !important;
-                    height: auto !important;
+                    /* Eliminamos transform scale y max-width para que el React-PDF re-renderice en alta definición basado en su ancho explícito */
                 }
                 .docx-content-wrapper .docx-viewer { 
                     background: white; 
