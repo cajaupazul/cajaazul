@@ -685,6 +685,8 @@ export default function ProfessorRatingsContent({
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
+        const validCourseId = selectedCourseId && !selectedCourseId.startsWith('virtual-') ? selectedCourseId : null;
+
         const { error } = await supabase.from('professor_ratings').upsert({
             professor_id: professor.id,
             user_id: user.id,
@@ -692,7 +694,7 @@ export default function ProfessorRatingsContent({
             claridad: formData.claridad,
             facilidad: formData.facilidad,
             recommended: formData.recommended,
-            course_id: selectedCourseId,
+            course_id: validCourseId,
             course_name: selectedCourse
         }, { onConflict: 'professor_id,user_id,course_id' });
 
@@ -713,12 +715,14 @@ export default function ProfessorRatingsContent({
         if (parentId) setIsSubmittingReply(true);
         else setIsSubmittingComment(true);
 
+        const validCourseId = selectedCourseId && !selectedCourseId.startsWith('virtual-') ? selectedCourseId : null;
+
         const { error } = await supabase.from('professor_comments').insert({
             professor_id: professor.id,
             user_id: user.id,
             contenido: textToSubmit.trim(),
             parent_id: parentId,
-            course_id: selectedCourseId,
+            course_id: validCourseId,
             course_name: selectedCourse
         });
 
