@@ -477,7 +477,17 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
                                 OTROS CURSOS QUE DICTA (AUTO-COMPLETADO)
                             </Label>
                             <div className="bg-bb-darker/50 border border-bb-border rounded-2xl p-6 min-h-[80px] flex flex-wrap gap-2 items-center">
-                                {suggestions.some(p => p.nombre.toUpperCase() === formData.nombre.toUpperCase()) ? (
+                                {existingProfessorData ? (
+                                    Array.from(new Set(
+                                        [existingProfessorData.especialidad, ...(existingProfessorData.otros_cursos?.split(',') || [])]
+                                            .filter(Boolean)
+                                            .map(s => s?.trim())
+                                    )).map((curso, i) => (
+                                        <span key={i} className="px-3 py-1.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-bold uppercase">
+                                            {curso}
+                                        </span>
+                                    ))
+                                ) : suggestions.some(p => p.nombre.toUpperCase() === formData.nombre.toUpperCase()) ? (
                                     Array.from(new Set(
                                         suggestions
                                             .filter(p => p.nombre.toUpperCase() === formData.nombre.toUpperCase())
