@@ -106,7 +106,12 @@ storageRouter.put('/upload', async (c) => {
     }
 
     try {
-        const body = await c.req.arrayBuffer()
+        // V6.1: Use direct stream (c.req.raw.body) instead of arrayBuffer() to avoid 128MB Worker memory limit (Error 10001)
+        const body = c.req.raw.body;
+
+        if (!body) {
+            return c.json({ error: 'Cuerpo de la petición vacío' }, 400)
+        }
 
         await bucket.put(path, body, {
             httpMetadata: {
