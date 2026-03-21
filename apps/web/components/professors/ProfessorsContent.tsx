@@ -90,6 +90,10 @@ export default function ProfessorsContent({
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [professorToDelete, setProfessorToDelete] = useState<any>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    
+    // Pagination state
+    const [itemsPerPage] = useState(24);
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Helper to normalize strings (remove accents, lowercase, trim)
     const normalizeString = (str: string) => {
@@ -236,6 +240,11 @@ export default function ProfessorsContent({
         });
     }, [professors, searchQuery, selectedCourse, sortBy]);
 
+    // Reset pagination when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedCourse, sortBy]);
+
     return (
         <div className="min-h-screen bg-bb-dark p-4 md:p-8 relative transition-colors duration-300">
             <div className="max-w-7xl mx-auto relative z-10">
@@ -292,119 +301,133 @@ export default function ProfessorsContent({
                 </div>
 
                 {filteredAndSortedProfessors.length > 0 ? (
-                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
-                        {filteredAndSortedProfessors.map((professor) => {
-                            const isTopRated = (professor.averageRating || 0) >= 4.5;
+                    <>
+                        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 mb-8">
+                            {filteredAndSortedProfessors.slice(0, currentPage * itemsPerPage).map((professor) => {
+                                const isTopRated = (professor.averageRating || 0) >= 4.5;
 
-                            return (
-                                <div
-                                    key={professor.id}
-                                    className="group relative"
-                                >
-                                    <Card className="h-full overflow-hidden transition-all duration-300 bg-bb-card border border-bb-border flex flex-col rounded-xl hover:border-blue-500/30">
-                                        <div className="relative h-20 md:h-24 overflow-hidden flex-shrink-0 bg-gradient-to-br from-bb-sidebar to-bb-dark">
-                                            <ProfessorBackground url={professor.background_image_url} name={professor.nombre} specialty={professor.especialidad} />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
-                                            {isTopRated && (
-                                                <div className="absolute top-2 right-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                                                    <Trophy className="w-3 h-3" /> TOP
-                                                </div>
-                                            )}
-                                            {profile?.role === 'admin' && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDeleteClick(professor);
-                                                    }}
-                                                    className="absolute top-2 left-2 bg-red-500/20 border border-red-500/30 text-red-400 p-1.5 rounded-lg hover:bg-red-500/40 transition-colors z-20"
-                                                    title="Eliminar profesor"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        <CardContent className="p-0 relative flex-1 flex flex-col">
-                                            <div className="px-3 md:px-5 pt-8 md:pt-12 pb-3 md:pb-4 relative flex-1">
-                                                <div className="absolute -top-8 md:-top-10 left-3 md:left-5">
-                                                    <div
-                                                        className="h-14 w-14 md:h-20 md:w-20 rounded-xl md:rounded-2xl flex items-center justify-center bg-bb-sidebar border-2 border-bb-card shadow-xl overflow-hidden"
+                                return (
+                                    <div
+                                        key={professor.id}
+                                        className="group relative"
+                                    >
+                                        <Card className="h-full overflow-hidden transition-all duration-300 bg-bb-card border border-bb-border flex flex-col rounded-xl hover:border-blue-500/30">
+                                            <div className="relative h-20 md:h-24 overflow-hidden flex-shrink-0 bg-gradient-to-br from-bb-sidebar to-bb-dark">
+                                                <ProfessorBackground url={professor.background_image_url} name={professor.nombre} specialty={professor.especialidad} />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+                                                {isTopRated && (
+                                                    <div className="absolute top-2 right-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                                                        <Trophy className="w-3 h-3" /> TOP
+                                                    </div>
+                                                )}
+                                                {profile?.role === 'admin' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteClick(professor);
+                                                        }}
+                                                        className="absolute top-2 left-2 bg-red-500/20 border border-red-500/30 text-red-400 p-1.5 rounded-lg hover:bg-red-500/40 transition-colors z-20"
+                                                        title="Eliminar profesor"
                                                     >
-                                                        <img
-                                                            src={getStorageUrl(professor.avatar_url || '/profes/tl.webp', 'profile-avatars', PLACEHOLDERS.AVATAR)}
-                                                            alt={professor.nombre}
-                                                            className="w-full h-full object-cover"
-                                                            onError={(e) => {
-                                                                (e.target as HTMLImageElement).src = '/profes/tl.webp';
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex justify-end mb-2">
-                                                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${isTopRated ? 'bg-yellow-500/10 text-yellow-400' : 'bg-bb-darker border border-bb-border text-bb-text-secondary'}`}>
-                                                        <Star className={`w-3.5 h-3.5 ${isTopRated ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-400 text-gray-400'}`} />
-                                                        <span className="text-xs font-bold">{((professor.averageRating || 0)).toFixed(1)}</span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="mt-1 md:mt-2">
-                                                    <h3 className="text-sm md:text-lg font-bold text-bb-text mb-1 truncate group-hover:text-blue-400 transition-colors">
-                                                        {professor.nombre}
-                                                    </h3>
-                                                    <div className="flex flex-col gap-0.5 mb-2 md:mb-3 overflow-hidden">
-                                                        {(() => {
-                                                            const courses = new Set<string>();
-                                                            if (professor.especialidad && professor.especialidad !== 'General') {
-                                                                courses.add(professor.especialidad.trim().toUpperCase());
-                                                            }
-                                                            if (professor.otros_cursos) {
-                                                                professor.otros_cursos.split(',').forEach((c: string) => {
-                                                                    const trimmed = c.trim().toUpperCase();
-                                                                    if (trimmed && trimmed !== 'GENERAL') {
-                                                                        courses.add(trimmed);
-                                                                    }
-                                                                });
-                                                            }
-                                                            return Array.from(courses).map((course, idx) => (
-                                                                <p key={idx} className="text-[10px] md:text-xs text-bb-text-secondary truncate leading-tight">
-                                                                    {course}
-                                                                </p>
-                                                            ));
-                                                        })()}
-                                                    </div>
-                                                </div>
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                             </div>
 
-                                            <div className="h-px w-full bg-bb-border" />
+                                            <CardContent className="p-0 relative flex-1 flex flex-col">
+                                                <div className="px-3 md:px-5 pt-8 md:pt-12 pb-3 md:pb-4 relative flex-1">
+                                                    <div className="absolute -top-8 md:-top-10 left-3 md:left-5">
+                                                        <div
+                                                            className="h-14 w-14 md:h-20 md:w-20 rounded-xl md:rounded-2xl flex items-center justify-center bg-bb-sidebar border-2 border-bb-card shadow-xl overflow-hidden"
+                                                        >
+                                                            <img
+                                                                src={getStorageUrl(professor.avatar_url || '/profes/tl.webp', 'profile-avatars', PLACEHOLDERS.AVATAR)}
+                                                                alt={professor.nombre}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    (e.target as HTMLImageElement).src = '/profes/tl.webp';
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
 
-                                            <div className="grid grid-cols-2 p-2 md:p-4 gap-2 md:gap-3 mt-auto">
-                                                <Button
-                                                    variant="outline"
-                                                    className="w-full border-bb-border bg-bb-darker hover:bg-bb-hover text-bb-text-secondary hover:text-bb-text text-[10px] md:text-xs h-8 md:h-10 transition-all px-1"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        router.push(`/dashboard/professors/view?id=${professor.id}`);
-                                                    }}
-                                                >
-                                                    Calificar
-                                                </Button>
-                                                <Button
-                                                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] md:text-xs h-8 md:h-10 px-1"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        router.push(`/dashboard/professors/view?id=${professor.id}`);
-                                                    }}
-                                                >
-                                                    Ver Perfil
-                                                </Button>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                            );
-                        })}
-                    </div>
+                                                    <div className="flex justify-end mb-2">
+                                                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${isTopRated ? 'bg-yellow-500/10 text-yellow-400' : 'bg-bb-darker border border-bb-border text-bb-text-secondary'}`}>
+                                                            <Star className={`w-3.5 h-3.5 ${isTopRated ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-400 text-gray-400'}`} />
+                                                            <span className="text-xs font-bold">{((professor.averageRating || 0)).toFixed(1)}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-1 md:mt-2">
+                                                        <h3 className="text-sm md:text-lg font-bold text-bb-text mb-1 truncate group-hover:text-blue-400 transition-colors">
+                                                            {professor.nombre}
+                                                        </h3>
+                                                        <div className="flex flex-col gap-0.5 mb-2 md:mb-3 overflow-hidden">
+                                                            {(() => {
+                                                                const courses = new Set<string>();
+                                                                if (professor.especialidad && professor.especialidad !== 'General') {
+                                                                    courses.add(professor.especialidad.trim().toUpperCase());
+                                                                }
+                                                                if (professor.otros_cursos) {
+                                                                    professor.otros_cursos.split(',').forEach((c: string) => {
+                                                                        const trimmed = c.trim().toUpperCase();
+                                                                        if (trimmed && trimmed !== 'GENERAL') {
+                                                                            courses.add(trimmed);
+                                                                        }
+                                                                    });
+                                                                }
+                                                                return Array.from(courses).map((course, idx) => (
+                                                                    <p key={idx} className="text-[10px] md:text-xs text-bb-text-secondary truncate leading-tight">
+                                                                        {course}
+                                                                    </p>
+                                                                ));
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="h-px w-full bg-bb-border" />
+
+                                                <div className="grid grid-cols-2 p-2 md:p-4 gap-2 md:gap-3 mt-auto">
+                                                    <Button
+                                                        variant="outline"
+                                                        className="w-full border-bb-border bg-bb-darker hover:bg-bb-hover text-bb-text-secondary hover:text-bb-text text-[10px] md:text-xs h-8 md:h-10 transition-all px-1"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            router.push(`/dashboard/professors/view?id=${professor.id}`);
+                                                        }}
+                                                    >
+                                                        Calificar
+                                                    </Button>
+                                                    <Button
+                                                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] md:text-xs h-8 md:h-10 px-1"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            router.push(`/dashboard/professors/view?id=${professor.id}`);
+                                                        }}
+                                                    >
+                                                        Ver Perfil
+                                                    </Button>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        
+                        {filteredAndSortedProfessors.length > currentPage * itemsPerPage && (
+                            <div className="flex justify-center mb-8">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => setCurrentPage(p => p + 1)}
+                                    className="bg-bb-card border-bb-border text-bb-text hover:bg-bb-hover"
+                                >
+                                    Cargar más profesores
+                                </Button>
+                            </div>
+                        )}
+                    </>
                 ) : (
                     <div className="text-center py-20 bg-bb-card rounded-3xl border border-bb-border">
                         <div className="bg-bb-darker p-4 rounded-full w-20 h-20 mx-auto flex items-center justify-center mb-4">

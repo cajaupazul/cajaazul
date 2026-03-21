@@ -1,7 +1,12 @@
 'use client';
 
 import React from 'react';
-import AnnouncementsManager from '@/components/admin/AnnouncementsManager';
+import dynamic from 'next/dynamic';
+
+const AnnouncementsManager = dynamic(
+  () => import('@/components/admin/AnnouncementsManager'),
+  { ssr: false }
+);
 
 export default function AdminAnnouncementsPage() {
     return (

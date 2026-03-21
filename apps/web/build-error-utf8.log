@@ -1,0 +1,59 @@
+﻿
+> campuslink@0.1.0 build
+> next build
+
+   Ôû▓ Next.js 15.1.12
+
+   Creating an optimized production build ...
+node.exe : Failed to compile.
+En C:\Program Files\nodejs\npm.ps1: 
+29 Carácter: 3
++   & $NODE_EXE $NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpec 
+   ified: (Failed to compile.:String  
+  ) [], RemoteException
+    + FullyQualifiedErrorId : NativeC 
+   ommandError
+ 
+
+./app/(main)/(authenticated)/dashboard
+/admin/announcements/page.tsx
+Error:   [31mx[0m `ssr: false` is 
+not allowed with `next/dynamic` in 
+Server Components. Please move it 
+into a client component.
+    ,-[[36;1;4mC:\Users\huama\Downloa
+ds\bolt descomprimido\project-bolt-sb1
+-emsbaasg\project\apps\web\app\(main)\
+(authenticated)\dashboard\admin\announ
+cements\page.tsx[0m:4:1]
+ [2m 1[0m |     import React from 
+'react';
+ [2m 2[0m |     import dynamic from 
+'next/dynamic';
+ [2m 3[0m |     
+ [2m 4[0m | 
+[35;1m,[0m[35;1m-[0m[35;1m>[0m 
+const AnnouncementsManager = dynamic(
+ [2m 5[0m | [35;1m|[0m     () => i
+mport('@/components/admin/Announcement
+sManager'),
+ [2m 6[0m | [35;1m|[0m     { ssr: 
+false }
+ [2m 7[0m | 
+[35;1m`[0m[35;1m-[0m[35;1m>[0m 
+);
+ [2m 8[0m |     
+ [2m 9[0m |     export default 
+function AdminAnnouncementsPage() {
+ [2m10[0m |         return (
+    `----
+
+Import trace for requested module:
+./app/(main)/(authenticated)/dashboard
+/admin/announcements/page.tsx
+
+
+> Build failed because of webpack 
+errors

@@ -45,7 +45,8 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
     const [selectedCycle, setSelectedCycle] = useState('todos');
     const [selectedFaculty, setSelectedFaculty] = useState('todos');
     const [savedCourses, setSavedCourses] = useState<string[]>([]);
-    const [itemsPerPage] = useState(25);
+    const [itemsPerPage] = useState(24);
+    const [currentPage, setCurrentPage] = useState(1);
     const router = useRouter();
     const { removeCourse } = useDashboardData();
 
@@ -54,6 +55,10 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
         setCourses(initialCourses);
     }, [initialCourses]);
 
+    // Reset pagination when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedCycle, selectedFaculty]);
 
     const filteredCourses = courses.filter((course) => {
         const matchesSearch =
@@ -146,97 +151,111 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
 
             {
                 filteredCourses.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-                        {filteredCourses.map((course) => (
-                            <div
-                                key={course.id}
-                                className="group cursor-pointer overflow-hidden rounded-lg shadow-md glass-card transition-all hover:shadow-lg hover:border-blue-500/30 flex flex-col"
-                                onClick={() => router.push(`/dashboard/courses/view?id=${course.id}`)}
-                            >
-                                <div className="relative h-28 md:h-40 overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0">
-                                    {course.imagen_url ? (
-                                        <img
-                                            src={course.imagen_url}
-                                            alt={course.nombre}
-                                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                                        />
-                                    ) : (
-                                        <div className="h-full w-full bg-gradient-to-br from-blue-400 via-blue-500 to-teal-600 transition-transform group-hover:scale-105" />
-                                    )}
-                                </div>
-
-                                <div className="p-2.5 md:p-4 flex flex-col flex-1 min-h-0">
-                                    <span className="text-[10px] md:text-xs font-semibold text-bb-text-secondary uppercase truncate">
-                                        {course.codigo}
-                                    </span>
-
-                                    <h3 className="mt-1 md:mt-2 line-clamp-2 text-xs md:text-sm font-bold text-bb-text group-hover:text-blue-400 transition-colors leading-tight">
-                                        {course.nombre}
-                                    </h3>
-
-                                    <div className="mt-1.5 md:mt-2 text-[10px] md:text-xs text-bb-text-secondary space-y-0.5 md:space-y-1 block">
-                                        <div className="truncate">{course.facultad || 'Sin Facultad'}</div>
-                                        {/* Ocultar ciclo en móvil muy pequeño si es necesario, o dejarlo */}
-                                        <div>Ciclo {course.ciclo}</div>
+                    <>
+                        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 mb-8">
+                            {filteredCourses.slice(0, currentPage * itemsPerPage).map((course) => (
+                                <div
+                                    key={course.id}
+                                    className="group cursor-pointer overflow-hidden rounded-lg shadow-md glass-card transition-all hover:shadow-lg hover:border-blue-500/30 flex flex-col"
+                                    onClick={() => router.push(`/dashboard/courses/view?id=${course.id}`)}
+                                >
+                                    <div className="relative h-28 md:h-40 overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0">
+                                        {course.imagen_url ? (
+                                            <img
+                                                src={course.imagen_url}
+                                                alt={course.nombre}
+                                                className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                            />
+                                        ) : (
+                                            <div className="h-full w-full bg-gradient-to-br from-blue-400 via-blue-500 to-teal-600 transition-transform group-hover:scale-105" />
+                                        )}
                                     </div>
 
-                                    <div className="mt-auto pt-2 md:pt-3 border-t border-bb-border flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px] md:text-xs h-5 md:h-6 px-1.5 md:px-2.5">
-                                                Abierto
-                                            </Badge>
-                                            {profile?.role === 'admin' && (
-                                                <button
-                                                    onClick={async (e) => {
-                                                        e.stopPropagation();
-                                                        if (confirm('¿Estás seguro de que quieres eliminar este curso?')) {
-                                                            const { error } = await supabase.from('courses').delete().eq('id', course.id);
-                                                            if (!error) {
-                                                                setCourses(prev => prev.filter(c => c.id !== course.id));
-                                                                removeCourse(course.id);
-                                                            } else {
-                                                                alert('Error al eliminar curso');
+                                    <div className="p-2.5 md:p-4 flex flex-col flex-1 min-h-0">
+                                        <span className="text-[10px] md:text-xs font-semibold text-bb-text-secondary uppercase truncate">
+                                            {course.codigo}
+                                        </span>
+
+                                        <h3 className="mt-1 md:mt-2 line-clamp-2 text-xs md:text-sm font-bold text-bb-text group-hover:text-blue-400 transition-colors leading-tight">
+                                            {course.nombre}
+                                        </h3>
+
+                                        <div className="mt-1.5 md:mt-2 text-[10px] md:text-xs text-bb-text-secondary space-y-0.5 md:space-y-1 block">
+                                            <div className="truncate">{course.facultad || 'Sin Facultad'}</div>
+                                            {/* Ocultar ciclo en móvil muy pequeño si es necesario, o dejarlo */}
+                                            <div>Ciclo {course.ciclo}</div>
+                                        </div>
+
+                                        <div className="mt-auto pt-2 md:pt-3 border-t border-bb-border flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px] md:text-xs h-5 md:h-6 px-1.5 md:px-2.5">
+                                                    Abierto
+                                                </Badge>
+                                                {profile?.role === 'admin' && (
+                                                    <button
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            if (confirm('¿Estás seguro de que quieres eliminar este curso?')) {
+                                                                const { error } = await supabase.from('courses').delete().eq('id', course.id);
+                                                                if (!error) {
+                                                                    setCourses(prev => prev.filter(c => c.id !== course.id));
+                                                                    removeCourse(course.id);
+                                                                } else {
+                                                                    alert('Error al eliminar curso');
+                                                                }
                                                             }
-                                                        }
+                                                        }}
+                                                        className="p-1 text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
+                                                        title="Eliminar curso"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-1 md:gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleSavedCourse(course.id);
                                                     }}
-                                                    className="p-1 text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
-                                                    title="Eliminar curso"
+                                                    className={`text-base md:text-lg transition-colors p-1 ${savedCourses.includes(course.id)
+                                                        ? 'text-yellow-400'
+                                                        : 'text-bb-text-secondary hover:text-yellow-400'
+                                                        }`}
+                                                    aria-label="Guardar curso"
                                                 >
-                                                    <Trash2 className="w-4 h-4" />
+                                                    ★
                                                 </button>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-1 md:gap-2">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleSavedCourse(course.id);
-                                                }}
-                                                className={`text-base md:text-lg transition-colors p-1 ${savedCourses.includes(course.id)
-                                                    ? 'text-yellow-400'
-                                                    : 'text-bb-text-secondary hover:text-yellow-400'
-                                                    }`}
-                                                aria-label="Guardar curso"
-                                            >
-                                                ★
-                                            </button>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    router.push(`/dashboard/courses/view?id=${course.id}`);
-                                                }}
-                                                className="text-blue-500 hover:bg-blue-500/10 hover:text-blue-400 text-[10px] md:text-xs h-7 md:h-9 px-2 hidden sm:inline-flex"
-                                            >
-                                                Ver más
-                                            </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        router.push(`/dashboard/courses/view?id=${course.id}`);
+                                                    }}
+                                                    className="text-blue-500 hover:bg-blue-500/10 hover:text-blue-400 text-[10px] md:text-xs h-7 md:h-9 px-2 hidden sm:inline-flex"
+                                                >
+                                                    Ver más
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
+                            ))}
+                        </div>
+                        
+                        {filteredCourses.length > currentPage * itemsPerPage && (
+                            <div className="flex justify-center mb-8">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => setCurrentPage(p => p + 1)}
+                                    className="bg-bb-card border-bb-border text-bb-text hover:bg-bb-hover"
+                                >
+                                    Cargar más cursos
+                                </Button>
                             </div>
-                        ))}
-                    </div>
+                        )}
+                    </>
                 ) : (
                     <div className="text-center py-12">
                         <p className="text-bb-text-secondary text-lg">

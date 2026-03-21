@@ -1,0 +1,29 @@
+
+> campuslink@0.1.0 build
+> next build
+
+   ▲ Next.js 15.1.12
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/43) ...
+Error occurred prerendering page "/dashboard/store". Read more: https://nextjs.org/docs/messages/prerender-error
+Error: @supabase/ssr: Your project's URL and API key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at rj (C:\Users\huama\Downloads\bolt descomprimido\project-bolt-sb1-emsbaasg\project\apps\web\.next\server\chunks\4852.js:37:55843)
+    at 31283 (C:\Users\huama\Downloads\bolt descomprimido\project-bolt-sb1-emsbaasg\project\apps\web\.next\server\chunks\7367.js:7:5527)
+    at t (C:\Users\huama\Downloads\bolt descomprimido\project-bolt-sb1-emsbaasg\project\apps\web\.next\server\webpack-runtime.js:1:128)
+    at 43084 (C:\Users\huama\Downloads\bolt descomprimido\project-bolt-sb1-emsbaasg\project\apps\web\.next\server\chunks\7367.js:7:1778)
+    at Object.t [as require] (C:\Users\huama\Downloads\bolt descomprimido\project-bolt-sb1-emsbaasg\project\apps\web\.next\server\webpack-runtime.js:1:128)
+    at require (C:\Users\huama\Downloads\bolt descomprimido\project-bolt-sb1-emsbaasg\project\apps\web\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:132:7946)
+    at c (C:\Users\huama\Downloads\bolt descomprimido\project-bolt-sb1-emsbaasg\project\apps\web\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:36:680)
+    at U (C:\Users\huama\Downloads\bolt descomprimido\project-bolt-sb1-emsbaasg\project\apps\web\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:36:10668)
+    at P (C:\Users\huama\Downloads\bolt descomprimido\project-bolt-sb1-emsbaasg\project\apps\web\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:36:8717)
+    at rT (C:\Users\huama\Downloads\bolt descomprimido\project-bolt-sb1-emsbaasg\project\apps\web\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:20:32387)
+Export encountered an error on /(main)/(authenticated)/dashboard/store/page: /dashboard/store, exiting the build.
+ ⨯ Next.js build worker exited with code: 1 and signal: null
