@@ -44,6 +44,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import AnnouncementPopup from '@/components/announcements/AnnouncementPopup';
 
 export default function AuthenticatedLayout({
   children,
@@ -51,6 +52,8 @@ export default function AuthenticatedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+ // ... (rest unchanged to the line just before the return)
+
   const pathname = usePathname();
   const { colors, loading: themeLoading } = useTheme();
   const { profile, session, loading: profileLoading } = useProfile();
@@ -243,6 +246,7 @@ export default function AuthenticatedLayout({
 
   return (
     <div className="relative flex h-screen bg-bb-dark transition-colors duration-300">
+      <AnnouncementPopup />
       {/* Overlay de Carga Global */}
       {/* Overlay de Carga Global */}
       {isInitialLoading && (

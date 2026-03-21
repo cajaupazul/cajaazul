@@ -8,7 +8,6 @@ import { BookOpen, Star, Calendar, Users, TrendingUp, Award, LogIn } from 'lucid
 import { motion } from 'framer-motion';
 import HeroCarousel from '@/components/landing/HeroCarousel';
 import SocialSidebar from '@/components/landing/SocialSidebar';
-import AnnouncementPopup from '@/components/announcements/AnnouncementPopup';
 
 export default function HomePage() {
   const [scrolled, setScrolled] = useState(false);
@@ -22,7 +21,6 @@ export default function HomePage() {
   return (
     <div className="relative w-full bg-white select-none xl:pl-[50px]">
       <SocialSidebar />
-      <AnnouncementPopup />
 
       {/* Navbar - Refined and Minimalist */}
       <nav
