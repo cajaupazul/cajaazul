@@ -88,6 +88,24 @@ const OptionsSelector: React.FC = () => {
         fetchAnnouncements();
     }, []);
 
+    const [isHovered, setIsHovered] = useState(false);
+
+    // Auto-rotate effect
+    useEffect(() => {
+        if (options.length <= 1) return;
+        if (isHovered) return;
+
+        const timer = setInterval(() => {
+            setActiveOption(prev => {
+                const currentIndex = options.findIndex(opt => opt.id === prev);
+                const nextIndex = (currentIndex + 1) % options.length;
+                return options[nextIndex].id;
+            });
+        }, 5000); // Rotar cada 5 segundos
+
+        return () => clearInterval(timer);
+    }, [options, isHovered]);
+
     const handleOptionClick = (option: OptionData) => {
         setActiveOption(option.id);
         if (option.id.toString().length > 4 && (option as any).link) {
@@ -308,7 +326,11 @@ const OptionsSelector: React.FC = () => {
   `;
 
     return (
-        <div className="w-full my-8 bg-bb-card rounded-3xl p-4 md:p-6 border border-bb-border shadow-xl overflow-hidden">
+        <div 
+            className="w-full my-8 bg-bb-card rounded-3xl p-4 md:p-6 border border-bb-border shadow-xl overflow-hidden"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
             <style dangerouslySetInnerHTML={{ __html: styles }} />
 
             <div className="options-container">
