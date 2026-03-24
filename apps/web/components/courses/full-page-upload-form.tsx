@@ -58,7 +58,13 @@ export default function FullPageUploadForm({
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFiles = Array.from(e.target.files || []);
         if (selectedFiles.length > 0) {
-            setFiles(prev => [...prev, ...selectedFiles]);
+            setFiles(prev => {
+                const combined = [...prev, ...selectedFiles];
+                // Sort files naturally (like Windows Explorer) e.g., File1, File2, File10
+                return combined.sort((a, b) => 
+                    a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+                );
+            });
         }
     };
 
