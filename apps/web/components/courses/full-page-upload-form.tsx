@@ -91,8 +91,13 @@ export default function FullPageUploadForm({
             const userId = user.id;
 
             if (materialType === 'enlace') {
-                for (const link of links) {
+                const nowMs = Date.now();
+                for (let i = 0; i < links.length; i++) {
+                    const link = links[i];
                     if (!link.url) continue;
+                    
+                    const linkCreatedAt = new Date(nowMs - i * 1000).toISOString();
+
                     const { error: insertError } = await supabase.from('materials').insert({
                         course_id: courseId,
                         user_id: userId,
@@ -102,6 +107,7 @@ export default function FullPageUploadForm({
                         url_archivo: link.url,
                         tipo: 'enlace',
                         descargas: 0,
+                        created_at: linkCreatedAt,
                     });
                     if (insertError) throw new Error(`Error al guardar enlace: ${insertError.message}`);
                 }
@@ -144,9 +150,14 @@ export default function FullPageUploadForm({
                     return { file, materialUrl, thumbnailUrl, fileExt };
                 }));
 
-                // 2. Then, insert into DB sequentially to preserve order in created_at
-                for (const info of uploadedFilesInfo) {
+                // 2. Then, insert into DB using explicitly staggered timestamps to preserve logical render ordering
+                const nowMs = Date.now();
+                for (let i = 0; i < uploadedFilesInfo.length; i++) {
+                    const info = uploadedFilesInfo[i];
                     const { file, materialUrl, thumbnailUrl, fileExt } = info;
+
+                    // i=0 is newest (top), i=1 is 1s older (second), etc. This enforces order in created_at DESC queries.
+                    const fileCreatedAt = new Date(nowMs - i * 1000).toISOString();
 
                     const { error: insertError } = await supabase.from('materials').insert({
                         course_id: courseId,
@@ -158,6 +169,7 @@ export default function FullPageUploadForm({
                         tipo: materialType,
                         descargas: 0,
                         thumbnail_url: thumbnailUrl,
+                        created_at: fileCreatedAt,
                     });
 
                     if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
