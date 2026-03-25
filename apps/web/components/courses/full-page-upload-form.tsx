@@ -21,30 +21,35 @@ interface FullPageUploadFormProps {
     courseId: string;
     courseName: string;
     allProfessors: Professor[];
+    courseCycles: any[];
 }
 
-const MATERIAL_TYPES = [
-    { value: 'syllabus', label: '📖 Sílabo Oficial', description: 'Documento oficial del curso' },
-    { value: 'ppt', label: '📊 Presentación (PPT)', description: 'Diapositivas de clase' },
-    { value: 'examen', label: '📝 Examen Pasado', description: 'Parciales, finales o prácticas' },
-    { value: 'guia', label: '📚 Guía de Estudio', description: 'Resúmenes y apuntes' },
-    { value: 'enlace', label: '🔗 Enlace / Link', description: 'Links externos o videos' },
-    { value: 'otro', label: '📎 Otro Material', description: 'Cualquier otro recurso útil' },
+const PREDEFINED_SUBFOLDERS = [
+    '📖 Sílabo y Cronograma',
+    '📝 Exámenes',
+    '📊 Presentaciones y Diapositivas',
+    '🔗 Enlaces Útiles',
+    '📚 Otros Recursos'
 ];
 
 export default function FullPageUploadForm({
     courseId,
     courseName,
     allProfessors,
+    courseCycles = [],
 }: FullPageUploadFormProps) {
     const router = useRouter();
     const [uploading, setUploading] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
-    const [materialType, setMaterialType] = useState('otro');
+    
+    // New Hierarchy State
+    const [uploadMethod, setUploadMethod] = useState<'file' | 'link'>('file');
+    const [selectedCycleId, setSelectedCycleId] = useState<string>('historical');
+    const [selectedSubfolder, setSelectedSubfolder] = useState<string>('');
+    
     const [professorId, setProfessorId] = useState<string>(
         allProfessors.length === 1 ? allProfessors[0].id : 'none'
     );
-    const [description, setDescription] = useState('');
     const [links, setLinks] = useState<{ titulo: string; url: string }[]>([{ titulo: '', url: '' }]);
 
     const addLinkRow = () => setLinks(prev => [...prev, { titulo: '', url: '' }]);
@@ -71,14 +76,17 @@ export default function FullPageUploadForm({
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (materialType !== 'enlace' && files.length === 0) {
+        if (uploadMethod === 'file' && files.length === 0) {
             alert('Por favor selecciona al menos un archivo');
             return;
         }
 
+        if (!selectedSubfolder) {
+            alert('Por favor selecciona la carpeta de destino');
+            return;
+        }
 
-
-        if (materialType === 'enlace' && links.some(l => !l.url)) {
+        if (uploadMethod === 'link' && links.some(l => !l.url)) {
             alert('Por favor ingresa la URL de todos los enlaces');
             return;
         }
@@ -90,7 +98,7 @@ export default function FullPageUploadForm({
             if (!user) throw new Error('Usuario no autenticado');
             const userId = user.id;
 
-            if (materialType === 'enlace') {
+            if (uploadMethod === 'link') {
                 const nowMs = Date.now();
                 for (let i = 0; i < links.length; i++) {
                     const link = links[i];
@@ -103,9 +111,9 @@ export default function FullPageUploadForm({
                         user_id: userId,
                         professor_id: professorId === 'none' ? null : professorId,
                         titulo: link.titulo || 'Enlace Externo',
-                        descripcion: description.trim() || null,
                         url_archivo: link.url,
-                        tipo: 'enlace',
+                        tipo: selectedSubfolder,
+                        cycle_id: selectedCycleId === 'historical' ? null : selectedCycleId,
                         descargas: 0,
                         created_at: linkCreatedAt,
                     });
@@ -164,9 +172,9 @@ export default function FullPageUploadForm({
                         user_id: userId,
                         professor_id: professorId === 'none' ? null : professorId,
                         titulo: file.name.split('.')[0] || file.name,
-                        descripcion: description.trim() || null,
                         url_archivo: materialUrl,
-                        tipo: materialType,
+                        tipo: selectedSubfolder,
+                        cycle_id: selectedCycleId === 'historical' ? null : selectedCycleId,
                         descargas: 0,
                         thumbnail_url: thumbnailUrl,
                         created_at: fileCreatedAt,
@@ -174,7 +182,7 @@ export default function FullPageUploadForm({
 
                     if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
 
-                    if (materialType === 'syllabus') {
+                    if (selectedSubfolder === '📖 Sílabo y Cronograma') {
                         await supabase
                             .from('courses')
                             .update({ syllabus_url: materialUrl })
@@ -227,14 +235,36 @@ export default function FullPageUploadForm({
             </div>
 
             <form onSubmit={handleUpload} className="space-y-8 bg-bb-card p-8 rounded-2xl shadow-2xl border border-bb-border shadow-black/10 dark:shadow-black/40">
+                {/* Format Toggle */}
+                <div className="flex bg-bb-sidebar rounded-xl p-1 mb-8 w-max">
+                    <button
+                        type="button"
+                        onClick={() => setUploadMethod('file')}
+                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${uploadMethod === 'file' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                    >
+                        Subir Archivos
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setUploadMethod('link');
+                            // If they switch to Link, auto-select Enlaces Útiles if possible
+                            if (!selectedSubfolder) setSelectedSubfolder('🔗 Enlaces Útiles');
+                        }}
+                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${uploadMethod === 'link' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                    >
+                        Publicar Enlaces Externos
+                    </button>
+                </div>
+
                 {/* 1. Selección de Archivo */}
                 <div className="space-y-4">
                     <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
-                        <CheckCircle className={`h-5 w-5 ${materialType === 'enlace' ? (links.some(l => l.url) ? 'text-green-500' : 'text-bb-border') : (files.length > 0 ? 'text-green-500' : 'text-bb-border')}`} />
-                        1. {materialType === 'enlace' ? 'Agrega los enlaces' : 'Selecciona los archivos'}
+                        <CheckCircle className={`h-5 w-5 ${uploadMethod === 'link' ? (links.some(l => l.url) ? 'text-green-500' : 'text-bb-border') : (files.length > 0 ? 'text-green-500' : 'text-bb-border')}`} />
+                        1. {uploadMethod === 'link' ? 'Agrega los enlaces' : 'Selecciona los archivos'}
                     </Label>
 
-                    {materialType === 'enlace' ? (
+                    {uploadMethod === 'link' ? (
                         <div className="space-y-4">
                             {links.map((link, index) => (
                                 <div key={index} className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-bb-darker/50 rounded-2xl border border-bb-border">
@@ -340,38 +370,58 @@ export default function FullPageUploadForm({
                     <div className="space-y-4">
                         <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
                             <span className="w-7 h-7 rounded-lg bg-bb-sidebar text-blue-400 border border-bb-border flex items-center justify-center text-xs font-black">2</span>
-                            Detalles del lote
+                            Destino del Archivo
                         </Label>
 
-                        <div className="space-y-4">
+                        <div className="space-y-4 bg-bb-sidebar/50 p-5 rounded-2xl border border-bb-border">
+                            {/* Cycle Selector */}
                             <div>
-                                <Label htmlFor="type" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">Categoría de material</Label>
-                                <Select value={materialType} onValueChange={setMaterialType}>
-                                    <SelectTrigger className="mt-1.5 h-12 bg-bb-sidebar border-bb-border text-bb-text rounded-xl focus:ring-blue-500/20">
-                                        <SelectValue />
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">¿A qué Ciclo pertenece?</Label>
+                                <Select value={selectedCycleId} onValueChange={(val) => {
+                                    setSelectedCycleId(val);
+                                    setSelectedSubfolder('');
+                                }}>
+                                    <SelectTrigger className="h-12 bg-bb-card border-bb-border text-bb-text rounded-xl focus:ring-blue-500/20">
+                                        <SelectValue placeholder="Selecciona un ciclo" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-bb-card border-bb-border text-bb-text rounded-xl">
-                                        {MATERIAL_TYPES.map((type) => (
-                                            <SelectItem key={type.value} value={type.value} className="focus:bg-blue-600 focus:text-white rounded-lg">
-                                                <div className="flex flex-col py-1">
-                                                    <span className="font-bold">{type.label}</span>
-                                                    <span className="text-[10px] opacity-60 font-medium">{type.description}</span>
-                                                </div>
+                                    <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60 z-[9999]">
+                                        <SelectItem value="historical" className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 font-bold">
+                                            📦 Archivos Históricos (General)
+                                        </SelectItem>
+                                        {courseCycles.map((cycle: any) => (
+                                            <SelectItem key={cycle.id} value={cycle.id} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2">
+                                                Ciclo {cycle.ciclo_name}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
 
+                            {/* Subfolder Selector */}
                             <div>
-                                <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">Descripción común (Opcional)</Label>
-                                <Input
-                                    id="description"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Describe brevemente este contenido"
-                                    className="mt-1.5 h-12 bg-bb-sidebar border-bb-border text-bb-text placeholder:text-bb-text-secondary/30 rounded-xl focus:ring-blue-500/20"
-                                />
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">Sección o Carpeta</Label>
+                                <Select value={selectedSubfolder} onValueChange={setSelectedSubfolder}>
+                                    <SelectTrigger className="h-12 bg-bb-card border-bb-border text-bb-text rounded-xl focus:ring-blue-500/20">
+                                        <SelectValue placeholder="Selecciona una sección..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60 z-[9999]">
+                                        {PREDEFINED_SUBFOLDERS.map((sub: string) => (
+                                            <SelectItem key={sub} value={sub} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 font-bold">
+                                                {sub}
+                                            </SelectItem>
+                                        ))}
+                                        {selectedCycleId !== 'historical' && courseCycles.find(c => c.id === selectedCycleId)?.active_subfolders?.filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)).map((sub: string) => (
+                                            <SelectItem key={sub} value={sub} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 text-blue-300 ml-4">
+                                                ↳ {sub}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {selectedCycleId !== 'historical' && courseCycles.find(c => c.id === selectedCycleId)?.active_subfolders?.length > 0 && (
+                                    <p className="text-[10px] text-bb-text-secondary mt-2 px-1 italic">
+                                        También puedes seleccionar las evaluaciones anidadas creadas para este ciclo.
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -442,10 +492,10 @@ export default function FullPageUploadForm({
                     </Button>
                     <Button
                         type="submit"
-                        disabled={uploading || (materialType === 'enlace' ? links.every(l => !l.url) : files.length === 0)}
+                        disabled={uploading || !selectedSubfolder || (uploadMethod === 'link' ? links.every(l => !l.url) : files.length === 0)}
                         className="w-full sm:w-64 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all text-white font-black uppercase tracking-widest text-xs h-12 rounded-xl active:scale-95 disabled:opacity-50"
                     >
-                        {uploading ? 'Subiendo...' : (materialType === 'enlace' ? 'Publicar Enlaces' : 'Publicar Materiales')}
+                        {uploading ? 'Subiendo...' : (uploadMethod === 'link' ? 'Publicar Enlaces' : 'Publicar Materiales')}
                     </Button>
                 </div>
             </form>

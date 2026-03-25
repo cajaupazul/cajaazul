@@ -34,7 +34,16 @@ function UploadWrapper() {
                 }
                 setCourse(courseData);
 
-                // 2. Fetch professors
+                // 2. Fetch course cycles
+                const { data: cyclesData } = await supabase
+                    .from('course_cycles')
+                    .select('*')
+                    .eq('course_id', courseId)
+                    .order('ciclo_name', { ascending: false });
+
+                const finalCycles = cyclesData || [];
+
+                // 3. Fetch professors
                 const courseNameClean = courseData.nombre.trim();
 
                 const [
@@ -68,10 +77,7 @@ function UploadWrapper() {
 
                 const getMatchedCourse = (professorCoursesStr: string | null) => {
                     if (!professorCoursesStr) return null;
-                    // Split by common separators: comma, semicolon, pipe, bullet, newline
                     const segments = professorCoursesStr.split(/[,;|•\n]/).map(s => s.trim()).filter(Boolean);
-
-                    // Return the FIRST segment that matches exactly after normalization
                     return segments.find(segment => normalizeStr(segment) === targetNorm) || null;
                 };
 
@@ -84,14 +90,12 @@ function UploadWrapper() {
                         return; // Skip if no clear match exists
                     }
 
-                    // Attach which course matched for UI purposes
                     const displayMatch = matchedSpecialty || matchedOthers || courseNameClean;
                     const professorWithMatch = { ...p, matchedCourse: displayMatch };
 
                     const normalizedName = p.nombre.toLowerCase().trim();
                     const existing = uniqueProfessorsByName.get(normalizedName);
 
-                    // Priority: Explicitly linked > Specialty match > Other match
                     if (!existing || isExplicitlyLinked || (matchedSpecialty && !getMatchedCourse(existing.especialidad))) {
                         uniqueProfessorsByName.set(normalizedName, professorWithMatch);
                     }
@@ -99,6 +103,9 @@ function UploadWrapper() {
 
                 const finalProfessors = Array.from(uniqueProfessorsByName.values());
                 setProfessors(finalProfessors);
+                
+                // Expose to state
+                setCourse({ ...courseData, cycles: finalCycles });
 
             } catch (err) {
                 console.error('Error fetching upload data:', err);
@@ -133,6 +140,7 @@ function UploadWrapper() {
                 courseId={course.id}
                 courseName={course.nombre}
                 allProfessors={professors}
+                courseCycles={course.cycles}
             />
         </div>
     );

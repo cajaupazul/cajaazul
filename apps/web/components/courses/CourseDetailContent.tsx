@@ -924,7 +924,7 @@ export default function CourseDetailContent({
                                         <SelectValue placeholder="Elige un tipo de evaluación" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl">
-                                        {['PC 1', 'PC 2', 'PC 3', 'PC 4', 'Examen Parcial', 'Examen Final', 'Examen Sustitutorio'].map(opt => (
+                                        {['PC 1', 'PC 2', 'PC 3', 'PC 4', 'PC 5', 'Examen Parcial', 'Examen Final', 'Examen Sustitutorio'].map(opt => (
                                             <SelectItem 
                                                 key={opt} 
                                                 value={opt} 
