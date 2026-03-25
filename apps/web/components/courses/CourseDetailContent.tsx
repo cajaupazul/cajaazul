@@ -1047,33 +1047,45 @@ export default function CourseDetailContent({
 
                                 {targetCycleId !== 'historical' && (
                                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}>
-                                        <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Subcarpeta de Destino</label>
+                                        <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Sección o Carpeta</label>
                                         <Select value={targetSubfolder} onValueChange={setTargetSubfolder}>
                                             <SelectTrigger className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 h-12 text-sm text-bb-text focus:outline-none focus:border-blue-500 shadow-none">
-                                                <SelectValue placeholder="Selecciona una subcarpeta..." />
+                                                <SelectValue placeholder="Selecciona una sección..." />
                                             </SelectTrigger>
                                             <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60">
-                                                {PREDEFINED_SUBFOLDERS.map((sub: string) => {
-                                                    const isExams = sub === '📝 Exámenes';
-                                                    const nestedSubfolders = isExams && targetCycleId !== 'historical'
-                                                        ? courseCycles.find(c => c.id === targetCycleId)?.active_subfolders?.filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)) || []
-                                                        : [];
+                                                {PREDEFINED_SUBFOLDERS.map((sub: string) => (
+                                                    <SelectItem key={sub} value={sub} className={`focus:bg-bb-card cursor-pointer py-2 font-bold ${sub === '📝 Exámenes' ? 'text-blue-400' : ''}`}>
+                                                        {sub}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
 
-                                                    return (
-                                                        <div key={`group-${sub}`}>
-                                                            <SelectItem value={sub} className={`focus:bg-bb-card cursor-pointer py-2 font-bold ${isExams ? 'text-blue-400' : ''}`}>
-                                                                {sub}
-                                                            </SelectItem>
-                                                            {nestedSubfolders.map((nested: string) => (
-                                                                <SelectItem key={nested} value={nested} className="focus:bg-bb-card cursor-pointer py-2 text-blue-300 ml-4 pl-4 border-l-2 border-bb-border/50 bg-bb-sidebar/30">
+                                        {/* Nested Selection for Evaluations */}
+                                        {targetSubfolder === '📝 Exámenes' && targetCycleId !== 'historical' && (
+                                            <motion.div 
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                className="mt-4 pt-4 border-t border-bb-border/50"
+                                            >
+                                                <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Tipo de Evaluación (Opcional)</label>
+                                                <Select value={targetSubfolder} onValueChange={setTargetSubfolder}>
+                                                    <SelectTrigger className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 h-12 text-sm text-blue-400 font-bold focus:outline-none focus:border-blue-500 shadow-none">
+                                                        <SelectValue placeholder="Carpeta de Examen General" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl">
+                                                        <SelectItem value="📝 Exámenes" className="focus:bg-bb-card cursor-pointer py-2 italic opacity-60">📁 Carpeta Raíz de Exámenes</SelectItem>
+                                                        {(courseCycles.find(c => c.id === targetCycleId)?.active_subfolders || [])
+                                                            .filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s))
+                                                            .map((nested: string) => (
+                                                                <SelectItem key={nested} value={nested} className="focus:bg-bb-card cursor-pointer py-2 text-blue-300">
                                                                     ↳ {nested}
                                                                 </SelectItem>
                                                             ))}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </SelectContent>
-                                        </Select>
+                                                    </SelectContent>
+                                                </Select>
+                                            </motion.div>
+                                        )}
                                     </motion.div>
                                 )}
                             </div>

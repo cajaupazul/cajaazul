@@ -1,0 +1,125 @@
+﻿apps/web/components/courses/full-page-upload-form.tsx(5,24): error TS2307: Cannot find module '@/components/ui/button' or its corresponding type declarations.
+apps/web/components/courses/full-page-upload-form.tsx(6,23): error TS2307: Cannot find module '@/components/ui/input' or its corresponding type declarations.
+apps/web/components/courses/full-page-upload-form.tsx(7,23): error TS2307: Cannot find module '@/components/ui/label' or its corresponding type declarations.
+apps/web/components/courses/full-page-upload-form.tsx(8,37): error TS2307: Cannot find module '@/lib/supabase' or its corresponding type declarations.
+apps/web/components/courses/full-page-upload-form.tsx(9,43): error TS2307: Cannot find module '@/lib/thumbnail-generator' or its corresponding type declarations.
+apps/web/components/courses/full-page-upload-form.tsx(17,8): error TS2307: Cannot find module '@/components/ui/select' or its corresponding type declarations.
+apps/web/components/courses/full-page-upload-form.tsx(181,61): error TS2307: Cannot find module '@/lib/r2-storage' or its corresponding type declarations.
+apps/web/components/courses/full-page-upload-form.tsx(244,76): error TS2307: Cannot find module '@/lib/converter' or its corresponding type declarations.
+apps/web/components/courses/full-page-upload-form.tsx(283,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(284,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(285,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(290,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(293,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(294,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(295,63): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(299,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(302,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(304,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(305,25): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(306,29): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(307,54): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(312,25): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(313,29): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(314,33): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(315,33): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(319,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(320,41): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(322,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(323,41): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(327,45): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(335,29): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(336,33): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(337,33): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(338,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(339,41): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(341,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(343,45): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(354,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(355,25): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(356,29): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(360,25): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(361,29): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(362,33): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(363,33): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(368,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(373,29): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(374,33): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(375,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(377,33): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(378,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(379,41): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(382,41): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(383,45): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(385,49): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(394,29): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(402,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(403,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(404,25): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(405,29): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(406,52): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(411,25): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(412,29): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(419,29): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(434,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(444,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(445,41): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(446,41): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(448,49): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(450,57): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(455,61): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(458,53): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(459,57): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(460,57): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(467,53): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(468,57): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(469,57): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(478,45): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(494,33): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(495,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(497,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(498,41): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(506,41): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(507,45): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(508,49): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(510,45): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(511,49): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(512,79): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(518,41): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(520,49): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(521,53): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(522,57): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(523,57): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(524,61): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(525,61): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(528,53): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(533,57): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(545,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(546,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/components/courses/full-page-upload-form.tsx(554,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+apps/web/node_modules/lucide-react/dist/lucide-react.d.ts(2,10): error TS2305: Module '"react"' has no exported member 'ReactSVG'.
+apps/web/node_modules/next/dist/build/templates/app-page.d.ts(10,40): error TS2307: Cannot find module 'VAR_MODULE_GLOBAL_ERROR' or its corresponding type declarations.
+apps/web/node_modules/next/dist/build/webpack-config.d.ts(9,104): error TS2694: Namespace '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/next/dist/compiled/webpack/webpack".webpack' has no exported member 'RuleSetUseItem'.
+apps/web/node_modules/next/dist/build/webpack/loaders/next-app-loader/index.d.ts(1,13): error TS2613: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/next/dist/compiled/webpack/webpack"' has no default export. Did you mean to use 'import { webpack } from "C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/next/dist/compiled/webpack/webpack"' instead?
+apps/web/node_modules/next/dist/client/components/error-boundary.d.ts(1,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/client/components/http-access-fallback/error-boundary.d.ts(11,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/client/components/layout-router.d.ts(3,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/client/link.d.ts(1,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/client/with-router.d.ts(1,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/server/app-render/entry-base.d.ts(1,114): error TS2307: Cannot find module 'react-server-dom-webpack/server.edge' or its corresponding type declarations.
+apps/web/node_modules/next/dist/server/app-render/entry-base.d.ts(2,27): error TS2307: Cannot find module 'react-server-dom-webpack/static.edge' or its corresponding type declarations.
+apps/web/node_modules/next/dist/server/render.d.ts(14,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/server/web/spec-extension/adapters/headers.d.ts(39,16): error TS2304: Cannot find name 'HeadersIterator'.
+apps/web/node_modules/next/dist/server/web/spec-extension/adapters/headers.d.ts(40,13): error TS2304: Cannot find name 'HeadersIterator'.
+apps/web/node_modules/next/dist/server/web/spec-extension/adapters/headers.d.ts(41,15): error TS2304: Cannot find name 'HeadersIterator'.
+apps/web/node_modules/next/dist/server/web/spec-extension/adapters/headers.d.ts(42,26): error TS2304: Cannot find name 'HeadersIterator'.
+apps/web/node_modules/next/dist/shared/lib/amp-context.shared-runtime.d.ts(1,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/shared/lib/app-router-context.shared-runtime.d.ts(4,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/shared/lib/head-manager-context.shared-runtime.d.ts(1,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/shared/lib/image-config-context.shared-runtime.d.ts(1,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/shared/lib/loadable-context.shared-runtime.d.ts(1,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/shared/lib/loadable.shared-runtime.d.ts(21,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/shared/lib/router-context.shared-runtime.d.ts(1,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/shared/lib/server-inserted-html.shared-runtime.d.ts(1,8): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+apps/web/node_modules/next/dist/shared/lib/utils.d.ts(10,13): error TS1192: Module '"fs"' has no default export.
+apps/web/node_modules/next/dist/types.d.ts(8,13): error TS1259: Module '"C:/Users/huama/Downloads/bolt descomprimido/project-bolt-sb1-emsbaasg/project/apps/web/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag

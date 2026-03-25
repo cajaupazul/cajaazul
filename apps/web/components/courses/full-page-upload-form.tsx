@@ -40,9 +40,8 @@ export default function FullPageUploadForm({
 }: FullPageUploadFormProps) {
     const router = useRouter();
     const [uploading, setUploading] = useState(false);
-    const [files, setFiles] = useState<File[]>([]);
     
-    // New Hierarchy State
+    // Multi-dropzone structural state
     const [uploadMethod, setUploadMethod] = useState<'file' | 'link'>('file');
     const [selectedCycleId, setSelectedCycleId] = useState<string>('historical');
     const [selectedSubfolder, setSelectedSubfolder] = useState<string>('');
@@ -50,45 +49,85 @@ export default function FullPageUploadForm({
     const [professorId, setProfessorId] = useState<string>(
         allProfessors.length === 1 ? allProfessors[0].id : 'none'
     );
-    const [links, setLinks] = useState<{ titulo: string; url: string }[]>([{ titulo: '', url: '' }]);
 
-    const addLinkRow = () => setLinks(prev => [...prev, { titulo: '', url: '' }]);
-    const updateLink = (index: number, field: 'titulo' | 'url', value: string) => {
-        const newLinks = [...links];
-        newLinks[index][field] = value;
-        setLinks(newLinks);
+    // Mapped State: Folder Name -> Files/Links
+    const [filesMap, setFilesMap] = useState<Record<string, File[]>>({});
+    const [linksMap, setLinksMap] = useState<Record<string, { titulo: string; url: string }[]>>({
+        'General': [{ titulo: '', url: '' }]
+    });
+
+    const addLinkRow = (key: string) => {
+        setLinksMap(prev => {
+            const current = prev[key] || [];
+            return { ...prev, [key]: [...current, { titulo: '', url: '' }] };
+        });
     };
-    const removeLinkRow = (index: number) => setLinks(prev => prev.filter((_, i) => i !== index));
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const updateLink = (key: string, index: number, field: 'titulo' | 'url', value: string) => {
+        setLinksMap(prev => {
+            const current = [...(prev[key] || [])];
+            current[index] = { ...current[index], [field]: value };
+            return { ...prev, [key]: current };
+        });
+    };
+
+    const removeLinkRow = (key: string, index: number) => {
+        setLinksMap(prev => {
+            const current = prev[key] || [];
+            const filtered = current.filter((_, i) => i !== index);
+            return { ...prev, [key]: filtered };
+        });
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
         const selectedFiles = Array.from(e.target.files || []);
         if (selectedFiles.length > 0) {
-            setFiles(prev => {
-                const combined = [...prev, ...selectedFiles];
-                // Sort files naturally (like Windows Explorer) e.g., File1, File2, File10
-                return combined.sort((a, b) => 
-                    a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
-                );
+            setFilesMap(prev => {
+                const existing = prev[key] || [];
+                const combined = [...existing, ...selectedFiles];
+                // Sort files naturally (like Windows Explorer)
+                return {
+                    ...prev,
+                    [key]: combined.sort((a, b) => 
+                        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+                    )
+                };
             });
         }
+    };
+
+    const removeFile = (key: string, index: number) => {
+        setFilesMap(prev => ({
+            ...prev,
+            [key]: prev[key].filter((_, i) => i !== index)
+        }));
     };
 
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (uploadMethod === 'file' && files.length === 0) {
-            alert('Por favor selecciona al menos un archivo');
-            return;
-        }
-
         if (!selectedSubfolder) {
-            alert('Por favor selecciona la carpeta de destino');
+            alert('Por favor selecciona la carpeta de destino primero');
             return;
         }
 
-        if (uploadMethod === 'link' && links.some(l => !l.url)) {
-            alert('Por favor ingresa la URL de todos los enlaces');
-            return;
+        if (uploadMethod === 'file') {
+            const hasFiles = Object.values(filesMap).some(arr => arr.length > 0);
+            if (!hasFiles) {
+                alert('Por favor selecciona al menos un archivo');
+                return;
+            }
+        } else {
+            const hasLinks = Object.values(linksMap).some(arr => arr.some(l => l.url));
+            if (!hasLinks) {
+                alert('Por favor ingresa la URL de al menos un enlace');
+                return;
+            }
+            const hasInvalidLink = Object.values(linksMap).some(arr => arr.some(l => l.titulo && !l.url));
+            if (hasInvalidLink) {
+                alert('Por favor completa la URL para los enlaces con título');
+                return;
+            }
         }
 
         setUploading(true);
@@ -99,12 +138,18 @@ export default function FullPageUploadForm({
             const userId = user.id;
 
             if (uploadMethod === 'link') {
+                const allLinks: { titulo: string; url: string; target: string }[] = [];
+                Object.entries(linksMap).forEach(([folderKey, linkArray]) => {
+                    linkArray.forEach(l => {
+                        if (l.url) allLinks.push({ ...l, target: folderKey });
+                    });
+                });
+
                 const nowMs = Date.now();
-                for (let i = 0; i < links.length; i++) {
-                    const link = links[i];
-                    if (!link.url) continue;
-                    
+                for (let i = 0; i < allLinks.length; i++) {
+                    const link = allLinks[i];
                     const linkCreatedAt = new Date(nowMs - i * 1000).toISOString();
+                    const finalTipo = link.target === 'General' ? selectedSubfolder : link.target;
 
                     const { error: insertError } = await supabase.from('materials').insert({
                         course_id: courseId,
@@ -112,7 +157,7 @@ export default function FullPageUploadForm({
                         professor_id: professorId === 'none' ? null : professorId,
                         titulo: link.titulo || 'Enlace Externo',
                         url_archivo: link.url,
-                        tipo: selectedSubfolder,
+                        tipo: finalTipo,
                         cycle_id: selectedCycleId === 'historical' ? null : selectedCycleId,
                         descargas: 0,
                         created_at: linkCreatedAt,
@@ -120,15 +165,21 @@ export default function FullPageUploadForm({
                     if (insertError) throw new Error(`Error al guardar enlace: ${insertError.message}`);
                 }
             } else {
-                // 1. First, upload all files to R2 in parallel for maximum speed
-                const uploadedFilesInfo = await Promise.all(files.map(async (file) => {
+                const allFiles: { file: File; target: string }[] = [];
+                Object.entries(filesMap).forEach(([folderKey, fileArray]) => {
+                    fileArray.forEach(f => {
+                        allFiles.push({ file: f, target: folderKey });
+                    });
+                });
+
+                // 1. Upload all files to R2 in parallel
+                const uploadedFilesInfo = await Promise.all(allFiles.map(async ({ file, target }) => {
                     const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
                     const originalName = file.name.split('.').slice(0, -1).join('.').replace(/[^a-z0-9]/gi, '_').toLowerCase();
                     const storagePath = `${Date.now()}-${originalName}.${fileExt}`;
 
                     const { uploadFileToR2 } = await import('@/lib/r2-storage');
 
-                    // Generate thumbnail client-side
                     let thumbnailUrl: string | null = null;
                     const thumbnailBlob = await generateThumbnailFromFile(file);
                     if (thumbnailBlob) {
@@ -152,20 +203,18 @@ export default function FullPageUploadForm({
                         }
                     }
 
-                    // Upload main file to R2
                     const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
-
-                    return { file, materialUrl, thumbnailUrl, fileExt };
+                    return { file, materialUrl, thumbnailUrl, fileExt, target };
                 }));
 
-                // 2. Then, insert into DB using explicitly staggered timestamps to preserve logical render ordering
+                // 2. Insert into DB with explicitly staggered timestamps
                 const nowMs = Date.now();
                 for (let i = 0; i < uploadedFilesInfo.length; i++) {
                     const info = uploadedFilesInfo[i];
-                    const { file, materialUrl, thumbnailUrl, fileExt } = info;
+                    const { file, materialUrl, thumbnailUrl, fileExt, target } = info;
 
-                    // i=0 is newest (top), i=1 is 1s older (second), etc. This enforces order in created_at DESC queries.
                     const fileCreatedAt = new Date(nowMs - i * 1000).toISOString();
+                    const finalTipo = target === 'General' ? selectedSubfolder : target;
 
                     const { error: insertError } = await supabase.from('materials').insert({
                         course_id: courseId,
@@ -173,7 +222,7 @@ export default function FullPageUploadForm({
                         professor_id: professorId === 'none' ? null : professorId,
                         titulo: file.name.split('.')[0] || file.name,
                         url_archivo: materialUrl,
-                        tipo: selectedSubfolder,
+                        tipo: finalTipo,
                         cycle_id: selectedCycleId === 'historical' ? null : selectedCycleId,
                         descargas: 0,
                         thumbnail_url: thumbnailUrl,
@@ -182,14 +231,13 @@ export default function FullPageUploadForm({
 
                     if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
 
-                    if (selectedSubfolder === '📖 Sílabo y Cronograma') {
+                    if (finalTipo === '📖 Sílabo y Cronograma') {
                         await supabase
                             .from('courses')
                             .update({ syllabus_url: materialUrl })
                             .eq('id', courseId);
                     }
 
-                    // Best-effort Office conversion
                     const officeExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'];
                     if (!thumbnailUrl && officeExtensions.includes(fileExt)) {
                         try {
@@ -206,7 +254,6 @@ export default function FullPageUploadForm({
                 }
             }
 
-            // Éxito
             router.push(`/dashboard/courses/view?id=${courseId}`);
             router.refresh();
         } catch (error: any) {
@@ -216,6 +263,21 @@ export default function FullPageUploadForm({
             setUploading(false);
         }
     };
+
+    // Calculate active zones to render
+    const isExams = selectedSubfolder === '📝 Exámenes';
+    const nestedSubfolders = isExams && selectedCycleId !== 'historical'
+        ? courseCycles.find(c => c.id === selectedCycleId)?.active_subfolders?.filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)) || []
+        : [];
+        
+    const dropzoneKeys = (isExams && nestedSubfolders.length > 0)
+        ? [...nestedSubfolders, 'General']
+        : ['General'];
+
+    const totalSelectedFiles = Object.values(filesMap).reduce((acc, arr) => acc + arr.length, 0);
+    const hasAnyFilesSelected = totalSelectedFiles > 0;
+    const hasAnyLinksEntered = Object.values(linksMap).some(arr => arr.some(l => l.url));
+    const isReadyForFiles = uploadMethod === 'link' ? hasAnyLinksEntered : hasAnyFilesSelected;
 
     return (
         <div className="max-w-5xl mx-auto py-8 px-4 min-h-screen bg-bb-dark">
@@ -234,147 +296,20 @@ export default function FullPageUploadForm({
                 </p>
             </div>
 
-            <form onSubmit={handleUpload} className="space-y-8 bg-bb-card p-8 rounded-2xl shadow-2xl border border-bb-border shadow-black/10 dark:shadow-black/40">
-                {/* Format Toggle */}
-                <div className="flex bg-bb-sidebar rounded-xl p-1 mb-8 w-max">
-                    <button
-                        type="button"
-                        onClick={() => setUploadMethod('file')}
-                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${uploadMethod === 'file' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
-                    >
-                        Subir Archivos
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setUploadMethod('link');
-                            // If they switch to Link, auto-select Enlaces Útiles if possible
-                            if (!selectedSubfolder) setSelectedSubfolder('🔗 Enlaces Útiles');
-                        }}
-                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${uploadMethod === 'link' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
-                    >
-                        Publicar Enlaces Externos
-                    </button>
-                </div>
-
-                {/* 1. Selección de Archivo */}
-                <div className="space-y-4">
-                    <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
-                        <CheckCircle className={`h-5 w-5 ${uploadMethod === 'link' ? (links.some(l => l.url) ? 'text-green-500' : 'text-bb-border') : (files.length > 0 ? 'text-green-500' : 'text-bb-border')}`} />
-                        1. {uploadMethod === 'link' ? 'Agrega los enlaces' : 'Selecciona los archivos'}
-                    </Label>
-
-                    {uploadMethod === 'link' ? (
-                        <div className="space-y-4">
-                            {links.map((link, index) => (
-                                <div key={index} className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-bb-darker/50 rounded-2xl border border-bb-border">
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-bb-text-secondary tracking-widest pl-1">Título del enlace</Label>
-                                        <Input
-                                            placeholder="Ej: Video de la clase"
-                                            value={link.titulo}
-                                            onChange={(e) => updateLink(index, 'titulo', e.target.value)}
-                                            className="h-11 bg-bb-card border-bb-border text-bb-text rounded-xl"
-                                        />
-                                    </div>
-                                    <div className="space-y-2 relative">
-                                        <Label className="text-[10px] font-black uppercase text-bb-text-secondary tracking-widest pl-1">URL / Link *</Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                placeholder="https://..."
-                                                value={link.url}
-                                                onChange={(e) => updateLink(index, 'url', e.target.value)}
-                                                className="h-11 bg-bb-card border-bb-border text-bb-text rounded-xl flex-1"
-                                            />
-                                            {links.length > 1 && (
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    onClick={() => removeLinkRow(index)}
-                                                    className="h-11 w-11 p-0 text-red-400 hover:bg-red-500/10 rounded-xl"
-                                                >
-                                                    <X className="h-5 w-5" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={addLinkRow}
-                                className="w-full h-12 border-dashed border-2 border-bb-border text-bb-text-secondary hover:text-blue-400 hover:border-blue-500/50 rounded-2xl font-bold transition-all"
-                            >
-                                + Agregar otro enlace
-                            </Button>
-                        </div>
-                    ) : (
-                        <>
-                            <div className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${files.length > 0 ? 'border-blue-500 bg-blue-500/5' : 'border-bb-border hover:border-blue-500 hover:bg-bb-darker/50'
-                                }`}>
-                                <input
-                                    id="file"
-                                    type="file"
-                                    multiple
-                                    onChange={handleFileChange}
-                                    className="hidden"
-                                    accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
-                                />
-                                <label htmlFor="file" className="cursor-pointer block w-full h-full">
-                                    <div className="flex flex-col items-center gap-4 py-4">
-                                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform active:scale-90 ${files.length > 0 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-bb-sidebar text-blue-400 border border-bb-border'}`}>
-                                            <Upload className="h-8 w-8" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-lg font-bold text-bb-text">Arrastra tus archivos aquí o haz clic para explorar</p>
-                                            <p className="text-xs text-bb-text-secondary font-medium">Soporta múltiples archivos: PDF, PPT, Word, Imágenes, ZIP</p>
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
-
-                            {files.length > 0 && (
-                                <div className="space-y-3 mt-4">
-                                    <Label className="text-[10px] font-black text-bb-text-secondary uppercase tracking-[0.2em] px-1 italic">Archivos Seleccionados ({files.length})</Label>
-                                    <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar border border-bb-border/30 rounded-2xl p-2 bg-bb-darker/30">
-                                        {files.map((f, i) => (
-                                            <div key={i} className="flex items-center justify-between p-3 bg-bb-card rounded-xl border border-bb-border group hover:border-blue-500/30 transition-all">
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <div className="p-2 bg-blue-500/10 rounded-lg">
-                                                        <FileText className="h-4 w-4 text-blue-400 shrink-0" />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-sm font-bold text-bb-text truncate">{f.name}</p>
-                                                        <p className="text-[10px] text-bb-text-secondary font-medium">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setFiles(prev => prev.filter((_, idx) => idx !== i))}
-                                                    className="p-2 hover:bg-red-500/10 text-bb-text-secondary hover:text-red-500 rounded-lg transition-all"
-                                                >
-                                                    <X className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
-
+            <form onSubmit={handleUpload} className="space-y-8 bg-bb-card p-6 md:p-8 rounded-xl shadow-2xl border border-bb-border shadow-black/10 dark:shadow-black/40 flex flex-col">
+                
+                {/* 1. DESTINO Y ASOCIACIÓN (Top Row) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* 2. Detalles del Material */}
+                    {/* Destino */}
                     <div className="space-y-4">
                         <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
-                            <span className="w-7 h-7 rounded-lg bg-bb-sidebar text-blue-400 border border-bb-border flex items-center justify-center text-xs font-black">2</span>
+                            <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${selectedSubfolder ? 'bg-green-500/20 text-green-500 border-green-500/50' : 'bg-bb-sidebar text-blue-400 border border-bb-border'}`}>
+                                {selectedSubfolder ? <CheckCircle className="w-4 h-4" /> : '1'}
+                            </span>
                             Destino del Archivo
                         </Label>
 
-                        <div className="space-y-4 bg-bb-sidebar/50 p-5 rounded-2xl border border-bb-border">
-                            {/* Cycle Selector */}
+                        <div className="space-y-4 bg-bb-sidebar/50 p-5 rounded-xl border border-bb-border">
                             <div>
                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">¿A qué Ciclo pertenece?</Label>
                                 <Select value={selectedCycleId} onValueChange={(val) => {
@@ -397,7 +332,6 @@ export default function FullPageUploadForm({
                                 </Select>
                             </div>
 
-                            {/* Subfolder Selector */}
                             <div>
                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">Sección o Carpeta</Label>
                                 <Select value={selectedSubfolder} onValueChange={setSelectedSubfolder}>
@@ -405,44 +339,25 @@ export default function FullPageUploadForm({
                                         <SelectValue placeholder="Selecciona una sección..." />
                                     </SelectTrigger>
                                     <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60 z-[9999]">
-                                        {PREDEFINED_SUBFOLDERS.map((sub: string) => {
-                                            const isExams = sub === '📝 Exámenes';
-                                            const nestedSubfolders = isExams && selectedCycleId !== 'historical'
-                                                ? courseCycles.find(c => c.id === selectedCycleId)?.active_subfolders?.filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)) || []
-                                                : [];
-
-                                            return (
-                                                <div key={`group-${sub}`}>
-                                                    <SelectItem value={sub} className={`hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 font-bold ${isExams ? 'text-blue-400' : ''}`}>
-                                                        {sub}
-                                                    </SelectItem>
-                                                    {nestedSubfolders.map((nested: string) => (
-                                                        <SelectItem key={nested} value={nested} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 text-blue-300 ml-4 pl-4 border-l-2 border-bb-border/50 bg-bb-sidebar/30">
-                                                            ↳ {nested}
-                                                        </SelectItem>
-                                                    ))}
-                                                </div>
-                                            );
-                                        })}
+                                        {PREDEFINED_SUBFOLDERS.map((sub: string) => (
+                                            <SelectItem key={sub} value={sub} className={`hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 font-bold ${sub === '📝 Exámenes' ? 'text-blue-400' : ''}`}>
+                                                {sub}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
-                                {selectedCycleId !== 'historical' && courseCycles.find(c => c.id === selectedCycleId)?.active_subfolders?.length > 0 && (
-                                    <p className="text-[10px] text-bb-text-secondary mt-2 px-1 italic">
-                                        También puedes seleccionar las evaluaciones anidadas creadas para este ciclo.
-                                    </p>
-                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* 3. Asociación (Profesor) */}
+                    {/* Asociación */}
                     <div className="space-y-4">
                         <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
-                            <span className="w-7 h-7 rounded-lg bg-bb-sidebar text-blue-400 border border-bb-border flex items-center justify-center text-xs font-black">3</span>
+                            <span className="w-7 h-7 rounded-lg bg-bb-sidebar text-blue-400 border border-bb-border flex items-center justify-center text-xs font-black">2</span>
                             Asociación
                         </Label>
 
-                        <div className="p-5 bg-bb-sidebar/50 rounded-2xl border border-bb-border">
+                        <div className="p-5 bg-bb-sidebar/50 rounded-xl border border-bb-border">
                             <div className="flex items-center justify-between mb-3">
                                 <Label htmlFor="professor" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 px-1">Profesor del curso</Label>
                                 <Link
@@ -459,7 +374,7 @@ export default function FullPageUploadForm({
                                 <SelectTrigger className="h-12 bg-bb-card border-bb-border text-bb-text rounded-xl focus:ring-blue-500/20">
                                     <SelectValue placeholder="Seleccionar profesor..." />
                                 </SelectTrigger>
-                                <SelectContent className="bg-bb-card border-bb-border text-bb-text rounded-xl max-h-[300px] overflow-y-auto">
+                                <SelectContent className="bg-bb-card border-bb-border text-bb-text rounded-xl max-h-[300px] overflow-y-auto z-[9999]">
                                     <SelectItem value="none" className="focus:bg-blue-600 focus:text-white rounded-lg">
                                         <span className="text-bb-text-secondary italic font-bold text-blue-400">Todo / Material General</span>
                                     </SelectItem>
@@ -477,20 +392,157 @@ export default function FullPageUploadForm({
                             </Select>
 
                             <p className="text-[10px] text-bb-text-secondary mt-4 leading-relaxed italic font-medium">
-                                Si el material corresponde a una clase específica de un profesor, selecciónalo aquí. Esto ayudará a otros estudiantes a encontrar materiales de sus docentes.
-                            </p>
-                            <p className="text-[10px] text-blue-400 mt-3 font-bold uppercase tracking-tight flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                Solo podrás eliminar tu material durante las primeras 24 horas.
-                            </p>
-                            <p className="text-[9px] text-blue-400/70 mt-4 font-bold uppercase tracking-tighter">
-                                * Si el profesor no se encuentra en la lista, deberías agregar uno nuevo.
+                                Si el material corresponde a una clase específica de un profesor, selecciónalo aquí. Esto ayudará a otros a buscarlo.
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div className="pt-8 border-t border-bb-border flex flex-col sm:flex-row justify-end gap-4">
+                {/* 2. ARCHIVOS / LINKS (Bottom Section) */}
+                <div className={`space-y-4 pt-4 border-t border-bb-border/50 transition-opacity duration-300 ${!selectedSubfolder ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
+                            <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${isReadyForFiles ? 'bg-green-500/20 text-green-500 border-green-500/50' : 'bg-bb-sidebar text-blue-400 border border-bb-border'}`}>
+                                {isReadyForFiles ? <CheckCircle className="w-4 h-4" /> : '3'}
+                            </span>
+                            Selecciona los archivos
+                        </Label>
+
+                        <div className="flex bg-bb-darker rounded-xl p-1 w-max border border-bb-border">
+                            <button
+                                type="button"
+                                onClick={() => setUploadMethod('file')}
+                                className={`px-4 py-2 text-xs uppercase tracking-widest font-bold rounded-lg transition-all ${uploadMethod === 'file' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                            >
+                                Archivos
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setUploadMethod('link');
+                                    // Make sure a default key exists for links
+                                    if (!linksMap['General']) setLinksMap(prev => ({ ...prev, 'General': [{ titulo: '', url: '' }]}));
+                                }}
+                                className={`px-4 py-2 text-xs uppercase tracking-widest font-bold rounded-lg transition-all ${uploadMethod === 'link' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                            >
+                                Enlaces
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* DYNAMIC DROPZONES */}
+                    <div className={dropzoneKeys.length > 1 ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "w-full space-y-4"}>
+                        {dropzoneKeys.map((key) => {
+                            const isGeneral = key === 'General';
+                            const label = isGeneral 
+                                ? (dropzoneKeys.length > 1 ? 'Material General' : selectedSubfolder || 'General') 
+                                : key;
+
+                            if (uploadMethod === 'link') {
+                                const currentLinks = linksMap[key] || [{ titulo: '', url: '' }];
+                                return (
+                                    <div key={`link-${key}`} className="space-y-4 bg-bb-sidebar/30 p-5 rounded-xl border border-bb-border">
+                                        <Label className="text-sm font-black text-blue-400 uppercase tracking-widest px-1">{label}</Label>
+                                        <div className="space-y-3">
+                                            {currentLinks.map((link, index) => (
+                                                <div key={index} className="flex flex-col gap-2 p-3 bg-bb-darker/50 rounded-xl border border-bb-border relative">
+                                                    {currentLinks.length > 1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeLinkRow(key, index)}
+                                                            className="absolute top-2 right-2 p-1 text-red-400 hover:bg-red-500/10 rounded-lg z-10"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                    <div className="space-y-1">
+                                                        <Label className="text-[10px] font-black uppercase text-bb-text-secondary tracking-widest pl-1">Título</Label>
+                                                        <Input
+                                                            placeholder="Ej: Video de la clase"
+                                                            value={link.titulo}
+                                                            onChange={(e) => updateLink(key, index, 'titulo', e.target.value)}
+                                                            className="bg-bb-card border-bb-border text-bb-text text-sm h-10 rounded-lg"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label className="text-[10px] font-black uppercase text-bb-text-secondary tracking-widest pl-1">Enlace *</Label>
+                                                        <Input
+                                                            placeholder="https://..."
+                                                            value={link.url}
+                                                            onChange={(e) => updateLink(key, index, 'url', e.target.value)}
+                                                            className="bg-bb-card border-bb-border text-bb-text text-sm h-10 rounded-lg pr-8"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => addLinkRow(key)}
+                                                className="w-full h-10 text-[11px] border-dashed border-2 border-bb-border text-bb-text-secondary hover:text-blue-400 hover:border-blue-500/50 rounded-xl font-bold transition-all"
+                                            >
+                                                + Agregar Enlace
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            // File Upload UI
+                            const currentFiles = filesMap[key] || [];
+                            return (
+                                <div key={`file-${key}`} className={`space-y-4 bg-bb-sidebar/30 p-5 rounded-xl border transition-all duration-300 ${currentFiles.length > 0 ? 'border-blue-500/40 bg-blue-500/5 shadow-lg shadow-blue-500/5' : 'border-bb-border'}`}>
+                                    <Label className="text-sm font-black text-blue-400 uppercase tracking-widest px-1">{label}</Label>
+                                    
+                                    <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${currentFiles.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-bb-border hover:border-blue-500 hover:bg-bb-darker/50'}`}>
+                                        <input
+                                            id={`file-${key}`}
+                                            type="file"
+                                            multiple
+                                            onChange={(e) => handleFileChange(e, key)}
+                                            className="hidden"
+                                            accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
+                                        />
+                                        <label htmlFor={`file-${key}`} className="cursor-pointer flex flex-col items-center justify-center w-full h-full gap-3">
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform active:scale-90 ${currentFiles.length > 0 ? 'bg-blue-600 text-white shadow-lg' : 'bg-bb-darker text-blue-400 border border-bb-border'}`}>
+                                                <Upload className="h-5 w-5" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-bold text-bb-text">Subir archivos</p>
+                                                {dropzoneKeys.length === 1 && <p className="text-[10px] text-bb-text-secondary">Arrastra o haz clic aquí</p>}
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    {currentFiles.length > 0 && (
+                                        <div className="space-y-2 mt-4 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
+                                            {currentFiles.map((f, i) => (
+                                                <div key={i} className="flex items-center justify-between p-2.5 bg-bb-card rounded-lg border border-bb-border group hover:border-blue-500/30 transition-all">
+                                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                        <FileText className="h-4 w-4 text-blue-400 shrink-0" />
+                                                        <div className="min-w-0 pr-2">
+                                                            <p className="text-[11px] font-bold text-bb-text truncate leading-tight">{f.name}</p>
+                                                            <p className="text-[9px] text-bb-text-secondary mt-0.5">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeFile(key, i)}
+                                                        className="p-1.5 hover:bg-red-500/10 text-bb-text-secondary hover:text-red-500 rounded-md transition-all shrink-0"
+                                                    >
+                                                        <X className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className="pt-6 border-t border-bb-border flex flex-col sm:flex-row justify-end gap-3">
                     <Button
                         type="button"
                         variant="ghost"
@@ -501,10 +553,10 @@ export default function FullPageUploadForm({
                     </Button>
                     <Button
                         type="submit"
-                        disabled={uploading || !selectedSubfolder || (uploadMethod === 'link' ? links.every(l => !l.url) : files.length === 0)}
+                        disabled={uploading || !selectedSubfolder || !isReadyForFiles}
                         className="w-full sm:w-64 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all text-white font-black uppercase tracking-widest text-xs h-12 rounded-xl active:scale-95 disabled:opacity-50"
                     >
-                        {uploading ? 'Subiendo...' : (uploadMethod === 'link' ? 'Publicar Enlaces' : 'Publicar Materiales')}
+                        {uploading ? 'Subiendo...' : (uploadMethod === 'link' ? 'Guardar Enlaces' : `Cargar ${totalSelectedFiles || ''} Archivos`)}
                     </Button>
                 </div>
             </form>
