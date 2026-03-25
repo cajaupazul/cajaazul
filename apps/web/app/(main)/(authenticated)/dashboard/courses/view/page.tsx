@@ -15,6 +15,7 @@ function CourseDetailWrapper() {
   const [topProfessor, setTopProfessor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [courseCycles, setCourseCycles] = useState<any[]>([]);
 
   // Helper to normalize strings (remove accents, lowercase, trim)
   const normalizeString = (str: string) => {
@@ -53,7 +54,8 @@ function CourseDetailWrapper() {
         const [
           { data: materialsData },
           { data: linkedData },
-          { data: sessionData }
+          { data: sessionData },
+          { data: cyclesData }
         ] = await Promise.all([
           supabase.from('materials')
             .select('*, professors(nombre), profiles(*)')
@@ -68,10 +70,15 @@ function CourseDetailWrapper() {
               )
             `)
             .eq('course_id', courseId),
-          supabase.auth.getUser()
+          supabase.auth.getUser(),
+          supabase.from('course_cycles')
+            .select('*')
+            .eq('course_id', courseId)
+            .order('ciclo_name', { ascending: false })
         ]);
 
         setMaterials(materialsData || []);
+        setCourseCycles(cyclesData || []);
 
         // 3. Handle User Permissions
         if (sessionData?.user) {
@@ -167,6 +174,7 @@ function CourseDetailWrapper() {
       allProfessors={allProfessors}
       initialMaterials={materials}
       currentUser={currentUser}
+      initialCourseCycles={courseCycles}
     />
   );
 }

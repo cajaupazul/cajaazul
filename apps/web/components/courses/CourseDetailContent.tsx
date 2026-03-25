@@ -21,6 +21,7 @@ interface CourseDetailContentProps {
     allProfessors: any[];
     initialMaterials: any[];
     currentUser: any | null;
+    initialCourseCycles: any[];
 }
 
 export default function CourseDetailContent({
@@ -28,11 +29,18 @@ export default function CourseDetailContent({
     topProfessor,
     allProfessors,
     initialMaterials,
-    currentUser
+    currentUser,
+    initialCourseCycles
 }: CourseDetailContentProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [materials, setMaterials] = useState<any[]>(initialMaterials);
+    const [courseCycles, setCourseCycles] = useState<any[]>(initialCourseCycles);
+    
+    // UI state for Add Cycle Modal
+    const [showAddCycleModal, setShowAddCycleModal] = useState(false);
+    const [selectedCycleToAdd, setSelectedCycleToAdd] = useState('');
+    const [isSavingCycle, setIsSavingCycle] = useState(false);
 
     const [viewingFile, setViewingFile] = useState<{ path: string; name: string; useAdvanced?: boolean } | null>(null);
     const [selectedProfessorId, setSelectedProfessorId] = useState<string>(searchParams.get('professor') || 'all');
@@ -100,6 +108,55 @@ export default function CourseDetailContent({
         } catch (error: any) {
             console.error('Error deleting material:', error);
             alert('Error al eliminar el material: ' + error.message);
+        }
+    };
+
+    // Generates cycles from 2020-0 up to 2050-2
+    const availableCycleOptions = useMemo(() => {
+        const options = [];
+        for (let year = 2020; year <= 2050; year++) {
+            for (let period = 0; period <= 2; period++) {
+                options.push(`${year}-${period}`);
+            }
+        }
+        return options;
+    }, []);
+
+    const handleAddCycle = async () => {
+        if (!selectedCycleToAdd) {
+            alert('Por favor selecciona un ciclo');
+            return;
+        }
+
+        if (courseCycles.some(c => c.ciclo_name === selectedCycleToAdd)) {
+            alert('Este ciclo ya fue creado para este curso');
+            return;
+        }
+
+        try {
+            setIsSavingCycle(true);
+            const newCycle = {
+                course_id: course.id,
+                ciclo_name: selectedCycleToAdd,
+                created_by: currentUser?.id || null
+            };
+
+            const { data, error } = await supabase
+                .from('course_cycles')
+                .insert(newCycle)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            setCourseCycles(prev => [data, ...prev].sort((a, b) => b.ciclo_name.localeCompare(a.ciclo_name)));
+            setShowAddCycleModal(false);
+            setSelectedCycleToAdd('');
+        } catch (error: any) {
+            console.error('Error adding cycle:', error);
+            alert('Error al agregar el ciclo: ' + error.message);
+        } finally {
+            setIsSavingCycle(true);
         }
     };
 
@@ -373,6 +430,15 @@ export default function CourseDetailContent({
                                             <List className="w-4 h-4" strokeWidth={2.5} />
                                         </button>
                                     </div>
+                                    <button
+                                        onClick={() => setShowAddCycleModal(true)}
+                                        className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-bb-border text-bb-text hover:bg-bb-card border border-transparent hover:border-bb-border h-11 px-4 active:scale-95 whitespace-nowrap"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <FolderRoot className="w-4 h-4" />
+                                            + Ciclo
+                                        </div>
+                                    </button>
                                     <Link
                                         href={`/dashboard/courses/upload?courseId=${course.id}`}
                                         className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 h-11 px-5 shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap"
@@ -387,6 +453,28 @@ export default function CourseDetailContent({
 
                             <div className="space-y-4">
                                 <Accordion>
+                                    
+                                    {/* Mapped Explicit Course Cycles */}
+                                    {courseCycles.map((cycle) => (
+                                        <AccordionItem 
+                                            key={cycle.id || cycle.ciclo_name}
+                                            title={
+                                                <div className="flex items-center justify-between w-full">
+                                                    <span>📁 Ciclo {cycle.ciclo_name}</span>
+                                                    <Badge className="ml-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 font-black">
+                                                        0
+                                                    </Badge>
+                                                </div>
+                                            }
+                                        >
+                                            {/* Currently no DB categorization for files to a cycle, so we render empty state */}
+                                            <div className="flex flex-col items-center justify-center py-12 text-center opacity-40 bg-black/10 rounded-2xl border border-bb-border/50">
+                                                <FolderRoot className="w-12 h-12 mb-3 text-bb-text-secondary" />
+                                                <p className="text-bb-text-secondary font-medium">Aún no hay materiales en este ciclo</p>
+                                            </div>
+                                        </AccordionItem>
+                                    ))}
+
                                     <AccordionItem title={
                                         <div className="flex items-center justify-between w-full">
                                             <span>📦 Archivos Históricos (Sin Clasificar)</span>
@@ -394,7 +482,7 @@ export default function CourseDetailContent({
                                                 {materialsForCounts.length}
                                             </Badge>
                                         </div>
-                                    } defaultOpen={true}>
+                                    } defaultOpen={courseCycles.length === 0}>
                                         
                                         <Accordion>
                                             {categories.map((cat) => (
@@ -408,7 +496,7 @@ export default function CourseDetailContent({
                                                             </Badge>
                                                         </div>
                                                     } 
-                                                    defaultOpen={cat.id === 'silabo'}
+                                                    defaultOpen={cat.id === 'silabo' && courseCycles.length === 0}
                                                 >
                                                     {renderMaterialGrid(cat.items)}
                                                 </AccordionItem>
@@ -523,6 +611,66 @@ export default function CourseDetailContent({
                     courseName={course.nombre}
                 />
             )}
+
+            {/* V6.0: Modal para Agregar Ciclo */}
+            <AnimatePresence>
+                {showAddCycleModal && (
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowAddCycleModal(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative bg-bb-card border border-bb-border p-6 md:p-8 rounded-3xl shadow-2xl max-w-sm w-full mx-auto"
+                        >
+                            <div className="flex items-center justify-center w-12 h-12 bg-blue-500/10 rounded-xl mb-5 border border-blue-500/20">
+                                <FolderRoot className="w-6 h-6 text-blue-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-bb-text mb-2 tracking-tight">Agregar Nuevo Ciclo</h3>
+                            <p className="text-xs text-bb-text-secondary leading-relaxed mb-6">
+                                Abre una carpeta de ciclo para este curso seleccionándolo del listado disponible.
+                            </p>
+
+                            <div className="mb-6">
+                                <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Seleccionar Ciclo</label>
+                                <select
+                                    value={selectedCycleToAdd}
+                                    onChange={(e) => setSelectedCycleToAdd(e.target.value)}
+                                    className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 text-sm text-bb-text focus:outline-none focus:border-blue-500 appearance-none placeholder-bb-text-secondary"
+                                >
+                                    <option value="" disabled>Elige un ciclo (Ej: 2026-1)</option>
+                                    {availableCycleOptions.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <Button
+                                    onClick={() => setShowAddCycleModal(false)}
+                                    variant="ghost"
+                                    className="flex-1 rounded-xl text-bb-text-secondary hover:text-bb-text hover:bg-bb-dark"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    onClick={handleAddCycle}
+                                    disabled={isSavingCycle || !selectedCycleToAdd}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {isSavingCycle ? 'Guardando...' : 'Crear Carpeta'}
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* V6.0: Modal de Calculadora de Notas */}
             <AnimatePresence>
