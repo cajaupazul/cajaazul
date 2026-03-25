@@ -41,6 +41,12 @@ export default function CourseDetailContent({
     const [showAddCycleModal, setShowAddCycleModal] = useState(false);
     const [selectedCycleToAdd, setSelectedCycleToAdd] = useState('');
     const [isSavingCycle, setIsSavingCycle] = useState(false);
+    
+    // UI state for Add Subfolder Modal
+    const [showAddSubfolderModal, setShowAddSubfolderModal] = useState(false);
+    const [cycleToEdit, setCycleToEdit] = useState<any>(null);
+    const [selectedSubfolderToAdd, setSelectedSubfolderToAdd] = useState('');
+    const [isSavingSubfolder, setIsSavingSubfolder] = useState(false);
 
     const [viewingFile, setViewingFile] = useState<{ path: string; name: string; useAdvanced?: boolean } | null>(null);
     const [selectedProfessorId, setSelectedProfessorId] = useState<string>(searchParams.get('professor') || 'all');
@@ -156,7 +162,52 @@ export default function CourseDetailContent({
             console.error('Error adding cycle:', error);
             alert('Error al agregar el ciclo: ' + error.message);
         } finally {
-            setIsSavingCycle(true);
+            setIsSavingCycle(false);
+        }
+    };
+
+    const PREDEFINED_SUBFOLDERS = [
+        '📖 Sílabo y Cronograma',
+        '📝 Exámenes Pasados',
+        '📊 Presentaciones y Diapositivas',
+        '🔗 Enlaces Útiles',
+        '📚 Otros Recursos'
+    ];
+
+    const handleAddSubfolder = async () => {
+        if (!selectedSubfolderToAdd || !cycleToEdit) {
+            alert('Por favor selecciona una subcarpeta');
+            return;
+        }
+
+        const currentSubfolders = cycleToEdit.active_subfolders || [];
+        if (currentSubfolders.includes(selectedSubfolderToAdd)) {
+            alert('Esta subcarpeta ya existe en este ciclo');
+            return;
+        }
+
+        try {
+            setIsSavingSubfolder(true);
+            const newSubfolders = [...currentSubfolders, selectedSubfolderToAdd];
+            
+            const { error, data } = await supabase
+                .from('course_cycles')
+                .update({ active_subfolders: newSubfolders })
+                .eq('id', cycleToEdit.id)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            setCourseCycles(prev => prev.map(c => c.id === cycleToEdit.id ? data : c));
+            setShowAddSubfolderModal(false);
+            setSelectedSubfolderToAdd('');
+            setCycleToEdit(null);
+        } catch (error: any) {
+            console.error('Error adding subfolder:', error);
+            alert('Error al agregar la carpeta: ' + error.message);
+        } finally {
+            setIsSavingSubfolder(false);
         }
     };
 
@@ -467,10 +518,48 @@ export default function CourseDetailContent({
                                                 </div>
                                             }
                                         >
-                                            {/* Currently no DB categorization for files to a cycle, so we render empty state */}
-                                            <div className="flex flex-col items-center justify-center py-12 text-center opacity-40 bg-black/10 rounded-2xl border border-bb-border/50">
-                                                <FolderRoot className="w-12 h-12 mb-3 text-bb-text-secondary" />
-                                                <p className="text-bb-text-secondary font-medium">Aún no hay materiales en este ciclo</p>
+                                            {/* Nested mapped Subfolders */}
+                                            {(!cycle.active_subfolders || cycle.active_subfolders.length === 0) ? (
+                                                <div className="flex flex-col items-center justify-center py-12 text-center opacity-40 bg-black/10 rounded-2xl border border-bb-border/50">
+                                                    <FolderRoot className="w-12 h-12 mb-3 text-bb-text-secondary" />
+                                                    <p className="text-bb-text-secondary font-medium">Este ciclo aún no tiene carpetas</p>
+                                                </div>
+                                            ) : (
+                                                <Accordion>
+                                                    {cycle.active_subfolders.map((subName: string) => (
+                                                        <AccordionItem 
+                                                            key={subName} 
+                                                            title={
+                                                                <div className="flex items-center justify-between w-full">
+                                                                    <span>{subName}</span>
+                                                                    <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black">
+                                                                        0
+                                                                    </Badge>
+                                                                </div>
+                                                            }
+                                                        >
+                                                            <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
+                                                                <FolderRoot className="w-12 h-12 mb-3 text-bb-text-secondary" />
+                                                                <p className="text-bb-text-secondary font-medium">Aún no hay materiales en {subName}</p>
+                                                            </div>
+                                                        </AccordionItem>
+                                                    ))}
+                                                </Accordion>
+                                            )}
+
+                                            <div className="mt-4 flex justify-end">
+                                                <button
+                                                    onClick={() => {
+                                                        setCycleToEdit(cycle);
+                                                        setShowAddSubfolderModal(true);
+                                                    }}
+                                                    className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-bb-border/50 text-bb-text-secondary hover:text-white hover:bg-bb-card border border-transparent hover:border-bb-border h-9 px-4 active:scale-95 whitespace-nowrap"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <FolderRoot className="w-3.5 h-3.5" />
+                                                        + Subcarpeta
+                                                    </div>
+                                                </button>
                                             </div>
                                         </AccordionItem>
                                     ))}
@@ -665,6 +754,66 @@ export default function CourseDetailContent({
                                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-50"
                                 >
                                     {isSavingCycle ? 'Guardando...' : 'Crear Carpeta'}
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* V6.0: Modal para Agregar Subcarpeta */}
+            <AnimatePresence>
+                {showAddSubfolderModal && cycleToEdit && (
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowAddSubfolderModal(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative bg-bb-card border border-bb-border p-6 md:p-8 rounded-3xl shadow-2xl max-w-sm w-full mx-auto"
+                        >
+                            <div className="flex items-center justify-center w-12 h-12 bg-teal-500/10 rounded-xl mb-5 border border-teal-500/20">
+                                <FolderRoot className="w-6 h-6 text-teal-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-bb-text mb-2 tracking-tight">Agregar Subcarpeta</h3>
+                            <p className="text-xs text-bb-text-secondary leading-relaxed mb-6">
+                                Crea una nueva categoría dentro del <strong className="text-teal-400">Ciclo {cycleToEdit.ciclo_name}</strong>.
+                            </p>
+
+                            <div className="mb-6">
+                                <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Seleccionar Categoría Predeterminada</label>
+                                <select
+                                    value={selectedSubfolderToAdd}
+                                    onChange={(e) => setSelectedSubfolderToAdd(e.target.value)}
+                                    className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 text-sm text-bb-text focus:outline-none focus:border-blue-500 appearance-none placeholder-bb-text-secondary"
+                                >
+                                    <option value="" disabled>Elige un tipo de material</option>
+                                    {PREDEFINED_SUBFOLDERS.map(opt => (
+                                        <option key={opt} value={opt} disabled={cycleToEdit.active_subfolders?.includes(opt)}>{opt}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <Button
+                                    onClick={() => setShowAddSubfolderModal(false)}
+                                    variant="ghost"
+                                    className="flex-1 rounded-xl text-bb-text-secondary hover:text-bb-text hover:bg-bb-dark"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    onClick={handleAddSubfolder}
+                                    disabled={isSavingSubfolder || !selectedSubfolderToAdd}
+                                    className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-lg shadow-teal-600/20 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {isSavingSubfolder ? 'Creando...' : 'Crear Subcarpeta'}
                                 </Button>
                             </div>
                         </motion.div>
