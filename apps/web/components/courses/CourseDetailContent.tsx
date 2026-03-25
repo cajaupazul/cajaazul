@@ -12,9 +12,8 @@ import AdminMaterialManager from './AdminMaterialManager';
 import { PLACEHOLDERS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
 import MaterialCard from './MaterialCard';
+import { Accordion, AccordionItem } from '@/components/ui/accordion';
 import { Autocomplete } from '@/components/ui/Autocomplete';
-
-type TabType = 'todos' | 'silabo' | 'presentaciones' | 'examenes' | 'enlaces' | 'otros';
 
 interface CourseDetailContentProps {
     course: Course;
@@ -34,7 +33,7 @@ export default function CourseDetailContent({
     const router = useRouter();
     const searchParams = useSearchParams();
     const [materials, setMaterials] = useState<any[]>(initialMaterials);
-    const [activeTab, setActiveTab] = useState<TabType>('todos');
+
     const [viewingFile, setViewingFile] = useState<{ path: string; name: string; useAdvanced?: boolean } | null>(null);
     const [selectedProfessorId, setSelectedProfessorId] = useState<string>(searchParams.get('professor') || 'all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -154,73 +153,12 @@ export default function CourseDetailContent({
         ).length;
     }, [materialsForCounts]);
 
-    const filteredMaterials = useMemo(() => {
-        const base = materialsForCounts; // Already sorted by upload order from DB
-
-        if (activeTab === 'silabo') {
-            return base.filter(m =>
-                m.tipo?.toLowerCase() === 'syllabus' ||
-                (m.titulo || '').toLowerCase().includes('silabo') ||
-                (m.titulo || '').toLowerCase().includes('sílabo')
-            );
-        }
-
-        if (activeTab === 'todos') {
-            return base;
-        }
-
-        if (activeTab === 'presentaciones') {
-            return base.filter(m => m.tipo?.toLowerCase().includes('ppt') || m.tipo?.toLowerCase().includes('presentacion'));
-        }
-
-        if (activeTab === 'examenes') {
-            return base.filter(m => m.tipo?.toLowerCase().includes('examen'));
-        }
-
-        if (activeTab === 'enlaces') {
-            return base.filter(m => m.tipo === 'enlace');
-        }
-
-        if (activeTab === 'otros') {
-            return base.filter(m =>
-                !m.tipo?.toLowerCase().includes('ppt') &&
-                !m.tipo?.toLowerCase().includes('presentacion') &&
-                !m.tipo?.toLowerCase().includes('examen') &&
-                m.tipo !== 'syllabus' &&
-                m.tipo !== 'enlace'
-            );
-        }
-
-        return base;
-    }, [materialsForCounts, activeTab]);
-
-    // Find if there is a syllabus in materials as a fallback (more robust search)
-    const syllabusMaterialForHeader = useMemo(() => {
-        return materials?.find(m =>
-            m.tipo?.toLowerCase() === 'syllabus' ||
-            (m.titulo || '').toLowerCase().includes('silabo') ||
-            (m.titulo || '').toLowerCase().includes('sílabo')
-        );
-    }, [materials]);
-
-    const effectiveSyllabusUrl = course.syllabus_url || syllabusMaterialForHeader?.url_archivo;
-
-
-    const tabs = [
-        { id: 'todos' as TabType, label: '📂 Todo', count: materialsForCounts.length },
-        { id: 'silabo' as TabType, label: '📖 Sílabo', count: syllabusCount },
-        { id: 'presentaciones' as TabType, label: '📊 Presentaciones', count: presentacionesCount },
-        { id: 'examenes' as TabType, label: '📝 Exámenes Pasados', count: examenesCount },
-        { id: 'enlaces' as TabType, label: '🔗 Enlaces', count: enlacesCount },
-        { id: 'otros' as TabType, label: '📚 Otros Recursos', count: otrosCount },
-    ];
-
     const renderMaterialGrid = (mats: any[]) => {
         if (mats.length === 0) {
             return (
                 <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
-                    <FolderRoot className="w-12 h-12 mb-3" />
-                    <p className="text-bb-text-secondary font-medium">Aún no hay materiales aquí</p>
+                    <FolderRoot className="w-12 h-12 mb-3 text-bb-text-secondary" />
+                    <p className="text-bb-text-secondary font-medium">Aún no hay materiales en esta carpeta</p>
                 </div>
             );
         }
@@ -258,7 +196,7 @@ export default function CourseDetailContent({
         }
 
         return (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {mats.map((material) => (
                     <MaterialCard
                         key={material.id}
@@ -287,6 +225,28 @@ export default function CourseDetailContent({
             </div>
         );
     };
+
+        const categories = [
+            { id: 'silabo', label: '📖 Sílabo y Cronograma', items: [] as any[] },
+            { id: 'examenes', label: '📝 Exámenes Pasados', items: [] as any[] },
+            { id: 'presentaciones', label: '📊 Presentaciones y Diapositivas', items: [] as any[] },
+            { id: 'enlaces', label: '🔗 Enlaces Útiles', items: [] as any[] },
+            { id: 'otros', label: '📚 Otros Recursos', items: [] as any[] },
+        ];
+
+        materialsForCounts.forEach(m => {
+            if (m.tipo?.toLowerCase() === 'syllabus' || (m.titulo || '').toLowerCase().includes('silabo') || (m.titulo || '').toLowerCase().includes('sílabo')) {
+                categories[0].items.push(m);
+            } else if (m.tipo?.toLowerCase().includes('examen')) {
+                categories[1].items.push(m);
+            } else if (m.tipo?.toLowerCase().includes('ppt') || m.tipo?.toLowerCase().includes('presentacion')) {
+                categories[2].items.push(m);
+            } else if (m.tipo === 'enlace') {
+                categories[3].items.push(m);
+            } else {
+                categories[4].items.push(m);
+            }
+        });
 
     return (
         <div className="flex-1 overflow-auto bg-bb-dark">
@@ -388,65 +348,75 @@ export default function CourseDetailContent({
                         </div>
 
                         <div className="w-full">
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
-                                <div className="flex gap-1 border-b border-bb-border overflow-x-auto no-scrollbar flex-1 pb-px">
-                                    {tabs.map((tab) => (
+                            <div className="flex flex-col sm:flex-row items-stretch justify-between gap-4 mb-6">
+                                <div className="flex-1 flex flex-col justify-center">
+                                    <h3 className="text-xl md:text-2xl font-black text-bb-text tracking-tight uppercase flex items-center gap-3">
+                                        <FolderRoot className="w-6 h-6 text-blue-500" />
+                                        Estructura del Curso
+                                    </h3>
+                                    <p className="text-xs text-bb-text-secondary mt-1 font-medium">Navega por las carpetas para encontrar el material</p>
+                                </div>
+                                <div className="flex items-center justify-end gap-3 self-center sm:self-auto min-w-max">
+                                    <div className="flex items-center gap-2 bg-bb-darker/50 p-1 rounded-xl border border-bb-border">
                                         <button
-                                            key={tab.id}
-                                            onClick={() => setActiveTab(tab.id)}
-                                            className={`px-3 md:px-4 py-3 font-bold text-[11px] md:text-sm transition-all relative whitespace-nowrap flex-1 sm:flex-none text-center ${activeTab === tab.id ? 'text-blue-400' : 'text-bb-text-secondary hover:text-bb-text'
-                                                }`}
+                                            onClick={() => setViewMode('grid')}
+                                            className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                            title="Vista Cuadrícula"
                                         >
-                                            <span className="flex items-center justify-center gap-1.5 md:gap-2">
-                                                {tab.label.split(' ')[1]}
-                                                <span className={`text-[9px] md:text-xs font-bold px-1.5 py-0.5 rounded-md ${activeTab === tab.id ? 'bg-blue-500/20 text-blue-400' : 'bg-bb-darker text-bb-text-secondary'}`}>
-                                                    {tab.count}
-                                                </span>
-                                            </span>
-                                            {activeTab === tab.id && (
-                                                <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></motion.div>
-                                            )}
+                                            <LayoutPanelLeft className="w-4 h-4" />
                                         </button>
-                                    ))}
-                                </div>
-                                <div className="flex items-center gap-2 self-center sm:self-auto bg-bb-darker/50 p-1 rounded-xl border border-bb-border">
-                                    <button
-                                        onClick={() => setViewMode('grid')}
-                                        className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
-                                        title="Vista Cuadrícula"
-                                    >
-                                        <LayoutPanelLeft className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => setViewMode('list')}
-                                        className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
-                                        title="Vista Lista"
-                                    >
-                                        <List className="w-4 h-4" strokeWidth={2.5} />
-                                    </button>
-                                </div>
-                                <div className="hidden sm:flex items-center gap-2 bg-bb-darker/50 p-1 rounded-xl border border-bb-border">
-                                    <button
-                                        onClick={() => setShowCalculatorModal(true)}
-                                        className="p-2 rounded-lg transition-all text-bb-text-secondary hover:text-blue-400 hover:bg-blue-400/10"
-                                        title="Calculadora de Notas"
-                                    >
-                                        <Calculator className="w-4 h-4" />
-                                    </button>
-                                </div>
-                                <Link
-                                    href={`/dashboard/courses/upload?courseId=${course.id}`}
-                                    className="inline-flex items-center justify-center rounded-xl text-xs md:text-sm font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 h-11 px-6 shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <Upload className="w-4 h-4" strokeWidth={2.5} />
-                                        Subir Material
+                                        <button
+                                            onClick={() => setViewMode('list')}
+                                            className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                            title="Vista Lista"
+                                        >
+                                            <List className="w-4 h-4" strokeWidth={2.5} />
+                                        </button>
                                     </div>
-                                </Link>
+                                    <Link
+                                        href={`/dashboard/courses/upload?courseId=${course.id}`}
+                                        className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 h-11 px-5 shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Upload className="w-4 h-4" strokeWidth={2.5} />
+                                            Subir
+                                        </div>
+                                    </Link>
+                                </div>
                             </div>
 
-                            <div className="bg-bb-card p-4 md:p-6 rounded-2xl border border-bb-border shadow-sm">
-                                {renderMaterialGrid(filteredMaterials)}
+                            <div className="space-y-4">
+                                <Accordion>
+                                    <AccordionItem title={
+                                        <div className="flex items-center justify-between w-full">
+                                            <span>📦 Archivos Históricos (Sin Clasificar)</span>
+                                            <Badge className="ml-4 bg-bb-dark border border-bb-border text-bb-text-secondary font-black">
+                                                {materialsForCounts.length}
+                                            </Badge>
+                                        </div>
+                                    } defaultOpen={true}>
+                                        
+                                        <Accordion>
+                                            {categories.map((cat) => (
+                                                <AccordionItem 
+                                                    key={cat.id} 
+                                                    title={
+                                                        <div className="flex items-center justify-between w-full">
+                                                            <span>{cat.label}</span>
+                                                            <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black">
+                                                                {cat.items.length}
+                                                            </Badge>
+                                                        </div>
+                                                    } 
+                                                    defaultOpen={cat.id === 'silabo'}
+                                                >
+                                                    {renderMaterialGrid(cat.items)}
+                                                </AccordionItem>
+                                            ))}
+                                        </Accordion>
+
+                                    </AccordionItem>
+                                </Accordion>
                             </div>
                         </div>
                     </div>
