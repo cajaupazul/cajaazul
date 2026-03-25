@@ -8,7 +8,7 @@ import { supabase, getStorageUrl, Material } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
-import { Trash2, Zap, ZapOff, Loader2 } from 'lucide-react';
+import { Trash2, Zap, ZapOff, Loader2, CheckSquare, Square } from 'lucide-react';
 import { useProfile } from '@/lib/profile-context';
 
 interface MaterialCardProps {
@@ -17,6 +17,9 @@ interface MaterialCardProps {
     onDelete?: () => void;
     canDelete?: boolean;
     viewMode?: 'grid' | 'list';
+    isSelectionMode?: boolean;
+    isSelected?: boolean;
+    onSelect?: () => void;
 }
 
 export default function MaterialCard({
@@ -24,7 +27,10 @@ export default function MaterialCard({
     onClick,
     onDelete,
     canDelete = false,
-    viewMode = 'grid'
+    viewMode = 'grid',
+    isSelectionMode = false,
+    isSelected = false,
+    onSelect
 }: MaterialCardProps) {
     const { profile } = useProfile();
     const [isUpdatingViewer, setIsUpdatingViewer] = React.useState(false);
@@ -128,15 +134,34 @@ export default function MaterialCard({
     const thumbnailUrl = material.thumbnail_url ? getStorageUrl(material.thumbnail_url, 'thumbnails') : null;
 
     if (viewMode === 'list') {
+        const handleCardClick = (e: React.MouseEvent) => {
+            if (isSelectionMode && onSelect) {
+                e.stopPropagation();
+                onSelect();
+            } else {
+                onClick();
+            }
+        };
+
         return (
             <motion.div
                 layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                onClick={onClick}
-                className="flex items-center justify-between p-3 bg-bb-darker/20 hover:bg-bb-card rounded-xl border border-bb-border/50 transition-all cursor-pointer group active:scale-[0.99]"
+                onClick={handleCardClick}
+                className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer group active:scale-[0.99] ${
+                    isSelectionMode && isSelected 
+                    ? 'bg-blue-500/10 border-blue-500 shadow-sm shadow-blue-500/20' 
+                    : 'bg-bb-darker/20 hover:bg-bb-card border-bb-border/50'
+                }`}
             >
-                <div className="flex items-center gap-4 min-w-0">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                    {/* Checkbox overlay for List Mode */}
+                    {isSelectionMode && (
+                        <div className={`mr-1 transition-colors ${isSelected ? 'text-blue-500' : 'text-bb-border hover:text-bb-text-secondary'}`}>
+                            {isSelected ? <CheckSquare className="w-5 h-5 fill-current" /> : <Square className="w-5 h-5" />}
+                        </div>
+                    )}
                     <div className={`p-2 rounded-xl ${config.bg} ${config.color} group-hover:scale-110 transition-transform flex-shrink-0`}>
                         {thumbnailUrl ? (
                             <img src={thumbnailUrl} alt={material.titulo} className="w-8 h-8 object-cover rounded-lg" />
@@ -191,17 +216,43 @@ export default function MaterialCard({
         );
     }
 
+    const handleCardClick = (e: React.MouseEvent) => {
+        if (isSelectionMode && onSelect) {
+            e.stopPropagation();
+            onSelect();
+        } else {
+            onClick();
+        }
+    };
+
     return (
         <motion.div
             layout
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             whileHover={{ y: -4 }}
-            onClick={onClick}
-            className="flex flex-col bg-bb-darker/20 rounded-2xl overflow-hidden border border-bb-border/50 hover:border-blue-500/20 shadow-sm transition-all cursor-pointer group active:scale-[0.98]"
+            onClick={handleCardClick}
+            className={`flex flex-col rounded-2xl overflow-hidden border shadow-sm transition-all cursor-pointer group active:scale-[0.98] relative ${
+                isSelectionMode && isSelected 
+                ? 'bg-blue-500/10 border-blue-500 ring-2 ring-blue-500/50 shadow-blue-500/20' 
+                : 'bg-bb-darker/20 border-bb-border/50 hover:border-blue-500/20'
+            }`}
         >
+            {/* Checkbox Overlay for Grid Mode */}
+            {isSelectionMode && (
+                <div className="absolute top-3 left-3 z-[40]">
+                    <div className={`p-1 rounded-md backdrop-blur-md border shadow-sm transition-all ${
+                        isSelected 
+                        ? 'bg-blue-500 text-white border-blue-400' 
+                        : 'bg-black/50 text-white/50 border-white/20 hover:bg-black/80 hover:text-white'
+                    }`}>
+                        {isSelected ? <CheckSquare className="w-4 h-4 fill-current" /> : <Square className="w-4 h-4" />}
+                    </div>
+                </div>
+            )}
+
             {/* Thumbnail Area */}
-            <div className="aspect-video w-full relative overflow-hidden shrink-0">
+            <div className={`aspect-video w-full relative overflow-hidden shrink-0 ${isSelectionMode && isSelected ? 'opacity-80' : ''}`}>
                 {thumbnailUrl ? (
                     <img
                         src={thumbnailUrl}

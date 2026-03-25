@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2, Pencil, Upload, List, Calculator } from 'lucide-react';
+import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2, Pencil, Upload, List, Calculator, CheckSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import AdminMaterialManager from './AdminMaterialManager';
@@ -53,6 +53,14 @@ export default function CourseDetailContent({
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [showAdminManager, setShowAdminManager] = useState(false);
     const [showCalculatorModal, setShowCalculatorModal] = useState(false);
+
+    // Mass Move State
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>([]);
+    const [showMoveModal, setShowMoveModal] = useState(false);
+    const [targetCycleId, setTargetCycleId] = useState<string | null>('historical');
+    const [targetSubfolder, setTargetSubfolder] = useState<string>('');
+    const [isMovingFiles, setIsMovingFiles] = useState(false);
 
     // Sync state with url param
     useEffect(() => {
@@ -166,6 +174,55 @@ export default function CourseDetailContent({
         }
     };
 
+    const handleMassMove = async () => {
+        if (selectedMaterialIds.length === 0) return;
+        if (targetCycleId !== 'historical' && !targetSubfolder) {
+            alert('Por favor selecciona una subcarpeta de destino');
+            return;
+        }
+
+        try {
+            setIsMovingFiles(true);
+            const targetCycleUuid = targetCycleId === 'historical' ? null : targetCycleId;
+            const targetTipo = targetCycleId === 'historical' ? targetSubfolder /* Actually for historical it keeps original or we should just reset? Wait, let's keep original if subfolder is empty */ : targetSubfolder;
+
+            // En caso de Archivos Históricos, user might want to let it keep current tipo, so we just set targetCycleUuid to null. 
+            // We'll update cycle_id. If targetCycleId != 'historical', we also update tipo.
+            const updatePayload: any = { cycle_id: targetCycleUuid };
+            if (targetCycleUuid) {
+                updatePayload.tipo = targetTipo;
+            }
+
+            const { error } = await supabase
+                .from('materials')
+                .update(updatePayload)
+                .in('id', selectedMaterialIds);
+
+            if (error) throw error;
+
+            // Optimistically update the UI
+            setMaterials(prev => prev.map(m => {
+                if (selectedMaterialIds.includes(m.id)) {
+                    return { ...m, ...updatePayload };
+                }
+                return m;
+            }));
+
+            // Reset Selection Mode
+            setIsSelectionMode(false);
+            setSelectedMaterialIds([]);
+            setShowMoveModal(false);
+            setTargetCycleId('historical');
+            setTargetSubfolder('');
+            alert(`${selectedMaterialIds.length} archivos movidos exitosamente`);
+        } catch (error: any) {
+            console.error('Error al mover archivos:', error);
+            alert('Error al mover los archivos: ' + error.message);
+        } finally {
+            setIsMovingFiles(false);
+        }
+    };
+
     const PREDEFINED_SUBFOLDERS = [
         '📖 Sílabo y Cronograma',
         '📝 Exámenes Pasados',
@@ -261,6 +318,10 @@ export default function CourseDetailContent({
         ).length;
     }, [materialsForCounts]);
 
+    const handleToggleSelect = (id: string) => {
+        setSelectedMaterialIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
     const renderMaterialGrid = (mats: any[]) => {
         if (mats.length === 0) {
             return (
@@ -279,6 +340,9 @@ export default function CourseDetailContent({
                             key={material.id}
                             material={material}
                             viewMode="list"
+                            isSelectionMode={isSelectionMode}
+                            isSelected={selectedMaterialIds.includes(material.id)}
+                            onSelect={() => handleToggleSelect(material.id)}
                             onClick={() => {
                                 if (material.tipo?.toLowerCase() === 'enlace') {
                                     window.open(material.url_archivo, '_blank');
@@ -310,6 +374,9 @@ export default function CourseDetailContent({
                         key={material.id}
                         material={material}
                         viewMode="grid"
+                        isSelectionMode={isSelectionMode}
+                        isSelected={selectedMaterialIds.includes(material.id)}
+                        onSelect={() => handleToggleSelect(material.id)}
                         onClick={() => {
                             if (material.tipo?.toLowerCase() === 'enlace') {
                                 window.open(material.url_archivo, '_blank');
@@ -342,7 +409,9 @@ export default function CourseDetailContent({
             { id: 'otros', label: '📚 Otros Recursos', items: [] as any[] },
         ];
 
-        materialsForCounts.forEach(m => {
+        // Archivos Históricos (sin ciclo)
+        const historicalMaterials = materialsForCounts.filter(m => !m.cycle_id);
+        historicalMaterials.forEach(m => {
             if (m.tipo?.toLowerCase() === 'syllabus' || (m.titulo || '').toLowerCase().includes('silabo') || (m.titulo || '').toLowerCase().includes('sílabo')) {
                 categories[0].items.push(m);
             } else if (m.tipo?.toLowerCase().includes('examen')) {
@@ -354,6 +423,14 @@ export default function CourseDetailContent({
             } else {
                 categories[4].items.push(m);
             }
+        });
+
+        // Archivos en Ciclos
+        const cycleMaterialsMap = new Map<string, any[]>();
+        materialsForCounts.filter(m => !!m.cycle_id).forEach(m => {
+            const arr = cycleMaterialsMap.get(m.cycle_id) || [];
+            arr.push(m);
+            cycleMaterialsMap.set(m.cycle_id, arr);
         });
 
     return (
@@ -481,6 +558,22 @@ export default function CourseDetailContent({
                                             <List className="w-4 h-4" strokeWidth={2.5} />
                                         </button>
                                     </div>
+                                    
+                                    {currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                                        <button
+                                            onClick={() => {
+                                                setIsSelectionMode(!isSelectionMode);
+                                                setSelectedMaterialIds([]);
+                                            }}
+                                            className={`inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all h-11 px-4 active:scale-95 whitespace-nowrap ${isSelectionMode ? 'bg-blue-600 text-white shadow-blue-500/20 shadow-lg' : 'bg-bb-border/50 text-bb-text-secondary hover:text-white hover:bg-bb-card border border-transparent hover:border-bb-border'}`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <CheckSquare className="w-4 h-4" />
+                                                {isSelectionMode ? 'Cancelar Selección' : 'Seleccionar Archivos'}
+                                            </div>
+                                        </button>
+                                    )}
+
                                     <button
                                         onClick={() => setShowAddCycleModal(true)}
                                         className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-bb-border text-bb-text hover:bg-bb-card border border-transparent hover:border-bb-border h-11 px-4 active:scale-95 whitespace-nowrap"
@@ -526,24 +619,24 @@ export default function CourseDetailContent({
                                                 </div>
                                             ) : (
                                                 <Accordion>
-                                                    {cycle.active_subfolders.map((subName: string) => (
+                                                    {cycle.active_subfolders.map((subName: string) => {
+                                                        const matchedMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === subName);
+                                                        return (
                                                         <AccordionItem 
                                                             key={subName} 
                                                             title={
                                                                 <div className="flex items-center justify-between w-full">
                                                                     <span>{subName}</span>
                                                                     <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black">
-                                                                        0
+                                                                        {matchedMats.length}
                                                                     </Badge>
                                                                 </div>
                                                             }
                                                         >
-                                                            <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
-                                                                <FolderRoot className="w-12 h-12 mb-3 text-bb-text-secondary" />
-                                                                <p className="text-bb-text-secondary font-medium">Aún no hay materiales en {subName}</p>
-                                                            </div>
+                                                            {renderMaterialGrid(matchedMats)}
                                                         </AccordionItem>
-                                                    ))}
+                                                    );
+                                                })}
                                                 </Accordion>
                                             )}
 
@@ -568,7 +661,7 @@ export default function CourseDetailContent({
                                         <div className="flex items-center justify-between w-full">
                                             <span>📦 Archivos Históricos (Sin Clasificar)</span>
                                             <Badge className="ml-4 bg-bb-dark border border-bb-border text-bb-text-secondary font-black">
-                                                {materialsForCounts.length}
+                                                {historicalMaterials.length}
                                             </Badge>
                                         </div>
                                     } defaultOpen={courseCycles.length === 0}>
@@ -814,6 +907,110 @@ export default function CourseDetailContent({
                                     className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-lg shadow-teal-600/20 transition-all active:scale-95 disabled:opacity-50"
                                 >
                                     {isSavingSubfolder ? 'Creando...' : 'Crear Subcarpeta'}
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* V6.0: Floating Selection Action Bar */}
+            <AnimatePresence>
+                {isSelectionMode && selectedMaterialIds.length > 0 && (
+                    <motion.div
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 100, opacity: 0 }}
+                        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[500] bg-bb-card border border-blue-500/50 shadow-2xl shadow-blue-500/20 px-6 py-4 rounded-3xl flex items-center gap-6"
+                    >
+                        <span className="text-white font-bold whitespace-nowrap">{selectedMaterialIds.length} archivos seleccionados</span>
+                        <div className="flex items-center gap-3 border-l border-bb-border/50 pl-6 shrink-0">
+                            <Button variant="ghost" className="text-bb-text-secondary hover:text-white hover:bg-bb-darker rounded-xl text-xs font-bold" onClick={() => setSelectedMaterialIds([])}>Desmarcar todos</Button>
+                            <Button className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20 px-6 h-10" onClick={() => setShowMoveModal(true)}>
+                                Mover a Carpeta
+                            </Button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* V6.0: Modal Mover Archivos */}
+            <AnimatePresence>
+                {showMoveModal && (
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowMoveModal(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative bg-bb-card border border-bb-border p-6 md:p-8 rounded-3xl shadow-2xl max-w-sm w-full mx-auto"
+                        >
+                            <div className="flex items-center justify-center w-12 h-12 bg-blue-500/10 rounded-xl mb-5 border border-blue-500/20">
+                                <FolderRoot className="w-6 h-6 text-blue-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-bb-text mb-2 tracking-tight">Mover {selectedMaterialIds.length} Archivos</h3>
+                            <p className="text-xs text-bb-text-secondary leading-relaxed mb-6">
+                                Selecciona el ciclo y subcarpeta destino para los archivos seleccionados.
+                            </p>
+
+                            <div className="space-y-4 mb-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Destino / Ciclo</label>
+                                    <select
+                                        value={targetCycleId || 'historical'}
+                                        onChange={(e) => {
+                                            setTargetCycleId(e.target.value);
+                                            setTargetSubfolder('');
+                                        }}
+                                        className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 text-sm text-bb-text focus:outline-none focus:border-blue-500 appearance-none"
+                                    >
+                                        <option value="historical">📦 Archivos Históricos (Raíz)</option>
+                                        {courseCycles.map(c => (
+                                            <option key={c.id} value={c.id}>📁 Ciclo {c.ciclo_name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {targetCycleId !== 'historical' && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}>
+                                        <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Subcarpeta de Destino</label>
+                                        <select
+                                            value={targetSubfolder}
+                                            onChange={(e) => setTargetSubfolder(e.target.value)}
+                                            className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 text-sm text-bb-text focus:outline-none focus:border-blue-500 appearance-none placeholder-bb-text-secondary"
+                                        >
+                                            <option value="" disabled>Selecciona una subcarpeta...</option>
+                                            {courseCycles.find(c => c.id === targetCycleId)?.active_subfolders?.map((sub: string) => (
+                                                <option key={sub} value={sub}>{sub}</option>
+                                            ))}
+                                        </select>
+                                        {!(courseCycles.find(c => c.id === targetCycleId)?.active_subfolders?.length > 0) && (
+                                            <p className="text-xs text-red-400 mt-2 font-medium">Este ciclo no tiene subcarpetas activas. Debes crear una primera.</p>
+                                        )}
+                                    </motion.div>
+                                )}
+                            </div>
+
+                            <div className="flex gap-3">
+                                <Button
+                                    onClick={() => setShowMoveModal(false)}
+                                    variant="ghost"
+                                    className="flex-1 rounded-xl text-bb-text-secondary hover:text-bb-text hover:bg-bb-dark"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    onClick={handleMassMove}
+                                    disabled={isMovingFiles || (targetCycleId !== 'historical' && !targetSubfolder)}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {isMovingFiles ? 'Moviendo...' : 'Confirmar'}
                                 </Button>
                             </div>
                         </motion.div>
