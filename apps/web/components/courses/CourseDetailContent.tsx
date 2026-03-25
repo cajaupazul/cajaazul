@@ -1035,16 +1035,25 @@ export default function CourseDetailContent({
                                                 <SelectValue placeholder="Selecciona una subcarpeta..." />
                                             </SelectTrigger>
                                             <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60">
-                                                {PREDEFINED_SUBFOLDERS.map((sub: string) => (
-                                                    <SelectItem key={sub} value={sub} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 font-bold">
-                                                        {sub}
-                                                    </SelectItem>
-                                                ))}
-                                                {courseCycles.find(c => c.id === targetCycleId)?.active_subfolders?.filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)).map((sub: string) => (
-                                                    <SelectItem key={sub} value={sub} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 text-blue-300 ml-4">
-                                                        ↳ {sub}
-                                                    </SelectItem>
-                                                ))}
+                                                {PREDEFINED_SUBFOLDERS.map((sub: string) => {
+                                                    const isExams = sub === '📝 Exámenes';
+                                                    const nestedSubfolders = isExams && targetCycleId !== 'historical'
+                                                        ? courseCycles.find(c => c.id === targetCycleId)?.active_subfolders?.filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)) || []
+                                                        : [];
+
+                                                    return (
+                                                        <div key={`group-${sub}`}>
+                                                            <SelectItem value={sub} className={`focus:bg-bb-card cursor-pointer py-2 font-bold ${isExams ? 'text-blue-400' : ''}`}>
+                                                                {sub}
+                                                            </SelectItem>
+                                                            {nestedSubfolders.map((nested: string) => (
+                                                                <SelectItem key={nested} value={nested} className="focus:bg-bb-card cursor-pointer py-2 text-blue-300 ml-4 pl-4 border-l-2 border-bb-border/50 bg-bb-sidebar/30">
+                                                                    ↳ {nested}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })}
                                             </SelectContent>
                                         </Select>
                                     </motion.div>
