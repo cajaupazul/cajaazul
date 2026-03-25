@@ -893,7 +893,7 @@ export default function CourseDetailContent({
                                     <SelectTrigger className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 h-12 text-sm text-bb-text focus:outline-none focus:border-blue-500 shadow-none">
                                         <SelectValue placeholder="Elige un tipo de material" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl z-[1050]">
+                                    <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl">
                                         {PREDEFINED_SUBFOLDERS.map(opt => (
                                             <SelectItem 
                                                 key={opt} 
@@ -984,7 +984,7 @@ export default function CourseDetailContent({
                                         <SelectTrigger className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 h-12 text-sm text-bb-text focus:outline-none focus:border-blue-500 shadow-none">
                                             <SelectValue placeholder="Selecciona un origen" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60 z-[1050]">
+                                        <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60">
                                             <SelectItem value="historical" className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2">
                                                 📦 Archivos Históricos (Raíz)
                                             </SelectItem>
@@ -1004,7 +1004,7 @@ export default function CourseDetailContent({
                                             <SelectTrigger className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 h-12 text-sm text-bb-text focus:outline-none focus:border-blue-500 shadow-none">
                                                 <SelectValue placeholder="Selecciona una subcarpeta..." />
                                             </SelectTrigger>
-                                            <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60 z-[1050]">
+                                            <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60">
                                                 {courseCycles.find(c => c.id === targetCycleId)?.active_subfolders?.map((sub: string) => (
                                                     <SelectItem key={sub} value={sub} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2">
                                                         {sub}
