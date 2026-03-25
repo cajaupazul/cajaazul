@@ -617,49 +617,79 @@ export default function CourseDetailContent({
                                                 </div>
                                             }
                                         >
-                                            {/* Nested mapped Subfolders */}
-                                            {(!cycle.active_subfolders || cycle.active_subfolders.length === 0) ? (
-                                                <div className="flex flex-col items-center justify-center py-12 text-center opacity-40 bg-black/10 rounded-2xl border border-bb-border/50">
-                                                    <FolderRoot className="w-12 h-12 mb-3 text-bb-text-secondary" />
-                                                    <p className="text-bb-text-secondary font-medium">Este ciclo aún no tiene carpetas</p>
-                                                </div>
-                                            ) : (
-                                                <Accordion>
-                                                    {cycle.active_subfolders.map((subName: string) => {
-                                                        const matchedMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === subName);
-                                                        return (
-                                                        <AccordionItem 
-                                                            key={subName} 
-                                                            title={
-                                                                <div className="flex items-center justify-between w-full">
-                                                                    <span>{subName}</span>
-                                                                    <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black">
-                                                                        {matchedMats.length}
-                                                                    </Badge>
+                                            {/* V6.1: Nested mapped Subfolders permanently rendered */}
+                                            <Accordion className="space-y-3 pl-4">
+                                                {PREDEFINED_SUBFOLDERS.map((mainFolder: string) => {
+                                                    const matchedMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === mainFolder);
+                                                    const isExams = mainFolder === '📝 Exámenes';
+                                                    const customSubfolders = isExams ? (cycle.active_subfolders || []).filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)) : [];
+
+                                                    let totalCount = matchedMats.length;
+                                                    if (isExams) {
+                                                        customSubfolders.forEach((sub: string) => {
+                                                            totalCount += (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === sub).length;
+                                                        });
+                                                    }
+
+                                                    return (
+                                                        <AccordionItem key={mainFolder} title={
+                                                            <div className="flex items-center justify-between w-full">
+                                                                <span>{mainFolder}</span>
+                                                                <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black">
+                                                                    {totalCount}
+                                                                </Badge>
+                                                            </div>
+                                                        }>
+                                                            {matchedMats.length > 0 && renderMaterialGrid(matchedMats)}
+                                                            {matchedMats.length === 0 && (!isExams || customSubfolders.length === 0) && (
+                                                                <div className="flex flex-col items-center justify-center py-8 text-center opacity-40">
+                                                                    <FolderRoot className="w-8 h-8 mb-2 text-bb-text-secondary" />
+                                                                    <p className="text-xs text-bb-text-secondary font-medium">Vacío</p>
                                                                 </div>
-                                                            }
-                                                        >
-                                                            {renderMaterialGrid(matchedMats)}
+                                                            )}
+
+                                                            {isExams && customSubfolders.length > 0 && (
+                                                                <div className="mt-4 border-l-2 border-bb-border/50 pl-4 space-y-3">
+                                                                     <Accordion className="space-y-3">
+                                                                        {customSubfolders.map((sub: string) => {
+                                                                            const subMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === sub);
+                                                                            return (
+                                                                                <AccordionItem key={sub} title={
+                                                                                    <div className="flex items-center justify-between w-full">
+                                                                                        <span className="text-sm border-l-2 border-blue-400 pl-2">↳ {sub}</span>
+                                                                                        <Badge className="ml-4 bg-teal-500/10 text-teal-400 border border-teal-500/20 font-black">{subMats.length}</Badge>
+                                                                                    </div>
+                                                                                }>
+                                                                                    {subMats.length > 0 ? renderMaterialGrid(subMats) : (
+                                                                                        <div className="text-center py-4 opacity-40 text-xs">Vacío</div>
+                                                                                    )}
+                                                                                </AccordionItem>
+                                                                            )
+                                                                        })}
+                                                                     </Accordion>
+                                                                </div>
+                                                            )}
+
+                                                            {isExams && currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                                                                <div className="mt-4 flex justify-end">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setCycleToEdit(cycle);
+                                                                            setShowAddSubfolderModal(true);
+                                                                        }}
+                                                                        className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-bb-border/50 text-bb-text-secondary hover:text-white hover:bg-bb-card border border-transparent hover:border-bb-border h-9 px-4 active:scale-95 whitespace-nowrap"
+                                                                    >
+                                                                        <div className="flex items-center gap-2">
+                                                                            <FolderRoot className="w-3.5 h-3.5" />
+                                                                            + Evaluación (PC, Parcial...)
+                                                                        </div>
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                         </AccordionItem>
                                                     );
                                                 })}
-                                                </Accordion>
-                                            )}
-
-                                            <div className="mt-4 flex justify-end">
-                                                <button
-                                                    onClick={() => {
-                                                        setCycleToEdit(cycle);
-                                                        setShowAddSubfolderModal(true);
-                                                    }}
-                                                    className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-bb-border/50 text-bb-text-secondary hover:text-white hover:bg-bb-card border border-transparent hover:border-bb-border h-9 px-4 active:scale-95 whitespace-nowrap"
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <FolderRoot className="w-3.5 h-3.5" />
-                                                        + Subcarpeta
-                                                    </div>
-                                                </button>
-                                            </div>
+                                            </Accordion>
                                         </AccordionItem>
                                     ))}
 
@@ -882,19 +912,19 @@ export default function CourseDetailContent({
                             <div className="flex items-center justify-center w-12 h-12 bg-teal-500/10 rounded-xl mb-5 border border-teal-500/20">
                                 <FolderRoot className="w-6 h-6 text-teal-400" />
                             </div>
-                            <h3 className="text-xl font-bold text-bb-text mb-2 tracking-tight">Agregar Subcarpeta</h3>
+                            <h3 className="text-xl font-bold text-bb-text mb-2 tracking-tight">Agregar Evaluación</h3>
                             <p className="text-xs text-bb-text-secondary leading-relaxed mb-6">
-                                Crea una nueva categoría dentro del <strong className="text-teal-400">Ciclo {cycleToEdit.ciclo_name}</strong>.
+                                Agrega una nueva sub-carpeta de evaluación dentro de la sección <strong className="text-teal-400">Exámenes</strong> del Ciclo {cycleToEdit.ciclo_name}.
                             </p>
 
                             <div className="mb-6">
-                                <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Seleccionar Categoría Predeterminada</label>
+                                <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Seleccionar Evaluación</label>
                                 <Select value={selectedSubfolderToAdd} onValueChange={setSelectedSubfolderToAdd}>
                                     <SelectTrigger className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 h-12 text-sm text-bb-text focus:outline-none focus:border-blue-500 shadow-none">
-                                        <SelectValue placeholder="Elige un tipo de material" />
+                                        <SelectValue placeholder="Elige un tipo de evaluación" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl">
-                                        {PREDEFINED_SUBFOLDERS.map(opt => (
+                                        {['PC 1', 'PC 2', 'PC 3', 'PC 4', 'Examen Parcial', 'Examen Final', 'Examen Sustitutorio'].map(opt => (
                                             <SelectItem 
                                                 key={opt} 
                                                 value={opt} 
@@ -1005,16 +1035,18 @@ export default function CourseDetailContent({
                                                 <SelectValue placeholder="Selecciona una subcarpeta..." />
                                             </SelectTrigger>
                                             <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60">
-                                                {courseCycles.find(c => c.id === targetCycleId)?.active_subfolders?.map((sub: string) => (
-                                                    <SelectItem key={sub} value={sub} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2">
+                                                {PREDEFINED_SUBFOLDERS.map((sub: string) => (
+                                                    <SelectItem key={sub} value={sub} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 font-bold">
                                                         {sub}
+                                                    </SelectItem>
+                                                ))}
+                                                {courseCycles.find(c => c.id === targetCycleId)?.active_subfolders?.filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)).map((sub: string) => (
+                                                    <SelectItem key={sub} value={sub} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 text-blue-300 ml-4">
+                                                        ↳ {sub}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
-                                        {!(courseCycles.find(c => c.id === targetCycleId)?.active_subfolders?.length > 0) && (
-                                            <p className="text-xs text-red-400 mt-2 font-medium">Este ciclo no tiene subcarpetas activas. Debes crear una primera.</p>
-                                        )}
                                     </motion.div>
                                 )}
                             </div>
