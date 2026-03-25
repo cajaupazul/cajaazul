@@ -10,7 +10,7 @@ interface AccordionProps {
 }
 
 export function Accordion({ children, className = '' }: AccordionProps) {
-  return <div className={`space-y-4 ${className}`}>{children}</div>;
+  return <div className={`flex flex-col w-full gap-2 ${className}`}>{children}</div>;
 }
 
 interface AccordionItemProps {
@@ -24,15 +24,15 @@ export function AccordionItem({ title, children, defaultOpen = false, className 
   const [isOpen, setIsOpen] = React.useState(defaultOpen);
 
   return (
-    <div className={`overflow-hidden rounded-2xl border ${isOpen ? 'border-bb-border/50 bg-bb-darker shadow-sm' : 'border-bb-border bg-bb-card shadow-transparent'} transition-all ${className}`}>
+    <div className={`border border-bb-border rounded-md overflow-hidden bg-bb-card transition-all ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex w-full items-center justify-between px-5 py-4 md:px-6 md:py-5 text-left font-bold transition-colors hover:bg-bb-hover group ${isOpen ? 'text-blue-400' : 'text-bb-text'}`}
+        className={`flex w-full items-center justify-between px-4 py-3.5 md:px-5 md:py-4 text-left transition-colors hover:bg-bb-hover group ${isOpen ? 'text-blue-400 font-bold' : 'text-bb-text font-medium'}`}
       >
-        <span className="flex items-center gap-3 text-base md:text-lg tracking-tight select-none">{title}</span>
-        <div className={`p-1 rounded-full transition-colors ${isOpen ? 'bg-blue-500/10' : 'group-hover:bg-bb-darker'}`}>
+        <span className="flex items-center gap-3 text-sm md:text-base tracking-tight select-none w-full">{title}</span>
+        <div className="p-1">
             <ChevronDown 
-            className={`h-5 w-5 md:h-6 md:w-6 transition-transform duration-300 ${isOpen ? 'rotate-180 text-blue-400' : 'text-bb-text-secondary group-hover:text-blue-400'}`} 
+            className={`h-4 w-4 md:h-5 md:w-5 transition-transform duration-200 ${isOpen ? 'rotate-180 text-blue-400' : 'text-bb-text-secondary group-hover:text-bb-text'}`} 
             />
         </div>
       </button>
@@ -42,10 +42,11 @@ export function AccordionItem({ title, children, defaultOpen = false, className 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.35, ease: [0.04, 0.62, 0.23, 0.98] }}
+            transition={{ duration: 0.25, ease: [0.04, 0.62, 0.23, 0.98] }}
           >
-            <div className="px-3 pb-4 pt-1 md:px-6 md:pb-6 md:pt-2">
-              <div className="border hover:border-blue-500/20 rounded-2xl p-4 md:p-6 bg-bb-card shadow-inner w-full border-bb-border transition-colors">
+            {/* The content container has a subtle top border to separate it from the header, and is indented with left padding */}
+            <div className="pl-6 md:pl-10 pr-4 md:pr-6 pb-4 pt-2 border-t border-bb-border/50 bg-bb-darker/20">
+              <div className="w-full">
                   {children}
               </div>
             </div>
