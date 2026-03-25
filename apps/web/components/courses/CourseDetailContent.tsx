@@ -399,12 +399,14 @@ export default function CourseDetailContent({
         }
 
         return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className={`grid ${viewMode === 'grid' 
+                ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4' 
+                : 'grid-cols-1 gap-1 sm:gap-2'}`}>
                 {mats.map((material) => (
                     <MaterialCard
                         key={material.id}
                         material={material}
-                        viewMode="grid"
+                        viewMode={viewMode}
                         isSelectionMode={isSelectionMode}
                         isSelected={selectedMaterialIds.includes(material.id)}
                         onSelect={() => handleToggleSelect(material.id)}
@@ -562,21 +564,21 @@ export default function CourseDetailContent({
                                     </h3>
                                     <p className="text-xs text-bb-text-secondary mt-1 font-medium">Navega por las carpetas para encontrar el material</p>
                                 </div>
-                                <div className="flex items-center justify-end gap-3 self-center sm:self-auto min-w-max">
-                                    <div className="flex items-center gap-2 bg-bb-darker/50 p-1 rounded-xl border border-bb-border">
+                                <div className="flex items-center justify-end gap-2 sm:gap-3 self-center sm:self-auto w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+                                    <div className="flex items-center gap-1 sm:gap-2 bg-bb-darker/50 p-1 rounded-xl border border-bb-border flex-shrink-0">
                                         <button
                                             onClick={() => setViewMode('grid')}
-                                            className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                            className={`p-1.5 sm:p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
                                             title="Vista Cuadrícula"
                                         >
-                                            <LayoutPanelLeft className="w-4 h-4" />
+                                            <LayoutPanelLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                         </button>
                                         <button
                                             onClick={() => setViewMode('list')}
-                                            className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                            className={`p-1.5 sm:p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
                                             title="Vista Lista"
                                         >
-                                            <List className="w-4 h-4" strokeWidth={2.5} />
+                                            <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
                                         </button>
                                     </div>
                                     
@@ -586,30 +588,31 @@ export default function CourseDetailContent({
                                                 setIsSelectionMode(!isSelectionMode);
                                                 setSelectedMaterialIds([]);
                                             }}
-                                            className={`inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all h-11 px-4 active:scale-95 whitespace-nowrap ${isSelectionMode ? 'bg-blue-600 text-white shadow-blue-500/20 shadow-lg' : 'bg-bb-border/50 text-bb-text-secondary hover:text-white hover:bg-bb-card border border-transparent hover:border-bb-border'}`}
+                                            className={`inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all h-10 sm:h-11 px-3 sm:px-4 active:scale-95 whitespace-nowrap flex-shrink-0 ${isSelectionMode ? 'bg-blue-600 text-white shadow-blue-500/20 shadow-lg' : 'bg-bb-border/50 text-bb-text-secondary hover:text-white hover:bg-bb-card border border-transparent hover:border-bb-border'}`}
                                         >
-                                            <div className="flex items-center gap-2">
-                                                <CheckSquare className="w-4 h-4" />
-                                                {isSelectionMode ? 'Cancelar Selección' : 'Seleccionar Archivos'}
+                                            <div className="flex items-center gap-1.5 sm:gap-2">
+                                                <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                                <span className="hidden xs:inline">{isSelectionMode ? 'Cancelar Selección' : 'Seleccionar Archivos'}</span>
+                                                <span className="xs:hidden">{isSelectionMode ? 'Cancelar' : 'Seleccionar'}</span>
                                             </div>
                                         </button>
                                     )}
 
                                     <button
                                         onClick={() => setShowAddCycleModal(true)}
-                                        className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-bb-border text-bb-text hover:bg-bb-card border border-transparent hover:border-bb-border h-11 px-4 active:scale-95 whitespace-nowrap"
+                                        className="inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all bg-bb-border text-bb-text hover:bg-bb-card border border-transparent hover:border-bb-border h-10 sm:h-11 px-3 sm:px-4 active:scale-95 whitespace-nowrap flex-shrink-0"
                                     >
-                                        <div className="flex items-center gap-2">
-                                            <FolderRoot className="w-4 h-4" />
-                                            + Ciclo
+                                        <div className="flex items-center gap-1.5 sm:gap-2">
+                                            <FolderRoot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                            <span>+ Ciclo</span>
                                         </div>
                                     </button>
                                     <Link
                                         href={`/dashboard/courses/upload?courseId=${course.id}`}
-                                        className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 h-11 px-5 shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap"
+                                        className="inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 h-10 sm:h-11 px-3 sm:px-5 shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap flex-shrink-0"
                                     >
-                                        <div className="flex items-center gap-2">
-                                            <Upload className="w-4 h-4" strokeWidth={2.5} />
+                                        <div className="flex items-center gap-1.5 sm:gap-2">
+                                            <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
                                             Subir
                                         </div>
                                     </Link>
@@ -633,7 +636,7 @@ export default function CourseDetailContent({
                                             }
                                         >
                                             {/* V6.1: Nested mapped Subfolders permanently rendered */}
-                                            <Accordion className="space-y-3 pl-4">
+                                            <Accordion className="space-y-1 pl-1 md:pl-4">
                                                 {PREDEFINED_SUBFOLDERS.map((mainFolder: string) => {
                                                     const matchedMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === mainFolder);
                                                     const isExams = mainFolder === '📝 Exámenes';
@@ -647,10 +650,10 @@ export default function CourseDetailContent({
                                                     }
 
                                                     return (
-                                                        <AccordionItem key={mainFolder} title={
+                                                        <AccordionItem key={mainFolder} variant="minimal" title={
                                                             <div className="flex items-center justify-between w-full">
-                                                                <span>{mainFolder}</span>
-                                                                <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black">
+                                                                <span className="text-sm font-bold text-bb-text/90 tracking-tight">{mainFolder}</span>
+                                                                <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/10 font-black text-[9px] py-0 px-1.5 h-5">
                                                                     {totalCount}
                                                                 </Badge>
                                                             </div>
@@ -664,15 +667,17 @@ export default function CourseDetailContent({
                                                             )}
 
                                                             {isExams && customSubfolders.length > 0 && (
-                                                                <div className="mt-4 border-l-2 border-bb-border/50 pl-4 space-y-3">
-                                                                     <Accordion className="space-y-3">
+                                                                <div className="mt-2 border-l border-bb-border/30 pl-2 space-y-1">
+                                                                     <Accordion className="space-y-1">
                                                                         {customSubfolders.map((sub: string) => {
                                                                             const subMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === sub);
                                                                             return (
-                                                                                <AccordionItem key={sub} title={
+                                                                                <AccordionItem key={sub} variant="ghost" title={
                                                                                     <div className="flex items-center justify-between w-full">
-                                                                                        <span className="text-sm border-l-2 border-blue-400 pl-2">↳ {sub}</span>
-                                                                                        <Badge className="ml-4 bg-teal-500/10 text-teal-400 border border-teal-500/20 font-black">{subMats.length}</Badge>
+                                                                                        <span className="text-xs font-bold text-bb-text/70 uppercase tracking-tighter flex items-center gap-2">
+                                                                                            <span className="text-blue-500/50">↳</span> {sub}
+                                                                                        </span>
+                                                                                        <Badge className="ml-4 bg-teal-500/10 text-teal-400 border border-teal-500/10 font-black text-[8px] py-0 px-1.5 h-4">{subMats.length}</Badge>
                                                                                     </div>
                                                                                 }>
                                                                                     {subMats.length > 0 ? renderMaterialGrid(subMats) : (
@@ -717,14 +722,15 @@ export default function CourseDetailContent({
                                         </div>
                                     } defaultOpen={courseCycles.length === 0}>
                                         
-                                        <Accordion>
+                                        <Accordion className="space-y-1">
                                             {categories.map((cat) => (
                                                 <AccordionItem 
                                                     key={cat.id} 
+                                                    variant="minimal"
                                                     title={
                                                         <div className="flex items-center justify-between w-full">
-                                                            <span>{cat.label}</span>
-                                                            <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black">
+                                                            <span className="text-sm font-bold text-bb-text/90 tracking-tight">{cat.label}</span>
+                                                            <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/10 font-black text-[9px] py-0 px-1.5 h-5">
                                                                 {cat.items.length}
                                                             </Badge>
                                                         </div>

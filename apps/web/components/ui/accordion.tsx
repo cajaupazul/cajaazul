@@ -18,16 +18,41 @@ interface AccordionItemProps {
   children: React.ReactNode;
   defaultOpen?: boolean;
   className?: string;
+  variant?: 'default' | 'minimal' | 'ghost';
 }
 
-export function AccordionItem({ title, children, defaultOpen = false, className = '' }: AccordionItemProps) {
+export function AccordionItem({ 
+  title, 
+  children, 
+  defaultOpen = false, 
+  className = '',
+  variant = 'default' 
+}: AccordionItemProps) {
   const [isOpen, setIsOpen] = React.useState(defaultOpen);
 
+  const containerStyles = {
+    default: 'border border-bb-border rounded-md bg-bb-card',
+    minimal: 'border-b border-bb-border/30 last:border-b-0 bg-transparent',
+    ghost: 'bg-transparent border-none'
+  }[variant];
+
+  const headerPadding = {
+    default: 'px-4 py-3.5 md:px-5 md:py-4',
+    minimal: 'px-2 py-2.5 md:px-4 md:py-3',
+    ghost: 'px-0 py-2'
+  }[variant];
+
+  const contentPadding = {
+    default: 'pl-6 md:pl-10 pr-4 md:pr-6 pb-4 pt-2 border-t border-bb-border/50 bg-bb-darker/20',
+    minimal: 'pl-4 md:pl-8 pr-2 md:pr-4 pb-3 pt-1 bg-transparent',
+    ghost: 'pl-4 md:pl-6 pr-0 pb-2 pt-0'
+  }[variant];
+
   return (
-    <div className={`border border-bb-border rounded-md overflow-hidden bg-bb-card transition-all ${className}`}>
+    <div className={`${containerStyles} overflow-hidden transition-all ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex w-full items-center justify-between px-4 py-3.5 md:px-5 md:py-4 text-left transition-colors hover:bg-bb-hover group ${isOpen ? 'text-blue-400 font-bold' : 'text-bb-text font-medium'}`}
+        className={`flex w-full items-center justify-between ${headerPadding} text-left transition-colors hover:bg-bb-hover group ${isOpen ? 'text-blue-400 font-bold' : 'text-bb-text font-medium'}`}
       >
         <span className="flex items-center gap-3 text-sm md:text-base tracking-tight select-none w-full">{title}</span>
         <div className="p-1">
@@ -44,8 +69,7 @@ export function AccordionItem({ title, children, defaultOpen = false, className 
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.04, 0.62, 0.23, 0.98] }}
           >
-            {/* The content container has a subtle top border to separate it from the header, and is indented with left padding */}
-            <div className="pl-6 md:pl-10 pr-4 md:pr-6 pb-4 pt-2 border-t border-bb-border/50 bg-bb-darker/20">
+            <div className={contentPadding}>
               <div className="w-full">
                   {children}
               </div>

@@ -149,68 +149,72 @@ export default function MaterialCard({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={handleCardClick}
-                className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer group active:scale-[0.99] ${
+                className={`flex items-center justify-between p-1.5 sm:p-3 rounded-lg sm:rounded-xl border transition-all cursor-pointer group active:scale-[0.99] ${
                     isSelectionMode && isSelected 
                     ? 'bg-blue-500/10 border-blue-500 shadow-sm shadow-blue-500/20' 
-                    : 'bg-bb-darker/20 hover:bg-bb-card border-bb-border/50'
+                    : 'bg-bb-darker/10 hover:bg-bb-card border-bb-border/30 hover:border-bb-border/60'
                 }`}
             >
-                <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
                     {/* Checkbox overlay for List Mode */}
                     {isSelectionMode && (
-                        <div className={`mr-1 transition-colors ${isSelected ? 'text-blue-500' : 'text-bb-border hover:text-bb-text-secondary'}`}>
-                            {isSelected ? <CheckSquare className="w-5 h-5 fill-current" /> : <Square className="w-5 h-5" />}
+                        <div className={`mr-0.5 sm:mr-1 transition-colors ${isSelected ? 'text-blue-500' : 'text-bb-border hover:text-bb-text-secondary'}`}>
+                            {isSelected ? <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 fill-current" /> : <Square className="w-4 h-4 sm:w-5 sm:h-5" />}
                         </div>
                     )}
-                    <div className={`p-2 rounded-xl ${config.bg} ${config.color} group-hover:scale-110 transition-transform flex-shrink-0`}>
+                    <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${config.bg} ${config.color} group-hover:scale-110 transition-transform flex-shrink-0 w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center`}>
                         {thumbnailUrl ? (
-                            <img src={thumbnailUrl} alt={material.titulo} className="w-8 h-8 object-cover rounded-lg" />
-                        ) : config.icon}
+                            <img src={thumbnailUrl} alt={material.titulo} className="w-full h-full object-cover rounded-md sm:rounded-lg" />
+                        ) : (
+                            <div className="w-5 h-5 sm:w-8 sm:h-8">
+                                {React.cloneElement(config.icon as React.ReactElement<any>, { className: "w-full h-full" })}
+                            </div>
+                        )}
                     </div>
                     <div className="min-w-0">
-                        <p className="text-sm font-bold text-bb-text truncate">
+                        <p className="text-[13px] sm:text-sm font-bold text-bb-text truncate leading-tight">
                             {material.titulo}
                         </p>
-                        <div className="flex items-center gap-3 mt-1 text-[10px] text-bb-text-secondary font-medium">
-                            <Badge variant="outline" className={`text-[8px] uppercase font-black py-0 px-1.5 ${config.color} border-current opacity-70`}>
+                        <div className="flex items-center gap-2 sm:gap-3 mt-0.5 sm:mt-1 text-[9px] sm:text-[10px] text-bb-text-secondary font-medium overflow-hidden">
+                            <Badge variant="outline" className={`text-[7px] sm:text-[8px] uppercase font-black py-0 px-1 sm:px-1.5 ${config.color} border-current opacity-70 flex-shrink-0`}>
                                 {config.label}
                             </Badge>
                             {material.professors?.nombre && (
-                                <span className="flex items-center gap-1 truncate max-w-[100px]" onClick={(e) => e.stopPropagation()}>
+                                <span className="hidden sm:flex items-center gap-1 truncate max-w-[80px] md:max-w-[100px]" onClick={(e) => e.stopPropagation()}>
                                     <User className="w-3 h-3" />
                                     {material.professors.nombre}
                                 </span>
                             )}
                             {material.profiles?.nombre && (
-                                <div onClick={(e) => e.stopPropagation()}>
+                                <div onClick={(e) => e.stopPropagation()} className="hidden sm:block">
                                     <UserHoverCard profile={material.profiles}>
-                                        <span className="flex items-center gap-1 truncate max-w-[100px] hover:text-blue-400 transition-colors">
+                                        <span className="flex items-center gap-1 truncate max-w-[80px] md:max-w-[100px] hover:text-blue-400 transition-colors">
                                             <UploadCloud className="w-3 h-3" />
                                             {material.profiles.nombre}
                                         </span>
                                     </UserHoverCard>
                                 </div>
                             )}
-                            <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
+                            <span className="flex items-center gap-1 flex-shrink-0">
+                                <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                 {format(new Date(material.created_at), 'd MMM', { locale: es })}
                             </span>
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 px-2">
+                <div className="flex items-center gap-1 sm:gap-2 px-1 sm:px-2">
                     {canDelete && onDelete && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onDelete();
                             }}
-                            className="p-2 rounded-lg hover:bg-red-500/20 text-red-500 transition-all bg-red-500/10"
+                            className="p-1.5 sm:p-2 rounded-lg hover:bg-red-500/20 text-red-500 transition-all bg-red-500/10"
                         >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                     )}
-                    <MoreVertical className="w-4 h-4 text-bb-text-secondary group-hover:text-blue-400 opacity-50 group-hover:opacity-100 transition-all" />
+                    <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-bb-text-secondary group-hover:text-blue-400 opacity-50 group-hover:opacity-100 transition-all" />
                 </div>
             </motion.div>
         );
@@ -232,21 +236,21 @@ export default function MaterialCard({
             animate={{ opacity: 1, scale: 1 }}
             whileHover={{ y: -4 }}
             onClick={handleCardClick}
-            className={`flex flex-col rounded-2xl overflow-hidden border shadow-sm transition-all cursor-pointer group active:scale-[0.98] relative ${
+            className={`flex flex-col rounded-xl sm:rounded-2xl overflow-hidden border shadow-sm transition-all cursor-pointer group active:scale-[0.98] relative ${
                 isSelectionMode && isSelected 
                 ? 'bg-blue-500/10 border-blue-500 ring-2 ring-blue-500/50 shadow-blue-500/20' 
-                : 'bg-bb-darker/20 border-bb-border/50 hover:border-blue-500/20'
+                : 'bg-bb-darker/5 hover:bg-bb-card border-bb-border/30 hover:border-blue-500/20'
             }`}
         >
             {/* Checkbox Overlay for Grid Mode */}
             {isSelectionMode && (
-                <div className="absolute top-3 left-3 z-[40]">
+                <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-[40]">
                     <div className={`p-1 rounded-md backdrop-blur-md border shadow-sm transition-all ${
                         isSelected 
                         ? 'bg-blue-500 text-white border-blue-400' 
                         : 'bg-black/50 text-white/50 border-white/20 hover:bg-black/80 hover:text-white'
                     }`}>
-                        {isSelected ? <CheckSquare className="w-4 h-4 fill-current" /> : <Square className="w-4 h-4" />}
+                        {isSelected ? <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" /> : <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                     </div>
                 </div>
             )}
@@ -275,8 +279,8 @@ export default function MaterialCard({
                         <div className="absolute left-0 top-0 bottom-0 w-[5px] bg-amber-400 z-10" />
 
                         {/* Title — vertically centered, left-aligned with padding after stripe */}
-                        <div className="absolute inset-0 flex items-center pl-5 pr-3 z-10">
-                            <p className="text-base font-black text-white leading-tight line-clamp-3 drop-shadow-lg">
+                        <div className="absolute inset-0 flex items-center pl-4 sm:pl-5 pr-3 z-10">
+                            <p className="text-sm sm:text-base font-black text-white leading-tight line-clamp-3 drop-shadow-lg uppercase tracking-tighter">
                                 {material.titulo}
                             </p>
                         </div>
@@ -295,8 +299,8 @@ export default function MaterialCard({
             </div>
 
             {/* Content Area */}
-            <div className="p-4 space-y-3 bg-bb-card border-t border-bb-border/50">
-                <p className="text-sm font-black text-bb-text line-clamp-2 leading-tight min-h-[2.5rem] group-hover:text-blue-400 transition-colors">
+            <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 bg-bb-card border-t border-bb-border/30">
+                <p className="text-[11px] sm:text-sm font-black text-bb-text line-clamp-2 leading-tight min-h-[2rem] sm:min-h-[2.5rem] group-hover:text-blue-400 transition-colors">
                     {material.titulo}
                 </p>
 
@@ -315,16 +319,16 @@ export default function MaterialCard({
                             </UserHoverCard>
                         </div>
                     )}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary opacity-60 font-medium uppercase">
-                            <Calendar className="w-3 h-3" />
+                    <div className="flex items-center justify-between mt-0.5 sm:mt-1 pt-1 border-t border-bb-border/20">
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-[8px] sm:text-[10px] text-bb-text-secondary opacity-60 font-medium uppercase truncate">
+                            <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                             {format(new Date(material.created_at), 'd MMM, yyyy', { locale: es })}
                         </div>
 
                         <div className="flex items-center gap-2">
                             {material.use_advanced_viewer && (
-                                <div className="flex items-center gap-1 text-[9px] font-black text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-500/20 animate-pulse">
-                                    <Zap className="w-2.5 h-2.5 fill-current" />
+                                <div className="flex items-center gap-1 text-[8px] sm:text-[9px] font-black text-amber-500 bg-amber-500/10 px-1 sm:px-1.5 py-0.5 rounded-full border border-amber-500/20 animate-pulse">
+                                    <Zap className="w-2 h-2 sm:w-2.5 sm:h-2.5 fill-current" />
                                     PRO
                                 </div>
                             )}
@@ -360,9 +364,9 @@ export default function MaterialCard({
                             e.stopPropagation();
                             onDelete();
                         }}
-                        className="absolute top-2 right-2 p-2 rounded-xl bg-red-500/10 text-red-500 backdrop-blur-sm transition-all hover:bg-red-500/20 shadow-sm border border-red-500/20 z-20"
+                        className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-red-500/10 text-red-500 backdrop-blur-sm transition-all hover:bg-red-500/20 shadow-sm border border-red-500/20 z-20"
                     >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                 )
             }
