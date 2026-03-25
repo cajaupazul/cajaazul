@@ -14,6 +14,7 @@ import SecureFileModal from '@/components/secure/SecureFileModal';
 import MaterialCard from './MaterialCard';
 import { Accordion, AccordionItem } from '@/components/ui/accordion';
 import { Autocomplete } from '@/components/ui/Autocomplete';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CourseDetailContentProps {
     course: Course;
@@ -39,7 +40,11 @@ export default function CourseDetailContent({
     
     // UI state for Add Cycle Modal
     const [showAddCycleModal, setShowAddCycleModal] = useState(false);
-    const [selectedCycleToAdd, setSelectedCycleToAdd] = useState('');
+    const [selectedCycleToAdd, setSelectedCycleToAdd] = useState(() => {
+        const d = new Date();
+        const m = d.getMonth();
+        return `${d.getFullYear()}-${m < 3 ? 0 : m < 7 ? 1 : 2}`;
+    });
     const [isSavingCycle, setIsSavingCycle] = useState(false);
     
     // UI state for Add Subfolder Modal
@@ -125,10 +130,11 @@ export default function CourseDetailContent({
         }
     };
 
-    // Generates cycles from 2020-0 up to 2050-2
+    // Generates cycles from roughly current year - 2 up to current year + 2
     const availableCycleOptions = useMemo(() => {
         const options = [];
-        for (let year = 2020; year <= 2050; year++) {
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear - 2; year <= currentYear + 2; year++) {
             for (let period = 0; period <= 2; period++) {
                 options.push(`${year}-${period}`);
             }
@@ -225,7 +231,7 @@ export default function CourseDetailContent({
 
     const PREDEFINED_SUBFOLDERS = [
         '📖 Sílabo y Cronograma',
-        '📝 Exámenes Pasados',
+        '📝 Exámenes',
         '📊 Presentaciones y Diapositivas',
         '🔗 Enlaces Útiles',
         '📚 Otros Recursos'
@@ -403,7 +409,7 @@ export default function CourseDetailContent({
 
         const categories = [
             { id: 'silabo', label: '📖 Sílabo y Cronograma', items: [] as any[] },
-            { id: 'examenes', label: '📝 Exámenes Pasados', items: [] as any[] },
+            { id: 'examenes', label: '📝 Exámenes', items: [] as any[] },
             { id: 'presentaciones', label: '📊 Presentaciones y Diapositivas', items: [] as any[] },
             { id: 'enlaces', label: '🔗 Enlaces Útiles', items: [] as any[] },
             { id: 'otros', label: '📚 Otros Recursos', items: [] as any[] },
@@ -821,16 +827,18 @@ export default function CourseDetailContent({
 
                             <div className="mb-6">
                                 <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Seleccionar Ciclo</label>
-                                <select
-                                    value={selectedCycleToAdd}
-                                    onChange={(e) => setSelectedCycleToAdd(e.target.value)}
-                                    className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 text-sm text-bb-text focus:outline-none focus:border-blue-500 appearance-none placeholder-bb-text-secondary"
-                                >
-                                    <option value="" disabled>Elige un ciclo (Ej: 2026-1)</option>
-                                    {availableCycleOptions.map(opt => (
-                                        <option key={opt} value={opt}>{opt}</option>
-                                    ))}
-                                </select>
+                                <Select value={selectedCycleToAdd} onValueChange={setSelectedCycleToAdd}>
+                                    <SelectTrigger className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 h-12 text-sm text-bb-text focus:outline-none focus:border-blue-500 shadow-none">
+                                        <SelectValue placeholder="Elige un ciclo (Ej: 2026-1)" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60">
+                                        {availableCycleOptions.map(opt => (
+                                            <SelectItem key={opt} value={opt} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2">
+                                                {opt}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="flex gap-3">
@@ -881,16 +889,23 @@ export default function CourseDetailContent({
 
                             <div className="mb-6">
                                 <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Seleccionar Categoría Predeterminada</label>
-                                <select
-                                    value={selectedSubfolderToAdd}
-                                    onChange={(e) => setSelectedSubfolderToAdd(e.target.value)}
-                                    className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 text-sm text-bb-text focus:outline-none focus:border-blue-500 appearance-none placeholder-bb-text-secondary"
-                                >
-                                    <option value="" disabled>Elige un tipo de material</option>
-                                    {PREDEFINED_SUBFOLDERS.map(opt => (
-                                        <option key={opt} value={opt} disabled={cycleToEdit.active_subfolders?.includes(opt)}>{opt}</option>
-                                    ))}
-                                </select>
+                                <Select value={selectedSubfolderToAdd} onValueChange={setSelectedSubfolderToAdd}>
+                                    <SelectTrigger className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 h-12 text-sm text-bb-text focus:outline-none focus:border-blue-500 shadow-none">
+                                        <SelectValue placeholder="Elige un tipo de material" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl">
+                                        {PREDEFINED_SUBFOLDERS.map(opt => (
+                                            <SelectItem 
+                                                key={opt} 
+                                                value={opt} 
+                                                disabled={cycleToEdit.active_subfolders?.includes(opt)}
+                                                className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 data-[disabled]:opacity-40"
+                                            >
+                                                {opt}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="flex gap-3">
@@ -962,34 +977,41 @@ export default function CourseDetailContent({
                             <div className="space-y-4 mb-6">
                                 <div>
                                     <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Destino / Ciclo</label>
-                                    <select
-                                        value={targetCycleId || 'historical'}
-                                        onChange={(e) => {
-                                            setTargetCycleId(e.target.value);
-                                            setTargetSubfolder('');
-                                        }}
-                                        className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 text-sm text-bb-text focus:outline-none focus:border-blue-500 appearance-none"
-                                    >
-                                        <option value="historical">📦 Archivos Históricos (Raíz)</option>
-                                        {courseCycles.map(c => (
-                                            <option key={c.id} value={c.id}>📁 Ciclo {c.ciclo_name}</option>
-                                        ))}
-                                    </select>
+                                    <Select value={targetCycleId || 'historical'} onValueChange={(v) => {
+                                        setTargetCycleId(v);
+                                        setTargetSubfolder('');
+                                    }}>
+                                        <SelectTrigger className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 h-12 text-sm text-bb-text focus:outline-none focus:border-blue-500 shadow-none">
+                                            <SelectValue placeholder="Selecciona un origen" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60">
+                                            <SelectItem value="historical" className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2">
+                                                📦 Archivos Históricos (Raíz)
+                                            </SelectItem>
+                                            {courseCycles.map(c => (
+                                                <SelectItem key={c.id} value={c.id} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2">
+                                                    📁 Ciclo {c.ciclo_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 {targetCycleId !== 'historical' && (
                                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}>
                                         <label className="block text-xs font-bold text-bb-text-secondary uppercase tracking-wider mb-2">Subcarpeta de Destino</label>
-                                        <select
-                                            value={targetSubfolder}
-                                            onChange={(e) => setTargetSubfolder(e.target.value)}
-                                            className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 text-sm text-bb-text focus:outline-none focus:border-blue-500 appearance-none placeholder-bb-text-secondary"
-                                        >
-                                            <option value="" disabled>Selecciona una subcarpeta...</option>
-                                            {courseCycles.find(c => c.id === targetCycleId)?.active_subfolders?.map((sub: string) => (
-                                                <option key={sub} value={sub}>{sub}</option>
-                                            ))}
-                                        </select>
+                                        <Select value={targetSubfolder} onValueChange={setTargetSubfolder}>
+                                            <SelectTrigger className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-3 h-12 text-sm text-bb-text focus:outline-none focus:border-blue-500 shadow-none">
+                                                <SelectValue placeholder="Selecciona una subcarpeta..." />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60">
+                                                {courseCycles.find(c => c.id === targetCycleId)?.active_subfolders?.map((sub: string) => (
+                                                    <SelectItem key={sub} value={sub} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2">
+                                                        {sub}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         {!(courseCycles.find(c => c.id === targetCycleId)?.active_subfolders?.length > 0) && (
                                             <p className="text-xs text-red-400 mt-2 font-medium">Este ciclo no tiene subcarpetas activas. Debes crear una primera.</p>
                                         )}
