@@ -338,6 +338,44 @@ export default function CourseDetailContent({
             );
         }
 
+        const handleMaterialClick = async (material: any) => {
+            if (material.tipo?.toLowerCase() === 'enlace') {
+                window.open(material.url_archivo, '_blank');
+                return;
+            }
+
+            const isExcel = material.url_archivo.toLowerCase().match(/\.(xls|xlsx|csv)$/i);
+            if (isExcel) {
+                // Open new tab immediately to bypass popup blocker
+                const newTab = window.open('', '_blank');
+                if (newTab) {
+                    newTab.document.write('<div style="font-family: sans-serif; padding: 2rem; text-align: center; color: #666;">Cargando visor de Excel...</div>');
+                    try {
+                        const { data, error } = await supabase.storage
+                            .from('course-materials')
+                            .createSignedUrl(material.url_archivo, 3600);
+                        
+                        if (error || !data?.signedUrl) throw error;
+                        
+                        // Use Google Docs viewer for a better external Excel experience
+                        const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(data.signedUrl)}`;
+                        newTab.location.href = viewerUrl;
+                    } catch (err) {
+                        console.error('Error al generar URL segura para Excel:', err);
+                        newTab.document.write('<div style="color: red; padding: 20px;">Error al cargar el archivo. Por favor intenta de nuevo.</div>');
+                    }
+                }
+                return;
+            }
+
+            // Normal file (PDF, PPTX, Docx, Image) -> open in SecureFileViewer
+            setViewingFile({
+                path: material.url_archivo,
+                name: material.titulo,
+                useAdvanced: material.use_advanced_viewer
+            });
+        };
+
         if (viewMode === 'list') {
             return (
                 <div className="space-y-4">
@@ -349,17 +387,7 @@ export default function CourseDetailContent({
                             isSelectionMode={isSelectionMode}
                             isSelected={selectedMaterialIds.includes(material.id)}
                             onSelect={() => handleToggleSelect(material.id)}
-                            onClick={() => {
-                                if (material.tipo?.toLowerCase() === 'enlace') {
-                                    window.open(material.url_archivo, '_blank');
-                                } else {
-                                    setViewingFile({
-                                        path: material.url_archivo,
-                                        name: material.titulo,
-                                        useAdvanced: material.use_advanced_viewer
-                                    });
-                                }
-                            }}
+                            onClick={() => handleMaterialClick(material)}
                             canDelete={
                                 currentUser && (
                                     (currentUser.role === 'admin' || currentUser.role === 'superadmin') ||
@@ -383,17 +411,7 @@ export default function CourseDetailContent({
                         isSelectionMode={isSelectionMode}
                         isSelected={selectedMaterialIds.includes(material.id)}
                         onSelect={() => handleToggleSelect(material.id)}
-                        onClick={() => {
-                            if (material.tipo?.toLowerCase() === 'enlace') {
-                                window.open(material.url_archivo, '_blank');
-                            } else {
-                                setViewingFile({
-                                    path: material.url_archivo,
-                                    name: material.titulo,
-                                    useAdvanced: material.use_advanced_viewer
-                                });
-                            }
-                        }}
+                        onClick={() => handleMaterialClick(material)}
                         canDelete={
                             currentUser && (
                                 (currentUser.role === 'admin' || currentUser.role === 'superadmin') ||

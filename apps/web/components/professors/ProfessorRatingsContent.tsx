@@ -1201,12 +1201,33 @@ export default function ProfessorRatingsContent({
                                                     <MaterialCard
                                                         material={material}
                                                         viewMode="grid"
-                                                        onClick={() => {
+                                                        onClick={async () => {
                                                             if (material.tipo?.toLowerCase() === 'enlace') {
                                                                 window.open(material.url_archivo, '_blank');
-                                                            } else {
-                                                                setViewingFile({ path: material.url_archivo, name: material.titulo });
+                                                                return;
                                                             }
+
+                                                            const isExcel = material.url_archivo.toLowerCase().match(/\.(xls|xlsx|csv)$/i);
+                                                            if (isExcel) {
+                                                                const newTab = window.open('', '_blank');
+                                                                if (newTab) {
+                                                                    newTab.document.write('<div style="font-family: sans-serif; padding: 2rem; text-align: center; color: #666;">Cargando visor de Excel...</div>');
+                                                                    try {
+                                                                        const { data, error } = await supabase.storage
+                                                                            .from('course-materials')
+                                                                            .createSignedUrl(material.url_archivo, 3600);
+                                                                        
+                                                                        if (error || !data?.signedUrl) throw error;
+                                                                        newTab.location.href = `https://docs.google.com/viewer?url=${encodeURIComponent(data.signedUrl)}`;
+                                                                    } catch (err) {
+                                                                        console.error('Error al generar URL para Excel:', err);
+                                                                        newTab.document.write('<div style="color: red; padding: 20px;">Error al cargar el archivo.</div>');
+                                                                    }
+                                                                }
+                                                                return;
+                                                            }
+
+                                                            setViewingFile({ path: material.url_archivo, name: material.titulo });
                                                         }}
                                                         canDelete={
                                                             !!profile && (
