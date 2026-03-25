@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2, Pencil, Upload, List, Calculator, CheckSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
+import { getPreviewUrl } from '@/lib/r2-storage';
 import AdminMaterialManager from './AdminMaterialManager';
 import { PLACEHOLDERS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
@@ -351,14 +352,10 @@ export default function CourseDetailContent({
                 if (newTab) {
                     newTab.document.write('<div style="font-family: sans-serif; padding: 2rem; text-align: center; color: #666;">Cargando visor de Excel...</div>');
                     try {
-                        const { data, error } = await supabase.storage
-                            .from('course-materials')
-                            .createSignedUrl(material.url_archivo, 3600);
-                        
-                        if (error || !data?.signedUrl) throw error;
+                        const signedUrl = await getPreviewUrl('course-materials', material.url_archivo);
                         
                         // Use Google Docs viewer for a better external Excel experience
-                        const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(data.signedUrl)}`;
+                        const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`;
                         newTab.location.href = viewerUrl;
                     } catch (err) {
                         console.error('Error al generar URL segura para Excel:', err);

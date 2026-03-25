@@ -21,6 +21,7 @@ import { PLACEHOLDERS, getDiversifiedProfessorBackground, getStringHash } from '
 import SecureFileModal from '@/components/secure/SecureFileModal';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
 import MaterialCard from '@/components/courses/MaterialCard';
+import { getPreviewUrl } from '@/lib/r2-storage';
 
 interface ProfessorComment {
     id: string;
@@ -1213,12 +1214,8 @@ export default function ProfessorRatingsContent({
                                                                 if (newTab) {
                                                                     newTab.document.write('<div style="font-family: sans-serif; padding: 2rem; text-align: center; color: #666;">Cargando visor de Excel...</div>');
                                                                     try {
-                                                                        const { data, error } = await supabase.storage
-                                                                            .from('course-materials')
-                                                                            .createSignedUrl(material.url_archivo, 3600);
-                                                                        
-                                                                        if (error || !data?.signedUrl) throw error;
-                                                                        newTab.location.href = `https://docs.google.com/viewer?url=${encodeURIComponent(data.signedUrl)}`;
+                                                                        const signedUrl = await getPreviewUrl('course-materials', material.url_archivo);
+                                                                        newTab.location.href = `https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`;
                                                                     } catch (err) {
                                                                         console.error('Error al generar URL para Excel:', err);
                                                                         newTab.document.write('<div style="color: red; padding: 20px;">Error al cargar el archivo.</div>');

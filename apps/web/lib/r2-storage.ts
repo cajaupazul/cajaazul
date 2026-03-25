@@ -22,6 +22,54 @@ export function getPublicFileUrl(bucket: string, path: string): string {
 }
 
 /**
+ * Extracts the storage path from a full R2 proxy URL.
+ */
+export function extractPathFromUrl(url: string, bucket: string): string {
+    if (!url || !url.startsWith('http')) return url;
+    
+    try {
+        const urlObj = new URL(url);
+        // Case 1: Proxy URL with ?path=...
+        const params = new URLSearchParams(urlObj.search);
+        const pathParam = params.get('path');
+
+        if (pathParam) {
+            return pathParam;
+        } 
+        
+        // Case 2: Direct-ish URL like .../bucket-name/actual/path
+        const bucketSuffix = `/${bucket.replace(/_/g, '-')}/`;
+        const parts = urlObj.pathname.split(bucketSuffix);
+        if (parts.length > 1) {
+            return parts[1];
+        }
+        
+        // Fallback to basename if nothing else works
+        return urlObj.pathname.split('/').pop() || url;
+    } catch (e) {
+        console.warn('Error parsing URL in extractPathFromUrl:', e);
+        return url;
+    }
+}
+
+/**
+ * Generates a publicly accessible preview URL via the worker's tokenized stream.
+ * Valid for 15 minutes.
+ */
+export async function getPreviewUrl(bucket: string, fullUrl: string): Promise<string> {
+    const path = extractPathFromUrl(fullUrl, bucket);
+    
+    const response = await fetch(
+        `${WORKER_URL}/storage/preview-url?bucket=${bucket}&path=${encodeURIComponent(path)}`
+    );
+
+    if (!response.ok) throw new Error(`Error generando preview: ${response.status}`);
+    
+    const data = await response.json() as { url: string };
+    return data.url;
+}
+
+/**
  * Fetches a private file from R2 using the current user's Supabase session.
  */
 export async function getFileFromR2(bucket: string, path: string): Promise<Blob> {
@@ -101,31 +149,7 @@ export async function deleteFileFromR2(bucket: string, path: string): Promise<bo
         return false
     }
 
-    let cleanPath = path;
-    if (path.startsWith('http')) {
-        try {
-            const urlObj = new URL(path);
-            // Case 1: Proxy URL with ?path=...
-            const params = new URLSearchParams(urlObj.search);
-            const pathParam = params.get('path');
-
-            if (pathParam) {
-                cleanPath = pathParam;
-            } else {
-                // Case 2: Direct-ish URL like .../bucket-name/actual/path
-                // Or .../storage/v1/object/public/bucket-name/actual/path
-                const parts = urlObj.pathname.split(`/${bucket}/`);
-                if (parts.length > 1) {
-                    cleanPath = parts[1];
-                } else {
-                    // Fallback to basename if nothing else works
-                    cleanPath = urlObj.pathname.split('/').pop() || path;
-                }
-            }
-        } catch (e) {
-            console.warn('Error parsing URL in deleteFileFromR2:', e);
-        }
-    }
+    const cleanPath = extractPathFromUrl(path, bucket);
 
     try {
         const response = await fetch(
