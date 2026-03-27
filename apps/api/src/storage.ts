@@ -218,6 +218,8 @@ storageRouter.get('/preview-url', async (c) => {
     const path = c.req.query('path')
     const bucketName = c.req.query('bucket') || 'course-materials'
 
+    console.log(`🔗 Preview URL request: bucket=${bucketName}, path=${path}`)
+
     if (!path) return c.json({ error: 'Falta path' }, 400)
 
     // 1. Generar Token

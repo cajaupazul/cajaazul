@@ -59,11 +59,26 @@ export function extractPathFromUrl(url: string, bucket: string): string {
 export async function getPreviewUrl(bucket: string, fullUrl: string): Promise<string> {
     const path = extractPathFromUrl(fullUrl, bucket);
     
+    // Auth required for course-materials in Worker proxy
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data: { session } } = await supabase.auth.getSession()
+
+    const headers: Record<string, string> = {}
+    if (session) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+    }
+
     const response = await fetch(
-        `${WORKER_URL}/storage/preview-url?bucket=${bucket}&path=${encodeURIComponent(path)}`
+        `${WORKER_URL}/storage/preview-url?bucket=${bucket}&path=${encodeURIComponent(path)}`,
+        { headers }
     );
 
-    if (!response.ok) throw new Error(`Error generando preview: ${response.status}`);
+    if (!response.ok) {
+        throw new Error(`Error generando preview: ${response.status} ${response.statusText}`);
+    }
     
     const data = await response.json() as { url: string };
     return data.url;
