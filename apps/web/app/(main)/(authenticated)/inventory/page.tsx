@@ -140,7 +140,7 @@ export default function InventoryPage() {
 
             {/* Inventory Grid */}
             {inventory.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 justify-items-center">
                     {inventory.map((invItem) => {
                         const item = invItem.shop_items;
                         if (!item) return null;
@@ -151,7 +151,7 @@ export default function InventoryPage() {
                         return (
                             <div
                                 key={invItem.id}
-                                className={`relative rounded-2xl border bg-bb-card p-3 sm:p-6 transition-all hover:shadow-lg flex flex-col ${isEquipped ? 'ring-2 ring-blue-500 shadow-blue-500/20' : 'border-bb-border'
+                                className={`relative rounded-2xl border bg-bb-card p-3 sm:p-6 transition-all hover:shadow-lg flex flex-col items-center text-center w-full max-w-[280px] ${isEquipped ? 'ring-2 ring-blue-500 shadow-blue-500/20' : 'border-bb-border'
                                     }`}
                             >
                                 {/* Equipped Badge */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Star, MessageCircle, TrendingUp, ArrowLeft, Trophy, Sparkles, Share2, Instagram, User, Info, ArrowRight, Upload, Trash2, Bold, Italic, Underline, Strikethrough, Quote, Eye, Image as ImageIcon, Plus, ThumbsUp, ThumbsDown, MessageSquare, FileText, LayoutPanelLeft, FolderRoot } from 'lucide-react';
 import Link from 'next/link';
-import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
+import { supabase, Professor, Profile, Rating, getStorageUrl } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
 import BouncingBalls from '@/components/BouncingBalls';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
@@ -54,25 +54,6 @@ const REACTIONS = [
     { type: 'angry', label: 'Me enoja', emoji: '😡', color: 'text-orange-600', bgColor: 'bg-orange-600' }
 ];
 
-interface Rating {
-    id: string;
-    puntuacion: number;
-    claridad: number | null;
-    facilidad: number | null;
-    recommended?: boolean | null;
-    created_at: string;
-    profiles?: {
-        nombre: string;
-        avatar_url: string | null;
-        active_frame_key?: string | null;
-        background_url?: string | null;
-        bio?: string | null;
-        created_at?: string;
-        puntos?: number;
-        es_vip?: boolean;
-    };
-    course_name?: string | null;
-}
 
 const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -475,6 +456,11 @@ export default function ProfessorRatingsContent({
         counts: Record<string, number>,
         userReaction: string | null
     }>>({});
+
+    const userHasRated = useMemo(() => {
+        if (!profile?.id) return false;
+        return ratings.some(r => r.user_id === profile.id);
+    }, [ratings, profile?.id]);
 
     const handleDeleteMaterial = async (material: any) => {
         const materialId = material.id;
@@ -1057,9 +1043,14 @@ export default function ProfessorRatingsContent({
                         <div className="p-3 flex items-center justify-center gap-3">
                             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                                 <DialogTrigger asChild>
-                                    <Button className="flex-1 bg-blue-600 hover:bg-blue-500 font-bold h-10 shadow-lg shadow-blue-500/20 text-white active:scale-95 transition-transform text-xs uppercase tracking-wide">
-                                        <Star className="h-4 w-4 mr-2" />
-                                        Calificar
+                                    <Button className={cn(
+                                        "flex-1 font-bold h-10 shadow-lg active:scale-95 transition-all text-xs uppercase tracking-wide",
+                                        userHasRated 
+                                            ? "bg-gradient-to-r from-yellow-600 to-yellow-400 hover:from-yellow-500 hover:to-yellow-300 text-bb-dark shadow-yellow-600/30" 
+                                            : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"
+                                    )}>
+                                        <Star className={cn("h-4 w-4 mr-2", userHasRated ? "fill-bb-dark" : "")} />
+                                        {userHasRated ? 'Ya calificado' : 'Calificar'}
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="bg-bb-card border-bb-border text-bb-text sm:max-w-md">

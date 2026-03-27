@@ -160,6 +160,7 @@ export type Rating = {
   comentario: string | null;
   facilidad: number | null;
   claridad: number | null;
+  recommended?: boolean | null;
   course_name?: string | null;
   created_at: string;
   profiles?: Profile;
