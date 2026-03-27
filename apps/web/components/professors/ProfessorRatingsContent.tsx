@@ -21,7 +21,7 @@ import { PLACEHOLDERS, getDiversifiedProfessorBackground, getStringHash } from '
 import SecureFileModal from '@/components/secure/SecureFileModal';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
 import MaterialCard from '@/components/courses/MaterialCard';
-import { getPreviewUrl } from '@/lib/r2-storage';
+import { extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
 
 interface ProfessorComment {
     id: string;
@@ -1210,16 +1210,27 @@ export default function ProfessorRatingsContent({
 
                                                             const isExcel = material.url_archivo.toLowerCase().match(/\.(xls|xlsx|csv)$/i);
                                                             if (isExcel) {
-                                                                const newTab = window.open('', '_blank');
-                                                                if (newTab) {
-                                                                    newTab.document.write('<div style="font-family: sans-serif; padding: 2rem; text-align: center; color: #666;">Cargando visor de Excel...</div>');
-                                                                    try {
-                                                                        const signedUrl = await getPreviewUrl('course-materials', material.url_archivo);
-                                                                        newTab.location.href = `https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`;
-                                                                    } catch (err) {
-                                                                        console.error('Error al generar URL para Excel:', err);
-                                                                        newTab.document.write('<div style="color: red; padding: 20px;">Error al cargar el archivo.</div>');
-                                                                    }
+                                                                try {
+                                                                    // Start download process
+                                                                    const path = extractPathFromUrl(material.url_archivo, 'course-materials');
+                                                                    const blob = await getFileFromR2('course-materials', path);
+                                                                    
+                                                                    const url = window.URL.createObjectURL(blob);
+                                                                    const a = document.createElement('a');
+                                                                    const extension = material.url_archivo.split('.').pop();
+                                                                    a.href = url;
+                                                                    a.download = `${material.titulo}.${extension}`;
+                                                                    document.body.appendChild(a);
+                                                                    a.click();
+                                                                    
+                                                                    // Cleanup
+                                                                    setTimeout(() => {
+                                                                        window.URL.revokeObjectURL(url);
+                                                                        document.body.removeChild(a);
+                                                                    }, 100);
+                                                                } catch (err: any) {
+                                                                    console.error('Error al descargar Excel:', err);
+                                                                    alert('Error al descargar el archivo: ' + err.message);
                                                                 }
                                                                 return;
                                                             }

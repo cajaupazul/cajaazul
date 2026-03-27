@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2, Pencil, Upload, List, Calculator, CheckSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
-import { getPreviewUrl } from '@/lib/r2-storage';
+import { extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
 import AdminMaterialManager from './AdminMaterialManager';
 import { PLACEHOLDERS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
@@ -347,20 +347,27 @@ export default function CourseDetailContent({
 
             const isExcel = material.url_archivo.toLowerCase().match(/\.(xls|xlsx|csv)$/i);
             if (isExcel) {
-                // Open new tab immediately to bypass popup blocker
-                const newTab = window.open('', '_blank');
-                if (newTab) {
-                    newTab.document.write('<div style="font-family: sans-serif; padding: 2rem; text-align: center; color: #666;">Cargando visor de Excel...</div>');
-                    try {
-                        const signedUrl = await getPreviewUrl('course-materials', material.url_archivo);
-                        
-                        // Use Google Docs viewer for a better external Excel experience
-                        const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`;
-                        newTab.location.href = viewerUrl;
-                    } catch (err) {
-                        console.error('Error al generar URL segura para Excel:', err);
-                        newTab.document.write('<div style="color: red; padding: 20px;">Error al cargar el archivo. Por favor intenta de nuevo.</div>');
-                    }
+                try {
+                    // Start download process
+                    const path = extractPathFromUrl(material.url_archivo, 'course-materials');
+                    const blob = await getFileFromR2('course-materials', path);
+                    
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    const extension = material.url_archivo.split('.').pop();
+                    a.href = url;
+                    a.download = `${material.titulo}.${extension}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Cleanup
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    }, 100);
+                } catch (err: any) {
+                    console.error('Error al descargar Excel:', err);
+                    alert('Error al descargar el archivo: ' + err.message);
                 }
                 return;
             }
