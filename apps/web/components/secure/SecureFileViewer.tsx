@@ -238,15 +238,15 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             const timer = setTimeout(() => {
                 const docEl = docxContainerRef.current?.querySelector('.docx-viewer') as HTMLElement;
                 if (docEl) {
-                    const docWidth = docEl.offsetWidth || 800;
+                    const docWidth = docEl.offsetWidth || 820; // 820 es estándar A4 aprox
                     const availableWidth = containerWidth - (isMobile ? 16 : 48);
-                    if (docWidth > availableWidth) {
-                        setDocxScale(availableWidth / docWidth);
-                    } else {
-                        setDocxScale(1);
-                    }
+                    
+                    // V5.9: Cálculo inteligente de escala base + zoom
+                    const calculatedBaseScale = availableWidth / docWidth;
+                    // Si el documento es más pequeño que la pantalla, no lo escalamos a más de 1 por defecto
+                    setDocxScale(Math.min(calculatedBaseScale, 1));
                 }
-            }, 500);
+            }, 300);
             return () => clearTimeout(timer);
         }
     }, [fileType, containerWidth, isMobile, blobUrl]);
@@ -463,7 +463,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                         <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100 italic font-black text-blue-600">v4</div>
                         <span className="text-xs font-black text-zinc-900 uppercase tracking-widest truncate max-w-[200px]">{fileName}</span>
                     </div>
-                    {fileType === 'pdf' && (
+                    {(fileType === 'pdf' || fileType === 'docx') && (
                         <div className="hidden md:flex items-center gap-1 bg-zinc-100 p-1 rounded-lg">
                             <button onClick={handleZoomOut} className="p-1 px-2 text-zinc-600 hover:bg-white rounded transition-colors"><ZoomOut className="w-4 h-4" /></button>
                             <span className="text-xs font-bold w-12 text-center text-zinc-700 select-none">{Math.round(zoomLevel * 100)}%</span>
@@ -481,7 +481,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             {/* V4.6+: Botón de cierre flotante y controles Zoom solo en Fullscreen */}
             {isFullscreen && (
                 <div className="fixed top-6 right-6 z-[200] flex items-center gap-3">
-                    {fileType === 'pdf' && (
+                    {(fileType === 'pdf' || fileType === 'docx') && (
                         <div className="flex items-center gap-1 bg-zinc-900/50 backdrop-blur-xl border border-white/10 p-1.5 rounded-full shadow-2xl">
                             <button onClick={handleZoomOut} className="w-10 h-10 flex items-center justify-center text-white hover:bg-white/20 rounded-full transition-all"><ZoomOut className="w-5 h-5" /></button>
                             <span className="text-xs font-bold w-12 text-center text-white select-none">{Math.round(zoomLevel * 100)}%</span>
@@ -536,11 +536,12 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                     <div className="h-full overflow-auto bg-zinc-100/50 flex flex-col items-center">
                         <div
                             ref={docxContainerRef}
-                            className="docx-content-wrapper transition-transform duration-500 origin-top"
+                            className="docx-content-wrapper transition-transform duration-300 origin-top"
                             style={{
-                                transform: `scale(${docxScale})`,
+                                transform: `scale(${docxScale * zoomLevel})`,
                                 width: 'fit-content',
-                                margin: isFullscreen ? '0' : '20px auto'
+                                margin: isFullscreen ? '0 auto' : '20px auto',
+                                paddingBottom: '100px'
                             }}
                         />
                     </div>
