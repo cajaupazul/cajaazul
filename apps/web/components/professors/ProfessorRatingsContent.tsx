@@ -1262,17 +1262,19 @@ export default function ProfessorRatingsContent({
                                         <p className="text-xs text-bb-text-secondary max-w-[250px]">
                                             Aún no se han subido materiales para este profesor. Sé el primero en compartir un aporte.
                                         </p>
-                                        <Button
-                                            className="mt-4 bg-bb-darker border border-bb-border hover:bg-bb-hover font-bold h-8 text-bb-text active:scale-95 transition-transform text-xs uppercase tracking-wide"
-                                            onClick={() => {
-                                                const finalCourseId = selectedCourseId || (professor.especialidad ? courseMapping[professor.especialidad.toLowerCase()] : null);
-                                                const uploadUrl = `/dashboard/professors/upload?id=${professor.id}${finalCourseId ? `&courseId=${finalCourseId}` : ''}`;
-                                                router.push(uploadUrl);
-                                            }}
-                                        >
-                                            <Upload className="h-3 w-3 mr-2" />
-                                            Subir Aporte
-                                        </Button>
+                                        {!isGuest && (
+                                            <Button
+                                                className="mt-4 bg-bb-darker border border-bb-border hover:bg-bb-hover font-bold h-8 text-bb-text active:scale-95 transition-transform text-xs uppercase tracking-wide"
+                                                onClick={() => {
+                                                    const finalCourseId = selectedCourseId || (professor.especialidad ? courseMapping[professor.especialidad.toLowerCase()] : null);
+                                                    const uploadUrl = `/dashboard/professors/upload?id=${professor.id}${finalCourseId ? `&courseId=${finalCourseId}` : ''}`;
+                                                    router.push(uploadUrl);
+                                                }}
+                                            >
+                                                <Upload className="h-3 w-3 mr-2" />
+                                                Subir Aporte
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1513,9 +1515,9 @@ export default function ProfessorRatingsContent({
                                                             comment={comment}
                                                             profile={profile}
                                                             frameMap={frameMap}
-                                                            onReaction={handleReactionComment}
+                                                            onReaction={isGuest ? () => alert('Modo Lectura: Inicia sesión para reaccionar.') : handleReactionComment}
                                                             onDelete={handleDeleteComment}
-                                                            onReply={() => setReplyToId(comment.id)}
+                                                            onReply={isGuest ? () => alert('Modo Lectura: Inicia sesión para responder.') : () => setReplyToId(comment.id)}
                                                             isReply={depth > 0}
                                                             hasReplies={replies.length > 0}
                                                             reactions={commentReactions[comment.id]}

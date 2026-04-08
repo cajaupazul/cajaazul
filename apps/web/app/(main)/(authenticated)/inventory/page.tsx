@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/theme-context';
 import { useProfile } from '@/lib/profile-context';
 import { supabase, ShopItem, UserInventoryItem } from '@/lib/supabase';
@@ -12,6 +13,7 @@ import Link from 'next/link';
 export default function InventoryPage() {
     const { colors } = useTheme();
     const { profile, refreshProfile, isGuest } = useProfile();
+    const router = useRouter();
     const [inventory, setInventory] = useState<(UserInventoryItem & { shop_items: ShopItem })[]>([]);
     const [loading, setLoading] = useState(true);
     const [equipLoading, setEquipLoading] = useState<string | null>(null);
@@ -68,6 +70,11 @@ export default function InventoryPage() {
         setEquipLoading(itemId);
         setMessage(null);
 
+        if (isGuest) {
+            alert('Modo Lectura: Inicia sesión para equipar artículos.');
+            router.push('/auth/login');
+            return;
+        }
         try {
             await apiFetch('/shop/equip', {
                 method: 'POST',
@@ -100,24 +107,6 @@ export default function InventoryPage() {
         );
     }
 
-    if (isGuest) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[70vh] p-4 text-center">
-                <div className="w-20 h-20 rounded-full bg-bb-darker flex items-center justify-center mb-6 border border-bb-border">
-                    <Package className="w-10 h-10 text-bb-text-secondary opacity-30" />
-                </div>
-                <h2 className="text-2xl font-bold text-bb-text mb-2">Tu Inventario está Vacío</h2>
-                <p className="text-bb-text-secondary max-w-sm mb-8">
-                    El inventario es una función exclusiva para usuarios registrados. Regístrate para ganar puntos, comprar marcos y personalizar tu perfil.
-                </p>
-                <Link href="/auth/login">
-                    <Button className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 h-12 rounded-xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all uppercase tracking-widest text-sm">
-                        Iniciar Sesión
-                    </Button>
-                </Link>
-            </div>
-        );
-    }
 
     return (
         <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8">

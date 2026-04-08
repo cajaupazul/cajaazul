@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useProfile } from '@/lib/profile-context';
 import { apiFetch } from '@/lib/api';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase, ShopItem, ShopCategory } from '@/lib/supabase';
 import PaymentModal from '@/components/store/PaymentModal';
 import PreviewModal from '@/components/store/PreviewModal';
@@ -74,6 +74,7 @@ export default function StorePage() {
 function StoreContent() {
     const { colors } = useTheme();
     const { profile, refreshProfile, updateProfile, isGuest } = useProfile();
+    const router = useRouter();
     const searchParams = useSearchParams();
     const [itemsLoading, setItemsLoading] = useState<Record<string, boolean>>({});
     const [purchaseLoading, setPurchaseLoading] = useState(false);
@@ -97,28 +98,6 @@ function StoreContent() {
     const collectionId = searchParams.get('collection_id') || searchParams.get('payment_id');
     const effectiveStatus = paymentStatus || status;
 
-    if (isGuest) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[70vh] p-4 text-center">
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="w-20 h-20 rounded-full bg-bb-darker flex items-center justify-center mb-6 border border-bb-border shadow-lg shadow-blue-500/5"
-                >
-                    <Zap className="w-10 h-10 text-blue-400 opacity-50" />
-                </motion.div>
-                <h2 className="text-2xl font-bold text-bb-text mb-2 uppercase tracking-tighter">Tienda EduSync</h2>
-                <p className="text-bb-text-secondary max-w-sm mb-8">
-                    La tienda es una función exclusiva para usuarios registrados. Regístrate para comprar marcos, obtener puntos y participar en eventos exclusivos.
-                </p>
-                <Link href="/auth/login">
-                    <Button className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-10 h-12 rounded-xl shadow-lg shadow-blue-600/20 active:scale-95 transition-all uppercase tracking-widest text-sm">
-                        Iniciar Sesión
-                    </Button>
-                </Link>
-            </div>
-        );
-    }
 
     React.useEffect(() => {
         if (effectiveStatus === 'success' || effectiveStatus === 'approved') {
@@ -203,6 +182,11 @@ function StoreContent() {
     }, [profile?.id]);
 
     const handleBuyItem = async (item: ShopItem) => {
+        if (isGuest) {
+            alert('Modo Lectura: Inicia sesión para comprar artículos en la tienda.');
+            router.push('/auth/login');
+            return;
+        }
         if (profile?.monedas && profile.monedas < item.price_coins) {
             setPurchaseMessage({ type: 'error', text: 'No tienes suficientes monedas' });
             return;
@@ -317,6 +301,11 @@ function StoreContent() {
     } | null>(null);
 
     const handlePurchase = (productId: string) => {
+        if (isGuest) {
+            alert('Debes iniciar sesión para comprar productos o suscribirte.');
+            router.push('/auth/login');
+            return;
+        }
         const selectedPackage = coinPackages.find(p => p.id === productId) || vipProduct;
         if (!selectedPackage) return;
 

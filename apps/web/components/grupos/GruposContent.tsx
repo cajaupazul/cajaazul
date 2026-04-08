@@ -11,12 +11,12 @@ import {
     Settings,
     X,
     Upload,
-    Loader,
     ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { useProfile } from '@/lib/profile-context';
 import { uploadFileToR2, deleteFileFromR2 } from '@/lib/r2-storage';
 
 let confetti: any = () => { };
@@ -29,16 +29,17 @@ interface GruposContentProps {
     userGruposIds: string[];
     miembrosCounts: Record<string, number>;
     profile: Profile | null;
+    isGuest?: boolean;
 }
 
 export default function GruposContent({
     initialGrupos,
     userGruposIds,
     miembrosCounts,
-    profile
 }: GruposContentProps) {
-    const { colors } = useTheme();
     const router = useRouter();
+    const { colors } = useTheme();
+    const { profile, isGuest } = useProfile();
     const [grupos, setGrupos] = useState(initialGrupos);
     const [userGrupos, setUserGrupos] = useState<Set<string>>(new Set(userGruposIds));
     const [miembrosCuenta, setMiembrosCuenta] = useState(miembrosCounts);
@@ -82,6 +83,11 @@ export default function GruposContent({
 
     const handleUnirse = async (e: React.MouseEvent, grupoId: string) => {
         e.preventDefault(); e.stopPropagation();
+        if (isGuest) {
+            alert('Modo Lectura: Inicia sesión para unirte a grupos.');
+            router.push('/auth/login');
+            return;
+        }
         if (!profile?.id) return;
         try {
             const { error } = await supabase.from('grupo_miembros').insert([{ grupo_id: grupoId, user_id: profile.id }]);
