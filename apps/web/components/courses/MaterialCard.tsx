@@ -278,8 +278,8 @@ export default function MaterialCard({
                         {/* Yellow/orange left stripe — exact replica of PPT template */}
                         <div className="absolute left-0 top-0 bottom-0 w-[5px] bg-amber-400 z-10" />
 
-                        {/* Title — vertically centered, left-aligned with padding after stripe */}
-                        <div className="absolute inset-0 flex items-center pl-4 sm:pl-5 pr-3 z-10">
+                        {/* Title — bottom-aligned to avoid overlap with type badge */}
+                        <div className="absolute inset-0 flex items-end pb-4 sm:pb-5 pl-4 sm:pl-5 pr-3 z-10">
                             <p className="text-sm sm:text-base font-black text-white leading-tight line-clamp-3 drop-shadow-lg uppercase tracking-tighter">
                                 {material.titulo}
                             </p>

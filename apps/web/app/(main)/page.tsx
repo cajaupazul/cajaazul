@@ -49,8 +49,8 @@ export default function HomePage() {
       >
         <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-24 flex justify-between items-center transition-all duration-300">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-12 h-12 flex items-center justify-center transform group-hover:rotate-12 transition-transform">
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center transform group-hover:rotate-12 transition-transform shrink-0">
               <img
                 src="/logo/logo-campuslink-v2.png"
                 alt="CampusLink Logo"
@@ -58,28 +58,34 @@ export default function HomePage() {
               />
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-xl md:text-2xl font-black text-[#002d5a] tracking-tighter">
+              <span className="text-lg sm:text-xl md:text-2xl font-black text-[#002d5a] tracking-tighter">
                 CAMPUS<span className="text-blue-600">LINK</span>
               </span>
-              <span className="text-[10px] md:text-[11px] font-black text-gray-400 tracking-[0.2em] uppercase mt-1">
+              <span className="text-[8px] sm:text-[10px] md:text-[11px] font-black text-gray-400 tracking-[0.2em] uppercase mt-0.5 sm:mt-1">
                 REPOSITORIO COLABORATIVO
               </span>
             </div>
           </Link>
 
           {/* Actions - Login and Guest buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             <button
               onClick={handleGuestLogin}
               disabled={isGuestLoading}
-              className="hidden md:flex items-center gap-2 text-[#4b5563] hover:text-black font-black text-[11px] tracking-[0.2em] uppercase transition-all px-4 h-12 border border-gray-200 hover:border-black/20"
+              className="flex items-center gap-2 text-[#4b5563] hover:text-black font-black text-[9px] sm:text-[11px] tracking-[0.1em] sm:tracking-[0.2em] uppercase transition-all px-2 sm:px-4 h-10 sm:h-12 border border-gray-200 hover:border-black/20"
             >
-              {isGuestLoading ? 'INGRESANDO...' : 'ENTRAR COMO INVITADO'}
+              {isGuestLoading ? '...' : (
+                <>
+                  <span className="hidden xs:inline">{isGuestLoading ? 'INGRESANDO...' : 'ENTRAR COMO INVITADO'}</span>
+                  <span className="xs:hidden">INVITADO</span>
+                </>
+              )}
             </button>
             <Link href="/auth/login">
-              <Button className="bg-[#1f2937] hover:bg-black text-white font-black px-6 h-12 rounded-none flex items-center gap-2 transition-all active:scale-95 shadow-xl shadow-black/10 text-xs tracking-widest italic uppercase">
-                <LogIn size={16} />
-                INICIAR SESIÓN
+              <Button className="bg-[#1f2937] hover:bg-black text-white font-black px-3 sm:px-6 h-10 sm:h-12 rounded-none flex items-center gap-1.5 sm:gap-2 transition-all active:scale-95 shadow-xl shadow-black/10 text-[10px] sm:text-xs tracking-widest italic uppercase overflow-hidden">
+                <LogIn size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden xxs:inline">INICIAR SESIÓN</span>
+                <span className="xxs:hidden">LOGIN</span>
               </Button>
             </Link>
           </div>

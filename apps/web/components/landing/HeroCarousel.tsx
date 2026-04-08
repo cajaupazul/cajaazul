@@ -89,13 +89,27 @@ export default function HeroCarousel() {
                                     {SLIDES[currentIndex].subtitle}
                                 </p>
 
-                                <div className="pt-8">
-                                    <Link href="/auth/register">
-                                        <Button className="bg-blue-600 hover:bg-blue-500 text-white font-black px-10 py-7 text-lg rounded-none shadow-2xl transition-all active:scale-95 uppercase tracking-widest italic group">
+                                <div className="pt-8 flex flex-col sm:flex-row gap-4 items-center">
+                                    <Link href="/auth/register" className="w-full sm:w-auto">
+                                        <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black px-10 py-7 text-lg rounded-none shadow-2xl transition-all active:scale-95 uppercase tracking-widest italic group">
                                             EXPLORAR MATERIAL
                                             <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                                         </Button>
                                     </Link>
+                                    <button 
+                                        onClick={async () => {
+                                            try {
+                                                const { supabase } = await import('@/lib/supabase');
+                                                await supabase.auth.signInAnonymously();
+                                                window.location.href = '/dashboard';
+                                            } catch (err) {
+                                                console.error(err);
+                                            }
+                                        }}
+                                        className="text-white/60 hover:text-white font-black text-xs tracking-widest uppercase border-b border-white/20 hover:border-white transition-all pb-1"
+                                    >
+                                        O CONTINUAR COMO INVITADO
+                                    </button>
                                 </div>
                             </motion.div>
                         </div>
