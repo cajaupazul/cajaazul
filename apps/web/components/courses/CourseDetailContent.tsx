@@ -10,6 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import { extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
 import AdminMaterialManager from './AdminMaterialManager';
+import { useProfile } from '@/lib/profile-context';
+import { useDashboardData } from '@/lib/dashboard-data-context';
 import { PLACEHOLDERS } from '@/lib/constants';
 import SecureFileModal from '@/components/secure/SecureFileModal';
 import MaterialCard from './MaterialCard';
@@ -31,9 +33,9 @@ export default function CourseDetailContent({
     topProfessor,
     allProfessors,
     initialMaterials,
-    currentUser,
     initialCourseCycles
 }: CourseDetailContentProps) {
+    const { profile: currentUser, isGuest } = useProfile();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [materials, setMaterials] = useState<any[]>(initialMaterials);
@@ -401,7 +403,7 @@ export default function CourseDetailContent({
                             onSelect={() => handleToggleSelect(material.id)}
                             onClick={() => handleMaterialClick(material)}
                             canDelete={
-                                currentUser && (
+                                !!currentUser && (
                                     (currentUser.role === 'admin' || currentUser.role === 'superadmin') ||
                                     (material.user_id === currentUser.id && (new Date().getTime() - new Date(material.created_at).getTime()) / (1000 * 60 * 60) < 24)
                                 )
@@ -427,7 +429,7 @@ export default function CourseDetailContent({
                         onSelect={() => handleToggleSelect(material.id)}
                         onClick={() => handleMaterialClick(material)}
                         canDelete={
-                            currentUser && (
+                            !!currentUser && (
                                 (currentUser.role === 'admin' || currentUser.role === 'superadmin') ||
                                 (material.user_id === currentUser.id && (new Date().getTime() - new Date(material.created_at).getTime()) / (1000 * 60 * 60) < 24)
                             )
@@ -613,24 +615,28 @@ export default function CourseDetailContent({
                                         </button>
                                     )}
 
-                                    <button
-                                        onClick={() => setShowAddCycleModal(true)}
-                                        className="inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all bg-bb-border text-bb-text hover:bg-bb-card border border-transparent hover:border-bb-border h-10 sm:h-11 px-3 sm:px-4 active:scale-95 whitespace-nowrap flex-shrink-0"
-                                    >
-                                        <div className="flex items-center gap-1.5 sm:gap-2">
-                                            <FolderRoot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                            <span>+ Ciclo</span>
-                                        </div>
-                                    </button>
-                                    <Link
-                                        href={`/dashboard/courses/upload?courseId=${course.id}`}
-                                        className="inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 h-10 sm:h-11 px-3 sm:px-5 shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap flex-shrink-0"
-                                    >
-                                        <div className="flex items-center gap-1.5 sm:gap-2">
-                                            <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
-                                            Subir
-                                        </div>
-                                    </Link>
+                                    {!isGuest && (
+                                        <button
+                                            onClick={() => setShowAddCycleModal(true)}
+                                            className="inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all bg-bb-border text-bb-text hover:bg-bb-card border border-transparent hover:border-bb-border h-10 sm:h-11 px-3 sm:px-4 active:scale-95 whitespace-nowrap flex-shrink-0"
+                                        >
+                                            <div className="flex items-center gap-1.5 sm:gap-2">
+                                                <FolderRoot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                                <span>+ Ciclo</span>
+                                            </div>
+                                        </button>
+                                    )}
+                                    {!isGuest && (
+                                        <Link
+                                            href={`/dashboard/courses/upload?courseId=${course.id}`}
+                                            className="inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 h-10 sm:h-11 px-3 sm:px-5 shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap flex-shrink-0"
+                                        >
+                                            <div className="flex items-center gap-1.5 sm:gap-2">
+                                                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
+                                                Subir
+                                            </div>
+                                        </Link>
+                                    )}
                                 </div>
                             </div>
 
@@ -705,7 +711,7 @@ export default function CourseDetailContent({
                                                                 </div>
                                                             )}
 
-                                                            {isExams && currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                                                            {isExams && currentUser && !isGuest && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
                                                                 <div className="mt-4 flex justify-end">
                                                                     <button
                                                                         onClick={() => {

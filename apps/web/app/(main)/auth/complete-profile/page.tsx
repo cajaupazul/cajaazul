@@ -59,6 +59,30 @@ export default function CompleteProfilePage() {
                 return;
             }
 
+            // AUTO-COMPLETE FOR GUESTS (Anonymous)
+            if (user.is_anonymous) {
+                console.log('[COMPLETE_PROFILE] Guest detected. Auto-creating profile...');
+                try {
+                    const { error: insertError } = await supabase
+                        .from('profiles')
+                        .upsert({
+                            id: user.id,
+                            nombre: 'Invitado',
+                            carrera: 'Facultad de Ciencias Empresariales',
+                            avatar_url: '/logo/fce.png',
+                            universidad: 'Universidad del Pacífico'
+                        }, { onConflict: 'id' });
+
+                    if (insertError) throw insertError;
+
+                    await refreshProfile();
+                    router.push('/dashboard');
+                    return;
+                } catch (err) {
+                    console.error('[COMPLETE_PROFILE] Guest auto-creation failed:', err);
+                }
+            }
+
             const { data: profile } = await supabase
                 .from('profiles')
                 .select('*')
@@ -92,7 +116,7 @@ export default function CompleteProfilePage() {
             }
         }
         fetchProfile();
-    }, [router]);
+    }, [router, refreshProfile]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

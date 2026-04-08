@@ -9,6 +9,7 @@ interface ProfileContextType {
   profile: Profile | null;
   session: Session | null;
   loading: boolean;
+  isGuest: boolean;
   updateProfile: (updatedProfile: Profile) => void;
   refreshProfile: () => Promise<void>;
   clearProfile: () => void;
@@ -152,14 +153,19 @@ export function ProfileProvider({
     }
   }, [session?.user?.id, fetchProfile]);
 
+  const isGuest = useMemo(() => {
+    return !!session?.user?.is_anonymous;
+  }, [session]);
+
   const value = useMemo(() => ({
     profile,
     session,
     loading,
+    isGuest,
     updateProfile,
     refreshProfile,
     clearProfile
-  }), [profile, session, loading, updateProfile, refreshProfile, clearProfile]);
+  }), [profile, session, loading, isGuest, updateProfile, refreshProfile, clearProfile]);
 
   return (
     <ProfileContext.Provider value={value}>

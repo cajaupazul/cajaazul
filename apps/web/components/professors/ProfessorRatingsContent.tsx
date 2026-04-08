@@ -13,6 +13,7 @@ import { Star, MessageCircle, TrendingUp, ArrowLeft, Trophy, Sparkles, Share2, I
 import Link from 'next/link';
 import { supabase, Professor, Profile, Rating, getStorageUrl } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
+import { useProfile } from '@/lib/profile-context';
 import BouncingBalls from '@/components/BouncingBalls';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
@@ -433,9 +434,9 @@ export default function ProfessorRatingsContent({
     initialComments = [],
     selectedCourse = null,
     selectedCourseId = null,
-    profile,
     frameMap = {}
 }: ProfessorRatingsContentProps) {
+    const { profile, isGuest } = useProfile();
     const router = useRouter();
     const { colors } = useTheme();
     const [ratings, setRatings] = useState<Rating[]>(initialRatings);
@@ -1041,101 +1042,105 @@ export default function ProfessorRatingsContent({
 
                         {/* Actions Section */}
                         <div className="p-3 flex items-center justify-center gap-3">
-                            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button className={cn(
-                                        "flex-1 font-bold h-10 shadow-lg active:scale-95 transition-all text-xs uppercase tracking-wide",
-                                        userHasRated 
-                                            ? "bg-gradient-to-r from-yellow-600 to-yellow-400 hover:from-yellow-500 hover:to-yellow-300 text-bb-dark shadow-yellow-600/30" 
-                                            : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"
-                                    )}>
-                                        <Star className={cn("h-4 w-4 mr-2", userHasRated ? "fill-bb-dark" : "")} />
-                                        {userHasRated ? 'Ya calificado' : 'Calificar'}
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="bg-bb-card border-bb-border text-bb-text sm:max-w-md">
-                                    <DialogHeader>
-                                        <DialogTitle className="text-2xl font-bold">Califica a {professor.nombre.split(' ')[0]}</DialogTitle>
-                                        <DialogDescription className="text-bb-text-secondary">
-                                            Tu opinión ayuda a futuros estudiantes.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <form onSubmit={handleSubmitRating} className="space-y-6 mt-4">
-                                        <div className="space-y-6">
-                                            {([
-                                                { label: 'Puntuación General', key: 'puntuacion', icon: Trophy, color: 'text-yellow-400' },
-                                                { label: 'Claridad en Clase', key: 'claridad', icon: Sparkles, color: 'text-blue-400' },
-                                                { label: 'Facilidad para Aprobar', key: 'facilidad', icon: TrendingUp, color: 'text-green-400' }
-                                            ] as const).map((field) => (
-                                                <div key={field.key} className="space-y-3 bg-bb-darker/50 p-4 rounded-2xl border border-bb-border/50">
+                            {!isGuest && (
+                                <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button className={cn(
+                                            "flex-1 font-bold h-10 shadow-lg active:scale-95 transition-all text-xs uppercase tracking-wide",
+                                            userHasRated 
+                                                ? "bg-gradient-to-r from-yellow-600 to-yellow-400 hover:from-yellow-500 hover:to-yellow-300 text-bb-dark shadow-yellow-600/30" 
+                                                : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"
+                                        )}>
+                                            <Star className={cn("h-4 w-4 mr-2", userHasRated ? "fill-bb-dark" : "")} />
+                                            {userHasRated ? 'Ya calificado' : 'Calificar'}
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="bg-bb-card border-bb-border text-bb-text sm:max-w-md">
+                                        <DialogHeader>
+                                            <DialogTitle className="text-2xl font-bold">Califica a {professor.nombre.split(' ')[0]}</DialogTitle>
+                                            <DialogDescription className="text-bb-text-secondary">
+                                                Tu opinión ayuda a futuros estudiantes.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <form onSubmit={handleSubmitRating} className="space-y-6 mt-4">
+                                            <div className="space-y-6">
+                                                {([
+                                                    { label: 'Puntuación General', key: 'puntuacion', icon: Trophy, color: 'text-yellow-400' },
+                                                    { label: 'Claridad en Clase', key: 'claridad', icon: Sparkles, color: 'text-blue-400' },
+                                                    { label: 'Facilidad para Aprobar', key: 'facilidad', icon: TrendingUp, color: 'text-green-400' }
+                                                ] as const).map((field) => (
+                                                    <div key={field.key} className="space-y-3 bg-bb-darker/50 p-4 rounded-2xl border border-bb-border/50">
+                                                        <Label className="flex items-center gap-2 text-bb-text font-bold">
+                                                            <field.icon className={`w-4 h-4 ${field.color}`} /> {field.label}
+                                                        </Label>
+                                                        <div className="flex justify-between px-2">
+                                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                                <button
+                                                                    key={star}
+                                                                    type="button"
+                                                                    onClick={() => setFormData({ ...formData, [field.key]: star })}
+                                                                    className="group p-1 focus:outline-none transition-all active:scale-90"
+                                                                >
+                                                                    <Star className={`w-10 h-10 md:w-11 md:h-11 transition-all ${star <= (formData as any)[field.key]
+                                                                        ? 'fill-yellow-400 text-yellow-400 filter drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]'
+                                                                        : 'text-bb-border fill-bb-darker'
+                                                                        }`} />
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+
+                                                {/* Recomiendas al profesor */}
+                                                <div className="space-y-3 bg-bb-darker/50 p-4 rounded-2xl border border-bb-border/50">
                                                     <Label className="flex items-center gap-2 text-bb-text font-bold">
-                                                        <field.icon className={`w-4 h-4 ${field.color}`} /> {field.label}
+                                                        <ThumbsUp className="w-4 h-4 text-purple-400" /> ¿Recomiendas a este profesor?
                                                     </Label>
-                                                    <div className="flex justify-between px-2">
-                                                        {[1, 2, 3, 4, 5].map((star) => (
-                                                            <button
-                                                                key={star}
-                                                                type="button"
-                                                                onClick={() => setFormData({ ...formData, [field.key]: star })}
-                                                                className="group p-1 focus:outline-none transition-all active:scale-90"
-                                                            >
-                                                                <Star className={`w-10 h-10 md:w-11 md:h-11 transition-all ${star <= (formData as any)[field.key]
-                                                                    ? 'fill-yellow-400 text-yellow-400 filter drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]'
-                                                                    : 'text-bb-border fill-bb-darker'
-                                                                    }`} />
-                                                            </button>
-                                                        ))}
+                                                    <div className="flex gap-4 px-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setFormData({ ...formData, recommended: true })}
+                                                            className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-bold ${formData.recommended === true
+                                                                ? 'border-green-500 bg-green-500/10 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.2)]'
+                                                                : 'border-bb-border bg-bb-sidebar text-bb-text-secondary hover:border-bb-border/80'
+                                                                }`}
+                                                        >
+                                                            <ThumbsUp className="w-5 h-5" /> Sí
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setFormData({ ...formData, recommended: false })}
+                                                            className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-bold ${formData.recommended === false
+                                                                ? 'border-red-500 bg-red-500/10 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+                                                                : 'border-bb-border bg-bb-sidebar text-bb-text-secondary hover:border-bb-border/80'
+                                                                }`}
+                                                        >
+                                                            <ThumbsDown className="w-5 h-5" /> No
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            ))}
-
-                                            {/* Recomiendas al profesor */}
-                                            <div className="space-y-3 bg-bb-darker/50 p-4 rounded-2xl border border-bb-border/50">
-                                                <Label className="flex items-center gap-2 text-bb-text font-bold">
-                                                    <ThumbsUp className="w-4 h-4 text-purple-400" /> ¿Recomiendas a este profesor?
-                                                </Label>
-                                                <div className="flex gap-4 px-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFormData({ ...formData, recommended: true })}
-                                                        className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-bold ${formData.recommended === true
-                                                            ? 'border-green-500 bg-green-500/10 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.2)]'
-                                                            : 'border-bb-border bg-bb-sidebar text-bb-text-secondary hover:border-bb-border/80'
-                                                            }`}
-                                                    >
-                                                        <ThumbsUp className="w-5 h-5" /> Sí
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFormData({ ...formData, recommended: false })}
-                                                        className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-bold ${formData.recommended === false
-                                                            ? 'border-red-500 bg-red-500/10 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
-                                                            : 'border-bb-border bg-bb-sidebar text-bb-text-secondary hover:border-bb-border/80'
-                                                            }`}
-                                                    >
-                                                        <ThumbsDown className="w-5 h-5" /> No
-                                                    </button>
-                                                </div>
                                             </div>
-                                        </div>
-                                        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 font-bold h-14 text-white text-lg rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
-                                            Guardar Calificación
-                                        </Button>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
+                                            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 font-bold h-14 text-white text-lg rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
+                                                Guardar Calificación
+                                            </Button>
+                                        </form>
+                                    </DialogContent>
+                                </Dialog>
+                            )}
 
-                            <Button
-                                className="flex-1 bg-bb-darker border border-bb-border hover:bg-bb-hover font-bold h-10 text-bb-text active:scale-95 transition-transform text-xs uppercase tracking-wide"
-                                onClick={() => {
-                                    const primaryCourseId = professor.especialidad ? courseMapping[professor.especialidad.toLowerCase()] : null;
-                                    const uploadUrl = `/dashboard/professors/upload?id=${professor.id}${primaryCourseId ? `&courseId=${primaryCourseId}` : ''}`;
-                                    router.push(uploadUrl);
-                                }}
-                            >
-                                <Upload className="h-4 w-4 mr-2" />
-                                Subir
-                            </Button>
+                            {!isGuest && (
+                                <Button
+                                    className="flex-1 bg-bb-darker border border-bb-border hover:bg-bb-hover font-bold h-10 text-bb-text active:scale-95 transition-transform text-xs uppercase tracking-wide"
+                                    onClick={() => {
+                                        const primaryCourseId = professor.especialidad ? courseMapping[professor.especialidad.toLowerCase()] : null;
+                                        const uploadUrl = `/dashboard/professors/upload?id=${professor.id}${primaryCourseId ? `&courseId=${primaryCourseId}` : ''}`;
+                                        router.push(uploadUrl);
+                                    }}
+                                >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Subir
+                                </Button>
+                            )}
 
                             <Button variant="ghost" size="icon" className="h-10 w-10 text-bb-text-secondary hover:text-bb-text hover:bg-bb-hover border border-transparent hover:border-bb-border rounded-lg">
                                 <Share2 className="h-5 w-5" />
@@ -1389,63 +1394,64 @@ export default function ProfessorRatingsContent({
 
                         {/* New Comment Input Box - Crunchyroll style redesign */}
                         <div className="bg-bb-sidebar/30 border border-bb-border rounded-lg overflow-hidden mb-12 shadow-sm">
-                            <form onSubmit={handleSubmitComment}>
-                                <div className="p-4 md:p-6">
-                                    <div className="flex gap-4">
-                                        <div className="shrink-0">
-                                            <AvatarWithFrame
-                                                avatarUrl={profile?.avatar_url || PLACEHOLDERS.AVATAR}
-                                                name={profile?.nombre || 'Usuario'}
-                                                frameUrl={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.image_url : null}
-                                                frameScale={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.scale : 1}
-                                                offsetX={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.x : 0}
-                                                offsetY={profile?.active_frame_key ? frameMap[profile.active_frame_key]?.frame_settings?.profile?.y : 0}
-                                                size="xs"
-                                                className="ring-2 ring-bb-dark"
-                                            />
-                                        </div>
-                                        <div className="flex-1">
-                                            <Textarea
-                                                value={commentText}
-                                                onChange={(e) => setCommentText(e.target.value)}
-                                                placeholder="Escribe algo..."
-                                                className="bg-transparent border-none text-bb-text min-h-[100px] rounded-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 text-sm md:text-base placeholder:text-bb-text-secondary/40 p-0 shadow-none font-medium"
-                                            />
+                            {isGuest ? (
+                                <div className="p-8 text-center bg-bb-darker/50">
+                                    <MessageSquare className="w-10 h-10 text-bb-text-secondary opacity-30 mx-auto mb-3" />
+                                    <p className="text-sm font-bold text-bb-text mb-1">Modo Lectura</p>
+                                    <p className="text-xs text-bb-text-secondary">
+                                        Inicia sesión para poder comentar y participar en la comunidad.
+                                    </p>
+                                    <Link href="/auth/login">
+                                        <Button variant="outline" className="mt-4 border-blue-500/50 text-blue-400 hover:bg-blue-500/10 font-bold text-xs uppercase tracking-widest px-6 rounded-xl">
+                                            Iniciar Sesión
+                                        </Button>
+                                    </Link>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleSubmitComment}>
+                                    <div className="p-4 md:p-6">
+                                        <div className="flex gap-4">
+                                            <div className="shrink-0">
+                                                <AvatarWithFrame
+                                                    avatarUrl={profile?.avatar_url || PLACEHOLDERS.AVATAR}
+                                                    name={profile?.nombre || 'Usuario'}
+                                                    frameUrl={profile?.active_frame_key ? (frameMap as any)[profile.active_frame_key]?.image_url : null}
+                                                    frameScale={profile?.active_frame_key ? (frameMap as any)[profile.active_frame_key]?.frame_settings?.profile?.scale : 1}
+                                                    size={48}
+                                                />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <Textarea
+                                                    value={commentText}
+                                                    onChange={(e) => setCommentText(e.target.value)}
+                                                    placeholder="Escribe un comentario o haz una pregunta..."
+                                                    className="w-full min-h-[100px] bg-bb-darker border-bb-border rounded-xl focus:ring-blue-500/20 text-bb-text resize-none text-sm p-4 font-medium"
+                                                />
+                                                <div className="flex items-center justify-between mt-4">
+                                                    <div className="flex items-center gap-1">
+                                                        <button type="button" className="p-2 text-bb-text-secondary hover:text-white rounded-lg hover:bg-bb-card transition-colors">
+                                                            <ImageIcon className="w-4 h-4" />
+                                                        </button>
+                                                        <button type="button" className="p-2 text-bb-text-secondary hover:text-white rounded-lg hover:bg-bb-card transition-colors">
+                                                            <Bold className="w-4 h-4" />
+                                                        </button>
+                                                        <button type="button" className="p-2 text-bb-text-secondary hover:text-white rounded-lg hover:bg-bb-card transition-colors">
+                                                            <Italic className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                    <Button
+                                                        type="submit"
+                                                        disabled={isSubmittingComment || !commentText.trim()}
+                                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 rounded-xl h-10 shadow-lg shadow-blue-600/20 active:scale-95 transition-all text-xs uppercase tracking-widest"
+                                                    >
+                                                        {isSubmittingComment ? 'Enviando...' : 'Publicar'}
+                                                    </Button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-
-                                {/* Toolbar footer */}
-                                <div className="bg-bb-sidebar/50 px-4 py-2 flex items-center justify-between border-t border-bb-border/50">
-                                    <div className="flex items-center gap-1 md:gap-4">
-                                        {[
-                                            { icon: Bold, label: 'Negrita' },
-                                            { icon: Italic, label: 'Cursiva' },
-                                            { icon: Underline, label: 'Subrayado' },
-                                            { icon: Strikethrough, label: 'Tachado' },
-                                            { icon: Quote, label: 'Cita' },
-                                            { icon: Eye, label: 'Vista previa' },
-                                            { icon: ImageIcon, label: 'Imagen' }
-                                        ].map((tool, i) => (
-                                            <button
-                                                key={i}
-                                                type="button"
-                                                className="p-1.5 text-bb-text-secondary hover:text-bb-text hover:bg-bb-hover rounded transition-all"
-                                                title={tool.label}
-                                            >
-                                                <tool.icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <Button
-                                        type="submit"
-                                        disabled={isSubmittingComment || !commentText.trim()}
-                                        className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 h-8 rounded text-[11px] uppercase tracking-wider transition-all"
-                                    >
-                                        {isSubmittingComment ? '...' : 'Responder'}
-                                    </Button>
-                                </div>
-                            </form>
+                                </form>
+                            )}
                         </div>
 
                         {/* Delete Confirmation Modal */}

@@ -56,7 +56,7 @@ export default function AuthenticatedLayout({
 
   const pathname = usePathname();
   const { colors, loading: themeLoading } = useTheme();
-  const { profile, session, loading: profileLoading } = useProfile();
+  const { profile, session, loading: profileLoading, isGuest } = useProfile();
   const { refreshAll, courses, professors, grupos } = useDashboardData();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [equippedFrame, setEquippedFrame] = useState<ShopItem | null>(null);
@@ -342,8 +342,13 @@ export default function AuthenticatedLayout({
                 />
               </div>
               <div className="text-left min-w-0">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <p className="text-sm font-semibold text-bb-text truncate">{profile?.nombre || 'Usuario'}</p>
+                  {isGuest && (
+                    <span className="px-1.5 py-0.5 rounded-md bg-white/10 text-[9px] font-black text-gray-400 border border-white/10 tracking-widest uppercase">
+                      Invitado
+                    </span>
+                  )}
                   {profile?.es_vip && (
                     <img src="/vip-icon.png" alt="VIP" className="w-4 h-4 object-contain shadow-sm" />
                   )}

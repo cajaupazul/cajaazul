@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,13 +11,32 @@ import HeroCarousel from '@/components/landing/HeroCarousel';
 import SocialSidebar from '@/components/landing/SocialSidebar';
 
 export default function HomePage() {
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
+  const [isGuestLoading, setIsGuestLoading] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleGuestLogin = async () => {
+    try {
+      setIsGuestLoading(true);
+      const { supabase } = await import('@/lib/supabase');
+      const { error } = await supabase.auth.signInAnonymously();
+      
+      if (error) throw error;
+      
+      router.push('/dashboard');
+    } catch (err: any) {
+      console.error('[GUEST_LOGIN] Error:', err.message);
+      alert('Error al ingresar como invitado. Asegúrate de que esta opción esté habilitada en Supabase.');
+    } finally {
+      setIsGuestLoading(false);
+    }
+  };
 
   return (
     <div className="relative w-full bg-white select-none xl:pl-[50px]">
@@ -47,10 +67,17 @@ export default function HomePage() {
             </div>
           </Link>
 
-          {/* Actions - Smaller Login Button */}
-          <div className="flex items-center">
+          {/* Actions - Login and Guest buttons */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleGuestLogin}
+              disabled={isGuestLoading}
+              className="hidden md:flex items-center gap-2 text-[#4b5563] hover:text-black font-black text-[11px] tracking-[0.2em] uppercase transition-all px-4 h-12 border border-gray-200 hover:border-black/20"
+            >
+              {isGuestLoading ? 'INGRESANDO...' : 'ENTRAR COMO INVITADO'}
+            </button>
             <Link href="/auth/login">
-              <Button className="bg-[#1f2937] hover:bg-black text-white font-black px-6 py-5 rounded-none flex items-center gap-2 transition-all active:scale-95 shadow-xl shadow-black/10 text-xs tracking-widest italic uppercase">
+              <Button className="bg-[#1f2937] hover:bg-black text-white font-black px-6 h-12 rounded-none flex items-center gap-2 transition-all active:scale-95 shadow-xl shadow-black/10 text-xs tracking-widest italic uppercase">
                 <LogIn size={16} />
                 INICIAR SESIÓN
               </Button>
