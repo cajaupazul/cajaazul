@@ -94,8 +94,9 @@ export function ProfileProvider({
     };
 
     initSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    
+    // 2. Session Listener
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (mounted) {
         setSession(newSession);
         if (!newSession) {
@@ -106,22 +107,18 @@ export function ProfileProvider({
       }
     });
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // 2. Profile Fetch Trigger
+  // 3. Profile Fetch Trigger
   useEffect(() => {
-    if (session?.user?.id) {
+    if (session?.user?.id && !isGuest) {
       fetchProfile(session.user.id);
+    } else if (isGuest) {
+      setLoading(false);
     }
-  }, [session?.user?.id, fetchProfile]);
+  }, [session?.user?.id, fetchProfile, isGuest]);
 
-  // 3. Realtime Subscription
+  // 4. Realtime Subscription
   useEffect(() => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id || isGuest) return;
 
     const channel = supabase
       .channel(`profile_realtime_${session.user.id}`)
@@ -154,7 +151,7 @@ export function ProfileProvider({
   }, [session?.user?.id, fetchProfile]);
 
   const isGuest = useMemo(() => {
-    return !session;
+    return !session || !!session.user?.is_anonymous;
   }, [session]);
 
   const value = useMemo(() => ({

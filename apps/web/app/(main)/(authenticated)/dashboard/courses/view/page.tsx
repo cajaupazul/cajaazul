@@ -36,11 +36,10 @@ function CourseDetailWrapper() {
       try {
         setLoading(true);
         // 1. Fetch course data
-        const { data: courseData, error: courseError } = await supabase
           .from('courses')
           .select('*')
           .eq('id', courseId)
-          .single();
+          .maybeSingle();
 
         if (courseError || !courseData) {
           console.error('Course not found');
@@ -80,13 +79,14 @@ function CourseDetailWrapper() {
         setMaterials(materialsData || []);
         setCourseCycles(cyclesData || []);
 
-        // 3. Handle User Permissions
-        if (sessionData?.user) {
+        // 3. Handle User Permissions - ONLY if not guest
+        const isGuest = !sessionData?.user || !!sessionData?.user?.is_anonymous;
+        if (sessionData?.user && !isGuest) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('id, role')
             .eq('id', sessionData.user.id)
-            .single();
+            .maybeSingle();
           setCurrentUser(profile);
         }
 

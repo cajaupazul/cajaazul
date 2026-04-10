@@ -36,11 +36,10 @@ function ProfessorRatingsWrapper() {
       try {
         setLoading(true);
         // 1. Fetch professor details
-        const { data: currentProf, error: profError } = await supabase
           .from('professors')
           .select('*')
           .eq('id', professorId)
-          .single();
+          .maybeSingle();
 
         if (profError || !currentProf) {
           console.error('Professor not found');
@@ -129,8 +128,9 @@ function ProfessorRatingsWrapper() {
             .eq('is_active', true)
         ];
 
-        if (user) {
-          promises.push(supabase.from('profiles').select('*').eq('id', user.id).single());
+        const isGuest = !user || !!user?.is_anonymous;
+        if (user && !isGuest) {
+          promises.push(supabase.from('profiles').select('*').eq('id', user.id).maybeSingle());
         } else {
           promises.push(Promise.resolve({ data: null }));
         }

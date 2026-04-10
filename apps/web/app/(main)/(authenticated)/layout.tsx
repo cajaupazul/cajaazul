@@ -230,9 +230,16 @@ export default function AuthenticatedLayout({
     { label: 'Nosotros', href: '/dashboard/about', icon: Info },
   ];
 
-  // Filter items for non-admins
+  // Filter items for non-admins and guests
   const navItems = allNavItems.filter(item => {
     if (isAdmin) return true; // Admins see everything
+    
+    // Guests only see specific public sections
+    if (isGuest) {
+      const allowedForGuests = ['Inicio', 'Cursos', 'Profesores', 'Herramientas', 'Nosotros'];
+      return allowedForGuests.includes(item.label);
+    }
+
     return !visibilitySettings[item.label]; // Others see only non-hidden
   });
 

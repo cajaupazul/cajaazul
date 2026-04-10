@@ -144,7 +144,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     }, [session]);
 
     const fetchUserGrupos = useCallback(async (userId: string) => {
-        if (!userId || !session) return;
+        if (!userId || !session || session.user?.is_anonymous) return;
         try {
             const { data, error } = await supabase
                 .from('grupo_miembros')
@@ -161,11 +161,13 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
 
     const refreshAll = useCallback(async (userId?: string) => {
         const effectiveUserId = userId || session?.user?.id;
+        const isGuest = !session || session.user?.is_anonymous;
+        
         await Promise.all([
             fetchCourses(),
             fetchProfessors(),
             fetchGrupos(),
-            effectiveUserId ? fetchUserGrupos(effectiveUserId) : Promise.resolve()
+            (effectiveUserId && !isGuest) ? fetchUserGrupos(effectiveUserId) : Promise.resolve()
         ]);
     }, [session, fetchCourses, fetchProfessors, fetchGrupos, fetchUserGrupos]);
 
