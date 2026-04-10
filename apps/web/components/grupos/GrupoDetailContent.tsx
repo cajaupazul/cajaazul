@@ -39,6 +39,7 @@ export default function GrupoDetailContent({
     grupo,
     initialMiembros,
     initialIsMember,
+    isAdmin,
 }: GrupoDetailContentProps) {
     const { profile, isGuest } = useProfile();
     const router = useRouter();
