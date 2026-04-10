@@ -651,7 +651,7 @@ export default function CourseDetailContent({
                                                 <div className="flex items-center justify-between w-full">
                                                     <span>📁 Ciclo {cycle.ciclo_name}</span>
                                                     <Badge className="ml-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 font-black">
-                                                        0
+                                                        {(cycleMaterialsMap.get(cycle.id) || []).length}
                                                     </Badge>
                                                 </div>
                                             }

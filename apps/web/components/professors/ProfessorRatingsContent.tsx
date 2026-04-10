@@ -1410,14 +1410,9 @@ export default function ProfessorRatingsContent({
                                         <p className="text-bb-text-secondary text-sm md:text-base max-w-md mx-auto mb-8 font-medium">
                                             Únete a la comunidad para calificar profesores, compartir materiales y participar en las discusiones.
                                         </p>
-                                        <div className="flex flex-col sm:flex-row gap-4">
+                                        <div className="flex justify-center">
                                             <Link href="/auth/login">
-                                                <Button className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-12 px-10 rounded-xl shadow-xl shadow-blue-600/20 active:scale-95 transition-all w-full sm:w-auto uppercase tracking-widest text-xs">
-                                                    Iniciar Sesión
-                                                </Button>
-                                            </Link>
-                                            <Link href="/auth/login?view=sign_up">
-                                                <Button variant="outline" className="border-white/10 text-bb-text-secondary hover:text-white hover:bg-white/5 font-bold h-12 px-10 rounded-xl active:scale-95 transition-all w-full sm:w-auto uppercase tracking-widest text-xs">
+                                                <Button className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-12 px-12 rounded-xl shadow-xl shadow-blue-600/20 active:scale-95 transition-all uppercase tracking-widest text-xs">
                                                     Registrarse
                                                 </Button>
                                             </Link>
