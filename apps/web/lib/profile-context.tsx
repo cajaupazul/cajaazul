@@ -26,6 +26,10 @@ export function ProfileProvider({
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const isGuest = useMemo(() => {
+    return !session || !!session.user?.is_anonymous;
+  }, [session]);
+
   // Singleton pattern to avoid redundant fetches
   const hasFetchedProfile = useRef<string | null>(null);
   const isFetching = useRef(false);
@@ -155,9 +159,6 @@ export function ProfileProvider({
     }
   }, [session?.user?.id, fetchProfile]);
 
-  const isGuest = useMemo(() => {
-    return !session || !!session.user?.is_anonymous;
-  }, [session]);
 
   const value = useMemo(() => ({
     profile: profile || (isGuest ? {
