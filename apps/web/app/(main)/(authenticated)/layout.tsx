@@ -179,7 +179,13 @@ export default function AuthenticatedLayout({
     fetchEquippedFrame();
   }, [isAuthReady, profile?.active_frame_key]);
 
-  const handleLogoutClick = () => setShowLogoutConfirm(true);
+  const handleLogoutClick = () => {
+    if (isGuest) {
+      router.push('/auth/login');
+      return;
+    }
+    setShowLogoutConfirm(true);
+  };
 
   const handleLogoutConfirm = async () => {
     setShowLogoutConfirm(false);
@@ -511,7 +517,7 @@ export default function AuthenticatedLayout({
               style={{ textDecoration: 'none', fontSize: '0.875rem', background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <LogOut style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
-              <span>Cerrar Sesión</span>
+              <span>{isGuest ? 'Salir' : 'Cerrar Sesión'}</span>
               <div
                 className="absolute left-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                 style={{ backgroundColor: '#ef4444' }}

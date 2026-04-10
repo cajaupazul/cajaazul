@@ -1411,11 +1411,12 @@ export default function ProfessorRatingsContent({
                                             Únete a la comunidad para calificar profesores, compartir materiales y participar en las discusiones.
                                         </p>
                                         <div className="flex justify-center">
-                                            <Link href="/auth/login">
-                                                <Button className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-12 px-12 rounded-xl shadow-xl shadow-blue-600/20 active:scale-95 transition-all uppercase tracking-widest text-xs">
-                                                    Registrarse
-                                                </Button>
-                                            </Link>
+                                            <Button 
+                                                onClick={() => router.push('/auth/login')}
+                                                className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-12 px-12 rounded-xl shadow-xl shadow-blue-600/20 active:scale-95 transition-all uppercase tracking-widest text-xs"
+                                            >
+                                                Registrarse
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>
