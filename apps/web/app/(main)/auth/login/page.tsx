@@ -47,18 +47,12 @@ function LoginContent() {
 
   // Listen for session confirmation from the Provider
   useEffect(() => {
-    if (session && !profileLoading) {
+    // Only redirect if it's a REAL session (not anonymous/guest)
+    if (session && !session.user?.is_anonymous && !profileLoading) {
       if (typeof window !== 'undefined') {
-        const profileStr = localStorage.getItem('sb-' + process.env.NEXT_PUBLIC_SUPABASE_URL + '-auth-token');
-        // If we have a session but no profile yet, we should probably wait or check if onboarding is needed
-        // For now, let the Auth Callback (server-side) handle the primary redirection.
-        // We only redirect here if we are SURE the user is fully logged in and ready.
         if (profile) {
           console.log('[LOGIN_PAGE] Session and profile confirmed, redirecting to dashboard...');
           router.replace('/dashboard');
-        } else {
-          console.log('[LOGIN_PAGE] Session detected but waiting for profile/onboarding...');
-          // Optional: router.replace('/auth/complete-profile');
         }
       }
     }

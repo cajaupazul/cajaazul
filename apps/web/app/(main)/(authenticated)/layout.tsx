@@ -179,8 +179,10 @@ export default function AuthenticatedLayout({
     fetchEquippedFrame();
   }, [isAuthReady, profile?.active_frame_key]);
 
-  const handleLogoutClick = () => {
+  const handleLogoutClick = async () => {
     if (isGuest) {
+      // Clear any session (anonymous or stale) to prevent login redirect loops
+      await supabase.auth.signOut();
       router.push('/auth/login');
       return;
     }
