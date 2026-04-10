@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
+import { useProfile } from '@/lib/profile-context';
 
 interface Miembro {
     user_id: string;
@@ -38,9 +39,8 @@ export default function GrupoDetailContent({
     grupo,
     initialMiembros,
     initialIsMember,
-    isAdmin,
-    profile,
 }: GrupoDetailContentProps) {
+    const { profile, isGuest } = useProfile();
     const router = useRouter();
     const { colors, themeMode } = useTheme();
 
@@ -56,6 +56,10 @@ export default function GrupoDetailContent({
 
 
     const handleUnirse = async () => {
+        if (isGuest) {
+            router.push('/auth/login');
+            return;
+        }
         try {
             const { error } = await supabase
                 .from('grupo_miembros')

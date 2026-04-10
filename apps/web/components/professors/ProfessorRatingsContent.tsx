@@ -1397,17 +1397,32 @@ export default function ProfessorRatingsContent({
                         {/* New Comment Input Box - Crunchyroll style redesign */}
                         <div className="bg-bb-sidebar/30 border border-bb-border rounded-lg overflow-hidden mb-12 shadow-sm">
                             {isGuest ? (
-                                <div className="p-8 text-center bg-bb-darker/50">
-                                    <MessageSquare className="w-10 h-10 text-bb-text-secondary opacity-30 mx-auto mb-3" />
-                                    <p className="text-sm font-bold text-bb-text mb-1">Modo Lectura</p>
-                                    <p className="text-xs text-bb-text-secondary">
-                                        Inicia sesión para poder comentar y participar en la comunidad.
-                                    </p>
-                                    <Link href="/auth/login">
-                                        <Button variant="outline" className="mt-4 border-blue-500/50 text-blue-400 hover:bg-blue-500/10 font-bold text-xs uppercase tracking-widest px-6 rounded-xl">
-                                            Iniciar Sesión
-                                        </Button>
-                                    </Link>
+                                <div className="p-10 md:p-16 text-center bg-gradient-to-br from-bb-darker/80 to-bb-sidebar/30 relative overflow-hidden group/modol">
+                                    {/* Decorative background element */}
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+                                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/5 rounded-full blur-3xl -ml-16 -mb-16" />
+                                    
+                                    <div className="relative z-10 flex flex-col items-center">
+                                        <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-6 border border-blue-500/20 shadow-lg shadow-blue-500/5 transition-transform group-hover/modol:scale-110">
+                                            <MessageSquare className="w-8 h-8 text-blue-400" />
+                                        </div>
+                                        <h3 className="text-xl md:text-2xl font-black text-white mb-2 uppercase tracking-tight">Modo Lectura</h3>
+                                        <p className="text-bb-text-secondary text-sm md:text-base max-w-md mx-auto mb-8 font-medium">
+                                            Únete a la comunidad para calificar profesores, compartir materiales y participar en las discusiones.
+                                        </p>
+                                        <div className="flex flex-col sm:flex-row gap-4">
+                                            <Link href="/auth/login">
+                                                <Button className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-12 px-10 rounded-xl shadow-xl shadow-blue-600/20 active:scale-95 transition-all w-full sm:w-auto uppercase tracking-widest text-xs">
+                                                    Iniciar Sesión
+                                                </Button>
+                                            </Link>
+                                            <Link href="/auth/login?view=sign_up">
+                                                <Button variant="outline" className="border-white/10 text-bb-text-secondary hover:text-white hover:bg-white/5 font-bold h-12 px-10 rounded-xl active:scale-95 transition-all w-full sm:w-auto uppercase tracking-widest text-xs">
+                                                    Registrarse
+                                                </Button>
+                                            </Link>
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <form onSubmit={handleSubmitComment}>
@@ -1515,9 +1530,9 @@ export default function ProfessorRatingsContent({
                                                             comment={comment}
                                                             profile={profile}
                                                             frameMap={frameMap}
-                                                            onReaction={isGuest ? () => alert('Modo Lectura: Inicia sesión para reaccionar.') : handleReactionComment}
+                                                            onReaction={isGuest ? () => router.push('/auth/login') : handleReactionComment}
                                                             onDelete={handleDeleteComment}
-                                                            onReply={isGuest ? () => alert('Modo Lectura: Inicia sesión para responder.') : () => setReplyToId(comment.id)}
+                                                            onReply={isGuest ? () => router.push('/auth/login') : () => setReplyToId(comment.id)}
                                                             isReply={depth > 0}
                                                             hasReplies={replies.length > 0}
                                                             reactions={commentReactions[comment.id]}

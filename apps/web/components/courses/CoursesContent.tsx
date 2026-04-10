@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Search, Plus, Trash2 } from 'lucide-react';
 import { supabase, Course, Profile } from '@/lib/supabase';
 import { useDashboardData } from '@/lib/dashboard-data-context';
+import { useProfile } from '@/lib/profile-context';
 import {
     Select,
     SelectContent,
@@ -40,6 +41,7 @@ interface CoursesContentProps {
 }
 
 export default function CoursesContent({ initialCourses, profile }: CoursesContentProps) {
+    const { isGuest } = useProfile();
     const [courses, setCourses] = useState<Course[]>(initialCourses);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCycle, setSelectedCycle] = useState('todos');
@@ -88,14 +90,16 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
                         {filteredCourses.length} {filteredCourses.length === 1 ? 'curso' : 'cursos'} disponibles
                     </p>
                 </div>
-
-                <Button
-                    className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 h-10 md:h-11 text-white shadow-lg shadow-blue-500/20 text-sm md:text-base font-bold"
-                    onClick={() => router.push('/dashboard/courses/new')}
-                >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Agregar Curso
-                </Button>
+                
+                {!isGuest && (
+                    <Button
+                        className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 h-10 md:h-11 text-white shadow-lg shadow-blue-500/20 text-sm md:text-base font-bold"
+                        onClick={() => router.push('/dashboard/courses/new')}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Agregar Curso
+                    </Button>
+                )}
             </div>
 
             <div className="mb-4 md:mb-6 relative">

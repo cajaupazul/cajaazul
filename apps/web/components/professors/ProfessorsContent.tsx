@@ -17,6 +17,7 @@ import { Star, Search, Plus, GraduationCap, Trophy, Trash2, RefreshCw } from 'lu
 import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useDashboardData } from '@/lib/dashboard-data-context';
+import { useProfile } from '@/lib/profile-context';
 import { PLACEHOLDERS, getDiversifiedProfessorBackground } from '@/lib/constants';
 // Removed SyncProfessorsModal import
 import DeleteProfessorModal from './DeleteProfessorModal';
@@ -80,6 +81,7 @@ export default function ProfessorsContent({
     initialSavedProfessors,
     profile
 }: ProfessorsContentProps) {
+    const { isGuest } = useProfile();
     const router = useRouter();
     const { removeProfessor } = useDashboardData();
     const [professors, setProfessors] = useState<any[]>(initialProfessors);
@@ -289,14 +291,16 @@ export default function ProfessorsContent({
                                 <SelectItem value="worst">Menor Calificados</SelectItem>
                             </SelectContent>
                         </Select>
-
-                        <Button
-                            onClick={() => router.push('/dashboard/professors/nuevo')}
-                            className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl w-full sm:w-auto"
-                        >
-                            <Plus className="h-5 w-5 mr-1" />
-                            Agregar
-                        </Button>
+                        
+                        {!isGuest && (
+                            <Button
+                                onClick={() => router.push('/dashboard/professors/nuevo')}
+                                className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl w-full sm:w-auto"
+                            >
+                                <Plus className="h-5 w-5 mr-1" />
+                                Agregar
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -441,7 +445,7 @@ export default function ProfessorsContent({
                                 ? 'Intenta con otro nombre o especialidad.'
                                 : 'Sé el primero en agregar a un profesor y ayuda a la comunidad.'}
                         </p>
-                        {!searchQuery && (
+                        {!searchQuery && !isGuest && (
                             <Button
                                 onClick={() => router.push('/dashboard/professors/nuevo')}
                                 className="mt-6 bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 h-12 rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-105 active:scale-95"
