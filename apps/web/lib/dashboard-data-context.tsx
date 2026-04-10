@@ -160,11 +160,12 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     }, [session]);
 
     const refreshAll = useCallback(async (userId?: string) => {
+        const effectiveUserId = userId || session?.user?.id;
         await Promise.all([
             fetchCourses(),
             fetchProfessors(),
             fetchGrupos(),
-            (userId || session?.user?.id) ? fetchUserGrupos(userId || session?.user.id) : Promise.resolve()
+            effectiveUserId ? fetchUserGrupos(effectiveUserId) : Promise.resolve()
         ]);
     }, [session, fetchCourses, fetchProfessors, fetchGrupos, fetchUserGrupos]);
 
