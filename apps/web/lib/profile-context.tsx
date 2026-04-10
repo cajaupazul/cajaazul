@@ -154,11 +154,19 @@ export function ProfileProvider({
   }, [session?.user?.id, fetchProfile]);
 
   const isGuest = useMemo(() => {
-    return !!session?.user?.is_anonymous;
+    return !session;
   }, [session]);
 
   const value = useMemo(() => ({
-    profile,
+    profile: profile || (isGuest ? {
+      id: 'guest',
+      nombre: 'Invitado',
+      role: 'user',
+      puntos: 0,
+      monedas: 0,
+      carrera: 'Estudiante',
+      avatar_url: null,
+    } as any : null),
     session,
     loading,
     isGuest,

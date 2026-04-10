@@ -58,7 +58,6 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     }, [session]);
 
     const fetchCourses = useCallback(async () => {
-        if (!session) return;
         setLoading(prev => ({ ...prev, courses: true }));
         try {
             const { data, error } = await supabase
@@ -75,7 +74,6 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     }, [session]);
 
     const fetchProfessors = useCallback(async () => {
-        if (!session) return;
         setLoading(prev => ({ ...prev, professors: true }));
         try {
             const { data, error } = await supabase
@@ -107,7 +105,6 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     }, [session]);
 
     const fetchGrupos = useCallback(async () => {
-        if (!session) return;
         setLoading(prev => ({ ...prev, grupos: true }));
         try {
             const { data, error } = await supabase
@@ -163,13 +160,11 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     }, [session]);
 
     const refreshAll = useCallback(async (userId?: string) => {
-        if (!session) return;
-
         await Promise.all([
             fetchCourses(),
             fetchProfessors(),
             fetchGrupos(),
-            (userId || session.user.id) ? fetchUserGrupos(userId || session.user.id) : Promise.resolve()
+            (userId || session?.user?.id) ? fetchUserGrupos(userId || session?.user.id) : Promise.resolve()
         ]);
     }, [session, fetchCourses, fetchProfessors, fetchGrupos, fetchUserGrupos]);
 

@@ -130,8 +130,8 @@ export default function AuthenticatedLayout({
   useEffect(() => {
     if (!profileLoading) {
       if (!session) {
-        console.log('[AUTH_GUARD] No session. Redirecting...');
-        router.replace('/auth/login');
+        // Guest mode is allowed - just set ready
+        setIsAuthReady(true);
       } else if (!profile) {
         console.warn('[AUTH_GUARD] Profile missing. Redirecting to onboarding...');
         router.replace('/auth/complete-profile');

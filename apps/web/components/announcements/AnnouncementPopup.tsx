@@ -32,7 +32,7 @@ export default function AnnouncementPopup() {
                 .eq('is_active', true)
                 .order('priority', { ascending: false })
                 .limit(1)
-                .single();
+                .maybeSingle();
 
             if (data && !error) {
                 setAnnouncement(data);
