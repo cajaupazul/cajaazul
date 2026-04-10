@@ -36,6 +36,7 @@ function ProfessorRatingsWrapper() {
       try {
         setLoading(true);
         // 1. Fetch professor details
+        const { data: currentProf, error: profError } = await supabase
           .from('professors')
           .select('*')
           .eq('id', professorId)

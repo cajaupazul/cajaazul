@@ -94,9 +94,8 @@ export function ProfileProvider({
     };
 
     initSession();
-    
-    // 2. Session Listener
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (mounted) {
         setSession(newSession);
         if (!newSession) {
@@ -106,6 +105,12 @@ export function ProfileProvider({
         }
       }
     });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // 3. Profile Fetch Trigger
   useEffect(() => {
