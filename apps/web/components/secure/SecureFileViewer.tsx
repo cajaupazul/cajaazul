@@ -567,11 +567,20 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                     </button>
                 </div>
 
-                {/* Right Control Group: Download */}
+                {/* Right Control Group: Download (Próximamente) */}
                 <div className="flex items-center gap-4 justify-end flex-1">
-                    <button onClick={handleDownload} className="hover:text-white transition-colors p-1" title="Descargar">
-                        <Download className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </button>
+                    <div className="relative group">
+                        <button
+                            disabled
+                            className="opacity-40 cursor-not-allowed transition-colors p-1"
+                            title="Próximamente"
+                        >
+                            <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </button>
+                        <span className="absolute bottom-full right-0 mb-2 px-2 py-1 text-[10px] font-bold bg-[#1a1a1a] text-[#aaaaaa] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-[#444]">
+                            Próximamente
+                        </span>
+                    </div>
                     {isFullscreen && (
                         <button onClick={toggleFullscreen} className="hover:text-[#ccc] transition-colors bg-[#1a1a1a] p-1.5 rounded-sm sm:hidden ml-2" title="Cerrar">
                             <X className="w-4 h-4 sm:w-5 sm:h-5" />
