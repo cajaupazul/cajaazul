@@ -51,11 +51,21 @@ function ProfessorRatingsWrapper() {
 
         const { data: { user } } = await supabase.auth.getUser();
 
-        // 2. Fetch all courses taught by this professor (to find effective course)
+        // 1.5. Find all duplicate professors with the same name to consolidate their data
+        const { data: duplicateProfs } = await supabase
+          .from('professors')
+          .select('id, especialidad, otros_cursos')
+          .ilike('nombre', currentProf.nombre);
+        
+        const allProfIds = duplicateProfs && duplicateProfs.length > 0 
+          ? duplicateProfs.map((p: any) => p.id) 
+          : [professorId];
+
+        // 2. Fetch all courses taught by any of these professor IDs
         const { data: coursesTaughtData } = await supabase
           .from('course_professors')
           .select('courses(id, nombre)')
-          .eq('professor_id', professorId);
+          .in('professor_id', allProfIds);
         
         const finalCourses: {id: string, nombre: string}[] = [];
         const seenNames = new Set<string>();
@@ -69,21 +79,25 @@ function ProfessorRatingsWrapper() {
           });
         }
 
-        // Add text-based courses from especialidad and otros_cursos
-        if (currentProf.especialidad && !seenNames.has(currentProf.especialidad.trim().toLowerCase())) {
-          seenNames.add(currentProf.especialidad.trim().toLowerCase());
-          finalCourses.push({ id: `virtual-esp`, nombre: currentProf.especialidad.trim() });
-        }
+        // Add text-based courses from especialidad and otros_cursos from ALL duplicates
+        const profsToProcess = duplicateProfs && duplicateProfs.length > 0 ? duplicateProfs : [currentProf];
         
-        if (currentProf.otros_cursos) {
-          const others = currentProf.otros_cursos.split(',').map((c: string) => c.trim()).filter(Boolean);
-          others.forEach((o: string, idx: number) => {
-            if (!seenNames.has(o.toLowerCase())) {
-              seenNames.add(o.toLowerCase());
-              finalCourses.push({ id: `virtual-oth-${idx}`, nombre: o });
-            }
-          });
-        }
+        profsToProcess.forEach((p: any) => {
+          if (p.especialidad && !seenNames.has(p.especialidad.trim().toLowerCase())) {
+            seenNames.add(p.especialidad.trim().toLowerCase());
+            finalCourses.push({ id: `virtual-esp-${p.id}`, nombre: p.especialidad.trim() });
+          }
+          
+          if (p.otros_cursos) {
+            const others = p.otros_cursos.split(',').map((c: string) => c.trim()).filter(Boolean);
+            others.forEach((o: string, idx: number) => {
+              if (!seenNames.has(o.toLowerCase())) {
+                seenNames.add(o.toLowerCase());
+                finalCourses.push({ id: `virtual-oth-${p.id}-${idx}`, nombre: o });
+              }
+            });
+          }
+        });
         
         setCoursesTaught(finalCourses);
 
@@ -109,19 +123,19 @@ function ProfessorRatingsWrapper() {
         setEffectiveCourseId(currentEffectiveCourseId);
         setEffectiveCourseName(currentEffectiveCourseName);
 
-        // 4. Fetch context-specific data in parallel
+        // 4. Fetch context-specific data in parallel for ALL duplicate IDs
         const promises: any[] = [
           supabase.from('professor_ratings')
             .select('*, profiles(nombre, avatar_url, background_url, active_frame_key, bio, created_at, puntos, es_vip)')
-            .eq('professor_id', professorId)
+            .in('professor_id', allProfIds)
             .order('created_at', { ascending: false }),
           supabase.from('materials')
             .select('*, courses(id, nombre)')
-            .eq('professor_id', professorId)
+            .in('professor_id', allProfIds)
             .order('created_at', { ascending: false }),
           supabase.from('professor_comments')
             .select('*, profiles(nombre, avatar_url, background_url, active_frame_key, bio, created_at, puntos, es_vip)')
-            .eq('professor_id', professorId)
+            .in('professor_id', allProfIds)
             .order('created_at', { ascending: false }),
           supabase.from('shop_items')
             .select('*')
@@ -194,7 +208,7 @@ function ProfessorRatingsWrapper() {
           const { data: lpRes } = await supabase.from('course_professors')
             .select('professors(id, nombre, avatar_url, especialidad, facultad)')
             .eq('course_id', currentEffectiveCourseId)
-            .neq('professor_id', professorId)
+            .not('professor_id', 'in', `(${allProfIds.join(',')})`)
             .limit(10);
             
           linkedProfessorsData = lpRes || [];
@@ -204,7 +218,7 @@ function ProfessorRatingsWrapper() {
         if (linkedProfessorsData.length === 0 && currentEffectiveCourseName) {
            const { data: stringMatchRes } = await supabase.from('professors')
             .select('id, nombre, avatar_url, especialidad, facultad')
-            .neq('id', professorId)
+            .not('id', 'in', `(${allProfIds.join(',')})`)
             .or(`especialidad.ilike.%${currentEffectiveCourseName}%,otros_cursos.ilike.%${currentEffectiveCourseName}%`)
             .limit(10);
             
