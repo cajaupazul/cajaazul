@@ -97,12 +97,11 @@ function ProfessorRatingsWrapper() {
           if (matched && !matched.id.startsWith('virtual-')) currentEffectiveCourseId = matched.id;
         }
 
-        // Final fallback for display name only — NOT used for filtering ratings
-        // We only auto-resolve the name (for UI display), never the ID without explicit URL context
+        // Final fallback: auto-resolve to first course for display (ID needed for filtering)
         if (!currentEffectiveCourseId && !currentEffectiveCourseName && finalCourses.length > 0) {
-          currentEffectiveCourseName = finalCourses[0].nombre;
-          // Do NOT auto-set currentEffectiveCourseId — this prevents filtering out ratings
-          // that were saved without a specific course context
+          const first = finalCourses[0];
+          currentEffectiveCourseName = first.nombre;
+          if (!first.id.startsWith('virtual-')) currentEffectiveCourseId = first.id;
         }
 
         const isVirtualActive = finalCourses.find(c => c.nombre.toLowerCase() === currentEffectiveCourseName?.toLowerCase())?.id.startsWith('virtual-');
@@ -145,33 +144,42 @@ function ProfessorRatingsWrapper() {
           { data: userProfile }
         ] = await Promise.all(promises);
 
-        // 5. Filter data by effectiveCourseId — ONLY when user explicitly navigated
-        // from a course context (courseId or course URL params present).
-        // When opening a professor directly from the professors list, show ALL data.
-        const hasCourseContext = !!(contextCourseId || selectedCourseName);
+        // 5. Filter data strictly by course — each course is fully independent.
+        // Also accepts ratings saved with course_id=null when course_name matches
+        // (handles legacy ratings submitted without a proper DB course context).
+        const filteredRatings = (ratingsData || []).filter((r: any) => {
+          if (currentEffectiveCourseId) {
+            // Primary: exact course_id match
+            if (r.course_id === currentEffectiveCourseId) return true;
+            // Fallback: rating stored without course_id but with matching course_name
+            if (r.course_id === null && currentEffectiveCourseName &&
+                r.course_name?.toLowerCase() === currentEffectiveCourseName.toLowerCase()) return true;
+            return false;
+          }
+          // Virtual course (text-based only): match by name
+          if (isVirtualActive && currentEffectiveCourseName) {
+            return r.course_name?.toLowerCase() === currentEffectiveCourseName.toLowerCase();
+          }
+          return true;
+        });
 
-        const filteredRatings = hasCourseContext
-          ? (ratingsData || []).filter((r: any) => {
-              if (currentEffectiveCourseId) return r.course_id === currentEffectiveCourseId || r.course_id === null;
-              if (isVirtualActive && currentEffectiveCourseName) return r.course_name?.toLowerCase() === currentEffectiveCourseName.toLowerCase();
-              return true;
-            })
-          : (ratingsData || []);
+        const filteredMaterials = (materialsData || []).filter((m: any) => {
+          if (currentEffectiveCourseId) return m.course_id === currentEffectiveCourseId;
+          return true;
+        });
 
-        const filteredMaterials = hasCourseContext
-          ? (materialsData || []).filter((m: any) => {
-              if (currentEffectiveCourseId) return m.course_id === currentEffectiveCourseId;
-              return true;
-            })
-          : (materialsData || []);
-
-        const filteredComments = hasCourseContext
-          ? (commentsData || []).filter((c: any) => {
-              if (currentEffectiveCourseId) return c.course_id === currentEffectiveCourseId;
-              if (isVirtualActive && currentEffectiveCourseName) return c.course_name?.toLowerCase() === currentEffectiveCourseName.toLowerCase();
-              return true;
-            })
-          : (commentsData || []);
+        const filteredComments = (commentsData || []).filter((c: any) => {
+          if (currentEffectiveCourseId) {
+            if (c.course_id === currentEffectiveCourseId) return true;
+            if (c.course_id === null && currentEffectiveCourseName &&
+                c.course_name?.toLowerCase() === currentEffectiveCourseName.toLowerCase()) return true;
+            return false;
+          }
+          if (isVirtualActive && currentEffectiveCourseName) {
+            return c.course_name?.toLowerCase() === currentEffectiveCourseName.toLowerCase();
+          }
+          return true;
+        });
 
         setRatings(filteredRatings);
         setMaterials(filteredMaterials);
