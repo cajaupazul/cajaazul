@@ -25,6 +25,11 @@ export default function HomePage() {
     try {
       setIsGuestLoading(true);
       const { supabase } = await import('@/lib/supabase');
+
+      // Cerrar sesión previa antes de entrar como invitado
+      // Esto evita que en móvil se reutilice la sesión registrada en lugar de crear una anónima
+      await supabase.auth.signOut();
+
       const { error } = await supabase.auth.signInAnonymously();
       
       if (error) throw error;
