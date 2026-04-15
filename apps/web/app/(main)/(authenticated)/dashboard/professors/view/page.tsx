@@ -160,8 +160,11 @@ function ProfessorRatingsWrapper() {
 
         // 5. Filter data strictly by course — each course is fully independent.
         // Also accepts ratings saved with course_id=null when course_name matches
-        // (handles legacy ratings submitted without a proper DB course context).
+        // For legacy ratings (no course context at all), we show them in all courses 
+        // to prevent 5.0 professors appearing as 0.0 on every tab.
         const filteredRatings = (ratingsData || []).filter((r: any) => {
+          if (!r.course_id && !r.course_name) return true; // Legacy global ratings
+
           if (currentEffectiveCourseId) {
             // Primary: exact course_id match
             if (r.course_id === currentEffectiveCourseId) return true;
@@ -178,11 +181,14 @@ function ProfessorRatingsWrapper() {
         });
 
         const filteredMaterials = (materialsData || []).filter((m: any) => {
+          if (!m.course_id && !currentEffectiveCourseName) return true; // Legacy
           if (currentEffectiveCourseId) return m.course_id === currentEffectiveCourseId;
           return true;
         });
 
         const filteredComments = (commentsData || []).filter((c: any) => {
+          if (!c.course_id && !c.course_name) return true; // Legacy global comments
+
           if (currentEffectiveCourseId) {
             if (c.course_id === currentEffectiveCourseId) return true;
             if (c.course_id === null && currentEffectiveCourseName &&
