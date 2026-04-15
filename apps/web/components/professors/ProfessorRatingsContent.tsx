@@ -687,8 +687,43 @@ export default function ProfessorRatingsContent({
         }, { onConflict: 'professor_id,user_id,course_id' });
 
         if (!error) {
+            // Optimistic update: update local ratings state immediately so
+            // userHasRated, recommendation bar and total count are instant
+            const optimisticRating: any = {
+                id: `optimistic-${Date.now()}`,
+                professor_id: professor.id,
+                user_id: user.id,
+                puntuacion: formData.puntuacion,
+                claridad: formData.claridad,
+                facilidad: formData.facilidad,
+                recommended: formData.recommended,
+                course_id: validCourseId,
+                course_name: selectedCourse,
+                created_at: new Date().toISOString(),
+                profiles: profile ? {
+                    nombre: profile.nombre,
+                    avatar_url: profile.avatar_url,
+                    active_frame_key: profile.active_frame_key,
+                    background_url: (profile as any).background_url,
+                    bio: (profile as any).bio,
+                    puntos: profile.puntos,
+                    es_vip: (profile as any).es_vip,
+                } : null
+            };
+
+            setRatings(prev => {
+                // If user already rated, replace — otherwise append
+                const existingIdx = prev.findIndex((r: any) => r.user_id === user.id);
+                if (existingIdx >= 0) {
+                    const updated = [...prev];
+                    updated[existingIdx] = { ...updated[existingIdx], ...optimisticRating };
+                    return updated;
+                }
+                return [...prev, optimisticRating];
+            });
+
             setCreateDialogOpen(false);
-            router.refresh();
+            router.refresh(); // Refresh server state for other data (materials, comments, etc.)
         }
     };
 
