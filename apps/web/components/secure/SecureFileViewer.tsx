@@ -59,7 +59,8 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, scale, estimatedHeight, pd
     return (
         <div
             ref={containerRef}
-            className={`transition-all duration-300 overflow-hidden flex flex-col items-center ${isMobile ? 'mb-2' : 'mb-2'}`}
+            data-page-number={pageNumber}
+            className={`pdf-page-container transition-all duration-300 overflow-hidden flex flex-col items-center ${isMobile ? 'mb-2' : 'mb-4 shadow-sm'}`}
             style={{
                 minHeight: shouldMount ? 'auto' : actualHeight * scale,
                 height: shouldMount ? 'auto' : actualHeight * scale,
@@ -185,6 +186,10 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const [containerWidth, setContainerWidth] = useState(0);
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
     const [zoomLevel, setZoomLevel] = useState(1);
+    
+    // V5 Blackboard UI states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageInput, setPageInput] = useState('1');
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
     const xlsxContainerRef = useRef<HTMLDivElement>(null);
@@ -219,6 +224,37 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
     const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.25, 4));
     const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
+
+    useEffect(() => {
+        setPageInput(currentPage.toString());
+    }, [currentPage]);
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        if (!containerRef.current) return;
+        const container = e.currentTarget;
+        const elements = container.getElementsByClassName('pdf-page-container');
+        const containerRect = container.getBoundingClientRect();
+        
+        for (let i = 0; i < elements.length; i++) {
+            const rect = elements[i].getBoundingClientRect();
+            const containerCenter = containerRect.top + containerRect.height / 2;
+            if (rect.top <= containerCenter && rect.bottom >= containerCenter) {
+                if (currentPage !== i + 1) {
+                    setCurrentPage(i + 1);
+                }
+                break;
+            }
+        }
+    };
+
+    const scrollToPage = (pageNumber: number) => {
+        if (!containerRef.current) return;
+        const elements = containerRef.current.getElementsByClassName('pdf-page-container');
+        if (elements[pageNumber - 1]) {
+            elements[pageNumber - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setCurrentPage(pageNumber);
+        }
+    };
 
     useEffect(() => {
         const observer = new ResizeObserver((entries) => {
@@ -453,55 +489,106 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     return (
         <div
             ref={containerRef}
-            className={`w-full ${isFullscreen ? 'h-screen fixed inset-0 z-[9999]' : 'h-full'} flex flex-col bg-[#F4F4F5] overflow-hidden rounded-xl relative select-none shadow-2xl`}
+            className={`w-full ${isFullscreen ? 'h-screen fixed inset-0 z-[9999] rounded-none' : 'h-full rounded-xl'} flex flex-col bg-[#e8e8e8] overflow-hidden relative select-none shadow-sm border border-zinc-200`}
             onContextMenu={(e) => e.preventDefault()}
         >
-            {/* V4.6+: Encabezado inteligente (se oculta en fullscreen) */}
+            {/* V5: Blackboard-style Title Area */}
             {!isFullscreen && (
-                <div className="h-14 bg-white/90 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-6 z-[110]">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100 italic font-black text-blue-600">v4</div>
-                        <span className="text-xs font-black text-zinc-900 uppercase tracking-widest truncate max-w-[200px]">{fileName}</span>
-                    </div>
-                    {(fileType === 'pdf' || fileType === 'docx') && (
-                        <div className="hidden md:flex items-center gap-1 bg-zinc-100 p-1 rounded-lg">
-                            <button onClick={handleZoomOut} className="p-1 px-2 text-zinc-600 hover:bg-white rounded transition-colors"><ZoomOut className="w-4 h-4" /></button>
-                            <span className="text-xs font-bold w-12 text-center text-zinc-700 select-none">{Math.round(zoomLevel * 100)}%</span>
-                            <button onClick={handleZoomIn} className="p-1 px-2 text-zinc-600 hover:bg-white rounded transition-colors"><ZoomIn className="w-4 h-4" /></button>
-                        </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                        <button onClick={toggleFullscreen} className="p-2.5 text-zinc-600 hover:bg-zinc-100 rounded-xl transition-all active:scale-95">
-                            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-                        </button>
-                    </div>
+                <div className="px-5 py-3 sm:px-6 sm:py-4 bg-white shrink-0 border-b border-zinc-200 flex flex-col items-start justify-center">
+                    <p className="text-[10px] sm:text-xs text-zinc-500 font-sans mb-0.5 uppercase tracking-wider">CampusLink Document Viewer</p>
+                    <h1 className="text-lg sm:text-2xl font-serif text-zinc-900 truncate w-full">{fileName}</h1>
                 </div>
             )}
 
-            {/* V4.6+: Botón de cierre flotante y controles Zoom solo en Fullscreen */}
-            {isFullscreen && (
-                <div className="fixed top-6 right-6 z-[200] flex items-center gap-3">
-                    {(fileType === 'pdf' || fileType === 'docx') && (
-                        <div className="flex items-center gap-1 bg-zinc-900/50 backdrop-blur-xl border border-white/10 p-1.5 rounded-full shadow-2xl">
-                            <button onClick={handleZoomOut} className="w-10 h-10 flex items-center justify-center text-white hover:bg-white/20 rounded-full transition-all"><ZoomOut className="w-5 h-5" /></button>
-                            <span className="text-xs font-bold w-12 text-center text-white select-none">{Math.round(zoomLevel * 100)}%</span>
-                            <button onClick={handleZoomIn} className="w-10 h-10 flex items-center justify-center text-white hover:bg-white/20 rounded-full transition-all"><ZoomIn className="w-5 h-5" /></button>
-                        </div>
+            {/* BLACKBOARD STYLE TOOLBAR */}
+            <div className="h-12 bg-[#333333] text-[#cccccc] flex items-center justify-between px-2 sm:px-4 z-[110] relative shrink-0 shadow-md">
+                {/* Left Control Group: Page navigation */}
+                <div className="flex items-center gap-1 sm:gap-3 flex-1">
+                    {fileType === 'pdf' && numPages && (
+                        <>
+                            <button 
+                               onClick={() => scrollToPage(currentPage - 1)}
+                               disabled={currentPage <= 1}
+                               className="hover:text-white disabled:opacity-30 transition-colors p-1"
+                            >
+                                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                            </button>
+                            <span className="text-[10px] sm:text-xs font-sans hidden sm:inline">Página</span>
+                            <input 
+                                 type="text" 
+                                 value={pageInput}
+                                 onChange={(e) => setPageInput(e.target.value)}
+                                 onKeyDown={(e) => {
+                                     if (e.key === 'Enter') {
+                                         const val = parseInt(pageInput);
+                                         if (!isNaN(val) && val >= 1 && val <= (numPages || 1)) {
+                                             scrollToPage(val);
+                                         } else {
+                                             setPageInput(currentPage.toString());
+                                         }
+                                     }
+                                 }}
+                                 onBlur={() => {
+                                     const val = parseInt(pageInput);
+                                     if (!isNaN(val) && val >= 1 && val <= (numPages || 1)) {
+                                         scrollToPage(val);
+                                     } else {
+                                         setPageInput(currentPage.toString());
+                                     }
+                                 }}
+                                 className="w-7 sm:w-10 h-6 sm:h-7 bg-[#1a1a1a] border border-[#1a1a1a] text-center text-white text-[10px] sm:text-xs rounded-sm focus:outline-none focus:border-[#4d4d4d]"
+                            />
+                            <span className="text-[10px] sm:text-xs font-sans whitespace-nowrap">de {numPages || 1}</span>
+                            <button 
+                               onClick={() => scrollToPage(currentPage + 1)}
+                               disabled={currentPage >= (numPages || 1)}
+                               className="hover:text-white disabled:opacity-30 transition-colors p-1"
+                            >
+                                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                            </button>
+                        </>
                     )}
-                    <button
-                        onClick={toggleFullscreen}
-                        className="w-12 h-12 flex items-center justify-center bg-zinc-900/50 text-white rounded-full backdrop-blur-xl border border-white/10 hover:bg-zinc-900 hover:scale-110 transition-all shadow-2xl group"
-                    >
-                        <X className="w-6 h-6 group-active:scale-90" />
+                </div>
+
+                {/* Center Control Group: Zoom & Fullscreen */}
+                <div className="flex items-center gap-4 sm:gap-6 justify-center flex-1">
+                    {(fileType === 'pdf' || fileType === 'docx') && (
+                        <>
+                            <button onClick={handleZoomOut} className="hover:text-white transition-colors" title="Alejar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 sm:w-4 sm:h-4"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
+                            <button onClick={handleZoomIn} className="hover:text-white transition-colors" title="Acercar">
+                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 sm:w-4 sm:h-4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
+                        </>
+                    )}
+                    <button onClick={toggleFullscreen} className="hover:text-white transition-colors sm:ml-2" title="Pantalla completa">
+                        {isFullscreen ? <Minimize className="w-4 h-4 sm:w-5 sm:h-5" /> : <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />}
                     </button>
                 </div>
-            )}
 
-            <div className={`flex-1 overflow-hidden relative ${isFullscreen ? 'bg-zinc-950' : 'bg-[#E4E4E7]/50'}`}>
+                {/* Right Control Group: Download */}
+                <div className="flex items-center gap-4 justify-end flex-1">
+                    <button onClick={handleDownload} className="hover:text-white transition-colors p-1" title="Descargar">
+                        <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    {isFullscreen && (
+                        <button onClick={toggleFullscreen} className="hover:text-[#ccc] transition-colors bg-[#1a1a1a] p-1.5 rounded-sm sm:hidden ml-2" title="Cerrar">
+                            <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className={`flex-1 overflow-hidden relative bg-[#e8e8e8]`}>
                 {fileType === 'pdf' && (
-                    <div className="h-full w-full relative bg-[#525659]">
+                    <div className="h-full w-full relative">
                         {fileSource && (
-                            <div id="secure-pdf-scroll-container" className="h-full w-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none pb-20 pt-4">
+                            <div 
+                                id="secure-pdf-scroll-container" 
+                                className="h-full w-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none pb-20 pt-4"
+                                onScroll={handleScroll}
+                            >
                                 <Document
                                     file={fileSource}
                                     onLoadSuccess={({ numPages: n }) => {
@@ -566,12 +653,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                 )}
             </div>
 
-            {/* V4.6+: Pie de página inteligente (se oculta en fullscreen) */}
-            {!isFullscreen && (
-                <div className="bg-zinc-900 h-10 flex items-center justify-center">
-                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.4em]">CampusLink Hybrid Engine v5.8 Stable</p>
-                </div>
-            )}
+
 
             <style jsx global>{`
                 /* REPLICA VISUAL de Google Chrome PDF Viewer Nativo */
