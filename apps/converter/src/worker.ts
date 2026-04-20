@@ -25,5 +25,6 @@ conversionWorker.on('completed', (job) => {
 });
 
 conversionWorker.on('failed', (job, err) => {
-    console.error(`Job ${job?.id} failed with ${err.message}`);
+    console.error(`❌ Job ${job?.id} failed!`);
+    console.error(err.stack || err.message);
 });

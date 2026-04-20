@@ -180,8 +180,10 @@ export async function processConversion(data: {
 
     } catch (error: any) {
         console.error(`Error in conversion core:`, error);
-        throw error;
+        throw new Error(`Conversion failed: ${error.message}`);
     } finally {
-        await fs.rm(jobDir, { recursive: true, force: true }).catch(() => { });
+        await fs.rm(jobDir, { recursive: true, force: true }).catch((err) => {
+            console.error(`Failed to cleanup job directory ${jobDir}:`, err);
+        });
     }
 }

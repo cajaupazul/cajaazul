@@ -24,6 +24,7 @@ export async function convertToPdf(inputPath: string, outputDir: string, timeout
             '--nofirststartwizard',
             '--convert-to', 'pdf',
             '--outdir', outputDir,
+            '-env:UserInstallation=file:///tmp/libreoffice_profile',
             inputPath
         ]);
 

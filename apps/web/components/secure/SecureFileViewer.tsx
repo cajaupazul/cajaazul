@@ -361,14 +361,23 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             setSessionToken(token);
 
             let type: typeof fileType = 'other';
-            // V5.9: Detección robusta que ignora parámetros de búsqueda (?bucket=...)
-            const cleanLowerPath = lowerPath.split('?')[0];
             
-            if (cleanLowerPath.endsWith('.pdf') || lowerPath.includes('path=Converted/') || lowerPath.includes('.pdf?')) type = 'pdf';
-            else if (lowerPath.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/)) type = 'image';
-            else if (lowerPath.match(/\.(doc|docx)($|\?)/)) type = 'docx';
-            else if (lowerPath.match(/\.(xls|xlsx|csv)($|\?)/)) type = 'xlsx';
-            else if (lowerPath.match(/\.(ppt|pptx)($|\?)/)) type = 'pptx';
+            // V5.9.1: Detección ultra-robusta (Busca extensión en el path real o en el nombre del archivo)
+            let effectivePath = lowerPath;
+            if (lowerPath.includes('path=')) {
+                try {
+                    const urlObj = new URL(lowerPath, 'http://dummy.com');
+                    effectivePath = (urlObj.searchParams.get('path') || lowerPath).toLowerCase();
+                } catch (e) { /* fallback */ }
+            } else {
+                effectivePath = lowerPath.split('?')[0];
+            }
+            
+            if (effectivePath.endsWith('.pdf') || lowerPath.includes('path=Converted/')) type = 'pdf';
+            else if (effectivePath.match(/\.(jpg|jpeg|png|webp|gif)$/)) type = 'image';
+            else if (effectivePath.match(/\.(doc|docx)$/)) type = 'docx';
+            else if (effectivePath.match(/\.(xls|xlsx|csv)$/)) type = 'xlsx';
+            else if (effectivePath.match(/\.(ppt|pptx)$/)) type = 'pptx';
 
             setFileType(type);
 
