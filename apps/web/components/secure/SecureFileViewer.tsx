@@ -361,11 +361,14 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             setSessionToken(token);
 
             let type: typeof fileType = 'other';
-            if (lowerPath.endsWith('.pdf')) type = 'pdf';
-            else if (lowerPath.match(/\.(jpg|jpeg|png|webp|gif)$/)) type = 'image';
-            else if (lowerPath.match(/\.(doc|docx)$/)) type = 'docx';
-            else if (lowerPath.match(/\.(xls|xlsx|csv)$/)) type = 'xlsx';
-            else if (lowerPath.match(/\.(ppt|pptx)$/)) type = 'pptx';
+            // V5.9: Detección robusta que ignora parámetros de búsqueda (?bucket=...)
+            const cleanLowerPath = lowerPath.split('?')[0];
+            
+            if (cleanLowerPath.endsWith('.pdf') || lowerPath.includes('path=Converted/') || lowerPath.includes('.pdf?')) type = 'pdf';
+            else if (lowerPath.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/)) type = 'image';
+            else if (lowerPath.match(/\.(doc|docx)($|\?)/)) type = 'docx';
+            else if (lowerPath.match(/\.(xls|xlsx|csv)($|\?)/)) type = 'xlsx';
+            else if (lowerPath.match(/\.(ppt|pptx)($|\?)/)) type = 'pptx';
 
             setFileType(type);
 
