@@ -5,9 +5,12 @@ import { createReadStream, createWriteStream } from 'fs';
 import path from 'path';
 import { convertToPdf } from './lib/libreoffice';
 import { generateImageThumbnail, generatePdfThumbnail } from './lib/thumbnails';
-import { Readable } from 'stream';
+import { Readable, pipeline } from 'stream';
+import util from 'util';
 import dotenv from 'dotenv';
 import os from 'os';
+
+const pump = util.promisify(pipeline);
 
 dotenv.config();
 
@@ -37,6 +40,7 @@ export async function processConversion(data: {
     bucket?: string;
 }) {
     const { filePath: initialPath, originalName, jobId, key, bucket } = data;
+    console.log(`👷 Starting conversion job ${jobId} for key: ${key || originalName}`);
     const jobDir = path.join(TMP_DIR, jobId);
     let currentInputPath = initialPath;
 
@@ -47,23 +51,20 @@ export async function processConversion(data: {
         await fs.mkdir(jobDir, { recursive: true });
 
         // 2. If file is in R2, download it
-        if (key && bucket) {
+        if (key) {
+            console.log(`📥 Downloading original file from R2: ${key}`);
             currentInputPath = path.join(jobDir, path.basename(key));
-            const getObjectResponse = await s3Client.send(new GetObjectCommand({
-                Bucket: bucket,
+            const response = await s3Client.send(new GetObjectCommand({
+                Bucket: bucket || process.env.R2_BUCKET_NAME,
                 Key: key,
             }));
-
-            const fileStream = createWriteStream(currentInputPath);
-            await new Promise((resolve, reject) => {
-                if (getObjectResponse.Body instanceof Readable) {
-                    getObjectResponse.Body.pipe(fileStream)
-                        .on('finish', () => resolve(true))
-                        .on('error', reject);
-                } else {
-                    reject(new Error('R2 Body is not a readable stream'));
-                }
-            });
+            
+            if (response.Body instanceof Readable) {
+                await pump(response.Body, createWriteStream(currentInputPath));
+                console.log(`✅ Downloaded to: ${currentInputPath}`);
+            } else {
+                throw new Error('R2 Body is not a readable stream');
+            }
         }
 
         if (!currentInputPath) throw new Error('No input file path available');
@@ -138,6 +139,7 @@ export async function processConversion(data: {
                 // will render it as a native PDF (cascade view, like Blackboard) instead of PPT.
                 // We preserve the original frontend url structure, just change the bucket path.
                 if (destinationPdfKey) {
+                    console.log(`📄 Updating url_archivo to point to PDF: ${destinationPdfKey}`);
                     const originalUrl = materials[0].url_archivo;
                     const urlObj = new URL(originalUrl);
                     urlObj.searchParams.set('path', destinationPdfKey);

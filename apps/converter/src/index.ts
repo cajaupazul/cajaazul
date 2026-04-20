@@ -85,6 +85,7 @@ fastify.post('/convert', async (req: any, reply: any) => {
     await pump(data.file, fs.createWriteStream(filePath));
 
     // Add to Queue
+    console.log(`[CONVERTER] Adding manual job for: ${data.filename}`);
     await conversionQueue.add('convert-document', {
         filePath,
         originalName: data.filename,
@@ -112,6 +113,7 @@ fastify.post('/convert-stored', async (req: FastifyRequest, reply: FastifyReply)
     const jobId = uuidv4();
 
     // Add to Queue
+    console.log(`[CONVERTER] Adding R2 job for key: ${key}`);
     await conversionQueue.add('convert-stored-document', {
         key,
         bucket,
