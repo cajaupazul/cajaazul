@@ -9,6 +9,7 @@ import { pipeline } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 import './worker'; // Initialize worker
+import { conversionQueue } from './queue';
 
 dotenv.config();
 
@@ -155,7 +156,24 @@ fastify.get('/status/:id', async (req: any, reply: any) => {
 
 // Health check
 fastify.get('/', async () => {
-    return { status: 'ok', service: 'campuslink-converter' };
+    return { status: 'ok', service: 'campus-link-converter' };
+});
+
+// Queue Status monitor
+fastify.get('/status', async () => {
+    const [waiting, active, completed, failed] = await Promise.all([
+        conversionQueue.getWaitingCount(),
+        conversionQueue.getActiveCount(),
+        conversionQueue.getCompletedCount(),
+        conversionQueue.getFailedCount(),
+    ]);
+    return {
+        queue: 'conversion-queue',
+        waiting,
+        active,
+        completed,
+        failed
+    };
 });
 
 // Start server

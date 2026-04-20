@@ -18,6 +18,8 @@ export const conversionWorker = new Worker('conversion-queue', async (job: Job) 
     concurrency: 1
 });
 
+console.log('👷 [WORKER] Conversion worker engine is UP and LISTENING for jobs...');
+
 conversionWorker.on('completed', (job) => {
     console.log(`Job ${job.id} completed!`);
 });
