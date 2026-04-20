@@ -3,15 +3,24 @@ FROM node:20-slim AS base
 WORKDIR /app
 
 # Install LibreOffice and dependencies
-# Using debian-based image for easier libreoffice install
 RUN apt-get update && apt-get install -y \
     libreoffice \
     libreoffice-java-common \
     default-jre \
     fonts-opensymbol \
     fonts-noto \
+    fonts-liberation \
     curl \
+    xvfb \
+    libxinerama1 \
+    libfontconfig1 \
+    libglu1-mesa \
+    libdbus-glib-1-2 \
+    libasound2 \
+    libnss3 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ENV HOME=/tmp
 
 # Add typical fonts to ensure good rendering (Arial, Times, etc. replacements)
 # In production, you might copy actual .ttf files to /usr/share/fonts/

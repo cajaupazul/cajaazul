@@ -16,26 +16,36 @@ export async function convertToPdf(inputPath: string, outputDir: string, timeout
 
         // Safety check: input must exist
 
-        console.log(`Starting conversion: ${inputPath} -> ${outputDir}`);
+        const jobId = path.basename(outputDir);
+        const profilePath = `/tmp/libreoffice_profile_${jobId}`;
+        
+        console.log(`Starting conversion with Xvfb: ${inputPath} -> ${outputDir}`);
 
-        const child = spawn('libreoffice', [
+        // xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" libreoffice ...
+        const child = spawn('xvfb-run', [
+            '--auto-servernum',
+            '--server-args=-screen 0 1024x768x24',
+            'libreoffice',
             '--headless',
             '--nologo',
             '--nofirststartwizard',
+            '--invisible',
+            '--nodefault',
             '--convert-to', 'pdf',
             '--outdir', outputDir,
-            '-env:UserInstallation=file:///tmp/libreoffice_profile',
+            `-env:UserInstallation=file://${profilePath}`,
             inputPath
         ]);
 
         let timeout: NodeJS.Timeout;
 
-        // Safety timeout
+        // Increased timeout: PPTs can be slow
         if (timeoutMs > 0) {
+            const actualTimeout = Math.max(timeoutMs, 90000); // Minimum 90s
             timeout = setTimeout(() => {
                 child.kill('SIGKILL');
-                reject(new ConversionError('Conversion timed out'));
-            }, timeoutMs);
+                reject(new ConversionError(`Conversion timed out after ${actualTimeout}ms`));
+            }, actualTimeout);
         }
 
         let stderr = '';
