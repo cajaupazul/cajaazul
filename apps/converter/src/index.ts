@@ -159,21 +159,36 @@ fastify.get('/', async () => {
 });
 
 // Queue Status monitor
-fastify.get('/status', async () => {
-    const [waiting, active, completed, failed] = await Promise.all([
-        conversionQueue.getWaitingCount(),
-        conversionQueue.getActiveCount(),
-        conversionQueue.getCompletedCount(),
-        conversionQueue.getFailedCount(),
-    ]);
-    return {
-        queue: 'conversion-queue',
-        waiting,
-        active,
-        completed,
-        failed
-    };
-});
+    fastify.get('/status', async (request, reply) => {
+        const [waiting, active, completed, failed] = await Promise.all([
+            conversionQueue.getWaitingCount(),
+            conversionQueue.getActiveCount(),
+            conversionQueue.getCompletedCount(),
+            conversionQueue.getFailedCount()
+        ]);
+
+        // Probar conexión a Supabase
+        let supabaseStatus = 'unknown';
+        try {
+            const { error } = await supabase.from('materials').select('id', { count: 'exact', head: true }).limit(1);
+            supabaseStatus = error ? `Error: ${error.message}` : 'OK';
+        } catch (e: any) {
+            supabaseStatus = `Exception: ${e.message}`;
+        }
+
+        return {
+            queue: 'conversion-queue',
+            status: { waiting, active, completed, failed },
+            connectivity: {
+                supabase: supabaseStatus,
+                env: {
+                    has_r2_key: !!process.env.R2_ACCESS_KEY_ID,
+                    has_supabase_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+                    node_env: process.env.NODE_ENV
+                }
+            }
+        };
+    });
 
 // Start server
 const start = async () => {
