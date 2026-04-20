@@ -82,21 +82,7 @@ export async function processConversion(data: {
             pdfPath = currentInputPath;
         }
 
-        // 4. Generate Thumbnail
-        try {
-            if (pdfPath) {
-                await generatePdfThumbnail(pdfPath, thumbnailPath);
-            } else if (['.jpg', '.jpeg', '.png', '.webp'].includes(fileExt)) {
-                await generateImageThumbnail(currentInputPath, thumbnailPath);
-            } else {
-                thumbnailPath = null;
-            }
-        } catch (thumbError: any) {
-            console.error('Failed to generate thumbnail:', thumbError.message);
-            thumbnailPath = null;
-        }
-
-        // 5. Upload Original PDF (if it was converted)
+        // 4. Upload PDF immediately after conversion (High Priority)
         let destinationPdfKey: string | null = null;
         if (pdfPath && pdfPath !== currentInputPath) {
             destinationPdfKey = `converted/${jobId}/${path.basename(pdfPath)}`;
@@ -106,69 +92,78 @@ export async function processConversion(data: {
                 Body: createReadStream(pdfPath),
                 ContentType: 'application/pdf',
             }));
-        }
+            console.log(`📄 PDF uploaded to R2: ${destinationPdfKey}`);
 
-        // 6. Upload Thumbnail
-        let thumbnailKey: string | null = null;
-        if (thumbnailPath) {
-            thumbnailKey = `materials/${jobId}.webp`;
-            await s3Client.send(new PutObjectCommand({
-                Bucket: 'thumbnails',
-                Key: thumbnailKey,
-                Body: createReadStream(thumbnailPath),
-                ContentType: 'image/webp',
-            }));
-            console.log(`📸 Thumbnail uploaded: ${thumbnailKey}`);
-        }
-
-        // 7. Update Supabase
-        if (key) {
-            const publicThumbnailUrl = `${process.env.PUBLIC_URL_BASE}/storage/secure-url?bucket=thumbnails&path=${thumbnailKey}`;
-
-            const { data: materials, error: fetchError } = await supabase
-                .from('materials')
-                .select('id, url_archivo')
-                .ilike('url_archivo', `%${key}%`);
-
-            if (fetchError) {
-                console.error('Error fetching material from Supabase:', fetchError);
-            } else if (materials && materials.length > 0) {
-                const updatePayload: any = { thumbnail_url: publicThumbnailUrl };
-                
-                // If we successfully converted to PDF, update the url_archivo so the frontend viewer
-                // will render it as a native PDF (cascade view, like Blackboard) instead of PPT.
-                // We preserve the original frontend url structure, just change the bucket path.
-                if (destinationPdfKey) {
-                    console.log(`📄 Updating url_archivo to point to PDF: ${destinationPdfKey}`);
-                    const originalUrl = materials[0].url_archivo;
-                    const urlObj = new URL(originalUrl);
-                    urlObj.searchParams.set('path', destinationPdfKey);
-                    updatePayload.url_archivo = urlObj.toString();
-                }
-
-                const { error: updateError } = await supabase
+            // 5. Update Supabase URL IMMEDIATELY (Priority #1)
+            // We do this BEFORE potentially memory-heavy thumbnailing to ensure the PDF state is saved.
+            if (key) {
+                const { data: materials, error: fetchError } = await supabase
                     .from('materials')
-                    .update(updatePayload)
-                    .eq('id', materials[0].id);
+                    .select('id, url_archivo')
+                    .ilike('url_archivo', `%${key}%`);
 
-                if (updateError) {
-                    console.error('Error updating thumbnail_url and url_archivo:', updateError);
-                } else {
-                    console.log(`✨ Supabase updated for material ${materials[0].id}`);
-                    
-                    // IF update was successful, and we converted a file, delete the original from R2 to save space
-                    if (destinationPdfKey && key) {
-                        try {
-                            await s3Client.send(new DeleteObjectCommand({
-                                Bucket: bucket || process.env.R2_BUCKET_NAME,
-                                Key: key
-                            }));
-                            console.log(`🗑️ Original file deleted from R2 to save space: ${key}`);
-                        } catch (delError: any) {
-                            console.error(`Failed to delete original file ${key}:`, delError.message);
-                        }
+                if (!fetchError && materials && materials.length > 0) {
+                    const originalUrl = materials[0].url_archivo;
+                    try {
+                        const urlObj = new URL(originalUrl);
+                        urlObj.searchParams.set('path', destinationPdfKey);
+                        
+                        const { error: updateError } = await supabase
+                            .from('materials')
+                            .update({ url_archivo: urlObj.toString() })
+                            .eq('id', materials[0].id);
+
+                        if (updateError) console.error('Error updating Supabase URL:', updateError);
+                        else console.log(`✨ Supabase URL updated to PDF for ${materials[0].id}`);
+                    } catch (urlErr) {
+                        console.error('Failed to parse original URL:', originalUrl);
                     }
                 }
+            }
+        }
+
+        // 6. Generate and Upload Thumbnail (Lower Priority / May OOM)
+        let thumbnailKey: string | null = null;
+        try {
+            if (pdfPath || (['.jpg', '.jpeg', '.png', '.webp'].includes(fileExt))) {
+                const targetPath = pdfPath || currentInputPath;
+                if (pdfPath) {
+                    await generatePdfThumbnail(targetPath, thumbnailPath);
+                } else {
+                    await generateImageThumbnail(targetPath, thumbnailPath);
+                }
+                
+                thumbnailKey = `materials/${jobId}.webp`;
+                await s3Client.send(new PutObjectCommand({
+                    Bucket: 'thumbnails',
+                    Key: thumbnailKey,
+                    Body: createReadStream(thumbnailPath),
+                    ContentType: 'image/webp',
+                }));
+                console.log(`📸 Thumbnail uploaded: ${thumbnailKey}`);
+
+                // Update thumbnail URL
+                const publicThumbnailUrl = `${process.env.PUBLIC_URL_BASE}/storage/secure-url?bucket=thumbnails&path=${thumbnailKey}`;
+                await supabase
+                    .from('materials')
+                    .update({ thumbnail_url: publicThumbnailUrl })
+                    .ilike('url_archivo', `%${destinationPdfKey || key}%`);
+                console.log(`✨ Supabase Thumbnail updated`);
+            }
+        } catch (thumbError: any) {
+            console.error('Non-fatal: Failed to process thumbnail:', thumbError.message);
+        }
+
+        // 7. Cleanup Original from R2 (only if we have a PDF now)
+        if (destinationPdfKey && key) {
+            try {
+                await s3Client.send(new DeleteObjectCommand({
+                    Bucket: bucket || process.env.R2_BUCKET_NAME,
+                    Key: key
+                }));
+                console.log(`🗑️ Original file deleted from R2: ${key}`);
+            } catch (delError: any) {
+                console.warn(`Failed to delete original file ${key}:`, delError.message);
             }
         }
 
@@ -182,6 +177,7 @@ export async function processConversion(data: {
         console.error(`Error in conversion core:`, error);
         throw new Error(`Conversion failed: ${error.message}`);
     } finally {
+        // Essential cleanup
         await fs.rm(jobDir, { recursive: true, force: true }).catch((err) => {
             console.error(`Failed to cleanup job directory ${jobDir}:`, err);
         });
