@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs/promises';
 import { createReadStream, createWriteStream } from 'fs';
@@ -126,19 +126,47 @@ export async function processConversion(data: {
 
             const { data: materials, error: fetchError } = await supabase
                 .from('materials')
-                .select('id')
+                .select('id, url_archivo')
                 .ilike('url_archivo', `%${key}%`);
 
             if (fetchError) {
                 console.error('Error fetching material from Supabase:', fetchError);
             } else if (materials && materials.length > 0) {
+                const updatePayload: any = { thumbnail_url: publicThumbnailUrl };
+                
+                // If we successfully converted to PDF, update the url_archivo so the frontend viewer
+                // will render it as a native PDF (cascade view, like Blackboard) instead of PPT.
+                // We preserve the original frontend url structure, just change the bucket path.
+                if (destinationPdfKey) {
+                    const originalUrl = materials[0].url_archivo;
+                    const urlObj = new URL(originalUrl);
+                    urlObj.searchParams.set('path', destinationPdfKey);
+                    updatePayload.url_archivo = urlObj.toString();
+                }
+
                 const { error: updateError } = await supabase
                     .from('materials')
-                    .update({ thumbnail_url: publicThumbnailUrl })
+                    .update(updatePayload)
                     .eq('id', materials[0].id);
 
-                if (updateError) console.error('Error updating thumbnail_url:', updateError);
-                else console.log(`✨ Supabase updated for material ${materials[0].id}`);
+                if (updateError) {
+                    console.error('Error updating thumbnail_url and url_archivo:', updateError);
+                } else {
+                    console.log(`✨ Supabase updated for material ${materials[0].id}`);
+                    
+                    // IF update was successful, and we converted a file, delete the original from R2 to save space
+                    if (destinationPdfKey && key) {
+                        try {
+                            await s3Client.send(new DeleteObjectCommand({
+                                Bucket: bucket || process.env.R2_BUCKET_NAME,
+                                Key: key
+                            }));
+                            console.log(`🗑️ Original file deleted from R2 to save space: ${key}`);
+                        } catch (delError: any) {
+                            console.error(`Failed to delete original file ${key}:`, delError.message);
+                        }
+                    }
+                }
             }
         }
 

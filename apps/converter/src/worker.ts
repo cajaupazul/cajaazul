@@ -4,14 +4,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const redisOptions = {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    ...(process.env.REDIS_PASSWORD ? { password: process.env.REDIS_PASSWORD } : {}),
+    ...(process.env.REDIS_TLS === 'true' ? { tls: {} } : {})
+};
+
 export const conversionWorker = new Worker('conversion-queue', async (job: Job) => {
     return await processConversion(job.data);
 }, {
-    connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-    },
-    concurrency: 2
+    connection: redisOptions,
+    concurrency: 1
 });
 
 conversionWorker.on('completed', (job) => {

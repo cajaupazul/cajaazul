@@ -16,11 +16,15 @@ const pump = util.promisify(pipeline);
 const fastify = Fastify({ logger: true });
 
 // Setup Queue
+const redisOptions = {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    ...(process.env.REDIS_PASSWORD ? { password: process.env.REDIS_PASSWORD } : {}),
+    ...(process.env.REDIS_TLS === 'true' ? { tls: {} } : {})
+};
+
 const conversionQueue = new Queue('conversion-queue', {
-    connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-    }
+    connection: redisOptions
 });
 
 // Register plugins
@@ -145,10 +149,7 @@ fastify.get('/status/:id', async (req: any, reply: any) => {
     };
 });
 
-// Explicit OPTIONS handling for preflight requests
-fastify.options('*', async (request, reply) => {
-    return reply.code(204).send();
-});
+
 
 // Health check
 fastify.get('/', async () => {
