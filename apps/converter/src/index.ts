@@ -8,9 +8,16 @@ import util from 'util';
 import { pipeline } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 import './worker'; // Initialize worker
 
 dotenv.config();
+
+// Supabase Configuration
+const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const pump = util.promisify(pipeline);
 const fastify = Fastify({ logger: true });
