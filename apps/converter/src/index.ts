@@ -9,7 +9,6 @@ import { pipeline } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 import './worker'; // Initialize worker
-import { conversionQueue } from './queue';
 
 dotenv.config();
 
