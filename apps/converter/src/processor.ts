@@ -122,37 +122,15 @@ export async function processConversion(data: {
             }
         }
 
-        // 6. Generate and Upload Thumbnail (Lower Priority / May OOM)
+        // 6. Generate and Upload Thumbnail (DISABLED to save memory)
         let thumbnailKey: string | null = null;
+        /* 
         try {
-            if (pdfPath || (['.jpg', '.jpeg', '.png', '.webp'].includes(fileExt))) {
-                const targetPath = pdfPath || currentInputPath;
-                if (pdfPath) {
-                    await generatePdfThumbnail(targetPath, thumbnailPath);
-                } else {
-                    await generateImageThumbnail(targetPath, thumbnailPath);
-                }
-                
-                thumbnailKey = `materials/${jobId}.webp`;
-                await s3Client.send(new PutObjectCommand({
-                    Bucket: 'thumbnails',
-                    Key: thumbnailKey,
-                    Body: createReadStream(thumbnailPath),
-                    ContentType: 'image/webp',
-                }));
-                console.log(`📸 Thumbnail uploaded: ${thumbnailKey}`);
-
-                // Update thumbnail URL
-                const publicThumbnailUrl = `${process.env.PUBLIC_URL_BASE}/storage/secure-url?bucket=thumbnails&path=${thumbnailKey}`;
-                await supabase
-                    .from('materials')
-                    .update({ thumbnail_url: publicThumbnailUrl })
-                    .ilike('url_archivo', `%${destinationPdfKey || key}%`);
-                console.log(`✨ Supabase Thumbnail updated`);
-            }
+            // Thumbnail logic removed per user request to prioritize file conversion
         } catch (thumbError: any) {
             console.error('Non-fatal: Failed to process thumbnail:', thumbError.message);
         }
+        */
 
         // 7. Cleanup Original from R2 (only if we have a PDF now)
         if (destinationPdfKey && key) {
