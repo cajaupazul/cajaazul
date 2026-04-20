@@ -19,9 +19,6 @@ export async function convertToPdf(inputPath: string, outputDir: string, timeout
         const jobId = path.basename(outputDir);
         const profilePath = `/tmp/libreoffice_profile_${jobId}`;
         
-        console.log(`Starting conversion with Xvfb: ${inputPath} -> ${outputDir}`);
-
-        // xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" libreoffice ...
         const child = spawn('xvfb-run', [
             '--auto-servernum',
             '--server-args=-screen 0 1024x768x24',
@@ -31,6 +28,8 @@ export async function convertToPdf(inputPath: string, outputDir: string, timeout
             '--nofirststartwizard',
             '--invisible',
             '--nodefault',
+            '--norestore',
+            '--nolockcheck',
             '--convert-to', 'pdf',
             '--outdir', outputDir,
             `-env:UserInstallation=file://${profilePath}`,
