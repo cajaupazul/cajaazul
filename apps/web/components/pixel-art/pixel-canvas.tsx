@@ -1403,7 +1403,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
                 {/* --- 1. VIEW MODE: PIXEL SELECTION PANEL --- */}
                 {!isPaintMode && selectedPixel && (
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-md animate-in slide-in-from-bottom-10 duration-300 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-md animate-in slide-in-from-bottom-10 duration-300 pointer-events-auto" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
                         <div className="bg-white rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] p-5 border border-slate-100/50 backdrop-blur-sm relative">
                             {/* Close Button */}
                             <button
@@ -1503,7 +1503,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     <div className="absolute bottom-0 left-0 z-30 w-full pointer-events-none" onContextMenu={(e) => e.preventDefault()}>
                         
                         {/* Floating Action Buttons (Eraser, Smart Pick) - Moved above the bottom bar so they don't overlap palette on mobile */}
-                        <div className="absolute right-4 bottom-[100%] mb-4 flex flex-col gap-3 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
+                        <div className="absolute right-4 bottom-[100%] mb-4 flex flex-col gap-3 pointer-events-auto" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
                             <button
                                 onClick={() => setSelectedColor('eraser')}
                                 className={cn(
@@ -1529,7 +1529,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                             </button>
                         </div>
 
-                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-t-[2rem] md:rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] p-3 md:px-8 md:py-6 border-t border-slate-200/60 flex flex-col gap-3 md:gap-6 animate-in slide-in-from-bottom-full duration-500 pb-safe" onMouseDown={e => e.stopPropagation()}>
+                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-t-[2rem] md:rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] p-3 md:px-6 md:py-4 border-t border-slate-200/60 flex flex-col gap-3 md:gap-4 animate-in slide-in-from-bottom-full duration-500 pb-safe" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
 
                             {/* Header / Tools - Scrollable on mobile */}
                             <div className="flex items-center justify-between px-1">
@@ -1599,7 +1599,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                             </div>
 
                             {showGuidancePanel && (
-                                <div className="absolute bottom-full left-4 mb-6 bg-white rounded-3xl shadow-2xl p-5 border border-slate-100 w-80 animate-in slide-in-from-bottom-4 z-50 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
+                                <div className="absolute bottom-full left-4 mb-6 bg-white rounded-3xl shadow-2xl p-5 border border-slate-100 w-80 animate-in slide-in-from-bottom-4 z-50 pointer-events-auto" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                                         <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Configurar Guía</h4>
                                         <button onClick={() => setShowGuidancePanel(false)} className="bg-slate-50 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
