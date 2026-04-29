@@ -290,6 +290,10 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     // Interaction Refs for Drag vs Click detection
     const dragStartRef = useRef<{ x: number, y: number } | null>(null);
     const isDraggingRef = useRef(false);
+    
+    // Touch Gestures Refs
+    const initialPinchDistRef = useRef<number | null>(null);
+    const initialPinchScaleRef = useRef<number | null>(null);
 
     // UI State
     const [isPaintMode, setIsPaintMode] = useState(false);
@@ -946,6 +950,110 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         }
     };
 
+    // --- Touch Event Handlers ---
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            lastMouseRef.current = { x: touch.clientX, y: touch.clientY };
+
+            if (!isEditingGuidance || !guidanceImage) {
+                dragStartRef.current = { x: touch.clientX, y: touch.clientY };
+                isDraggingRef.current = false;
+            }
+        } else if (e.touches.length === 2) {
+            // Pinch to zoom
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            initialPinchDistRef.current = Math.hypot(dx, dy);
+            initialPinchScaleRef.current = isEditingGuidance && guidanceImage ? guidanceState.scale : scale;
+            dragStartRef.current = null;
+            isDraggingRef.current = false;
+            setIsPanning(true);
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            const { x, y } = screenToWorld(touch.clientX, touch.clientY);
+            setCursorGridPos({ x, y });
+            cursorGridPosRef.current = { x, y };
+            needsRedrawRef.current = true;
+
+            if (dragStartRef.current) {
+                const dist = Math.hypot(touch.clientX - dragStartRef.current.x, touch.clientY - dragStartRef.current.y);
+                if (dist > 5) {
+                    isDraggingRef.current = true;
+                    setIsPanning(true);
+                }
+            }
+
+            if (isEditingGuidance && guidanceImage && lastMouseRef.current) {
+                const dx = (touch.clientX - lastMouseRef.current.x) / scale;
+                const dy = (touch.clientY - lastMouseRef.current.y) / scale;
+                setGuidanceState(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+                lastMouseRef.current = { x: touch.clientX, y: touch.clientY };
+                needsRedrawRef.current = true;
+                return;
+            }
+
+            if (isDraggingRef.current && lastMouseRef.current) {
+                const dx = touch.clientX - lastMouseRef.current.x;
+                const dy = touch.clientY - lastMouseRef.current.y;
+                setOffsetX(prev => prev + dx / scale);
+                setOffsetY(prev => prev + dy / scale);
+                lastMouseRef.current = { x: touch.clientX, y: touch.clientY };
+            }
+        } else if (e.touches.length === 2 && initialPinchDistRef.current !== null && initialPinchScaleRef.current !== null) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const dist = Math.hypot(dx, dy);
+            const factor = dist / initialPinchDistRef.current;
+
+            if (isEditingGuidance && guidanceImage) {
+                setGuidanceState(prev => ({
+                    ...prev,
+                    scale: Math.max(0.001, Math.min(1000, initialPinchScaleRef.current! * factor))
+                }));
+            } else {
+                setScale(Math.max(0.05, Math.min(100, initialPinchScaleRef.current! * factor)));
+            }
+            needsRedrawRef.current = true;
+        }
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (e.touches.length === 0) {
+            setIsPanning(false);
+            initialPinchDistRef.current = null;
+            initialPinchScaleRef.current = null;
+
+            if (dragStartRef.current && !isDraggingRef.current && lastMouseRef.current) {
+                if (isPaintMode) {
+                    paintPixel(lastMouseRef.current.x, lastMouseRef.current.y);
+                } else {
+                    const { x, y } = screenToWorld(lastMouseRef.current.x, lastMouseRef.current.y);
+                    if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
+                        fetchPixelDetails(x, y);
+                    }
+                }
+            }
+            dragStartRef.current = null;
+            isDraggingRef.current = false;
+            lastMouseRef.current = null;
+            setCursorGridPos(null);
+            cursorGridPosRef.current = null;
+            needsRedrawRef.current = true;
+        } else if (e.touches.length === 1) {
+            // After pinch, reset single touch drag ref to avoid sudden jumps
+            const touch = e.touches[0];
+            lastMouseRef.current = { x: touch.clientX, y: touch.clientY };
+            dragStartRef.current = null; // Do not treat as a click
+            isDraggingRef.current = true;
+            setIsPanning(true);
+        }
+    };
+
     const handleWheel = useCallback((e: WheelEvent) => {
         e.preventDefault();
         const zoomIntensity = 0.1;
@@ -1273,6 +1381,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseLeave}
                 onMouseEnter={handleMouseEnter}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                 onContextMenu={(e) => e.preventDefault()}
             >
                 <canvas
@@ -1390,18 +1501,45 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     </div>
                 ) : (
                     <div className="absolute bottom-0 left-0 z-30 w-full pointer-events-none" onContextMenu={(e) => e.preventDefault()}>
-                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-t-[2.5rem] shadow-[0_-20px_60px_rgba(0,0,0,0.15)] p-4 md:px-8 md:py-6 border-t border-slate-200/60 flex flex-col gap-4 md:gap-6 animate-in slide-in-from-bottom-full duration-500" onMouseDown={e => e.stopPropagation()}>
+                        
+                        {/* Floating Action Buttons (Eraser, Smart Pick) - Moved above the bottom bar so they don't overlap palette on mobile */}
+                        <div className="absolute right-4 bottom-[100%] mb-4 flex flex-col gap-3 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
+                            <button
+                                onClick={() => setSelectedColor('eraser')}
+                                className={cn(
+                                    "p-3 md:p-4 rounded-full shadow-lg transition-all hover:scale-110 active:scale-95 border border-slate-100",
+                                    isEraser ? "bg-rose-500 text-white" : "bg-white text-slate-400"
+                                )}
+                                title="Borrador"
+                            >
+                                <Eraser className="w-5 h-5 md:w-6 md:h-6" />
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (isEditingGuidance) setIsEditingGuidance(false);
+                                    setIsSmartPicking(!isSmartPicking);
+                                }}
+                                className={cn(
+                                    "p-3 md:p-4 rounded-full shadow-lg transition-all hover:scale-110 active:scale-95 border border-slate-100",
+                                    isSmartPicking ? "bg-amber-500 text-white" : "bg-white text-slate-400"
+                                )}
+                                title="Selector Mágico"
+                            >
+                                <Sparkles className="w-5 h-5 md:w-6 md:h-6" />
+                            </button>
+                        </div>
 
-                            <div className="flex items-center justify-between px-2">
-                                <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
-                                    <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
-                                        <button className="p-2.5 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Maximize className="w-5 h-5 md:w-4 md:h-4" /></button>
-                                        <div className="h-5 w-[1px] bg-slate-200 mx-1" />
-                                        <span className="text-[10px] md:text-xs font-black text-slate-700 px-3 uppercase tracking-tighter whitespace-nowrap">Pintar ({pendingPixels.size})</span>
-                                        <button className="p-2.5 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Pencil className="w-5 h-5 md:w-4 md:h-4" /></button>
-                                        <button className="p-2.5 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" onClick={() => setShowGuidancePanel(!showGuidancePanel)}><Grid className="w-5 h-5 md:w-4 md:h-4" /></button>
-                                        <button className="p-2.5 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Undo className="w-5 h-5 md:w-4 md:h-4" /></button>
-                                        <button className="p-2.5 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Redo className="w-5 h-5 md:w-4 md:h-4" /></button>
+                        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-t-[2rem] md:rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] p-3 md:px-8 md:py-6 border-t border-slate-200/60 flex flex-col gap-3 md:gap-6 animate-in slide-in-from-bottom-full duration-500 pb-safe" onMouseDown={e => e.stopPropagation()}>
+
+                            {/* Header / Tools - Scrollable on mobile */}
+                            <div className="flex items-center justify-between px-1">
+                                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
+                                    <div className="flex items-center gap-1 bg-slate-100 p-1 md:p-1.5 rounded-2xl border border-slate-200 shrink-0">
+                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Maximize className="w-4 h-4 md:w-5 md:h-5" /></button>
+                                        <div className="h-4 w-[1px] bg-slate-200 mx-1" />
+                                        <span className="text-[10px] md:text-xs font-black text-slate-700 px-2 uppercase tracking-tighter whitespace-nowrap">({pendingPixels.size})</span>
+                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Pencil className="w-4 h-4 md:w-5 md:h-5" /></button>
+                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" onClick={() => setShowGuidancePanel(!showGuidancePanel)}><Grid className="w-4 h-4 md:w-5 md:h-5" /></button>
                                     </div>
 
                                     <TemplateSlotBar
@@ -1409,42 +1547,25 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                         onRestore={restoreGuidance}
                                         onDelete={removeGuidanceFromHistory}
                                         onUploadClick={() => document.getElementById('guidance-upload')?.click()}
-                                        className="hidden sm:flex"
+                                        className="shrink-0"
                                     />
-
-                                    {userProfile && (
-                                        <div className="hidden lg:flex items-center gap-2 pr-4 border-r border-slate-100">
-                                            <AvatarWithFrame
-                                                size={32}
-                                                avatarUrl={getStorageUrl(userProfile.avatar_url)}
-                                                frameUrl={equippedFrame?.image_url}
-                                                frameScale={equippedFrame?.frame_settings?.navbar?.scale || 1}
-                                                offsetX={equippedFrame?.frame_settings?.navbar?.x || 0}
-                                                offsetY={equippedFrame?.frame_settings?.navbar?.y || 0}
-                                                name={userProfile.nombre}
-                                            />
-                                            <span className="text-xs font-bold text-slate-800">{userProfile.nombre?.split(' ')[0]}</span>
-                                            {userProfile.es_vip && (
-                                                <img src="/vip-icon.png" alt="VIP" className="w-4 h-4 object-contain" />
-                                            )}
-                                        </div>
-                                    )}
                                 </div>
 
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 shrink-0 ml-2">
                                     <button
                                         onClick={() => {
                                             setIsPaintMode(false);
                                             isPaintModeRef.current = false;
                                         }}
-                                        className="p-2.5 rounded-full hover:bg-slate-100 text-slate-400 transition-all"
+                                        className="p-2 rounded-full hover:bg-slate-100 text-slate-400 transition-all"
                                     >
-                                        <X className="w-5 h-5" />
+                                        <X className="w-5 h-5 md:w-6 md:h-6" />
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="px-1 overflow-x-auto scrollbar-hide">
+                            {/* Color Palette - Adjusted for easier scrolling */}
+                            <div className="px-1 -mx-2 overflow-x-auto scrollbar-hide">
                                 <Palette
                                     selectedColor={isPanning || isEditingGuidance || isEraser || isSmartPicking ? null : selectedColor}
                                     onSelectColor={(c) => {
@@ -1453,52 +1574,27 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                         setIsPanning(false);
                                         setIsSmartPicking(false);
                                     }}
-                                    className="border-none bg-transparent shadow-none p-0 flex-nowrap"
+                                    className="border-none bg-transparent shadow-none p-0 flex-nowrap pl-2 pr-4"
                                 />
                             </div>
 
-                            <div className="flex justify-center pb-2">
+                            {/* Confirm Button */}
+                            <div className="flex justify-center pb-2 md:pb-0">
                                 <button
                                     onClick={confirmPaint}
                                     disabled={pendingPixels.size === 0 || isSaving}
                                     className={cn(
-                                        "px-8 md:px-12 py-3.5 md:py-4 rounded-[1.25rem] font-black transition-all flex items-center gap-3 shadow-[0_15px_30px_-5px_rgba(37,99,235,0.3)] transform active:scale-95 group relative overflow-hidden",
+                                        "w-full md:w-auto px-6 md:px-12 py-3.5 md:py-4 rounded-2xl md:rounded-[1.25rem] font-black transition-all flex items-center justify-center gap-3 shadow-[0_10px_20px_-5px_rgba(37,99,235,0.3)] transform active:scale-95 group relative overflow-hidden",
                                         pendingPixels.size > 0 && !isSaving
-                                            ? "bg-blue-600 text-white hover:bg-blue-500 hover:scale-[1.03]"
+                                            ? "bg-blue-600 text-white hover:bg-blue-500 hover:scale-[1.02]"
                                             : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
                                     )}
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                                     <Sparkles className={cn("w-5 h-5 md:w-6 md:h-6", pendingPixels.size > 0 && !isSaving ? "animate-pulse" : "")} />
-                                    <span className="tracking-tight text-base md:text-xl italic uppercase">
+                                    <span className="tracking-tight text-sm md:text-xl italic uppercase">
                                         {isSaving ? "Guardando..." : `Confirmar Pintura${pendingPixels.size > 0 ? ` (${pendingPixels.size})` : ''}`}
                                     </span>
-                                </button>
-                            </div>
-
-                            <div className="absolute right-6 bottom-24 flex flex-col gap-2 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
-                                <button
-                                    onClick={() => setSelectedColor('eraser')}
-                                    className={cn(
-                                        "p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 border border-slate-100",
-                                        isEraser ? "bg-rose-500 text-white" : "bg-white text-slate-400"
-                                    )}
-                                    title="Borrador"
-                                >
-                                    <Eraser className="w-5 h-5" />
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (isEditingGuidance) setIsEditingGuidance(false);
-                                        setIsSmartPicking(!isSmartPicking);
-                                    }}
-                                    className={cn(
-                                        "p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 border border-slate-100",
-                                        isSmartPicking ? "bg-amber-500 text-white" : "bg-white text-slate-400"
-                                    )}
-                                    title="Selector Mágico"
-                                >
-                                    <Sparkles className="w-5 h-5" />
                                 </button>
                             </div>
 
