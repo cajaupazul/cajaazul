@@ -661,7 +661,7 @@ export default function CourseDetailContent({
                                                 {PREDEFINED_SUBFOLDERS.map((mainFolder: string) => {
                                                     const matchedMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === mainFolder);
                                                     const isExams = mainFolder === '📝 Exámenes';
-                                                    const customSubfolders = isExams ? (cycle.active_subfolders || []).filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)) : [];
+                                                    const customSubfolders = isExams ? (cycle.active_subfolders || []).filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)).sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })) : [];
 
                                                     let totalCount = matchedMats.length;
                                                     if (isExams) {
