@@ -1293,7 +1293,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             setGuidanceOpacity(item.opacity);
             setGuidanceGridStep(item.gridStep);
             setGuidanceState(item.state);
-            setIsEditingGuidance(true);
+            setIsEditingGuidance(false); // FIXED BY DEFAULT when restoring
         };
         img.src = item.image;
     };
@@ -1599,7 +1599,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                             </div>
 
                             {showGuidancePanel && (
-                                <div className="absolute bottom-full left-4 mb-6 bg-white rounded-3xl shadow-2xl p-5 border border-slate-100 w-80 animate-in slide-in-from-bottom-4 z-50 pointer-events-auto" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 md:left-4 md:translate-x-0 mb-6 bg-white rounded-3xl shadow-2xl p-5 border border-slate-100 w-[92vw] md:w-80 animate-in slide-in-from-bottom-4 z-50 pointer-events-auto" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                                         <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Configurar Guía</h4>
                                         <button onClick={() => setShowGuidancePanel(false)} className="bg-slate-50 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
@@ -1734,8 +1734,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 </div>
 
                 {isEditingGuidance && (
-                    <div className="absolute top-1/4 left-1/2 -translate-x-1/2 bg-amber-500 text-white px-6 py-3 rounded-full shadow-2xl border-2 border-white pointer-events-none animate-bounce z-40 font-bold text-sm flex items-center gap-2 transform -translate-y-1/2">
-                        <Move className="w-5 h-5" />
+                    <div className="absolute top-20 md:top-1/4 left-1/2 -translate-x-1/2 bg-amber-500 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-full shadow-2xl border-2 border-white pointer-events-none animate-bounce z-40 font-bold text-[10px] md:text-sm flex items-center gap-2 transform -translate-y-1/2 whitespace-nowrap">
+                        <Move className="w-4 h-4 md:w-5 md:h-5" />
                         <span>Mueve y escala la imagen guía</span>
                     </div>
                 )}
