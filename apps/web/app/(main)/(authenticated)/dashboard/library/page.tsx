@@ -5,10 +5,14 @@ import { supabase, LibraryBook } from '@/lib/supabase';
 import { LibraryShelf } from '@/components/library/LibraryShelf';
 import { BookDetailModal } from '@/components/library/BookDetailModal';
 import { useTheme } from '@/lib/theme-context';
+import { useProfile } from '@/lib/profile-context';
 import { motion } from 'framer-motion';
+import { Plus } from 'lucide-react';
+import Link from 'next/link';
 
 export default function LibraryPage() {
   const { colors } = useTheme();
+  const { profile } = useProfile();
   const [books, setBooks] = useState<LibraryBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBook, setSelectedBook] = useState<LibraryBook | null>(null);
@@ -51,6 +55,25 @@ export default function LibraryPage() {
           >
             Recursos académicos y lectura esencial
           </motion.p>
+          
+          {/* Admin Action */}
+          {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 }}
+              className="mt-8"
+            >
+              <Link href="/admin/library">
+                <button 
+                  className="px-8 py-3 rounded-2xl bg-white text-bb-dark font-black uppercase text-xs tracking-widest shadow-xl shadow-white/10 hover:scale-105 transition-all flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="w-4 h-4" />
+                  Añadir nuevo libro
+                </button>
+              </Link>
+            </motion.div>
+          )}
         </div>
       </div>
 
