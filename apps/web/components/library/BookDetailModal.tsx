@@ -11,7 +11,6 @@ import { useTheme } from '@/lib/theme-context';
 import { PDFViewerModal } from './PDFViewerModal';
 import { useProfile } from '@/lib/profile-context';
 import { supabase, LibraryBook } from '@/lib/supabase';
-import { toast } from 'sonner';
 
 interface BookDetailModalProps {
   book: LibraryBook | null;
@@ -54,7 +53,6 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
     if (!window.confirm('¿Estás seguro de que deseas eliminar este libro? Esta acción no se puede deshacer.')) return;
     
     setIsDeleting(true);
-    const toastId = toast.loading('Eliminando libro...');
 
     try {
       // 1. Delete from R2 (Cover and PDF)
@@ -80,12 +78,12 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
 
       if (error) throw error;
 
-      toast.success('Libro eliminado correctamente', { id: toastId });
+      alert('Libro eliminado correctamente');
       onDeleted?.();
       onClose();
     } catch (err: any) {
       console.error('Error deleting book:', err);
-      toast.error('Error al eliminar el libro: ' + err.message, { id: toastId });
+      alert('Error al eliminar el libro: ' + err.message);
     } finally {
       setIsDeleting(false);
     }
