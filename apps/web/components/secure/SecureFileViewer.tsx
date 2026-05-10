@@ -19,6 +19,7 @@ interface SecureFileViewerProps {
     fileName: string;
     useAdvancedViewer?: boolean;
     onClose?: (open: false) => void;
+    bucket?: string;
 }
 
 // ─── Virtualized Lazy PDF Page ────────────────────────────────────────────────
@@ -167,7 +168,7 @@ function MobilePdfNavigator({ numPages, pageWidth, scale, estimatedHeight }: Mob
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer = false, onClose }: SecureFileViewerProps) {
+export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer = false, onClose, bucket: initialBucket }: SecureFileViewerProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [fileType, setFileType] = useState<'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'other'>('other');
@@ -353,6 +354,14 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
         setPdfReady(false);
         if (!forceExternal) setUseExternalViewer(false);
 
+        let effectiveBucket = initialBucket || 'course-materials';
+        try {
+            if (filePath.includes('bucket=')) {
+                const urlObj = new URL(filePath, 'http://dummy.com');
+                effectiveBucket = urlObj.searchParams.get('bucket') || effectiveBucket;
+            }
+        } catch (e) { /* fallback */ }
+
         try {
             const lowerPath = filePath.toLowerCase();
             const { data: { session } } = await supabase.auth.getSession();
@@ -396,7 +405,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
             if (forceExternal || useExternalViewer) {
                 const previewRes = await fetch(
-                    `${baseUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`,
+                    `${baseUrl}/storage/preview-url?path=${encodeURIComponent(cleanPath)}&bucket=${effectiveBucket}`,
                     { headers: { 'Authorization': `Bearer ${token}` } }
                 );
                 const data = await previewRes.json();
@@ -405,7 +414,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                 return;
             }
 
-            const secureUrl = `${baseUrl}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=course-materials`;
+            const secureUrl = `${baseUrl}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=${effectiveBucket}`;
 
             // V4.6+: Obtener tamaño real del archivo vía HEAD
             try {
