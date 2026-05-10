@@ -12,6 +12,7 @@ type Bindings = {
     COURSE_IMAGES: R2Bucket
     THUMBNAILS: R2Bucket
     ANNOUNCEMENTS: R2Bucket
+    LIBRARY: R2Bucket
     // NO R2_ACCESS_KEYS required (Native Bindings)
 }
 
@@ -97,6 +98,7 @@ storageRouter.put('/upload', async (c) => {
         case 'grupos': bucket = c.env.GRUPOS; break;
         case 'thumbnails': bucket = c.env.THUMBNAILS; break;
         case 'announcements': bucket = c.env.ANNOUNCEMENTS; break;
+        case 'library': bucket = c.env.LIBRARY; break;
         default:
             return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
     }
@@ -192,6 +194,7 @@ storageRouter.delete('/delete', async (c) => {
         case 'grupos': bucket = c.env.GRUPOS; break;
         case 'thumbnails': bucket = c.env.THUMBNAILS; break;
         case 'announcements': bucket = c.env.ANNOUNCEMENTS; break;
+        case 'library': bucket = c.env.LIBRARY; break;
         default:
             return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
     }
@@ -279,6 +282,7 @@ storageRouter.get('/public-stream', async (c) => {
             case 'grupos': bucket = c.env.GRUPOS; break;
             case 'thumbnails': bucket = c.env.THUMBNAILS; break;
             case 'announcements': bucket = c.env.ANNOUNCEMENTS; break;
+            case 'library': bucket = c.env.LIBRARY; break;
             default: return c.json({ error: 'Bucket inválido' }, 400);
         }
 
@@ -330,6 +334,7 @@ storageRouter.get('/secure-url', async (c) => {
         case 'grupos': bucket = c.env.GRUPOS; break;
         case 'thumbnails': bucket = c.env.THUMBNAILS; break;
         case 'announcements': bucket = c.env.ANNOUNCEMENTS; break;
+        case 'library': bucket = c.env.LIBRARY; break;
         default: return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
     }
 

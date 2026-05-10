@@ -223,6 +223,7 @@ export default function AuthenticatedLayout({
       }
     ] : []),
     { label: 'Cursos', href: '/dashboard/courses', icon: BookOpen },
+    { label: 'Biblioteca', href: '/dashboard/library', icon: Layers },
     { label: 'Profesores', href: '/dashboard/professors', icon: Users },
     { label: 'Herramientas', href: '/dashboard/herramientas', icon: Wrench },
     { label: 'Tienda', href: '/dashboard/store', icon: ShoppingBag },
@@ -238,7 +239,7 @@ export default function AuthenticatedLayout({
     
     // Guests only see specific public sections
     if (isGuest) {
-      const allowedForGuests = ['Inicio', 'Cursos', 'Profesores', 'Herramientas', 'Nosotros'];
+      const allowedForGuests = ['Inicio', 'Cursos', 'Biblioteca', 'Profesores', 'Herramientas', 'Nosotros'];
       return allowedForGuests.includes(item.label);
     }
 

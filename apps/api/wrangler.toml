@@ -35,3 +35,7 @@ bucket_name = "thumbnails"
 [[r2_buckets]]
 binding = "ANNOUNCEMENTS"
 bucket_name = "announcements"
+
+[[r2_buckets]]
+binding = "LIBRARY"
+bucket_name = "library"

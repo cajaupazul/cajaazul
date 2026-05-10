@@ -231,6 +231,22 @@ export type UserSchedule = {
   updated_at: string;
 };
 
+export type LibraryBook = {
+  id: string;
+  title: string;
+  author: string;
+  year: number | null;
+  cover_url: string | null;
+  pdf_url: string | null;
+  synopsis: string | null;
+  editorial: string | null;
+  rating: number;
+  buy_links: { store: string; url: string }[];
+  metadata: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+};
+
 // Funciones helper para obtener profesores de un curso
 export async function getProfessorsForCourse(courseId: string) {
   const { data, error } = await supabase
