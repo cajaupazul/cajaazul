@@ -8,7 +8,7 @@ import {
 import { Star, Download, User, ExternalLink, Trash2, Info, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/lib/theme-context';
-import { PDFViewerModal } from './PDFViewerModal';
+import SecureFileModal from '@/components/secure/SecureFileModal';
 import { useProfile } from '@/lib/profile-context';
 import { supabase, LibraryBook } from '@/lib/supabase';
 
@@ -100,7 +100,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
                     {book.metadata.collection}
                   </span>
                 )}
-                <h2 className="text-xl font-serif font-black text-bb-text leading-tight uppercase pr-8">
+                <h2 className="text-lg font-serif font-black text-bb-text leading-tight uppercase pr-8">
                   {book.title}
                 </h2>
                 <p className="text-xs text-bb-text-secondary font-medium italic opacity-80">
@@ -214,7 +214,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
                       {book.metadata.collection}
                     </span>
                   )}
-                  <h2 className="text-3xl md:text-5xl font-serif font-black text-bb-text leading-none uppercase tracking-tighter">
+                  <h2 className="text-2xl md:text-4xl font-serif font-black text-bb-text leading-none uppercase tracking-tighter">
                     {book.title}
                   </h2>
                   <div className="flex items-center gap-4">
@@ -277,15 +277,8 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
               {/* Action Footer - Fixed at Bottom */}
               <div className="p-4 md:p-8 bg-bb-sidebar/50 border-t border-bb-border flex flex-col sm:flex-row gap-3 shrink-0 shadow-[0_-10px_20px_rgba(0,0,0,0.2)]">
                 <Button 
-                  variant="outline" 
-                  className="flex-1 h-12 md:h-14 rounded-2xl border-bb-border hover:bg-white/10 text-bb-text-secondary font-black text-[10px] md:text-xs uppercase tracking-[0.2em]"
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Perfil Autor
-                </Button>
-                <Button 
                   onClick={() => setShowViewer(true)}
-                  className="flex-[1.5] h-12 md:h-14 rounded-2xl bg-faculty-primary hover:opacity-90 text-white font-black shadow-xl shadow-faculty-primary/30 text-[10px] md:text-xs uppercase tracking-[0.2em]"
+                  className="w-full h-12 md:h-14 rounded-2xl bg-faculty-primary hover:opacity-90 text-white font-black shadow-xl shadow-faculty-primary/30 text-[10px] md:text-xs uppercase tracking-[0.2em]"
                   style={{ backgroundColor: colors?.primary }}
                 >
                   <Download className="w-4 h-4 mr-2" />
@@ -297,11 +290,11 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
         </DialogContent>
       </Dialog>
 
-      <PDFViewerModal 
+      <SecureFileModal 
         isOpen={showViewer} 
         onClose={() => setShowViewer(false)} 
-        url={book.pdf_url} 
-        title={book.title} 
+        filePath={book.pdf_url} 
+        fileName={book.title} 
       />
     </>
   );
