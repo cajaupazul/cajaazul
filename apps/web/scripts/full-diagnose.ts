@@ -28,9 +28,9 @@ async function fullDiagnose() {
     console.log(`\nTotal courses in parsed_offer.json: ${parsed.length}`);
     
     // Which parsed courses are NOT in DB sections?
-    const missingFromDB = parsed.filter(c => !uniqueCourseIds.has(c.codigo));
+    const missingFromDB = parsed.filter((c: any) => !uniqueCourseIds.has(c.codigo));
     console.log(`\nParsed but NOT in sche_sections 2026-I: ${missingFromDB.length}`);
-    missingFromDB.slice(0, 20).forEach(c => {
+    missingFromDB.slice(0, 20).forEach((c: any) => {
         console.log(`  ${c.codigo} - ${c.nombre} (${c.sections.length} sections in JSON)`);
     });
 
