@@ -4,25 +4,13 @@ import React from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
-import { LibraryBook } from '@/lib/supabase';
-import { Star, ExternalLink, Download, User, Info } from 'lucide-react';
+import { Star, Download, User, ExternalLink, Trash2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useTheme } from '@/lib/theme-context';
-
-interface BookDetailModalProps {
-  book: LibraryBook | null;
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-import { Star, Download, User, ExternalLink, Trash2 } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
 import { PDFViewerModal } from './PDFViewerModal';
 import { useProfile } from '@/lib/profile-context';
-import { supabase } from '@/lib/supabase';
+import { supabase, LibraryBook } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 interface BookDetailModalProps {
