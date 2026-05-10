@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog';
-import { Star, Download, User, ExternalLink, Trash2, Info } from 'lucide-react';
+import { Star, Download, User, ExternalLink, Trash2, Info, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/lib/theme-context';
 import { PDFViewerModal } from './PDFViewerModal';
@@ -89,27 +89,55 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-[95vw] md:max-w-5xl bg-bb-card border-bb-border p-0 overflow-hidden rounded-2xl md:rounded-3xl shadow-2xl h-[90vh] md:h-auto md:max-h-[85vh] flex flex-col">
-          {/* Admin Header Actions */}
-          <div className="absolute top-4 right-12 z-50 flex items-center gap-2">
+        <DialogContent className="max-w-[98vw] md:max-w-5xl bg-bb-card border-bb-border p-0 overflow-hidden rounded-3xl shadow-2xl h-[95vh] md:h-auto md:max-h-[85vh] flex flex-col transition-all duration-300">
+          
+          {/* Mobile Header Title (Visible only on mobile) */}
+          <div className="md:hidden pt-6 px-6 pb-2 shrink-0 border-b border-bb-border/30 bg-bb-sidebar/20">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                {book.metadata?.collection && (
+                  <span className="text-[8px] font-black text-faculty-primary uppercase tracking-[0.2em]">
+                    {book.metadata.collection}
+                  </span>
+                )}
+                <h2 className="text-xl font-serif font-black text-bb-text leading-tight uppercase pr-8">
+                  {book.title}
+                </h2>
+                <p className="text-xs text-bb-text-secondary font-medium italic opacity-80">
+                  {book.author}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Admin Action Button (Repositioned) */}
+          <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
             {isAdmin && (
               <Button 
                 onClick={handleDelete}
                 disabled={isDeleting}
                 variant="ghost"
                 size="icon"
-                className="w-9 h-9 rounded-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition-all border border-red-500/20"
-                title="Eliminar Libro"
+                className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition-all border border-red-500/20"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               </Button>
             )}
+            <Button 
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-bb-text-secondary md:hidden"
+            >
+              <X className="w-4 h-4" />
+            </Button>
           </div>
 
-          <div className="flex flex-col md:flex-row flex-1 min-h-0">
-            {/* Left Column - Cover & Meta */}
-            <div className="w-full md:w-[35%] bg-bb-sidebar/40 p-6 md:p-8 flex flex-col items-center border-b md:border-b-0 md:border-r border-bb-border shrink-0 overflow-y-auto md:overflow-visible">
-              <div className="w-32 h-44 md:w-56 md:h-80 rounded-xl shadow-2xl overflow-hidden mb-6 md:mb-8 transform hover:scale-[1.02] transition-transform duration-500 ring-1 ring-white/10 shrink-0">
+          <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
+            {/* Left Sidebar - Meta & Acquisition (PC) */}
+            <div className="w-full md:w-[35%] bg-bb-sidebar/30 p-6 md:p-8 flex flex-col items-center border-b md:border-b-0 md:border-r border-bb-border shrink-0 overflow-y-auto">
+              {/* Cover Image */}
+              <div className="w-32 h-44 md:w-56 md:h-80 rounded-2xl shadow-2xl overflow-hidden mb-6 md:mb-8 transform hover:scale-[1.02] transition-transform duration-500 ring-1 ring-white/10 shrink-0">
                 <img 
                   src={book.cover_url || ''} 
                   alt={book.title} 
@@ -117,125 +145,151 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
                 />
               </div>
 
-              <div className="w-full space-y-4 md:space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
+              {/* Stats Grid */}
+              <div className="w-full space-y-5 md:space-y-6">
+                <div className="grid grid-cols-2 gap-4 pb-4 border-b border-bb-border/50">
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black text-faculty-primary uppercase tracking-widest opacity-70">Fecha:</p>
-                    <p className="text-sm text-bb-text font-bold">{book.year || '2023'}</p>
+                    <p className="text-[9px] font-black text-faculty-primary uppercase tracking-[0.2em] opacity-60">Publicación</p>
+                    <p className="text-xs text-bb-text font-bold">{book.year || '2023'}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black text-faculty-primary uppercase tracking-widest opacity-70">Páginas:</p>
-                    <p className="text-sm text-bb-text font-bold">{book.metadata?.pages || 'N/A'}</p>
+                    <p className="text-[9px] font-black text-faculty-primary uppercase tracking-[0.2em] opacity-60">Extensión</p>
+                    <p className="text-xs text-bb-text font-bold">{book.metadata?.pages || 'N/A'} pág.</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black text-faculty-primary uppercase tracking-widest opacity-70">Temática:</p>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-[9px] font-black text-faculty-primary uppercase tracking-[0.2em] opacity-60">Áreas Temáticas</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {(book.metadata?.genres || ['General']).map((g: string) => (
-                      <span key={g} className="px-2.5 py-1 rounded-lg bg-faculty-primary/10 text-[10px] text-faculty-primary border border-faculty-primary/20 font-bold">
+                      <span key={g} className="px-2 py-0.5 rounded-md bg-faculty-primary/10 text-[9px] text-faculty-primary border border-faculty-primary/20 font-bold uppercase tracking-wider">
                         {g}
                       </span>
                     ))}
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-bb-border/50">
-                  <p className="text-[10px] font-black text-faculty-primary uppercase tracking-widest opacity-70 mb-2">Editorial:</p>
-                  <p className="text-xs text-bb-text-secondary font-bold uppercase">{book.editorial || 'Editorial Universidad del Pacífico'}</p>
+                <div className="pt-2">
+                  <p className="text-[9px] font-black text-faculty-primary uppercase tracking-[0.2em] opacity-60 mb-1">Sello Editorial</p>
+                  <p className="text-[10px] text-bb-text-secondary font-bold uppercase leading-tight">{book.editorial || 'Editorial Universidad del Pacífico'}</p>
+                </div>
+
+                {/* PC-ONLY Acquisition Section */}
+                <div className="hidden md:block pt-6 border-t border-bb-border/50 space-y-4">
+                  <p className="text-[9px] font-black text-faculty-primary uppercase tracking-[0.2em]">Adquirir Copia</p>
+                  <div className="space-y-2">
+                    {book.buy_links && book.buy_links.length > 0 ? (
+                      book.buy_links.map((link, i) => (
+                        <a 
+                          key={i} 
+                          href={link.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-bb-border transition-all group/link"
+                        >
+                          <img 
+                            src={getFavicon(link.url) || ''} 
+                            alt={link.store}
+                            className="w-4 h-4 object-contain"
+                          />
+                          <span className="text-[10px] font-bold text-bb-text flex-1 truncate">{link.store}</span>
+                          <ExternalLink className="w-2.5 h-2.5 text-bb-text-secondary opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                        </a>
+                      ))
+                    ) : (
+                      <p className="text-[9px] text-bb-text-secondary font-bold italic">No disponible para compra externa</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Column - Main Info */}
+            {/* Right Main Content */}
             <div className="flex-1 flex flex-col min-w-0 bg-bb-card">
               <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 scrollbar-hide">
-                {/* Header Info */}
-                <div className="space-y-3">
+                {/* Desktop-ONLY Header Title */}
+                <div className="hidden md:block space-y-3">
                   {book.metadata?.collection && (
-                    <span className="inline-block px-3 py-1 rounded-full bg-faculty-primary text-[10px] font-black text-white uppercase tracking-widest">
+                    <span className="inline-block px-3 py-1 rounded-full bg-faculty-primary/10 text-[10px] font-black text-faculty-primary uppercase tracking-widest border border-faculty-primary/20">
                       {book.metadata.collection}
                     </span>
                   )}
-                  <h2 className="text-2xl md:text-4xl font-serif font-black text-bb-text leading-[1.1] uppercase tracking-tight">
+                  <h2 className="text-3xl md:text-5xl font-serif font-black text-bb-text leading-none uppercase tracking-tighter">
                     {book.title}
                   </h2>
                   <div className="flex items-center gap-4">
-                    <p className="text-lg md:text-xl text-bb-text-secondary font-serif italic opacity-80">
+                    <p className="text-xl text-bb-text-secondary font-serif italic opacity-80">
                       {book.author}
                     </p>
                     <div className="h-4 w-px bg-bb-border" />
-                    <div className="flex items-center gap-1 text-yellow-400">
+                    <div className="flex items-center gap-1.5 text-yellow-400">
                       <Star className="w-4 h-4 fill-current" />
-                      <span className="text-xs font-black text-faculty-primary ml-1">{book.rating || '5.0'}/5</span>
+                      <span className="text-xs font-black text-faculty-primary tracking-widest uppercase">{book.rating || '5.0'} / 5.0</span>
                     </div>
                   </div>
+                </div>
+
+                {/* Stars for Mobile (Inline with content) */}
+                <div className="md:hidden flex items-center justify-between py-3 border-y border-bb-border/30">
+                  <div className="flex items-center gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className={`w-3.5 h-3.5 ${i < 5 ? 'fill-yellow-400 text-yellow-400' : 'text-bb-border'}`} />
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-black text-faculty-primary uppercase tracking-widest">Valoración 5/5</span>
                 </div>
 
                 {/* Synopsis */}
                 <div className="space-y-3">
                   <h3 className="text-[10px] font-black text-faculty-primary uppercase tracking-[0.3em] flex items-center gap-2">
                     <Info className="w-3.5 h-3.5" />
-                    Sinopsis
+                    Resumen del Libro
                   </h3>
                   <p className="text-bb-text-secondary leading-relaxed text-sm md:text-base font-medium opacity-90 text-justify">
                     {book.synopsis || 'No hay sinopsis disponible.'}
                   </p>
                 </div>
 
-                {/* Buy Links */}
-                {(book.buy_links && book.buy_links.length > 0) ? (
-                  <div className="space-y-4 pt-4">
-                    <h3 className="text-[10px] font-black text-faculty-primary uppercase tracking-[0.3em]">Adquirir Copia Física / Digital</h3>
-                    <div className="flex flex-wrap gap-3">
-                      {book.buy_links.map((link, i) => (
-                        <a 
-                          key={i} 
-                          href={link.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-bb-sidebar hover:bg-bb-hover border border-bb-border transition-all text-xs font-bold text-bb-text group/link shadow-sm"
-                        >
-                          <div className="w-6 h-6 rounded-lg overflow-hidden bg-white/5 flex items-center justify-center p-1">
-                            <img 
-                              src={getFavicon(link.url) || ''} 
-                              alt={link.store}
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[9px] text-faculty-primary uppercase font-black opacity-60">Tienda Oficial</span>
-                            <span className="text-xs">{link.store}</span>
-                          </div>
-                          <ExternalLink className="w-3 h-3 text-bb-text-secondary group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
-                        </a>
-                      ))}
-                    </div>
+                {/* MOBILE-ONLY Acquisition Section */}
+                <div className="md:hidden space-y-4 pt-4 pb-10">
+                  <h3 className="text-[10px] font-black text-faculty-primary uppercase tracking-[0.3em]">Opciones de Adquisición</h3>
+                  <div className="grid grid-cols-1 gap-2">
+                    {book.buy_links && book.buy_links.map((link, i) => (
+                      <a 
+                        key={i} 
+                        href={link.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/5 border border-bb-border"
+                      >
+                        <img src={getFavicon(link.url) || ''} alt="" className="w-6 h-6" />
+                        <div className="flex-1">
+                          <p className="text-[8px] font-black text-faculty-primary uppercase">Tienda Oficial</p>
+                          <p className="text-sm font-bold text-white">{link.store}</p>
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-bb-text-secondary" />
+                      </a>
+                    ))}
                   </div>
-                ) : (
-                  /* Fallback if links are empty but we want to show something */
-                  <div className="p-4 rounded-xl bg-bb-sidebar/30 border border-dashed border-bb-border">
-                    <p className="text-[10px] text-bb-text-secondary font-bold uppercase tracking-widest text-center">Información de compra no disponible</p>
-                  </div>
-                )}
+                </div>
               </div>
 
-              {/* Action Footer */}
-              <div className="p-6 md:p-8 bg-bb-sidebar/30 border-t border-bb-border flex flex-col sm:flex-row gap-4 shrink-0">
+              {/* Action Footer - Fixed at Bottom */}
+              <div className="p-4 md:p-8 bg-bb-sidebar/50 border-t border-bb-border flex flex-col sm:flex-row gap-3 shrink-0 shadow-[0_-10px_20px_rgba(0,0,0,0.2)]">
                 <Button 
                   variant="outline" 
-                  className="flex-1 h-12 md:h-14 rounded-xl border-bb-border hover:bg-bb-hover text-bb-text-secondary font-bold text-xs md:text-sm uppercase tracking-widest"
+                  className="flex-1 h-12 md:h-14 rounded-2xl border-bb-border hover:bg-white/10 text-bb-text-secondary font-black text-[10px] md:text-xs uppercase tracking-[0.2em]"
                 >
                   <User className="w-4 h-4 mr-2" />
-                  Biografía Autor
+                  Perfil Autor
                 </Button>
                 <Button 
                   onClick={() => setShowViewer(true)}
-                  className="flex-[1.5] h-12 md:h-14 rounded-xl bg-faculty-primary hover:opacity-90 text-white font-black shadow-lg shadow-faculty-primary/20 text-xs md:text-sm uppercase tracking-widest"
+                  className="flex-[1.5] h-12 md:h-14 rounded-2xl bg-faculty-primary hover:opacity-90 text-white font-black shadow-xl shadow-faculty-primary/30 text-[10px] md:text-xs uppercase tracking-[0.2em]"
                   style={{ backgroundColor: colors?.primary }}
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Leer Libro Online / PDF
+                  Visualizar Documento / PDF
                 </Button>
               </div>
             </div>
