@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CalendarDays, Upload, ArrowRight, Trash2, AlertTriangle, FileText, Wrench } from 'lucide-react';
+import { CalendarDays, Upload, ArrowRight, Trash2, AlertTriangle, FileText, Wrench, Download } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
 import { useProfile } from '@/lib/profile-context';
 import { supabase } from '@/lib/supabase';
@@ -165,6 +165,41 @@ export default function HerramientasPage() {
                         </div>
                     </div>
                 </Link>
+
+                {/* Downloader Extension Card */}
+                <div
+                    className="group relative bg-bb-card border border-bb-border rounded-2xl p-6 opacity-80 transition-all duration-300 overflow-hidden grayscale hover:grayscale-0"
+                >
+                    <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-4">
+                            <div
+                                className="w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110"
+                                style={{ backgroundColor: '#f59e0b20' }}
+                            >
+                                <Download className="w-7 h-7 text-amber-500" />
+                            </div>
+                            <div className="flex flex-col gap-1 items-end">
+                                <span className="px-2 py-1 rounded-md bg-amber-500/10 text-[9px] font-black text-amber-500 border border-amber-500/20 uppercase tracking-widest">
+                                    Próximamente
+                                </span>
+                                <span className="px-2 py-1 rounded-md bg-blue-500/10 text-[9px] font-black text-blue-400 border border-blue-500/20 uppercase tracking-widest">
+                                    Solo para PC
+                                </span>
+                            </div>
+                        </div>
+
+                        <h3 className="text-lg font-bold text-bb-text mb-2 group-hover:text-white transition-colors">
+                            Extensión de Descarga
+                        </h3>
+                        <p className="text-bb-text-secondary text-sm leading-relaxed mb-4">
+                            Descarga todo el contenido de tus cursos de Blackboard de forma instantánea. Olvida las descargas manuales, un clic y listo.
+                        </p>
+
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-bb-text-secondary opacity-50 cursor-not-allowed">
+                            Instalar Extensión <ArrowRight className="w-4 h-4" />
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Upload Modal */}

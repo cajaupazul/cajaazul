@@ -89,7 +89,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-[98vw] md:max-w-5xl bg-bb-card border-bb-border p-0 overflow-hidden rounded-3xl shadow-2xl h-[95vh] md:h-auto md:max-h-[85vh] flex flex-col transition-all duration-300">
+        <DialogContent className="max-w-[98vw] md:max-w-5xl bg-bb-card border-bb-border p-0 overflow-hidden rounded-3xl shadow-2xl h-[90dvh] md:h-auto md:max-h-[85vh] flex flex-col transition-all duration-300">
           
           {/* Mobile Header Title (Visible only on mobile) */}
           <div className="md:hidden pt-6 px-6 pb-2 shrink-0 border-b border-bb-border/30 bg-bb-sidebar/20">
@@ -111,7 +111,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
           </div>
 
           {/* Admin Action Button (Repositioned) */}
-          <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+          <div className="absolute top-4 right-12 z-50 flex items-center gap-2">
             {isAdmin && (
               <Button 
                 onClick={handleDelete}
@@ -123,21 +123,13 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
             )}
-            <Button 
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-bb-text-secondary md:hidden"
-            >
-              <X className="w-4 h-4" />
-            </Button>
           </div>
 
           <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
             {/* Left Sidebar - Meta & Acquisition (PC) */}
             <div className="w-full md:w-[35%] bg-bb-sidebar/30 p-6 md:p-8 flex flex-col items-center border-b md:border-b-0 md:border-r border-bb-border shrink-0 overflow-y-auto">
               {/* Cover Image */}
-              <div className="w-32 h-44 md:w-56 md:h-80 rounded-2xl shadow-2xl overflow-hidden mb-6 md:mb-8 transform hover:scale-[1.02] transition-transform duration-500 ring-1 ring-white/10 shrink-0">
+              <div className="w-28 h-40 md:w-56 md:h-80 rounded-2xl shadow-2xl overflow-hidden mb-6 md:mb-8 transform hover:scale-[1.02] transition-transform duration-500 ring-1 ring-white/10 shrink-0">
                 <img 
                   src={book.cover_url || ''} 
                   alt={book.title} 
@@ -205,7 +197,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
             </div>
 
             {/* Right Main Content */}
-            <div className="flex-1 flex flex-col min-w-0 bg-bb-card">
+            <div className="flex-1 flex flex-col min-w-0 bg-bb-card overflow-hidden">
               <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 scrollbar-hide">
                 {/* Desktop-ONLY Header Title */}
                 <div className="hidden md:block space-y-3">
@@ -278,7 +270,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
               <div className="p-4 md:p-8 bg-bb-sidebar/50 border-t border-bb-border flex flex-col sm:flex-row gap-3 shrink-0 shadow-[0_-10px_20px_rgba(0,0,0,0.2)]">
                 <Button 
                   onClick={() => setShowViewer(true)}
-                  className="w-full h-12 md:h-14 rounded-2xl bg-faculty-primary hover:opacity-90 text-white font-black shadow-xl shadow-faculty-primary/30 text-[10px] md:text-xs uppercase tracking-[0.2em]"
+                  className="w-full h-12 md:h-14 rounded-2xl bg-faculty-primary hover:opacity-90 text-white font-black shadow-xl shadow-faculty-primary/30 text-[10px] md:text-xs uppercase tracking-[0.2em] mb-safe"
                   style={{ backgroundColor: colors?.primary }}
                 >
                   <Download className="w-4 h-4 mr-2" />
