@@ -341,9 +341,24 @@ storageRouter.get('/secure-url', async (c) => {
     if (!bucket) return c.json({ error: 'Bucket no configurado' }, 500)
 
     try {
+        let r2Range: any = undefined;
+        if (rangeHeader) {
+            // Parse range header like "bytes=0-100" or "bytes=500-"
+            const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+            if (match) {
+                const offset = parseInt(match[1], 10);
+                if (match[2]) {
+                    const end = parseInt(match[2], 10);
+                    r2Range = { offset, length: end - offset + 1 };
+                } else {
+                    r2Range = { offset };
+                }
+            }
+        }
+
         // Soporte de Range Requests para PDF.js y optimización de grandes archivos
         const object = await bucket.get(path, {
-            range: rangeHeader,
+            range: r2Range,
         })
 
         if (object === null) {
@@ -361,8 +376,9 @@ storageRouter.get('/secure-url', async (c) => {
         // Cloudflare R2: Si se pidió un rango y se obtuvo un objeto parcial, objeto.range tendrá los datos
         if (rangeHeader && object.range) {
             const r = object.range as any;
-            if (r.offset !== undefined && r.length !== undefined) {
-                headers.set('Content-Range', `bytes ${r.offset}-${r.offset + r.length - 1}/${object.size}`)
+            if (r.offset !== undefined) {
+                const length = r.length || (object.size - r.offset);
+                headers.set('Content-Range', `bytes ${r.offset}-${r.offset + length - 1}/${object.size}`)
                 status = 206
             }
         }
