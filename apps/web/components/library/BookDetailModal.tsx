@@ -265,6 +265,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
         onClose={() => setShowViewer(false)} 
         filePath={book.pdf_url} 
         fileName={book.title} 
+        bucket="library"
       />
     </>
   );
