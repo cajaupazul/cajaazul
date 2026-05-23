@@ -4,6 +4,8 @@ import React from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Star, Download, User, ExternalLink, Trash2, Info, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -90,9 +92,11 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-[98vw] md:max-w-5xl bg-bb-card border-bb-border p-0 overflow-hidden rounded-3xl shadow-2xl h-[90dvh] md:h-auto md:max-h-[85vh] flex flex-col transition-all duration-300">
-          
+          <div className="sr-only">
+            <DialogTitle>{book.title}</DialogTitle>
+            <DialogDescription>Detalles del libro {book.title}</DialogDescription>
+          </div>
           {/* Main Scrollable Area */}
-          <div className="flex-1 overflow-y-auto scrollbar-hide">
             {/* Mobile Header Title (Visible only on mobile) */}
             <div className="md:hidden pt-6 px-6 pb-2 shrink-0 border-b border-bb-border/30 bg-bb-sidebar/20">
               <div className="flex justify-between items-start">
