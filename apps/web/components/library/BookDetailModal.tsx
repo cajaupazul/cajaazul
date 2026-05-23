@@ -96,7 +96,9 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
             <DialogTitle>{book.title}</DialogTitle>
             <DialogDescription>Detalles del libro {book.title}</DialogDescription>
           </div>
+          
           {/* Main Scrollable Area */}
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
             {/* Mobile Header Title (Visible only on mobile) */}
             <div className="md:hidden pt-6 px-6 pb-2 shrink-0 border-b border-bb-border/30 bg-bb-sidebar/20">
               <div className="flex justify-between items-start">
