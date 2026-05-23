@@ -32,6 +32,8 @@ export const BookItem: React.FC<BookItemProps> = ({ book, onClick }) => {
             src={book.cover_url} 
             alt={book.title} 
             className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-bb-card to-bb-hover p-4 text-center">

@@ -8,7 +8,13 @@ const nextConfig = {
   // output: 'export' elimina todas las capacidades de servidor
 
   images: {
-    unoptimized: true, // Cloudflare Pages no soporta Next.js Image Optimization API
+    unoptimized: true, // Cloudflare Pages compatibility
+    remotePatterns: [
+      { protocol: 'https', hostname: 'mevfhlhwrrkbhppgeyaj.supabase.co' },
+      { protocol: 'https', hostname: 't2.gstatic.com' },
+      { protocol: 'https', hostname: 'cajaazul.pages.dev' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' }, // For Google auth avatars
+    ],
   },
 
   // Configuración experimental

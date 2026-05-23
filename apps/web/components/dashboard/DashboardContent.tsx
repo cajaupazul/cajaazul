@@ -95,7 +95,7 @@ export default function DashboardContent({
                         <div className="flex flex-wrap items-center gap-2 text-bb-text-secondary px-3 md:px-4">
                             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-bb-card border border-bb-border">
                                 {profile?.avatar_url && (profile.avatar_url.includes('/logo/') || profile.avatar_url.includes('fce.png')) && (
-                                    <img src={getStorageUrl(profile.avatar_url)} alt="Faculty" className="w-4 h-4 object-contain" />
+                                    <img src={getStorageUrl(profile.avatar_url)} alt="Faculty" className="w-4 h-4 object-contain" loading="lazy" decoding="async" />
                                 )}
                                 <span className="text-[10px] md:text-xs font-semibold">
                                     {profile?.carrera || 'Facultad'}

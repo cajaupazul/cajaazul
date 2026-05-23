@@ -142,6 +142,8 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
                     src={book.cover_url || ''} 
                     alt={book.title} 
                     className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
 
