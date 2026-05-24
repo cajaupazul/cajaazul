@@ -143,6 +143,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const dataCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const guidanceCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const isTouchRef = useRef(false);
 
     const [scale, setScale] = useState(1);
     const [offsetX, setOffsetX] = useState(0);
@@ -843,6 +844,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
+        if (isTouchRef.current) return;
         if (e.button !== 0) return;
 
         lastMouseRef.current = { x: e.clientX, y: e.clientY };
@@ -890,6 +892,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     };
 
     const handleMouseUp = (e: React.MouseEvent) => {
+        if (isTouchRef.current) return;
         if (e.button !== 0) {
             setIsPanning(false);
             return;
@@ -930,6 +933,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
     // --- Touch Event Handlers ---
     const handleTouchStart = (e: React.TouchEvent) => {
+        isTouchRef.current = true;
         if (e.touches.length === 1) {
             const touch = e.touches[0];
             lastMouseRef.current = { x: touch.clientX, y: touch.clientY };
@@ -1001,6 +1005,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     };
 
     const handleTouchEnd = (e: React.TouchEvent) => {
+        if (e.touches.length < 2) {
+            setIsPanning(false);
+        }
         if (e.touches.length === 0) {
             setIsPanning(false);
             initialPinchDistRef.current = null;
@@ -1016,12 +1023,13 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     }
                 }
             }
+
             dragStartRef.current = null;
             isDraggingRef.current = false;
             lastMouseRef.current = null;
             setCursorGridPos(null);
             cursorGridPosRef.current = null;
-            needsRedrawRef.current = true;
+            setTimeout(() => { isTouchRef.current = false; }, 500);
         } else if (e.touches.length === 1) {
             // After pinch, reset single touch drag ref to avoid sudden jumps
             const touch = e.touches[0];
@@ -1587,8 +1595,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                         <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                                     )}
                                     <Sparkles className={cn("w-5 h-5", pendingPixels.size > 0 && !isSaving ? "animate-pulse" : "")} />
-                                    <span className="hidden md:inline-block tracking-tight text-lg italic uppercase">
-                                        {isSaving ? "Guardando..." : "Confirmar"}
+                                    <span className="tracking-tight text-xs md:text-lg italic uppercase">
+                                        {isSaving ? "..." : "Confirmar"}
                                     </span>
                                     
                                     {/* Mobile/Desktop badge for pending count */}
