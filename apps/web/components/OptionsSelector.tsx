@@ -339,13 +339,18 @@ const OptionsSelector: React.FC = () => {
                         <div
                             key={option.id}
                             className={`option-item ${activeOption === option.id ? 'active' : ''} ${option.id.toString().length > 4 ? 'is-announcement' : ''}`}
-                            style={{
-                                backgroundImage: `url(${option.background})`,
-                            }}
                             onClick={() => handleOptionClick(option)}
                         >
-                            <div className="option-shadow"></div>
-                            <div className="option-label">
+                            <img 
+                                src={option.background} 
+                                alt={option.main}
+                                className="absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-500"
+                                loading={activeOption === option.id ? "eager" : "lazy"}
+                                fetchPriority={activeOption === option.id ? "high" : "low"}
+                                decoding="async"
+                            />
+                            <div className="option-shadow z-10 relative"></div>
+                            <div className="option-label z-20 relative">
                                 <div
                                     className="option-icon"
                                     style={{
