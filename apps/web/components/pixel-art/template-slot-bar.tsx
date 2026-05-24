@@ -47,14 +47,15 @@ export function TemplateSlotBar({ slots, onRestore, onDelete, onUploadClick, cla
                         );
                     }
                     return (
-                        <button
+                        <label
                             key={slotNumber}
+                            htmlFor="guidance-upload"
                             onClick={() => onUploadClick(slotNumber)}
-                            className="w-10 h-10 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300 hover:text-blue-400 hover:border-blue-200 hover:bg-white transition-all hover:scale-105"
+                            className="w-10 h-10 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300 hover:text-blue-400 hover:border-blue-200 hover:bg-white transition-all hover:scale-105 cursor-pointer"
                             title="Subir plantilla a este espacio"
                         >
                             <Plus className="w-4 h-4" />
-                        </button>
+                        </label>
                     );
                 })}
             </div>
