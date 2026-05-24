@@ -1764,6 +1764,12 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         <span>Mueve y escala la imagen guía</span>
                     </div>
                 )}
+                
+                {/* Global Hidden Inputs */}
+                <input id="guidance-upload" type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    if (e.target.files?.[0]) handleUploadGuidance(e.target.files[0]);
+                    e.target.value = '';
+                }} />
             </div>
         </div>
     );
