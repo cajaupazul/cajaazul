@@ -529,56 +529,32 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             await fetchGridData();
 
             boardChannel = supabase
-                .channel(`board-state-${eventId}`)
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'pixel_board_state',
-                        filter: `event_id=eq.${eventId}`
-                    },
-                    (payload) => {
-                        const { x, y, color_hex } = payload.new as any;
-                        // Autoritative sync from DB state
-                        updateLocalPixel(x, y, color_hex);
-                    }
-                )
-                .subscribe();
-        };
-
-        setupBoardSync();
-
-        return () => {
-            if (boardChannel) supabase.removeChannel(boardChannel);
-        };
-    }, [eventId, gridWidth, gridHeight]);
-
-    // 2. Real-time Painting (Presence and Individual Pixels)
-    useEffect(() => {
-        const paintChannel = supabase.channel(`pixel-art-${eventId}`);
-
-        const initPaint = async () => {
-            paintChannel
+                .channel(`pixel-art-${eventId}`)
                 .on('presence', { event: 'sync' }, () => {
-                    const state = paintChannel.presenceState();
+                    const state = boardChannel.presenceState();
                     setOnlineUsers(Object.keys(state).length || 1);
                 })
-                .subscribe(async (status) => {
+                .on('broadcast', { event: 'pixel_batch' }, (payload) => {
+                    const pixels = payload.payload.pixels;
+                    if (pixels && Array.isArray(pixels)) {
+                        pixels.forEach((p: any) => updateLocalPixel(p.x, p.y, p.color_hex));
+                    }
+                })
+                .subscribe(async (status: string) => {
                     if (status === 'SUBSCRIBED') {
-                        await paintChannel.track({ online_at: new Date().toISOString(), user_id: userProfile?.id });
+                        await boardChannel.track({ online_at: new Date().toISOString(), user_id: userProfile?.id });
                     }
                 });
         };
 
-        if (eventId) initPaint();
+        if (eventId) setupBoardSync();
 
         return () => {
-            supabase.removeChannel(paintChannel);
+            if (boardChannel) supabase.removeChannel(boardChannel);
             isRunningRef.current = false;
             cancelAnimationFrame(frameIdRef.current);
         };
-    }, [eventId, userProfile]);
+    }, [eventId, gridWidth, gridHeight, userProfile?.id]);
 
 
     // --- Image Processing (Mathematically Grid-Linked) ---
@@ -1256,6 +1232,14 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             }
 
             console.log("[PIXEL_SAVE] Transaction Committed.");
+            
+            // BATCH BROADCAST: Send all pixels in one realtime message instead of relying on postgres_changes per row
+            supabase.channel(`pixel-art-${eventId}`).send({
+                type: 'broadcast',
+                event: 'pixel_batch',
+                payload: { pixels: pixelsToSave }
+            });
+
             incrementLocalCount();
         } catch (err) {
             console.error("[PIXEL_SAVE] Transaction FAILED. Rolling back buffer.", err);
