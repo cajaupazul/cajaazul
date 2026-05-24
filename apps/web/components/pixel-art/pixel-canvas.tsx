@@ -1492,7 +1492,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                     <div className="flex items-center gap-1 bg-slate-100/80 p-1 md:p-1.5 rounded-2xl border border-slate-200 shrink-0 shadow-inner">
                                         <button 
                                             onClick={() => {
-                                                if(isEraser) setSelectedColor(COLOR_MAP[Object.keys(COLOR_MAP)[0]]);
+                                                if(isEraser) setSelectedColor(COLOR_PALETTE[0]);
                                                 setIsSmartPicking(false);
                                             }}
                                             className={cn("p-2 md:p-2.5 rounded-xl transition-all", !isEraser && !isSmartPicking ? "bg-white text-blue-600 shadow-sm" : "hover:bg-white/50 text-slate-400 hover:text-slate-600")}
