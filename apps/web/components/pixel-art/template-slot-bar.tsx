@@ -8,7 +8,7 @@ interface TemplateSlotBarProps {
     slots: TemplateSlot[];
     onRestore: (slot: TemplateSlot) => void;
     onDelete: (image: string) => void;
-    onUploadClick: () => void;
+    onUploadClick: (slotIndex: number) => void;
     className?: string;
 }
 
@@ -21,11 +21,11 @@ export function TemplateSlotBar({ slots, onRestore, onDelete, onUploadClick, cla
             </div>
 
             <div className="flex items-center gap-1.5 px-1">
-                {[0, 1, 2].map((idx) => {
-                    const slot = slots[idx];
+                {[1, 2, 3].map((slotNumber) => {
+                    const slot = slots.find(s => s.slot_index === slotNumber);
                     if (slot) {
                         return (
-                            <div key={idx} className="relative group/slot">
+                            <div key={slotNumber} className="relative group/slot">
                                 <button
                                     onClick={() => onRestore(slot)}
                                     className="w-10 h-10 rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-100 transition-all hover:scale-110 active:scale-90 shadow-sm bg-white"
@@ -48,8 +48,8 @@ export function TemplateSlotBar({ slots, onRestore, onDelete, onUploadClick, cla
                     }
                     return (
                         <button
-                            key={idx}
-                            onClick={onUploadClick}
+                            key={slotNumber}
+                            onClick={() => onUploadClick(slotNumber)}
                             className="w-10 h-10 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300 hover:text-blue-400 hover:border-blue-200 hover:bg-white transition-all hover:scale-105"
                             title="Subir plantilla a este espacio"
                         >

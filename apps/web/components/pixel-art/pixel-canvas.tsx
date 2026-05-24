@@ -315,6 +315,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const [guidanceState, setGuidanceState] = useState({ x: 0, y: 0, scale: 1 });
     const [showGuidancePanel, setShowGuidancePanel] = useState(false);
     const [isSmartPicking, setIsSmartPicking] = useState(false);
+    const [activeSlotIndex, setActiveSlotIndex] = useState<number | undefined>(undefined);
+    const pendingUploadSlotRef = useRef<number | null>(null);
 
     // WPlace Slot System
     const { slots: guidanceHistory, saveSlot, deleteSlot } = useTemplateSlots(userProfile?.id, eventId);
@@ -393,7 +395,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         }
     }, [eventId, userProfile?.id]);
 
-    // Guidance image / state sync to slot system
     useEffect(() => {
         if (!guidanceImage || !userProfile?.id) return;
 
@@ -402,9 +403,10 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             image: guidanceImage.src,
             opacity: guidanceOpacity,
             gridStep: guidanceGridStep,
-            state: guidanceState
+            state: guidanceState,
+            slot_index: activeSlotIndex
         });
-    }, [guidanceOpacity, guidanceGridStep, guidanceState, guidanceImage, userProfile?.id]);
+    }, [guidanceOpacity, guidanceGridStep, guidanceState, guidanceImage, activeSlotIndex, userProfile?.id]);
 
     useEffect(() => {
         if (!eventId || !userProfile?.id) return;
@@ -1277,6 +1279,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             setGuidanceOpacity(item.opacity);
             setGuidanceGridStep(item.gridStep);
             setGuidanceState(item.state);
+            setActiveSlotIndex(item.slot_index);
             setIsEditingGuidance(false); // FIXED BY DEFAULT when restoring
         };
         img.src = item.image;
@@ -1301,17 +1304,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     guidanceRawDataRef.current = ctx.getImageData(0, 0, off.width, off.height);
                 }
                 colorMatchCacheRef.current.clear(); // Clear cache for new image
-
-                // Auto-save history when a NEW image is uploaded
-                if (guidanceImage) {
-                    saveSlot({
-                        image: guidanceImage.src,
-                        opacity: guidanceOpacity,
-                        gridStep: guidanceGridStep,
-                        state: guidanceState
-                    });
-                }
-
                 setGuidanceImage(img);
 
                 // Calculate the exact center of the VISIBLE viewport in world coordinates
@@ -1323,6 +1315,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 const viewportWidth = displayCanvasRef.current?.width || 800;
                 const worldViewportWidth = viewportWidth / scale;
                 const initialScale = (worldViewportWidth * 0.4) / Math.max(1, img.naturalWidth);
+
+                setActiveSlotIndex(pendingUploadSlotRef.current || undefined);
+                pendingUploadSlotRef.current = null;
 
                 setGuidanceState({
                     x: centerX,
@@ -1486,99 +1481,126 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 ) : (
                     <div className="absolute bottom-0 left-0 z-30 w-full pointer-events-none" onContextMenu={(e) => e.preventDefault()}>
                         
-                        {/* Floating Action Buttons (Eraser, Smart Pick) - Moved above the bottom bar so they don't overlap palette on mobile */}
-                        <div className="absolute right-4 bottom-[100%] mb-4 flex flex-col gap-3 pointer-events-auto" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
-                            <button
-                                onClick={() => setSelectedColor('eraser')}
-                                className={cn(
-                                    "p-3 md:p-4 rounded-full shadow-lg transition-all hover:scale-110 active:scale-95 border border-slate-100",
-                                    isEraser ? "bg-rose-500 text-white" : "bg-white text-slate-400"
-                                )}
-                                title="Borrador"
-                            >
-                                <Eraser className="w-5 h-5 md:w-6 md:h-6" />
-                            </button>
-                            <button
-                                onClick={() => {
-                                    if (isEditingGuidance) setIsEditingGuidance(false);
-                                    setIsSmartPicking(!isSmartPicking);
-                                }}
-                                className={cn(
-                                    "p-3 md:p-4 rounded-full shadow-lg transition-all hover:scale-110 active:scale-95 border border-slate-100",
-                                    isSmartPicking ? "bg-amber-500 text-white" : "bg-white text-slate-400"
-                                )}
-                                title="Selector Mágico"
-                            >
-                                <Sparkles className="w-5 h-5 md:w-6 md:h-6" />
-                            </button>
-                        </div>
+                        {/* Floating Action Buttons removed - now integrated into the main toolbar */}
 
                         <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-t-[2rem] md:rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] p-3 md:px-6 md:py-4 border-t border-slate-200/60 flex flex-col gap-3 md:gap-4 animate-in slide-in-from-bottom-full duration-500 pb-safe" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
 
                             {/* Header / Tools - Scrollable on mobile */}
-                            <div className="flex items-center justify-between px-1">
-                                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
-                                    <div className="flex items-center gap-1 bg-slate-100 p-1 md:p-1.5 rounded-2xl border border-slate-200 shrink-0">
-                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Maximize className="w-4 h-4 md:w-5 md:h-5" /></button>
-                                        <div className="h-4 w-[1px] bg-slate-200 mx-1" />
-                                        <span className="text-[10px] md:text-xs font-black text-slate-700 px-2 uppercase tracking-tighter whitespace-nowrap">({pendingPixels.size})</span>
-                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all"><Pencil className="w-4 h-4 md:w-5 md:h-5" /></button>
-                                        <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" onClick={() => setShowGuidancePanel(!showGuidancePanel)}><Grid className="w-4 h-4 md:w-5 md:h-5" /></button>
+                            <div className="flex items-center justify-between px-1 gap-2">
+                                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 flex-1">
+                                    {/* Main Tool Group */}
+                                    <div className="flex items-center gap-1 bg-slate-100/80 p-1 md:p-1.5 rounded-2xl border border-slate-200 shrink-0 shadow-inner">
+                                        <button 
+                                            onClick={() => {
+                                                if(isEraser) setSelectedColor(COLOR_MAP[Object.keys(COLOR_MAP)[0]]);
+                                                setIsSmartPicking(false);
+                                            }}
+                                            className={cn("p-2 md:p-2.5 rounded-xl transition-all", !isEraser && !isSmartPicking ? "bg-white text-blue-600 shadow-sm" : "hover:bg-white/50 text-slate-400 hover:text-slate-600")}
+                                            title="Lápiz"
+                                        >
+                                            <Pencil className="w-4 h-4 md:w-5 md:h-5" />
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                setSelectedColor('eraser');
+                                                setIsSmartPicking(false);
+                                            }}
+                                            className={cn("p-2 md:p-2.5 rounded-xl transition-all", isEraser ? "bg-white text-rose-500 shadow-sm" : "hover:bg-white/50 text-slate-400 hover:text-slate-600")}
+                                            title="Borrador"
+                                        >
+                                            <Eraser className="w-4 h-4 md:w-5 md:h-5" />
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                if (isEditingGuidance) setIsEditingGuidance(false);
+                                                setIsSmartPicking(!isSmartPicking);
+                                            }}
+                                            className={cn("p-2 md:p-2.5 rounded-xl transition-all", isSmartPicking ? "bg-white text-amber-500 shadow-sm" : "hover:bg-white/50 text-slate-400 hover:text-slate-600")}
+                                            title="Selector Mágico"
+                                        >
+                                            <Sparkles className="w-4 h-4 md:w-5 md:h-5" />
+                                        </button>
+                                        
+                                        <div className="h-6 w-[1px] bg-slate-200 mx-1" />
+                                        
+                                        <button 
+                                            onClick={() => setShowGuidancePanel(!showGuidancePanel)}
+                                            className={cn("p-2 md:p-2.5 rounded-xl transition-all", showGuidancePanel ? "bg-white text-purple-600 shadow-sm" : "hover:bg-white/50 text-slate-400 hover:text-purple-600")}
+                                            title="Configurar Guía"
+                                        >
+                                            <Grid className="w-4 h-4 md:w-5 md:h-5" />
+                                        </button>
                                     </div>
 
                                     <TemplateSlotBar
                                         slots={guidanceHistory}
                                         onRestore={restoreGuidance}
                                         onDelete={removeGuidanceFromHistory}
-                                        onUploadClick={() => document.getElementById('guidance-upload')?.click()}
-                                        className="shrink-0"
+                                        onUploadClick={(idx) => {
+                                            pendingUploadSlotRef.current = idx;
+                                            document.getElementById('guidance-upload')?.click();
+                                        }}
+                                        className="shrink-0 shadow-inner bg-slate-100/80"
                                     />
                                 </div>
 
-                                <div className="flex items-center gap-2 shrink-0 ml-2">
+                                <div className="flex items-center shrink-0">
                                     <button
                                         onClick={() => {
                                             setIsPaintMode(false);
                                             isPaintModeRef.current = false;
                                         }}
-                                        className="p-2 rounded-full hover:bg-slate-100 text-slate-400 transition-all"
+                                        className="p-2 md:p-3 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all bg-slate-50 border border-slate-100"
                                     >
                                         <X className="w-5 h-5 md:w-6 md:h-6" />
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Color Palette - Adjusted for easier scrolling */}
-                            <div className="px-1 -mx-2 overflow-x-auto scrollbar-hide">
-                                <Palette
-                                    selectedColor={isPanning || isEditingGuidance || isEraser || isSmartPicking ? null : selectedColor}
-                                    onSelectColor={(c) => {
-                                        if (isEditingGuidance) setIsEditingGuidance(false);
-                                        setSelectedColor(c);
-                                        setIsPanning(false);
-                                        setIsSmartPicking(false);
-                                    }}
-                                    className="border-none bg-transparent shadow-none p-0 flex-nowrap pl-2 pr-4"
-                                />
-                            </div>
+                            {/* Bottom Row: Palette + Confirm Button */}
+                            <div className="flex items-center gap-2 md:gap-4 px-1 pb-1">
+                                <div className="flex-1 overflow-x-auto scrollbar-hide -ml-2 pl-2">
+                                    <Palette
+                                        selectedColor={isPanning || isEditingGuidance || isEraser || isSmartPicking ? null : selectedColor}
+                                        onSelectColor={(c) => {
+                                            if (isEditingGuidance) setIsEditingGuidance(false);
+                                            setSelectedColor(c);
+                                            setIsPanning(false);
+                                            setIsSmartPicking(false);
+                                        }}
+                                        className="border-none bg-transparent shadow-none p-0 flex-nowrap"
+                                    />
+                                </div>
 
-                            {/* Confirm Button */}
-                            <div className="flex justify-center pb-2 md:pb-0">
+                                {/* Confirm Button */}
                                 <button
                                     onClick={confirmPaint}
                                     disabled={pendingPixels.size === 0 || isSaving}
                                     className={cn(
-                                        "w-full md:w-auto px-6 md:px-12 py-3.5 md:py-4 rounded-2xl md:rounded-[1.25rem] font-black transition-all flex items-center justify-center gap-3 shadow-[0_10px_20px_-5px_rgba(37,99,235,0.3)] transform active:scale-95 group relative overflow-hidden",
+                                        "shrink-0 h-12 md:h-14 px-4 md:px-8 rounded-2xl md:rounded-[1.25rem] font-black transition-all flex items-center justify-center gap-2 transform active:scale-95 group relative overflow-hidden",
                                         pendingPixels.size > 0 && !isSaving
-                                            ? "bg-blue-600 text-white hover:bg-blue-500 hover:scale-[1.02]"
-                                            : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                                            ? "bg-blue-600 text-white hover:bg-blue-500 shadow-[0_5px_15px_-3px_rgba(37,99,235,0.4)]"
+                                            : "bg-slate-100 text-slate-400 cursor-not-allowed"
                                     )}
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                                    <Sparkles className={cn("w-5 h-5 md:w-6 md:h-6", pendingPixels.size > 0 && !isSaving ? "animate-pulse" : "")} />
-                                    <span className="tracking-tight text-sm md:text-xl italic uppercase">
-                                        {isSaving ? "Guardando..." : `Confirmar Pintura${pendingPixels.size > 0 ? ` (${pendingPixels.size})` : ''}`}
+                                    {pendingPixels.size > 0 && !isSaving && (
+                                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                                    )}
+                                    <Sparkles className={cn("w-5 h-5", pendingPixels.size > 0 && !isSaving ? "animate-pulse" : "")} />
+                                    <span className="hidden md:inline-block tracking-tight text-lg italic uppercase">
+                                        {isSaving ? "Guardando..." : "Confirmar"}
                                     </span>
+                                    
+                                    {/* Mobile/Desktop badge for pending count */}
+                                    {pendingPixels.size > 0 && (
+                                        <div className={cn(
+                                            "flex items-center justify-center font-bold",
+                                            "md:bg-white/20 md:text-white md:rounded-lg md:px-2 md:py-0.5 md:ml-1 md:text-sm md:static md:w-auto md:h-auto", // Desktop
+                                            "absolute -top-1 -right-1 bg-rose-500 text-white rounded-full w-5 h-5 text-[10px] md:hidden shadow-sm border-2 border-blue-600" // Mobile
+                                        )}>
+                                            {pendingPixels.size}
+                                        </div>
+                                    )}
                                 </button>
                             </div>
 
