@@ -1302,38 +1302,52 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
+                // Compress image to max 1000px width/height to avoid DB/LocalStorage quota limits
+                const MAX_DIM = 1000;
+                let w = img.naturalWidth;
+                let h = img.naturalHeight;
+                if (w > MAX_DIM || h > MAX_DIM) {
+                    if (w > h) { h = (MAX_DIM / w) * h; w = MAX_DIM; }
+                    else { w = (MAX_DIM / h) * w; h = MAX_DIM; }
+                }
+
                 // Capture raw image data for picking
                 const off = document.createElement('canvas');
-                off.width = img.naturalWidth;
-                off.height = img.naturalHeight;
+                off.width = w;
+                off.height = h;
                 const ctx = off.getContext('2d', { willReadFrequently: true });
                 if (ctx) {
-                    ctx.drawImage(img, 0, 0);
-                    guidanceRawDataRef.current = ctx.getImageData(0, 0, off.width, off.height);
+                    ctx.drawImage(img, 0, 0, w, h);
+                    guidanceRawDataRef.current = ctx.getImageData(0, 0, w, h);
+                    
+                    const compressedImage = new Image();
+                    compressedImage.onload = () => {
+                        colorMatchCacheRef.current.clear(); // Clear cache for new image
+                        setGuidanceImage(compressedImage);
+
+                        // Calculate the exact center of the VISIBLE viewport in world coordinates
+                        // Formula: P_world_center = -Offset
+                        const centerX = -offsetX;
+                        const centerY = -offsetY;
+
+                        // Set a visible initial scale (auto-fit to 40% of viewport width)
+                        const viewportWidth = displayCanvasRef.current?.width || 800;
+                        const worldViewportWidth = viewportWidth / scale;
+                        const initialScale = (worldViewportWidth * 0.4) / Math.max(1, w);
+
+                        setActiveSlotIndex(pendingUploadSlotRef.current || undefined);
+                        pendingUploadSlotRef.current = null;
+
+                        setGuidanceState({
+                            x: centerX,
+                            y: centerY,
+                            scale: initialScale
+                        });
+
+                        setIsEditingGuidance(true);
+                    };
+                    compressedImage.src = off.toDataURL('image/jpeg', 0.85);
                 }
-                colorMatchCacheRef.current.clear(); // Clear cache for new image
-                setGuidanceImage(img);
-
-                // Calculate the exact center of the VISIBLE viewport in world coordinates
-                // Formula: P_world_center = -Offset
-                const centerX = -offsetX;
-                const centerY = -offsetY;
-
-                // Set a visible initial scale (auto-fit to 40% of viewport width)
-                const viewportWidth = displayCanvasRef.current?.width || 800;
-                const worldViewportWidth = viewportWidth / scale;
-                const initialScale = (worldViewportWidth * 0.4) / Math.max(1, img.naturalWidth);
-
-                setActiveSlotIndex(pendingUploadSlotRef.current || undefined);
-                pendingUploadSlotRef.current = null;
-
-                setGuidanceState({
-                    x: centerX,
-                    y: centerY,
-                    scale: initialScale
-                });
-
-                setIsEditingGuidance(true);
             };
             img.src = e.target?.result as string;
         };
@@ -1696,6 +1710,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                     )}
                                     <input id="guidance-upload" type="file" accept="image/*" className="hidden" onChange={(e) => {
                                         if (e.target.files?.[0]) handleUploadGuidance(e.target.files[0]);
+                                        e.target.value = '';
                                     }} />
                                 </div>
                             )}
