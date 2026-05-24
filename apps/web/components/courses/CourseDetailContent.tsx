@@ -81,6 +81,21 @@ export default function CourseDetailContent({
         setMaterials(initialMaterials);
     }, [initialMaterials]);
 
+    // Track view once per session
+    useEffect(() => {
+        const hasViewedKey = `viewed_course_${course.id}`;
+        if (!sessionStorage.getItem(hasViewedKey)) {
+            supabase.rpc('increment_course_views', { p_course_id: course.id })
+                .then(({ error }) => {
+                    if (!error) {
+                        sessionStorage.setItem(hasViewedKey, 'true');
+                    } else {
+                        console.error('Error incrementing views:', error);
+                    }
+                });
+        }
+    }, [course.id]);
+
     const handleMaterialUploaded = () => {
         router.refresh();
     };

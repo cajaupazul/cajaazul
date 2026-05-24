@@ -111,6 +111,7 @@ export type Course = {
   descripcion: string | null;
   imagen_url: string | null;
   syllabus_url: string | null;
+  views: number;
   created_at: string;
 };
 

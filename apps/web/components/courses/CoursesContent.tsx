@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Trash2 } from 'lucide-react';
+import { Search, Plus, Trash2, Eye } from 'lucide-react';
 import { supabase, Course, Profile } from '@/lib/supabase';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import { useProfile } from '@/lib/profile-context';
@@ -195,6 +195,10 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
                                                 <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px] md:text-xs h-5 md:h-6 px-1.5 md:px-2.5">
                                                     Abierto
                                                 </Badge>
+                                                <div className="flex items-center gap-1 text-bb-text-secondary text-[10px] md:text-xs font-medium bg-bb-dark px-1.5 rounded-md border border-bb-border" title={`${course.views || 0} visualizaciones`}>
+                                                    <Eye className="w-3.5 h-3.5" />
+                                                    <span>{course.views || 0}</span>
+                                                </div>
                                                 {profile?.role === 'admin' && (
                                                     <button
                                                         onClick={async (e) => {
