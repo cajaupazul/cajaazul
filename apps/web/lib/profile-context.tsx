@@ -25,10 +25,12 @@ export function ProfileProvider({
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
 
   const isGuest = useMemo(() => {
+    if (!sessionLoaded) return false;
     return !session || !!session.user?.is_anonymous;
-  }, [session]);
+  }, [session, sessionLoaded]);
 
   // Singleton pattern to avoid redundant fetches
   const hasFetchedProfile = useRef<string | null>(null);
@@ -90,6 +92,7 @@ export function ProfileProvider({
             setProfile(null);
             hasFetchedProfile.current = null;
           }
+          setSessionLoaded(true);
         }
       } catch (e) {
         console.error('[PROFILE_CONTEXT] Session init error:', e);
@@ -107,6 +110,7 @@ export function ProfileProvider({
           setLoading(false);
           hasFetchedProfile.current = null;
         }
+        setSessionLoaded(true);
       }
     });
 

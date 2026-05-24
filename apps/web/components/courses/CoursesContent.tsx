@@ -62,6 +62,43 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
         setCurrentPage(1);
     }, [searchQuery, selectedCycle, selectedFaculty]);
 
+    // Silently refresh views on mount to bypass Next.js navigation cache
+    useEffect(() => {
+        const fetchViews = async () => {
+            const { data } = await supabase.from('courses').select('id, views');
+            if (data) {
+                setCourses(prev => prev.map(c => {
+                    const updated = data.find(d => d.id === c.id);
+                    return updated ? { ...c, views: updated.views } : c;
+                }));
+            }
+        };
+        fetchViews();
+    }, []);
+
+    // Realtime listener for course views
+    useEffect(() => {
+        const channel = supabase
+            .channel('public:courses:views')
+            .on('postgres_changes', 
+                { event: 'UPDATE', schema: 'public', table: 'courses' },
+                (payload) => {
+                    setCourses((prevCourses) => 
+                        prevCourses.map(c => 
+                            c.id === payload.new.id 
+                                ? { ...c, views: payload.new.views } 
+                                : c
+                        )
+                    );
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
     const filteredCourses = courses.filter((course) => {
         const matchesSearch =
             course.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
