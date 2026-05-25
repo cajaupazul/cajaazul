@@ -428,11 +428,9 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
 
     const fetchGridData = async () => {
         try {
-            // MURAL ENGINE: Fetch 4-byte RGBA buffer
-            const { data, error } = await supabase.rpc('get_pixel_board_blob', {
-                p_event_id: eventId,
-                p_width: gridWidth,
-                p_height: gridHeight
+            // MURAL ENGINE V2: Fetch 7-byte per pixel buffer (x, y, R, G, B)
+            const { data, error } = await supabase.rpc('get_painted_pixels_blob_v2', {
+                p_event_id: eventId
             });
 
             if (data) {
@@ -448,15 +446,32 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     bytes = new Uint8Array(data as any);
                 }
 
-                const expectedSizeRGBA = gridWidth * gridHeight * 4;
-                if (bytes.length !== expectedSizeRGBA) {
-                    console.error(`[MURAL_ENGINE] RGBA Buffer size mismatch! Expected ${expectedSizeRGBA}, received ${bytes.length}.`);
-                    return; // Stop to prevent corrupted memory state
+                if (bytes.length % 7 !== 0) {
+                    console.error(`[MURAL_ENGINE_V2] Invalid payload size: ${bytes.length} is not a multiple of 7.`);
+                    return; 
                 }
 
+                // Initialize a fresh white canvas
+                pixelDataRef.current.fill(0xFFFFFFFF);
+                const isLittleEndian = new Uint8Array(new Uint32Array([0x12345678]).buffer)[0] === 0x78;
+
                 // Direct merge into the Single Source of Truth
-                // Each pixel is 4 bytes, so Uint32Array length is bytes.length / 4 = gridWidth * gridHeight
-                pixelDataRef.current = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.length / 4);
+                for (let i = 0; i < bytes.length; i += 7) {
+                    const x = (bytes[i] << 8) | bytes[i + 1];
+                    const y = (bytes[i + 2] << 8) | bytes[i + 3];
+                    const r = bytes[i + 4];
+                    const g = bytes[i + 5];
+                    const b = bytes[i + 6];
+
+                    if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
+                        const index = y * gridWidth + x;
+                        if (isLittleEndian) {
+                            pixelDataRef.current[index] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+                        } else {
+                            pixelDataRef.current[index] = (r << 24) | (g << 16) | (b << 8) | 0xFF;
+                        }
+                    }
+                }
                 updateDataCanvasFull();
                 needsRedrawRef.current = true;
             }
