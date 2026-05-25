@@ -1956,7 +1956,8 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                                 x: templateData.settings?.x || 0,
                                 y: templateData.settings?.y || 0,
                                 scale: templateData.settings?.scale || 1
-                            }
+                            },
+                            group_code: templateData.inviteCode
                         });
                     };
                     img.crossOrigin = "anonymous";
@@ -1967,6 +1968,16 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                 }}
                 onCreateGroup={(code) => {
                     setActiveGroupId(code);
+                    if (guidanceImage && activeSlotIndex) {
+                        saveSlot({
+                            image: guidanceImage.src,
+                            opacity: guidanceOpacity,
+                            gridStep: guidanceGridStep,
+                            state: guidanceState,
+                            slot_index: activeSlotIndex,
+                            group_code: code
+                        });
+                    }
                 }}
             />
         </div>

@@ -28,10 +28,18 @@ export function TemplateSlotBar({ slots, onRestore, onDelete, onUploadClick, cla
                             <div key={slotNumber} className="relative group/slot">
                                 <button
                                     onClick={() => onRestore(slot)}
-                                    className="w-10 h-10 rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-100 transition-all hover:scale-110 active:scale-90 shadow-sm bg-white"
-                                    title="Continuar con esta plantilla"
+                                    className={cn(
+                                        "w-10 h-10 rounded-lg overflow-hidden border-2 hover:scale-110 active:scale-90 shadow-sm bg-white transition-all",
+                                        slot.group_code ? "border-indigo-400 hover:ring-2 hover:ring-indigo-200" : "border-slate-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-100"
+                                    )}
+                                    title={slot.group_code ? "Plantilla de Grupo" : "Continuar con esta plantilla"}
                                 >
                                     <img src={slot.image} className="w-full h-full object-cover opacity-60 group-hover/slot:opacity-100 transition-opacity" />
+                                    {slot.group_code && (
+                                        <div className="absolute inset-x-0 bottom-0 bg-indigo-500/80 text-[8px] text-center text-white font-bold py-0.5">
+                                            GRUPO
+                                        </div>
+                                    )}
                                 </button>
                                 <button
                                     onClick={(e) => {
