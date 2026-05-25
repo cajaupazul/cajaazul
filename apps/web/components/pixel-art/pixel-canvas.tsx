@@ -8,6 +8,7 @@ import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 import { Palette, COLOR_PALETTE, COLOR_MAP } from './palette';
 import { NavigationControls } from './overlay-controls';
 import { ProfileStatsPanel } from './profile-stats-panel';
+import { GroupTemplateModal } from './group-template-modal';
 import { usePixelStats } from './use-pixel-stats';
 import { useTemplateSlots, TemplateSlot } from './use-template-slots';
 import { TemplateSlotBar } from './template-slot-bar';
@@ -299,10 +300,16 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     // UI State
     const [isPaintMode, setIsPaintMode] = useState(false);
     const isPaintModeRef = useRef(false);
+    const [showGuidancePanel, setShowGuidancePanel] = useState(false);
+    const [showProfilePanel, setShowProfilePanel] = useState(false);
+
+    // Group & Community State
+    const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+    const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+    const [activeGroupUsers, setActiveGroupUsers] = useState<any[]>([]);
 
     // Stats & Profile logic decoupled
     const { pixelsPainted, incrementLocalCount } = usePixelStats(userProfile?.id, eventId);
-    const [showProfilePanel, setShowProfilePanel] = useState(false);
 
     // Cursor Tracking
     const [cursorGridPos, setCursorGridPos] = useState<{ x: number, y: number } | null>(null);
@@ -314,7 +321,6 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     const [guidanceGridStep, setGuidanceGridStep] = useState(1); // N pixels per block
     const [isEditingGuidance, setIsEditingGuidance] = useState(false);
     const [guidanceState, setGuidanceState] = useState({ x: 0, y: 0, scale: 1 });
-    const [showGuidancePanel, setShowGuidancePanel] = useState(false);
     const [isSmartPicking, setIsSmartPicking] = useState(false);
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | undefined>(undefined);
     const pendingUploadSlotRef = useRef<number | null>(null);
@@ -573,6 +579,40 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             cancelAnimationFrame(frameIdRef.current);
         };
     }, [eventId, gridWidth, gridHeight, userProfile?.id]);
+
+    // Group Presence Subscription
+    useEffect(() => {
+        if (!activeGroupId || !userProfile?.id) return;
+        
+        const channel = supabase.channel(`group-presence-${activeGroupId}`);
+        
+        channel
+            .on('presence', { event: 'sync' }, () => {
+                const state = channel.presenceState();
+                const users = [];
+                for (const id in state) {
+                    if (state[id] && state[id].length > 0) {
+                        users.push(state[id][0]);
+                    }
+                }
+                setActiveGroupUsers(users);
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await channel.track({
+                        id: userProfile.id,
+                        nombre: userProfile.nombre,
+                        avatar_url: userProfile.avatar_url,
+                        es_vip: userProfile.es_vip
+                    });
+                }
+            });
+            
+        return () => {
+            supabase.removeChannel(channel);
+            setActiveGroupUsers([]);
+        };
+    }, [activeGroupId, userProfile]);
 
 
     // --- Image Processing (Mathematically Grid-Linked) ---
@@ -1770,8 +1810,33 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         userProfile={userProfile}
                         equippedFrame={equippedFrame}
                         pixelsPainted={pixelsPainted}
+                        onOpenGroupModal={() => setIsGroupModalOpen(true)}
                     />
                 </div>
+
+                {/* Group Active Members Panel */}
+                {activeGroupId && activeGroupUsers.length > 0 && (
+                    <div className="absolute top-20 right-4 z-40 flex flex-col items-end gap-2 pointer-events-auto" onMouseDown={e => e.stopPropagation()}>
+                        <div className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg border border-indigo-100 flex items-center gap-2 mb-1">
+                            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                            <span className="text-[10px] font-bold text-indigo-900 uppercase tracking-wider">Grupo Activo</span>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            {activeGroupUsers.map((u, i) => (
+                                <div key={i} className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1 pr-3 rounded-full shadow-md border border-slate-100 group">
+                                    <AvatarWithFrame
+                                        size={32}
+                                        avatarUrl={getStorageUrl(u.avatar_url)}
+                                        name={u.nombre}
+                                    />
+                                    <span className="text-xs font-bold text-slate-700 max-w-[80px] truncate group-hover:max-w-[150px] transition-all">
+                                        {u.nombre}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {isEditingGuidance && (
                     <div className="absolute top-20 md:top-1/4 left-1/2 -translate-x-1/2 bg-amber-500 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-full shadow-2xl border-2 border-white pointer-events-none animate-bounce z-40 font-bold text-[10px] md:text-sm flex items-center gap-2 transform -translate-y-1/2 whitespace-nowrap">
@@ -1786,6 +1851,53 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     e.target.value = '';
                 }} />
             </div>
+
+            <GroupTemplateModal 
+                isOpen={isGroupModalOpen}
+                onClose={() => setIsGroupModalOpen(false)}
+                currentGuidanceImage={guidanceImage?.src || null}
+                currentSettings={{
+                    x: guidanceState.x,
+                    y: guidanceState.y,
+                    scale: guidanceState.scale,
+                    opacity: guidanceOpacity,
+                    gridStep: guidanceGridStep
+                }}
+                onJoinGroup={(templateData) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const off = document.createElement('canvas');
+                        off.width = img.naturalWidth;
+                        off.height = img.naturalHeight;
+                        const ctx = off.getContext('2d', { willReadFrequently: true });
+                        if (ctx) {
+                            ctx.drawImage(img, 0, 0);
+                            guidanceRawDataRef.current = ctx.getImageData(0, 0, off.width, off.height);
+                        }
+                        colorMatchCacheRef.current.clear();
+                        setGuidanceImage(img);
+                        
+                        if (templateData.settings) {
+                            setGuidanceState({
+                                x: templateData.settings.x,
+                                y: templateData.settings.y,
+                                scale: templateData.settings.scale
+                            });
+                            setGuidanceOpacity(templateData.settings.opacity || 0.5);
+                            setGuidanceGridStep(templateData.settings.gridStep || 1);
+                        }
+                        
+                        setIsEditingGuidance(false);
+                        needsRedrawRef.current = true;
+                    };
+                    img.crossOrigin = "anonymous";
+                    img.src = templateData.image;
+
+                    // Extracted invite code logic (assumes image URL has it or we can pass the code)
+                    // We'll use a random group ID for now or pass the actual group ID
+                    setActiveGroupId(Date.now().toString()); 
+                }}
+            />
         </div>
     );
 }
