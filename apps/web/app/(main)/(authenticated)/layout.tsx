@@ -193,6 +193,7 @@ export default function AuthenticatedLayout({
   const handleLogoutConfirm = async () => {
     setShowLogoutConfirm(false);
     await supabase.auth.signOut();
+    router.push('/auth/login');
   };
 
   const isActive = (href: string) => {

@@ -348,29 +348,22 @@ export default function MaterialCard({
 
                 <div className="mt-auto flex flex-col gap-2 pt-2 border-t border-bb-border/10">
                     {/* User info */}
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1.5">
                         {material.professors?.nombre && (
-                            <div className="flex items-start gap-2 text-[10px] text-bb-text-secondary font-medium bg-bb-darker/10 px-2.5 py-1.5 rounded-lg border border-bb-border/30" onClick={(e) => e.stopPropagation()}>
-                                <div className="bg-blue-500/10 p-1 rounded-md shrink-0 mt-0.5">
-                                    <User className="w-3 h-3 text-blue-400" />
-                                </div>
-                                <div className="flex flex-col min-w-0">
-                                    <span className="text-[8px] uppercase tracking-widest opacity-60 font-black mb-0.5">Profesor</span>
-                                    <span className="line-clamp-2 text-bb-text/90 leading-tight">{material.professors.nombre}</span>
-                                </div>
+                            <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-bb-text-secondary font-medium" onClick={(e) => e.stopPropagation()}>
+                                <User className="w-3.5 h-3.5 shrink-0 opacity-60" />
+                                <span className="line-clamp-2 text-bb-text/80 leading-tight">{material.professors.nombre}</span>
                             </div>
                         )}
+                        {material.professors?.nombre && material.profiles?.nombre && (
+                            <div className="w-full h-px bg-bb-border/30 my-0.5" />
+                        )}
                         {material.profiles?.nombre && (
-                            <div className="flex items-start gap-2 text-[10px] text-bb-text-secondary font-medium bg-bb-darker/10 px-2.5 py-1.5 rounded-lg border border-bb-border/30" onClick={(e) => e.stopPropagation()}>
-                                <div className="bg-purple-500/10 p-1 rounded-md shrink-0 mt-0.5">
-                                    <UploadCloud className="w-3 h-3 text-purple-400" />
-                                </div>
-                                <div className="flex flex-col min-w-0">
-                                    <span className="text-[8px] uppercase tracking-widest opacity-60 font-black mb-0.5">Subido por</span>
-                                    <UserHoverCard profile={material.profiles}>
-                                        <span className="line-clamp-2 hover:text-blue-400 transition-colors cursor-pointer text-bb-text/90 leading-tight">{material.profiles.nombre}</span>
-                                    </UserHoverCard>
-                                </div>
+                            <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-bb-text-secondary font-medium" onClick={(e) => e.stopPropagation()}>
+                                <UploadCloud className="w-3.5 h-3.5 shrink-0 opacity-60" />
+                                <UserHoverCard profile={material.profiles}>
+                                    <span className="line-clamp-2 hover:text-blue-400 transition-colors cursor-pointer text-bb-text/80 leading-tight">{material.profiles.nombre}</span>
+                                </UserHoverCard>
                             </div>
                         )}
                     </div>
