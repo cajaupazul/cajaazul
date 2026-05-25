@@ -11,6 +11,7 @@ interface GroupTemplateModalProps {
     currentGuidanceImage: string | null;
     currentSettings: any;
     onJoinGroup: (templateData: any) => void;
+    onCreateGroup: (code: string) => void;
 }
 
 export function GroupTemplateModal({
@@ -18,7 +19,8 @@ export function GroupTemplateModal({
     onClose,
     currentGuidanceImage,
     currentSettings,
-    onJoinGroup
+    onJoinGroup,
+    onCreateGroup
 }: GroupTemplateModalProps) {
     const [mode, setMode] = useState<'select' | 'create' | 'join' | 'success'>('select');
     const [isLoading, setIsLoading] = useState(false);
@@ -76,6 +78,7 @@ export function GroupTemplateModal({
             if (dbError) throw dbError;
 
             setCreatedCode(code);
+            onCreateGroup(code);
             setMode('success');
         } catch (err: any) {
             console.error('[GROUP] Error creating group:', err);
@@ -107,7 +110,8 @@ export function GroupTemplateModal({
 
             onJoinGroup({
                 image: data.image_url,
-                settings: data.settings
+                settings: data.settings,
+                inviteCode: data.invite_code
             });
             onClose();
         } catch (err: any) {

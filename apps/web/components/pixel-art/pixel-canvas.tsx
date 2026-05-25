@@ -1889,13 +1889,27 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         
                         setIsEditingGuidance(false);
                         needsRedrawRef.current = true;
+
+                        // Save to personal slots so they don't lose it on refresh!
+                        saveSlot({
+                            image: templateData.image,
+                            opacity: templateData.settings?.opacity || 0.5,
+                            gridStep: templateData.settings?.gridStep || 1,
+                            state: {
+                                x: templateData.settings?.x || 0,
+                                y: templateData.settings?.y || 0,
+                                scale: templateData.settings?.scale || 1
+                            }
+                        });
                     };
                     img.crossOrigin = "anonymous";
                     img.src = templateData.image;
 
                     // Extracted invite code logic (assumes image URL has it or we can pass the code)
-                    // We'll use a random group ID for now or pass the actual group ID
-                    setActiveGroupId(Date.now().toString()); 
+                    setActiveGroupId(templateData.inviteCode || Date.now().toString()); 
+                }}
+                onCreateGroup={(code) => {
+                    setActiveGroupId(code);
                 }}
             />
         </div>
