@@ -256,7 +256,7 @@ export default function MaterialCard({
             )}
 
             {/* Thumbnail Area */}
-            <div className={`aspect-video w-full relative overflow-hidden shrink-0 ${isSelectionMode && isSelected ? 'opacity-80' : ''}`}>
+            <div className={`aspect-[4/3] sm:aspect-video w-full relative overflow-hidden shrink-0 ${isSelectionMode && isSelected ? 'opacity-80' : ''}`}>
                 {thumbnailUrl ? (
                     <img
                         src={thumbnailUrl}
@@ -265,93 +265,93 @@ export default function MaterialCard({
                         loading="lazy"
                     />
                 ) : (
-                    <>
-                        {/* Background gradient — orange/brown */}
-                        <div className={`absolute inset-0 bg-gradient-to-br ${config.headerGradient}`} />
-
-                        {/* Decorative circle — top-right (large) */}
-                        <div className={`absolute -top-10 -right-8 w-48 h-48 rounded-full ${config.circleColor} opacity-80`} />
-
-                        {/* Decorative circle — bottom-left (medium) */}
-                        <div className={`absolute -bottom-8 -left-4 w-32 h-32 rounded-full ${config.circleColor} opacity-60`} />
-
-                        {/* Yellow/orange left stripe — exact replica of PPT template */}
-                        <div className="absolute left-0 top-0 bottom-0 w-[5px] bg-amber-400 z-10" />
-
-                        {/* Title — bottom-aligned to avoid overlap with type badge */}
-                        <div className="absolute inset-0 flex items-end pb-4 sm:pb-5 pl-4 sm:pl-5 pr-3 z-10">
-                            <p className="text-sm sm:text-base font-black text-white leading-tight line-clamp-3 drop-shadow-lg uppercase tracking-tighter">
-                                {material.titulo}
-                            </p>
+                    <div className={`w-full h-full relative flex items-center justify-center bg-gradient-to-br ${config.headerGradient} group-hover:scale-105 transition-transform duration-500`}>
+                        {/* Minimalist Icon */}
+                        <div className={`p-4 sm:p-5 rounded-2xl ${config.circleColor} backdrop-blur-md border border-white/10 shadow-xl transform group-hover:-translate-y-1 transition-transform duration-300`}>
+                            {React.cloneElement(config.icon as React.ReactElement<any>, { className: "w-8 h-8 sm:w-12 sm:h-12 text-white opacity-90" })}
                         </div>
-                    </>
+                    </div>
                 )}
 
-                {/* Overlay for thumbnail images */}
-                {thumbnailUrl && <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-30" />}
+                {/* Overlays */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 opacity-60" />
 
-                {/* Type Badge — centered at top */}
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20">
-                    <span className={`inline-block px-3 py-0.5 rounded-full border ${config.color} border-current/60 bg-black/30 backdrop-blur-sm font-black text-[9px] uppercase tracking-widest`}>
+                {/* Type Badge — Top Left */}
+                <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-20">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border ${config.color} border-current/30 bg-black/40 backdrop-blur-md font-bold text-[8px] sm:text-[9px] uppercase tracking-wider`}>
                         {config.label}
                     </span>
                 </div>
+                
+                {/* Actions (Floating Delete) — Top Right inside the thumbnail area for cleaner look */}
+                {canDelete && onDelete && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                        }}
+                        className="absolute top-2 right-2 sm:top-3 sm:right-3 p-1.5 rounded-md bg-red-500/20 text-red-100 hover:text-white backdrop-blur-md transition-all hover:bg-red-500/80 shadow-sm border border-red-500/30 z-30 opacity-80 hover:opacity-100"
+                        title="Eliminar material"
+                    >
+                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
+                )}
             </div>
 
             {/* Content Area */}
-            <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 bg-bb-card border-t border-bb-border/30">
-                <p className="text-[11px] sm:text-sm font-black text-bb-text line-clamp-2 leading-tight min-h-[2rem] sm:min-h-[2.5rem] group-hover:text-blue-400 transition-colors">
+            <div className="p-3 sm:p-4 flex flex-col flex-grow bg-bb-card border-t border-bb-border/20 group-hover:bg-bb-card-hover transition-colors">
+                <h3 className="text-xs sm:text-sm font-bold text-bb-text line-clamp-2 leading-snug group-hover:text-blue-400 transition-colors mb-2">
                     {material.titulo}
-                </p>
+                </h3>
 
-                <div className="flex flex-col gap-2 pt-1 border-t border-bb-border/30 mt-1">
-                    {material.professors?.nombre && (
-                        <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary font-medium truncate" onClick={(e) => e.stopPropagation()}>
-                            <User className="w-3 h-3 shrink-0" />
-                            <span className="truncate">{material.professors.nombre}</span>
-                        </div>
-                    )}
-                    {material.profiles?.nombre && (
-                        <div className="flex items-center gap-2 text-[10px] text-bb-text-secondary font-medium truncate" onClick={(e) => e.stopPropagation()}>
-                            <UploadCloud className="w-3 h-3 shrink-0" />
-                            <UserHoverCard profile={material.profiles}>
-                                <span className="truncate hover:text-blue-400 transition-colors">{material.profiles.nombre}</span>
-                            </UserHoverCard>
-                        </div>
-                    )}
-                    <div className="flex items-center justify-between mt-0.5 sm:mt-1 pt-1 border-t border-bb-border/20">
-                        <div className="flex items-center gap-1.5 sm:gap-2 text-[8px] sm:text-[10px] text-bb-text-secondary opacity-60 font-medium uppercase truncate">
-                            <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                <div className="mt-auto flex flex-col gap-2 pt-2 border-t border-bb-border/10">
+                    {/* User info */}
+                    <div className="flex items-center gap-2">
+                        {material.professors?.nombre && (
+                            <div className="flex items-center gap-1.5 text-[10px] text-bb-text-secondary font-medium truncate bg-bb-darker/20 px-2 py-1 rounded-md max-w-[50%]" onClick={(e) => e.stopPropagation()}>
+                                <User className="w-3 h-3 shrink-0 opacity-70" />
+                                <span className="truncate">{material.professors.nombre}</span>
+                            </div>
+                        )}
+                        {material.profiles?.nombre && (
+                            <div className="flex items-center gap-1.5 text-[10px] text-bb-text-secondary font-medium truncate bg-bb-darker/20 px-2 py-1 rounded-md flex-1" onClick={(e) => e.stopPropagation()}>
+                                <UploadCloud className="w-3 h-3 shrink-0 opacity-70" />
+                                <UserHoverCard profile={material.profiles}>
+                                    <span className="truncate hover:text-blue-400 transition-colors cursor-pointer">{material.profiles.nombre}</span>
+                                </UserHoverCard>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer row: Date and Tags */}
+                    <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] text-bb-text-secondary opacity-70 font-medium tracking-tight">
+                            <Calendar className="w-3 h-3" />
                             {format(new Date(material.created_at), 'd MMM, yyyy', { locale: es })}
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                             {material.use_advanced_viewer && (
-                                <div className="flex items-center gap-1 text-[8px] sm:text-[9px] font-black text-amber-500 bg-amber-500/10 px-1 sm:px-1.5 py-0.5 rounded-full border border-amber-500/20 animate-pulse">
-                                    <Zap className="w-2 h-2 sm:w-2.5 sm:h-2.5 fill-current" />
+                                <div className="flex items-center gap-1 text-[8px] sm:text-[9px] font-black text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20">
+                                    <Zap className="w-2.5 h-2.5 fill-current" />
                                     PRO
                                 </div>
                             )}
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="p-1 px-2 rounded-lg bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase">
-                                    Ver
-                                </div>
-                            </div>
-                        </div>
 
-                        {isAdmin && (
-                            <button
-                                onClick={toggleAdvancedViewer}
-                                disabled={isUpdatingViewer}
-                                className={`p-2 rounded-xl transition-all shadow-sm border z-30 ${material.use_advanced_viewer
-                                    ? 'bg-amber-500/20 text-amber-500 border-amber-500/30'
-                                    : 'bg-zinc-800/10 text-zinc-400 border-zinc-500/10 hover:bg-zinc-800/20'
-                                    }`}
-                                title={material.use_advanced_viewer ? "Desactivar Motor Pro" : "Activar Motor Pro (Paging/Virtualizado)"}
-                            >
-                                {isUpdatingViewer ? <Loader2 className="w-4 h-4 animate-spin" /> : (material.use_advanced_viewer ? <Zap className="w-4 h-4 fill-current" /> : <ZapOff className="w-4 h-4" />)}
-                            </button>
-                        )}
+                            {isAdmin && (
+                                <button
+                                    onClick={toggleAdvancedViewer}
+                                    disabled={isUpdatingViewer}
+                                    className={`p-1.5 rounded-md transition-all shadow-sm z-30 ${material.use_advanced_viewer
+                                        ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30'
+                                        : 'bg-zinc-800/20 text-zinc-400 hover:bg-zinc-800/40 hover:text-white'
+                                        }`}
+                                    title={material.use_advanced_viewer ? "Desactivar Motor Pro" : "Activar Motor Pro"}
+                                >
+                                    {isUpdatingViewer ? <Loader2 className="w-3 h-3 animate-spin" /> : (material.use_advanced_viewer ? <Zap className="w-3 h-3 fill-current" /> : <ZapOff className="w-3 h-3" />)}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
