@@ -1384,7 +1384,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
     }, []);
 
     return (
-        <div ref={containerRef} className="relative w-full h-full bg-[#1a1a1a] overflow-hidden font-sans rounded-xl shadow-2xl border border-white/10">
+        <div ref={containerRef} className="relative w-full h-full bg-[#1a1a1a] overflow-hidden font-sans rounded-none border-none">
             <canvas ref={dataCanvasRef} width={gridWidth} height={gridHeight} className="hidden" />
 
             <div

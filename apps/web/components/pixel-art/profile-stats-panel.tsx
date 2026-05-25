@@ -104,6 +104,20 @@ export const ProfileStatsPanel: React.FC<ProfileStatsPanelProps> = ({
                     </span>
                 </div>
             </div>
+
+            {/* Community/Group Collaborative Button */}
+            <div className="mt-4 pt-4 border-t border-slate-100">
+                <button 
+                    onClick={() => {
+                        // In the future this can open a modal to select/create a group template
+                        alert('Próximamente: ¡Crea o únete a un grupo para colaborar en una plantilla compartida!');
+                    }}
+                    className="w-full py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white rounded-xl shadow-md shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 group"
+                >
+                    <span className="text-sm group-hover:scale-110 transition-transform">🤝</span>
+                    <span className="font-bold text-[11px] uppercase tracking-wider">Comunidad / Grupo</span>
+                </button>
+            </div>
         </div>
     );
 };
