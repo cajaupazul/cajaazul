@@ -59,31 +59,94 @@ export default function MaterialCard({
     };
 
     const materialType = material.tipo?.toLowerCase() || '';
+    const fileName = material.url_archivo?.toLowerCase() || '';
     const isEnlace = materialType === 'enlace';
+
+    const isPDF = fileName.endsWith('.pdf') || materialType.includes('pdf');
+    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || materialType.includes('xls') || materialType.includes('excel');
+    const isWord = fileName.endsWith('.docx') || fileName.endsWith('.doc') || materialType.includes('doc') || materialType.includes('word');
+    const isPPT = fileName.endsWith('.pptx') || fileName.endsWith('.ppt') || materialType.includes('ppt') || materialType.includes('presentacion');
+    const isImage = fileName.endsWith('.jpg') || fileName.endsWith('.png') || fileName.endsWith('.jpeg') || fileName.endsWith('.webp') || fileName.endsWith('.gif');
 
     // Icon and Color Selection based on type
     const getTypeConfig = () => {
-        if (materialType.includes('ppt') || materialType.includes('presentacion')) {
+        if (isPDF) {
+            return {
+                icon: <FileText className="w-8 h-8" />,
+                color: 'text-red-500',
+                bg: 'bg-red-500/10',
+                border: 'border-red-500/20',
+                label: 'PDF',
+                headerGradient: 'from-[#5C0000] via-[#7A0000] to-[#3A0000]',
+                circleColor: 'bg-red-900/60',
+            };
+        }
+        if (isExcel) {
+            return {
+                icon: <FileSpreadsheet className="w-8 h-8" />,
+                color: 'text-green-500',
+                bg: 'bg-green-500/10',
+                border: 'border-green-500/20',
+                label: 'Excel',
+                headerGradient: 'from-[#003A00] via-[#004E00] to-[#002000]',
+                circleColor: 'bg-green-900/60',
+            };
+        }
+        if (isWord) {
+            return {
+                icon: <FileText className="w-8 h-8" />,
+                color: 'text-blue-500',
+                bg: 'bg-blue-500/10',
+                border: 'border-blue-500/20',
+                label: 'Word',
+                headerGradient: 'from-[#001A5C] via-[#002A7A] to-[#000E3A]',
+                circleColor: 'bg-blue-900/60',
+            };
+        }
+        if (isPPT) {
             return {
                 icon: <LayoutPanelLeft className="w-8 h-8" />,
-                color: 'text-orange-400',
+                color: 'text-orange-500',
                 bg: 'bg-orange-500/10',
                 border: 'border-orange-500/20',
-                label: 'Presentación',
-                // Old card header design colors
+                label: 'PPT',
                 headerGradient: 'from-[#5C2A00] via-[#7A3800] to-[#3A1800]',
                 circleColor: 'bg-orange-800/60',
             };
         }
+        if (isImage) {
+            return {
+                icon: <FileImage className="w-8 h-8" />,
+                color: 'text-purple-500',
+                bg: 'bg-purple-500/10',
+                border: 'border-purple-500/20',
+                label: 'Imagen',
+                headerGradient: 'from-[#3A005C] via-[#4E007A] to-[#20003A]',
+                circleColor: 'bg-purple-900/60',
+            };
+        }
+        if (isEnlace) {
+            return {
+                icon: <ExternalLink className="w-8 h-8" />,
+                color: 'text-cyan-500',
+                bg: 'bg-cyan-500/10',
+                border: 'border-cyan-500/20',
+                label: 'Enlace',
+                headerGradient: 'from-[#003A5C] via-[#004E7A] to-[#00203A]',
+                circleColor: 'bg-cyan-900/60',
+            };
+        }
+
+        // Fallbacks for category if no specific file extension matched
         if (materialType.includes('examen')) {
             return {
                 icon: <FileText className="w-8 h-8" />,
-                color: 'text-red-400',
-                bg: 'bg-red-500/10',
-                border: 'border-red-500/20',
+                color: 'text-rose-400',
+                bg: 'bg-rose-500/10',
+                border: 'border-rose-500/20',
                 label: 'Examen',
-                headerGradient: 'from-[#5C0000] via-[#7A1000] to-[#3A0000]',
-                circleColor: 'bg-red-900/60',
+                headerGradient: 'from-[#5C001A] via-[#7A002A] to-[#3A000E]',
+                circleColor: 'bg-rose-900/60',
             };
         }
         if (materialType.includes('syllabus')) {
@@ -97,28 +160,7 @@ export default function MaterialCard({
                 circleColor: 'bg-teal-900/60',
             };
         }
-        if (isEnlace) {
-            return {
-                icon: <ExternalLink className="w-8 h-8" />,
-                color: 'text-blue-400',
-                bg: 'bg-blue-500/10',
-                border: 'border-blue-500/20',
-                label: 'Enlace',
-                headerGradient: 'from-[#001A3C] via-[#002A5C] to-[#000E24]',
-                circleColor: 'bg-blue-900/60',
-            };
-        }
-        if (materialType.includes('xls') || materialType.includes('excel')) {
-            return {
-                icon: <FileSpreadsheet className="w-8 h-8" />,
-                color: 'text-green-400',
-                bg: 'bg-green-500/10',
-                border: 'border-green-500/20',
-                label: 'Excel',
-                headerGradient: 'from-[#003A00] via-[#004E00] to-[#002000]',
-                circleColor: 'bg-green-900/60',
-            };
-        }
+
         return {
             icon: <FileBox className="w-8 h-8" />,
             color: 'text-blue-400',
