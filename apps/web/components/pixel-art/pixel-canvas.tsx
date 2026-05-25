@@ -580,11 +580,14 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         };
     }, [eventId, gridWidth, gridHeight, userProfile?.id]);
 
+    const groupChannelRef = useRef<any>(null);
+
     // Group Presence Subscription
     useEffect(() => {
         if (!activeGroupId || !userProfile?.id) return;
         
         const channel = supabase.channel(`group-presence-${activeGroupId}`);
+        groupChannelRef.current = channel;
         
         channel
             .on('presence', { event: 'sync' }, () => {
@@ -603,16 +606,37 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                         id: userProfile.id,
                         nombre: userProfile.nombre,
                         avatar_url: userProfile.avatar_url,
-                        es_vip: userProfile.es_vip
+                        es_vip: userProfile.es_vip,
+                        pending: []
                     });
                 }
             });
             
         return () => {
             supabase.removeChannel(channel);
+            groupChannelRef.current = null;
             setActiveGroupUsers([]);
         };
     }, [activeGroupId, userProfile]);
+
+    // Track pending pixels changes for group
+    useEffect(() => {
+        if (!activeGroupId || !groupChannelRef.current || !userProfile?.id) return;
+        
+        const pendingArr = Array.from(pendingPixels.entries()).map(([k, v]) => {
+            const [x, y] = k.split(',').map(Number);
+            return { x, y, color: v };
+        });
+        
+        groupChannelRef.current.track({
+            id: userProfile.id,
+            nombre: userProfile.nombre,
+            avatar_url: userProfile.avatar_url,
+            es_vip: userProfile.es_vip,
+            pending: pendingArr
+        }).catch((err: any) => console.log('Presence update skipped', err));
+        
+    }, [pendingPixels, activeGroupId, userProfile]);
 
 
     // --- Image Processing (Mathematically Grid-Linked) ---
@@ -759,6 +783,31 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
                     }
                     ctx.stroke();
                 }
+
+                // --- Draw Other Group Members' Pending Pixels ---
+                activeGroupUsers.forEach(u => {
+                    // Only draw others, not ourselves (we already draw our own pendingPixels)
+                    if (u.id !== userProfile?.id && u.pending && Array.isArray(u.pending)) {
+                        u.pending.forEach((p: any) => {
+                            const scX = (pixelStartX + p.x);
+                            const scY = (pixelStartY + p.y);
+                            
+                            // Draw pixel with opacity
+                            ctx.fillStyle = p.color === 'eraser' ? '#ffffff' : p.color;
+                            ctx.globalAlpha = 0.5;
+                            ctx.fillRect(scX, scY, 1, 1);
+                            
+                            // Outline
+                            ctx.globalAlpha = 1.0;
+                            ctx.strokeStyle = '#6366f1'; // Indigo-500
+                            ctx.lineWidth = 0.1;
+                            ctx.strokeRect(scX, scY, 1, 1);
+                        });
+                    }
+                });
+
+                // Restore alpha just in case
+                ctx.globalAlpha = 1.0;
 
                 // Draw Pending Pixels Highlights & Colors
                 if (pendingPixelsRef.current.size > 0) {
@@ -1343,8 +1392,16 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             setGuidanceGridStep(item.gridStep);
             setGuidanceState(item.state);
             setActiveSlotIndex(item.slot_index);
+            
+            if (item.group_code) {
+                setActiveGroupId(item.group_code);
+            } else {
+                setActiveGroupId(null);
+            }
+            
             setIsEditingGuidance(false); // FIXED BY DEFAULT when restoring
         };
+        img.crossOrigin = "anonymous";
         img.src = item.image;
     };
 

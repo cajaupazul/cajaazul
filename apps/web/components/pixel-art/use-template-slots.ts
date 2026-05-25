@@ -11,6 +11,7 @@ export interface TemplateSlot {
     state: { x: number, y: number, scale: number };
     updated_at: string;
     slot_index?: number; // 1, 2, or 3
+    group_code?: string;
 }
 
 export function useTemplateSlots(userId: string | undefined, eventId: string) {
@@ -44,7 +45,8 @@ export function useTemplateSlots(userId: string | undefined, eventId: string) {
                         gridStep: row.grid_step,
                         state: { x: row.world_x, y: row.world_y, scale: row.scale },
                         updated_at: row.updated_at,
-                        slot_index: row.slot_index
+                        slot_index: row.slot_index,
+                        group_code: row.group_code
                     }));
                     setSlots(mappedSlots);
                 }
@@ -113,7 +115,8 @@ export function useTemplateSlots(userId: string | undefined, eventId: string) {
                     world_x: template.state.x,
                     world_y: template.state.y,
                     scale: template.state.scale,
-                    updated_at: newSlot.updated_at
+                    updated_at: newSlot.updated_at,
+                    group_code: newSlot.group_code
                 }, { onConflict: 'user_id,event_id,slot_index' }); // Using slot_index instead of image_data
 
             if (error) {
