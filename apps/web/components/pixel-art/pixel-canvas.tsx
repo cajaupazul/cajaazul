@@ -619,7 +619,7 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
         };
     }, [activeGroupId, userProfile]);
 
-    // Track pending pixels changes for group
+    // Track pending pixels changes for group with debounce
     useEffect(() => {
         if (!activeGroupId || !groupChannelRef.current || !userProfile?.id) return;
         
@@ -628,14 +628,19 @@ export default function PixelCanvas({ eventId, onClose, userProfile, equippedFra
             return { x, y, color: v };
         });
         
-        groupChannelRef.current.track({
-            id: userProfile.id,
-            nombre: userProfile.nombre,
-            avatar_url: userProfile.avatar_url,
-            es_vip: userProfile.es_vip,
-            pending: pendingArr
-        }).catch((err: any) => console.log('Presence update skipped', err));
+        const timer = setTimeout(() => {
+            if (groupChannelRef.current) {
+                groupChannelRef.current.track({
+                    id: userProfile.id,
+                    nombre: userProfile.nombre,
+                    avatar_url: userProfile.avatar_url,
+                    es_vip: userProfile.es_vip,
+                    pending: pendingArr
+                }).catch((err: any) => console.log('Presence update skipped', err));
+            }
+        }, 300); // Debounce by 300ms to avoid rate limits!
         
+        return () => clearTimeout(timer);
     }, [pendingPixels, activeGroupId, userProfile]);
 
 
