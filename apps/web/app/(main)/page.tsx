@@ -77,7 +77,7 @@ export default function HomePage() {
             <button
               onClick={handleGuestLogin}
               disabled={isGuestLoading}
-              className="flex items-center gap-2 text-[#4b5563] hover:text-black font-black text-[9px] sm:text-[11px] tracking-[0.1em] sm:tracking-[0.2em] uppercase transition-all px-2 sm:px-4 h-10 sm:h-12 border border-gray-200 hover:border-black/20"
+              className="flex items-center gap-2 text-[#4b5563] hover:text-[#002d5a] font-semibold text-[10px] sm:text-[11px] tracking-wide sm:tracking-wider uppercase transition-all px-2 sm:px-4 h-10 sm:h-12 border-b-2 border-transparent hover:border-[#002d5a]"
             >
               {isGuestLoading ? '...' : (
                 <>
@@ -87,8 +87,8 @@ export default function HomePage() {
               )}
             </button>
             <Link href="/auth/login">
-              <Button className="bg-[#1f2937] hover:bg-black text-white font-black px-3 sm:px-6 h-10 sm:h-12 rounded-none flex items-center gap-1.5 sm:gap-2 transition-all active:scale-95 shadow-xl shadow-black/10 text-[10px] sm:text-xs tracking-widest italic uppercase overflow-hidden">
-                <LogIn size={14} className="sm:w-4 sm:h-4" />
+              <Button className="bg-[#1f2937] hover:bg-black text-white font-semibold px-4 sm:px-6 h-10 sm:h-12 rounded-full flex items-center gap-1.5 sm:gap-2 transition-all active:scale-95 shadow-md hover:shadow-lg text-[10px] sm:text-xs tracking-wide uppercase overflow-hidden">
+                <LogIn size={16} className="sm:w-4 sm:h-4" />
                 <span className="hidden xxs:inline">INICIAR SESIÓN</span>
                 <span className="xxs:hidden">LOGIN</span>
               </Button>
@@ -104,13 +104,13 @@ export default function HomePage() {
       <main className="max-w-7xl mx-auto px-6 py-24 md:py-32 relative">
         {/* Intro Section */}
         <div className="text-center mb-16 md:mb-24 max-w-4xl mx-auto space-y-6">
-          <div className="inline-block border border-gray-200 text-gray-500 text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-widest mb-4">
+          <div className="inline-block bg-blue-50/50 text-blue-600 text-[11px] font-semibold px-4 py-1.5 rounded-full uppercase tracking-wider mb-2">
             De alumnos para alumnos
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-[#111] leading-tight tracking-tight">
+          <h2 className="text-3xl md:text-5xl font-extrabold text-[#002d5a] leading-tight tracking-tight">
             Nuestra propia red académica.
           </h2>
-          <p className="text-lg md:text-xl text-gray-500 font-normal leading-relaxed max-w-3xl mx-auto">
+          <p className="text-lg md:text-xl text-gray-600 font-medium leading-relaxed max-w-3xl mx-auto">
             Un espacio donde recopilamos material de ciclos pasados, calificamos profesores basados en la experiencia real
             y nos ayudamos mutuamente durante la carrera universitaria.
           </p>
@@ -149,14 +149,14 @@ export default function HomePage() {
                 transition={{ delay: i * 0.1, duration: 0.5 }}
                 className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-5 sm:gap-6 group"
               >
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[1.5rem] flex items-center justify-center shrink-0 border border-gray-100 bg-gray-50 text-blue-800 transition-colors group-hover:border-blue-200 group-hover:bg-blue-50/50">
-                  <feature.icon className="w-8 h-8 sm:w-10 sm:h-10" strokeWidth={1.5} />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center shrink-0 bg-blue-50/50 text-blue-600 transition-all group-hover:bg-blue-100/50 group-hover:scale-105">
+                  <feature.icon className="w-7 h-7 sm:w-9 sm:h-9" strokeWidth={1.5} />
                 </div>
-                <div className="space-y-3">
-                  <h3 className="text-xl sm:text-2xl font-black text-[#111] tracking-tight">
+                <div className="space-y-2.5">
+                  <h3 className="text-xl sm:text-2xl font-bold text-[#002d5a] tracking-tight">
                     {feature.title}
                   </h3>
-                  <p className="text-gray-500 leading-relaxed text-[15px] sm:text-[17px]">
+                  <p className="text-gray-600 leading-relaxed text-[15px] sm:text-[16px] font-medium">
                     {feature.desc}
                   </p>
                 </div>

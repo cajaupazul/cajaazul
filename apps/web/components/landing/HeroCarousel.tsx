@@ -82,7 +82,7 @@ export default function HeroCarousel() {
                                 <p className="text-white/80 font-bold text-sm tracking-[0.2em] uppercase">
                                     {SLIDES[currentIndex].date}
                                 </p>
-                                <h1 className="text-4xl md:text-7xl font-black text-white leading-tight italic uppercase tracking-tighter select-none">
+                                <h1 className="text-4xl md:text-7xl font-bold text-white leading-tight uppercase tracking-tight select-none">
                                     {SLIDES[currentIndex].title}
                                 </h1>
                                 <p className="text-xl md:text-2xl text-white/90 font-medium max-w-xl select-none">
@@ -91,7 +91,7 @@ export default function HeroCarousel() {
 
                                 <div className="pt-8 flex flex-col sm:flex-row gap-4 items-center">
                                     <Link href="/auth/register" className="w-full sm:w-auto">
-                                        <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black px-10 py-7 text-lg rounded-none shadow-2xl transition-all active:scale-95 uppercase tracking-widest italic group">
+                                        <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold px-10 py-7 text-lg rounded-full shadow-2xl transition-all active:scale-95 uppercase tracking-wide group">
                                             EXPLORAR MATERIAL
                                             <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                                         </Button>
@@ -106,7 +106,7 @@ export default function HeroCarousel() {
                                                 console.error(err);
                                             }
                                         }}
-                                        className="text-white/60 hover:text-white font-black text-xs tracking-widest uppercase border-b border-white/20 hover:border-white transition-all pb-1"
+                                        className="text-white/60 hover:text-white font-semibold text-xs tracking-wider uppercase border-b border-white/20 hover:border-white transition-all pb-1"
                                     >
                                         O CONTINUAR COMO INVITADO
                                     </button>
