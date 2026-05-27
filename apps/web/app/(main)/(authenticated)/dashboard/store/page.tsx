@@ -696,9 +696,35 @@ function StoreContent() {
                                                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
 
                                                         <div className="relative z-10 flex flex-col h-full space-y-4 sm:space-y-6">
-                                                            <div className="relative aspect-square flex items-center justify-center cursor-pointer" onClick={() => setPreviewItem(item)}>
+                                                            <div className="relative aspect-square flex items-center justify-center cursor-pointer overflow-hidden" onClick={() => setPreviewItem(item)}>
                                                                 <div className="absolute inset-0 bg-indigo-500/10 blur-[40px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-                                                                <img src={item.image_url || ''} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)]" />
+                                                                
+                                                                {item.type === 'profile_frame' ? (
+                                                                    <div className="relative flex items-center justify-center w-16 h-16 sm:w-24 sm:h-24">
+                                                                        {/* Dummy Avatar */}
+                                                                        <div className="w-full h-full rounded-full bg-[#111114] flex items-center justify-center border border-white/10 overflow-hidden opacity-50 relative z-0">
+                                                                            <div className="w-full h-full bg-gradient-to-br from-indigo-500/10 to-purple-500/10" />
+                                                                        </div>
+
+                                                                        {/* Frame */}
+                                                                        {item.image_url && (
+                                                                            <img 
+                                                                                src={item.image_url} 
+                                                                                alt={item.name} 
+                                                                                className="absolute max-w-none object-contain z-10 group-hover:scale-[1.15] transition-transform duration-700 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)]"
+                                                                                style={{ 
+                                                                                    top: '50%', 
+                                                                                    left: '50%', 
+                                                                                    width: `${(item.frame_settings?.preview?.scale || 1.3) * 100}%`,
+                                                                                    height: `${(item.frame_settings?.preview?.scale || 1.3) * 100}%`,
+                                                                                    transform: `translate(calc(-50% + ${item.frame_settings?.preview?.x || 0}px), calc(-50% + ${item.frame_settings?.preview?.y || 0}px))`
+                                                                                }}
+                                                                            />
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <img src={item.image_url || ''} alt={item.name} className="w-full h-full object-contain relative z-10 group-hover:scale-110 transition-transform duration-700 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)]" />
+                                                                )}
 
                                                                 {item.max_uses !== null && (
                                                                     <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-black px-2 py-1 rounded-bl-xl rounded-tr-lg shadow-lg z-20">

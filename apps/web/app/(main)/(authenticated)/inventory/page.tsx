@@ -172,24 +172,33 @@ export default function InventoryPage() {
                                     </div>
                                 )}
 
-                                <div className="w-full aspect-square rounded-xl bg-bb-sidebar flex items-center justify-center relative mb-3 sm:mb-4">
-                                    {/* Dummy Avatar behind for context */}
-                                    <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-bb-dark flex items-center justify-center border border-bb-border overflow-hidden opacity-50 relative z-0">
-                                        <div className="w-full h-full bg-gradient-to-br from-bb-sidebar to-bb-dark" />
-                                    </div>
-
-                                    {item.image_url ? (
-                                        <img
-                                            src={item.image_url}
-                                            alt={item.name}
-                                            className="w-[120%] h-[120%] object-contain absolute inset-[-10%] z-10 pointer-events-none"
-                                            loading="lazy"
-                                        />
-                                    ) : (
-                                        <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-4 border-bb-border absolute inset-0 m-auto pointer-events-none">
-                                            <div className="w-full h-full rounded-full bg-bb-text-secondary/20" />
+                                <div className="w-full aspect-square rounded-xl bg-bb-sidebar flex items-center justify-center relative mb-3 sm:mb-4 overflow-hidden">
+                                    {/* The Dummy Avatar and Frame container */}
+                                    <div className="relative flex items-center justify-center w-16 h-16 sm:w-24 sm:h-24">
+                                        {/* Dummy Avatar */}
+                                        <div className="w-full h-full rounded-full bg-bb-dark flex items-center justify-center border border-bb-border overflow-hidden opacity-50 relative z-0">
+                                            <div className="w-full h-full bg-gradient-to-br from-bb-sidebar to-bb-dark" />
                                         </div>
-                                    )}
+
+                                        {/* Frame */}
+                                        {item.image_url ? (
+                                            <img
+                                                src={item.image_url}
+                                                alt={item.name}
+                                                className="absolute max-w-none object-contain z-10 pointer-events-none"
+                                                style={{ 
+                                                    top: '50%', 
+                                                    left: '50%', 
+                                                    width: `${(item.frame_settings?.preview?.scale || 1.3) * 100}%`,
+                                                    height: `${(item.frame_settings?.preview?.scale || 1.3) * 100}%`,
+                                                    transform: `translate(calc(-50% + ${item.frame_settings?.preview?.x || 0}px), calc(-50% + ${item.frame_settings?.preview?.y || 0}px))`
+                                                }}
+                                                loading="lazy"
+                                            />
+                                        ) : (
+                                            <div className="absolute w-full h-full rounded-full border-4 border-bb-border z-10 pointer-events-none" />
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Item Info */}
