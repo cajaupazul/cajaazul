@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +45,7 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
     const { isGuest } = useProfile();
     const [courses, setCourses] = useState<Course[]>(initialCourses);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [selectedCycle, setSelectedCycle] = useState('todos');
     const [selectedFaculty, setSelectedFaculty] = useState('todos');
     const [savedCourses, setSavedCourses] = useState<string[]>([]);
@@ -56,6 +58,14 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
     useEffect(() => {
         setCourses(initialCourses);
     }, [initialCourses]);
+
+    // Debounce search query to prevent lag on rapid typing
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     // Reset pagination when filters change
     useEffect(() => {
@@ -101,8 +111,8 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
 
     const filteredCourses = courses.filter((course) => {
         const matchesSearch =
-            course.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course.codigo?.toLowerCase().includes(searchQuery.toLowerCase());
+            course.nombre.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+            course.codigo?.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
 
         const matchesCycle = selectedCycle === 'todos' || course.ciclo?.toString() === selectedCycle;
         const matchesFaculty = selectedFaculty === 'todos' || course.facultad === selectedFaculty;
@@ -202,10 +212,12 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
                                 >
                                     <div className="relative h-28 md:h-40 overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0">
                                         {course.imagen_url ? (
-                                            <img
+                                            <Image
                                                 src={course.imagen_url}
                                                 alt={course.nombre}
-                                                className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                                fill
+                                                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                                                className="object-cover transition-transform group-hover:scale-105"
                                             />
                                         ) : (
                                             <div className="h-full w-full bg-gradient-to-br from-blue-400 via-blue-500 to-teal-600 transition-transform group-hover:scale-105" />
