@@ -27,8 +27,26 @@ export async function updateSession(request: NextRequest) {
         }
     );
 
-    // refreshing the auth token
-    await supabase.auth.getUser();
+    // refreshing the auth token and checking user session
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const path = request.nextUrl.pathname;
+
+    // 1. Auto-Login: Si el usuario ya está logueado y va al inicio o al login, lo mandamos directo al dashboard
+    if (user && (path === '/' || path === '/auth/login' || path === '/auth/register')) {
+        const dashboardUrl = request.nextUrl.clone();
+        dashboardUrl.pathname = '/dashboard';
+        return NextResponse.redirect(dashboardUrl);
+    }
+
+    // 2. Proteger Rutas: Si no está logueado y trata de entrar a páginas privadas, lo mandamos al login
+    const isProtectedRoute = path.startsWith('/dashboard') || path.startsWith('/inventory') || path.startsWith('/admin') || path.startsWith('/profile');
+    
+    if (!user && isProtectedRoute) {
+        const loginUrl = request.nextUrl.clone();
+        loginUrl.pathname = '/auth/login';
+        return NextResponse.redirect(loginUrl);
+    }
 
     return supabaseResponse;
 }
