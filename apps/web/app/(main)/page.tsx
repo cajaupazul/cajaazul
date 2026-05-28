@@ -116,54 +116,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Minimalist Features Grid */}
-        <div className="mx-auto max-w-6xl border-t border-gray-100 pt-16 md:pt-24 mt-8 md:mt-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 md:gap-x-16 lg:gap-x-24 gap-y-12 md:gap-y-20 px-4 sm:px-0">
-            {[
-              {
-                icon: BookOpen,
-                title: 'Material Académico',
-                desc: 'Únete a nuestro repositorio colaborativo para compartir y acceder a apuntes, manuales, guías y exámenes pasados.'
-              },
-              {
-                icon: Star,
-                title: 'Reseñas de Profesores',
-                desc: 'Lee calificaciones honestas sobre metodologías, dificultad y carga de trabajo para matricularte con seguridad.'
-              },
-              {
-                icon: Calendar,
-                title: 'Eventos del Campus',
-                desc: 'Mantente al día con foros, talleres estudiantiles, congresos y fechas críticas que no nos podemos perder.'
-              },
-              {
-                icon: Users,
-                title: 'Red de Apoyo',
-                desc: 'Conéctate con estudiantes de distintas carreras para resolver dudas, armar grupos de estudio y colaborar.'
-              },
-            ].map((feature, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1, duration: 0.5 }}
-                className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-5 sm:gap-6 group"
-              >
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center shrink-0 bg-blue-50/50 text-blue-600 transition-all group-hover:bg-blue-100/50 group-hover:scale-105">
-                  <feature.icon className="w-7 h-7 sm:w-9 sm:h-9" strokeWidth={1.5} />
-                </div>
-                <div className="space-y-2.5">
-                  <h3 className="text-xl sm:text-2xl font-bold text-[#002d5a] tracking-tight">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed text-[15px] sm:text-[16px] font-medium">
-                    {feature.desc}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
+
 
         {/* Features + Video Section */}
         <div className="mx-auto max-w-6xl mt-24 md:mt-32 border-t border-gray-100 pt-16 md:pt-24 px-4 sm:px-0 mb-8 md:mb-16">
