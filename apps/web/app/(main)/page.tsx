@@ -164,6 +164,60 @@ export default function HomePage() {
             ))}
           </div>
         </div>
+
+        {/* RPG/Cyberpunk Aesthetic Video Section */}
+        <div className="mx-auto max-w-6xl mt-24 md:mt-32 pt-16 md:pt-24 px-4 sm:px-0 mb-8 md:mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col md:flex-row items-center gap-16 lg:gap-24"
+          >
+            {/* Left: Video with Cyberpunk/RPG Accents */}
+            <div className="w-full md:w-1/2 relative mt-8 md:mt-0 order-2 md:order-1">
+              {/* Decorative Blocks */}
+              <div className="absolute -top-6 -left-6 md:-top-10 md:-left-10 w-3/4 h-12 bg-[#00ffcc] z-0"></div>
+              <div className="absolute -top-3 left-10 md:-top-5 md:left-20 w-1/2 h-4 bg-[#ff00ff] z-0"></div>
+              
+              <div className="absolute -bottom-6 -right-6 md:-bottom-10 md:-right-10 w-2/3 h-8 bg-[#00ffcc] z-0"></div>
+              <div className="absolute -bottom-3 right-10 md:-bottom-5 md:right-20 w-1/3 h-2 bg-[#ff00ff] z-0"></div>
+
+              {/* Floating Pixel Squares */}
+              <div className="absolute top-0 -right-4 w-4 h-4 bg-[#00ffcc]/30 hidden md:block"></div>
+              <div className="absolute bottom-12 -right-8 w-6 h-6 bg-[#00ffcc] hidden md:block"></div>
+              <div className="absolute -bottom-16 -right-2 w-8 h-8 bg-[#00ffcc]/40 hidden md:block"></div>
+
+              {/* Main Video Container */}
+              <div className="relative z-10 bg-white p-2 md:p-3 shadow-2xl">
+                 <div className="overflow-hidden relative bg-black aspect-video md:aspect-[4/3]">
+                    <video 
+                      src="/waifu/fg_video.webm" 
+                      autoPlay 
+                      loop 
+                      muted 
+                      playsInline 
+                      className="w-full h-full object-cover scale-[1.01]"
+                    />
+                 </div>
+              </div>
+            </div>
+
+            {/* Right: Text */}
+            <div className="w-full md:w-1/2 text-center md:text-right space-y-4 md:space-y-6 order-1 md:order-2">
+              <span className="block text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
+                JUGABILIDAD FLUIDA Y ADICTIVA
+              </span>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-light text-[#002d5a] leading-tight">
+                Una nueva experiencia <br className="hidden md:block" />
+                <span className="font-bold text-[#002d5a]">de juego de rol</span>
+              </h2>
+              <p className="text-gray-500 text-sm md:text-base font-medium leading-relaxed max-w-md ml-auto mr-auto md:mr-0">
+                Ponte a prueba con mecánicas de RPG innovadoras que combinan estrategia y reflejos. ¡Fácil de aprender, pero difícil de dominar!
+              </p>
+            </div>
+          </motion.div>
+        </div>
       </main>
 
       {/* Footer */}
