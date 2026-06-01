@@ -21,7 +21,7 @@ import '@xyflow/react/dist/style.css';
 
 import CourseNode from './CourseNode';
 import { administracionNodes, administracionEdges as defaultEdges } from '../../lib/data/flowcharts/administracion';
-import { Moon, Sun, Edit3, Save, Eye, Loader2, CheckCircle, AlertCircle, Trash2, Info } from 'lucide-react';
+import { Moon, Sun, Edit3, Save, Eye, Loader2, CheckCircle, AlertCircle, Trash2, Info, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 
@@ -265,7 +265,38 @@ export default function InteractiveFlowchart() {
   const [isEditMode, setIsEditMode]   = useState(false);
   const [saveStatus, setSaveStatus]   = useState<SaveStatus>('idle');
   const [loadedEdges, setLoadedEdges] = useState<{ source: string; target: string }[] | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // ----- Fullscreen handlers ------------------------------------------------
+  const toggleFullscreen = useCallback(() => {
+    if (!containerRef.current) return;
+    const hasNativeFullscreen = typeof containerRef.current.requestFullscreen === 'function';
+
+    if (hasNativeFullscreen) {
+      if (!document.fullscreenElement) {
+        containerRef.current.requestFullscreen().catch(() => {
+          setIsFullscreen(true);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    } else {
+      // iOS iPhone / Fallback toggle
+      setIsFullscreen(prev => !prev);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+    };
+  }, []);
 
   // ----- Load edges from Supabase on mount ----------------------------------
   useEffect(() => {
@@ -609,7 +640,14 @@ export default function InteractiveFlowchart() {
   const gridColor = isDarkMode ? '#1e293b' : '#e2e8f0';
 
   return (
-    <div className={`w-full h-[750px] border rounded-xl overflow-hidden shadow-inner transition-colors duration-300 relative ${isDarkMode ? 'bg-gray-950 border-gray-800' : 'bg-slate-50 border-gray-200'}`}>
+    <div
+      ref={containerRef}
+      className={`w-full transition-all duration-300 relative border overflow-hidden shadow-inner
+        ${isFullscreen
+          ? 'fixed inset-0 z-50 h-screen w-screen border-none rounded-none'
+          : 'h-[750px] rounded-xl border-gray-200'}
+        ${isDarkMode ? 'bg-gray-950 border-gray-800' : 'bg-slate-50 border-gray-200'}`}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -629,6 +667,7 @@ export default function InteractiveFlowchart() {
         nodesDraggable={isEditMode}
         elementsSelectable={isEditMode}
         deleteKeyCode={isEditMode ? 'Backspace' : null}
+        onlyRenderVisibleElements={true}
       >
         <Background gap={28} size={1.5} color={gridColor} />
         <Controls
@@ -637,6 +676,18 @@ export default function InteractiveFlowchart() {
 
         {/* ── Top-right panel: toolbar ── */}
         <Panel position="top-right" className="flex items-center gap-2 m-2">
+          {/* Fullscreen toggle (Always available) */}
+          <button
+            onClick={toggleFullscreen}
+            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+            className={`h-9 w-9 rounded-full flex items-center justify-center shadow-md border transition-all duration-200
+              ${isDarkMode
+                ? 'bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700 hover:text-white'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
+          >
+            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+          </button>
+
           {/* Dark mode toggle (view mode only) */}
           {!isEditMode && (
             <button
