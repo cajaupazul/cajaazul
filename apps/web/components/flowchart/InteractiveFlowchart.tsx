@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useState, useMemo, useEffect } from 'react';
+import React, { useCallback, useState, useMemo, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -12,279 +12,504 @@ import {
   Edge,
   MarkerType,
   Connection,
-  Panel
+  Panel,
+  MiniMap,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import CourseNode from './CourseNode';
-import { administracionNodes, administracionEdges } from '../../lib/data/flowcharts/administracion';
-import { Moon, Sun, Edit3, Save, Eye } from 'lucide-react';
+import { administracionNodes, administracionEdges as defaultEdges } from '../../lib/data/flowcharts/administracion';
+import { Moon, Sun, Edit3, Save, Eye, Loader2, CheckCircle, AlertCircle, Trash2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
 
+// ---------------------------------------------------------------------------
+// Header node
+// ---------------------------------------------------------------------------
 function HeaderNode({ data }: { data: any }) {
   return (
     <div className={`w-48 text-center border-b-2 pb-2 ${data.isDark ? 'border-gray-700' : 'border-gray-300'}`}>
-      <h3 className={`font-black uppercase tracking-widest text-xs mb-1 ${data.isDark ? 'text-gray-200' : 'text-gray-800'}`}>{data.label}</h3>
+      <h3 className={`font-black uppercase tracking-widest text-xs mb-1 ${data.isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+        {data.label}
+      </h3>
       <div className="flex items-center justify-center gap-2">
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${data.isDark ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'}`}>{data.coursesCount} cursos</span>
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${data.isDark ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'}`}>{data.credits} créd.</span>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${data.isDark ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'}`}>
+          {data.coursesCount} cursos
+        </span>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${data.isDark ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'}`}>
+          {data.credits} créd.
+        </span>
       </div>
     </div>
   );
 }
 
-const nodeTypes = {
-  courseNode: CourseNode,
-  headerNode: HeaderNode,
-};
+const nodeTypes = { courseNode: CourseNode, headerNode: HeaderNode };
 
 const CYCLE_HEADERS = [
-  { label: 'Ciclo 0', coursesCount: 3, credits: 0 },
-  { label: 'Ciclo I', coursesCount: 4, credits: 18 },
-  { label: 'Ciclo II', coursesCount: 5, credits: 21 },
-  { label: 'Ciclo III', coursesCount: 5, credits: 20 },
-  { label: 'Ciclo IV', coursesCount: 5, credits: 18 },
-  { label: 'Ciclo V', coursesCount: 5, credits: 21 },
-  { label: 'Ciclo VI', coursesCount: 5, credits: 19 },
-  { label: 'Ciclo VII', coursesCount: 5, credits: 19 },
+  { label: 'Ciclo 0',    coursesCount: 3, credits: 0 },
+  { label: 'Ciclo I',    coursesCount: 4, credits: 18 },
+  { label: 'Ciclo II',   coursesCount: 5, credits: 21 },
+  { label: 'Ciclo III',  coursesCount: 5, credits: 20 },
+  { label: 'Ciclo IV',   coursesCount: 5, credits: 18 },
+  { label: 'Ciclo V',    coursesCount: 5, credits: 21 },
+  { label: 'Ciclo VI',   coursesCount: 5, credits: 19 },
+  { label: 'Ciclo VII',  coursesCount: 5, credits: 19 },
   { label: 'Ciclo VIII', coursesCount: 5, credits: 19 },
-  { label: 'Ciclo IX', coursesCount: 4, credits: 15 },
-  { label: 'Ciclo X', coursesCount: 3, credits: 13 },
+  { label: 'Ciclo IX',   coursesCount: 4, credits: 15 },
+  { label: 'Ciclo X',    coursesCount: 3, credits: 13 },
 ];
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function buildEdgeObject(
+  source: string,
+  target: string,
+  idx: number,
+  color: string,
+  isEditMode: boolean
+): Edge {
+  return {
+    id: `e-${source}-${target}-${idx}`,
+    source,
+    target,
+    type: 'smoothstep',
+    animated: false,
+    deletable: isEditMode,
+    style: { stroke: color, strokeWidth: 2 },
+    markerEnd: { type: MarkerType.ArrowClosed, color },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 export default function InteractiveFlowchart() {
   const [completedCourses, setCompletedCourses] = useState<Set<string>>(new Set());
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [isDarkMode, setIsDarkMode]   = useState(false);
+  const [isEditMode, setIsEditMode]   = useState(false);
+  const [saveStatus, setSaveStatus]   = useState<SaveStatus>('idle');
+  const [loadedEdges, setLoadedEdges] = useState<{ source: string; target: string }[] | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const getStatus = useCallback((nodeId: string, currentEdges: Edge[]): 'locked' | 'unlocked' | 'completed' => {
-    if (completedCourses.has(nodeId)) return 'completed';
-    const prerequisites = currentEdges.filter(e => e.target === nodeId).map(e => e.source);
-    if (prerequisites.length === 0) return 'unlocked';
-    const allPrerequisitesCompleted = prerequisites.every(reqId => completedCourses.has(reqId));
-    return allPrerequisitesCompleted ? 'unlocked' : 'locked';
-  }, [completedCourses]);
+  // ----- Load edges from Supabase on mount ----------------------------------
+  useEffect(() => {
+    async function load() {
+      const { data, error } = await supabase
+        .from('flowchart_edges')
+        .select('edges')
+        .eq('carrera', 'administracion')
+        .single();
+
+      if (!error && data && Array.isArray(data.edges) && data.edges.length > 0) {
+        setLoadedEdges(data.edges);
+      } else {
+        // Use the default hardcoded edges as seed
+        setLoadedEdges(defaultEdges);
+      }
+    }
+    load();
+  }, []);
+
+  // ----- Status logic -------------------------------------------------------
+  const getStatus = useCallback(
+    (nodeId: string, currentEdges: Edge[]): 'locked' | 'unlocked' | 'completed' => {
+      if (completedCourses.has(nodeId)) return 'completed';
+      const prerequisites = currentEdges.filter(e => e.target === nodeId).map(e => e.source);
+      if (prerequisites.length === 0) return 'unlocked';
+      return prerequisites.every(id => completedCourses.has(id)) ? 'unlocked' : 'locked';
+    },
+    [completedCourses]
+  );
 
   const toggleCourse = useCallback((id: string) => {
-    if (isEditMode) return; // Disable toggle in edit mode
-    setCompletedCourses((prev) => {
+    setCompletedCourses(prev => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  }, [isEditMode]);
+  }, []);
 
-  const initialNodes: Node[] = useMemo(() => {
-    const cycleCounts: Record<number, number> = {};
-    const nodes: Node[] = [];
+  // ----- Build initial nodes ------------------------------------------------
+  const buildInitialNodes = useCallback(
+    (editMode: boolean, darkMode: boolean): Node[] => {
+      const cycleCounts: Record<number, number> = {};
+      const nodes: Node[] = [];
 
-    CYCLE_HEADERS.forEach((header, cycle) => {
-      nodes.push({
-        id: `header-${cycle}`,
-        type: 'headerNode',
-        position: { x: cycle * 280, y: -20 },
-        draggable: false,
-        selectable: false,
-        data: { ...header, isDark: isDarkMode },
+      CYCLE_HEADERS.forEach((header, cycle) => {
+        nodes.push({
+          id: `header-${cycle}`,
+          type: 'headerNode',
+          position: { x: cycle * 280, y: -20 },
+          draggable: false,
+          selectable: false,
+          data: { ...header, isDark: darkMode },
+        });
       });
-    });
 
-    administracionNodes.forEach((course) => {
-      const cycle = course.cycle;
-      if (cycleCounts[cycle] === undefined) cycleCounts[cycle] = 0;
-      
-      const x = cycle * 280;
-      const y = cycleCounts[cycle] * 120 + 80;
-      
-      cycleCounts[cycle]++;
+      administracionNodes.forEach(course => {
+        const cycle = course.cycle;
+        if (cycleCounts[cycle] === undefined) cycleCounts[cycle] = 0;
+        const x = cycle * 280;
+        const y = cycleCounts[cycle] * 120 + 80;
+        cycleCounts[cycle]++;
 
-      nodes.push({
-        id: course.id,
-        type: 'courseNode',
-        position: { x, y },
-        data: {
-          ...course,
-          status: 'locked',
+        nodes.push({
           id: course.id,
-          isEditMode: isEditMode,
-        },
+          type: 'courseNode',
+          position: { x, y },
+          data: { ...course, status: 'locked', id: course.id, isEditMode: editMode },
+        });
       });
-    });
 
-    return nodes;
-  }, [isDarkMode, isEditMode]);
+      return nodes;
+    },
+    []
+  );
 
-  const initialEdges: Edge[] = useMemo(() => {
-    return administracionEdges.map((edge, i) => ({
-      id: `e-${edge.source}-${edge.target}-${i}`,
-      source: edge.source,
-      target: edge.target,
-      type: 'smoothstep',
-      animated: false,
-      style: { stroke: isDarkMode ? '#475569' : '#cbd5e1', strokeWidth: 2 },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: isDarkMode ? '#475569' : '#cbd5e1',
-      },
-    }));
-  }, [isDarkMode]);
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-
-  const onNodeClick = useCallback(
-    (event: React.MouseEvent, node: Node) => {
-      if (isEditMode) return;
-      if (node.type === 'courseNode') {
-        toggleCourse(node.id);
+  // ----- Build edges from a raw list ----------------------------------------
+  const buildEdges = useCallback(
+    (rawEdges: { source: string; target: string }[], editMode: boolean, darkMode: boolean): Edge[] => {
+      const color = darkMode ? '#475569' : '#cbd5e1';
+      if (editMode) {
+        // In edit mode: bright, thick, selectable
+        return rawEdges.map((e, i) => ({
+          ...buildEdgeObject(e.source, e.target, i, '#6366f1', true),
+          style: { stroke: '#6366f1', strokeWidth: 2.5 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#6366f1' },
+          selected: false,
+        }));
       }
+      return rawEdges.map((e, i) => buildEdgeObject(e.source, e.target, i, color, false));
+    },
+    []
+  );
+
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // Initialize once loadedEdges is available
+  useEffect(() => {
+    if (loadedEdges === null) return;
+    setNodes(buildInitialNodes(false, false));
+    setEdges(buildEdges(loadedEdges, false, false));
+  }, [loadedEdges]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ----- Toggle edit mode ---------------------------------------------------
+  const enterEditMode = useCallback(() => {
+    setIsEditMode(true);
+    // Show edges in "edit style" (purple), all nodes unlocked visually
+    setNodes(nds =>
+      nds.map(n => {
+        if (n.type === 'courseNode') {
+          return { ...n, data: { ...n.data, status: 'unlocked', isEditMode: true } };
+        }
+        return n;
+      })
+    );
+    setEdges(eds =>
+      eds.map(e => ({
+        ...e,
+        deletable: true,
+        style: { stroke: '#6366f1', strokeWidth: 2.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#6366f1' },
+        animated: false,
+      }))
+    );
+  }, [setNodes, setEdges]);
+
+  const exitEditMode = useCallback(() => {
+    setIsEditMode(false);
+    const color = isDarkMode ? '#475569' : '#cbd5e1';
+    setNodes(nds =>
+      nds.map(n => {
+        if (n.type === 'courseNode') {
+          return { ...n, data: { ...n.data, isEditMode: false } };
+        }
+        if (n.type === 'headerNode') {
+          return { ...n, data: { ...n.data, isDark: isDarkMode } };
+        }
+        return n;
+      })
+    );
+    setEdges(eds =>
+      eds.map(e => ({
+        ...e,
+        deletable: false,
+        animated: false,
+        style: { stroke: color, strokeWidth: 2 },
+        markerEnd: { type: MarkerType.ArrowClosed, color },
+      }))
+    );
+    // Recompute statuses from current edges
+    setNodes(nds =>
+      nds.map(n => {
+        if (n.type !== 'courseNode') return n;
+        return { ...n, data: { ...n.data, isEditMode: false } };
+      })
+    );
+  }, [isDarkMode, setNodes, setEdges]);
+
+  // ----- Save to Supabase ---------------------------------------------------
+  const handleSave = useCallback(async () => {
+    setSaveStatus('saving');
+    const rawEdges = edges
+      .filter(e => !e.id.startsWith('header-'))
+      .map(e => ({ source: e.source, target: e.target }));
+
+    const { error } = await supabase
+      .from('flowchart_edges')
+      .upsert({ carrera: 'administracion', edges: rawEdges, updated_at: new Date().toISOString() }, { onConflict: 'carrera' });
+
+    if (error) {
+      setSaveStatus('error');
+    } else {
+      setSaveStatus('saved');
+      setLoadedEdges(rawEdges);
+    }
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [edges]);
+
+  // ----- Clear all edges in edit mode ---------------------------------------
+  const handleClearEdges = useCallback(() => {
+    if (!isEditMode) return;
+    setEdges([]);
+  }, [isEditMode, setEdges]);
+
+  // ----- Connect handler (edit mode only) -----------------------------------
+  const onConnect = useCallback(
+    (params: Connection) => {
+      if (!isEditMode) return;
+      setEdges(eds => addEdge({
+        ...params,
+        type: 'smoothstep',
+        deletable: true,
+        style: { stroke: '#6366f1', strokeWidth: 2.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#6366f1' },
+      }, eds));
+    },
+    [isEditMode, setEdges]
+  );
+
+  // ----- Node click (view mode): toggle completed ---------------------------
+  const onNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      if (isEditMode) return;
+      if (node.type !== 'courseNode') return;
+      toggleCourse(node.id);
     },
     [isEditMode, toggleCourse]
   );
 
-  // Allow edge connections in edit mode
-  const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge({ 
-      ...params, 
-      type: 'smoothstep',
-      style: { stroke: isDarkMode ? '#475569' : '#cbd5e1', strokeWidth: 2 },
-      markerEnd: { type: MarkerType.ArrowClosed, color: isDarkMode ? '#475569' : '#cbd5e1' }
-    }, eds)),
-    [setEdges, isDarkMode]
-  );
-
+  // ----- Update node statuses when completed courses changes (view mode) ----
   useEffect(() => {
-    setNodes((nds) => {
+    if (isEditMode) return;
+    const color = isDarkMode ? '#475569' : '#cbd5e1';
+    setNodes(nds => {
       let changed = false;
-      const nextNodes = nds.map((node) => {
-        if (node.type === 'headerNode') {
-          if (node.data.isDark !== isDarkMode) {
-            changed = true;
-            return { ...node, data: { ...node.data, isDark: isDarkMode } };
-          }
-          return node;
-        }
-        if (node.type === 'courseNode') {
-          const newStatus = getStatus(node.id, edges);
-          if (node.data.status !== newStatus || node.data.isEditMode !== isEditMode) {
-            changed = true;
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                status: newStatus,
-                isEditMode: isEditMode,
-              },
-            };
-          }
+      const next = nds.map(node => {
+        if (node.type !== 'courseNode') return node;
+        const newStatus = getStatus(node.id, edges);
+        if (node.data.status !== newStatus) {
+          changed = true;
+          return { ...node, data: { ...node.data, status: newStatus } };
         }
         return node;
       });
-      return changed ? nextNodes : nds;
+      return changed ? next : nds;
     });
 
-    setEdges((eds) => {
+    setEdges(eds => {
       let changed = false;
-      const nextEdges = eds.map((edge) => {
-        const isSourceCompleted = completedCourses.has(edge.source);
-        const defaultColor = isDarkMode ? '#475569' : '#cbd5e1';
-        const expectedAnimated = isSourceCompleted && !isEditMode;
-        const expectedStroke = isSourceCompleted && !isEditMode ? '#22c55e' : defaultColor;
-        const expectedWidth = isSourceCompleted && !isEditMode ? 3 : 2;
-
+      const next = eds.map(edge => {
+        const completed = completedCourses.has(edge.source);
+        const expectedStroke = completed ? '#22c55e' : color;
+        const expectedWidth  = completed ? 3 : 2;
+        const expectedAnim   = completed;
         if (
-          edge.animated !== expectedAnimated ||
+          edge.animated !== expectedAnim ||
           edge.style?.stroke !== expectedStroke ||
-          edge.style?.strokeWidth !== expectedWidth ||
-          (edge.markerEnd as any)?.color !== expectedStroke
+          edge.style?.strokeWidth !== expectedWidth
         ) {
           changed = true;
           return {
             ...edge,
-            animated: expectedAnimated,
-            style: { 
-              stroke: expectedStroke,
-              strokeWidth: expectedWidth 
-            },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: expectedStroke,
-            },
+            animated: expectedAnim,
+            style: { stroke: expectedStroke, strokeWidth: expectedWidth },
+            markerEnd: { type: MarkerType.ArrowClosed, color: expectedStroke },
           };
         }
         return edge;
       });
-      return changed ? nextEdges : eds;
+      return changed ? next : eds;
     });
-  }, [completedCourses, getStatus, setNodes, setEdges, edges, isDarkMode, isEditMode]);
+  }, [completedCourses, isEditMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleExportData = () => {
-    const exportedEdges = edges.map(e => ({ source: e.source, target: e.target }));
-    console.log("Nuevos Enlaces Exportados:", JSON.stringify(exportedEdges, null, 2));
-    alert("¡Enlaces exportados a la consola del navegador! Puedes copiarlos para actualizar administracion.ts");
-  };
+  // ----- Dark mode toggle (view mode only) ----------------------------------
+  const toggleDarkMode = useCallback(() => {
+    if (isEditMode) return;
+    const next = !isDarkMode;
+    setIsDarkMode(next);
+    const color = next ? '#475569' : '#cbd5e1';
+    setNodes(nds =>
+      nds.map(n => {
+        if (n.type === 'headerNode') return { ...n, data: { ...n.data, isDark: next } };
+        return n;
+      })
+    );
+    setEdges(eds =>
+      eds.map(e => ({
+        ...e,
+        style: { ...e.style, stroke: completedCourses.has(e.source) ? '#22c55e' : color },
+        markerEnd: { type: MarkerType.ArrowClosed, color: completedCourses.has(e.source) ? '#22c55e' : color },
+      }))
+    );
+  }, [isDarkMode, isEditMode, completedCourses, setNodes, setEdges]);
+
+  // ----- Loading state ------------------------------------------------------
+  if (loadedEdges === null) {
+    return (
+      <div className="w-full h-[750px] flex items-center justify-center bg-slate-50 border border-gray-200 rounded-xl">
+        <div className="flex flex-col items-center gap-3 text-gray-400">
+          <Loader2 className="w-8 h-8 animate-spin" />
+          <p className="text-sm font-medium">Cargando malla curricular…</p>
+        </div>
+      </div>
+    );
+  }
+
+  const bgColor  = isDarkMode ? '#0f172a' : '#f8fafc';
+  const gridColor = isDarkMode ? '#1e293b' : '#e2e8f0';
 
   return (
-    <div className={`w-full h-[750px] border rounded-xl overflow-hidden shadow-inner transition-colors duration-300 relative ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-slate-50 border-gray-200'}`}>
+    <div className={`w-full h-[750px] border rounded-xl overflow-hidden shadow-inner transition-colors duration-300 relative ${isDarkMode ? 'bg-gray-950 border-gray-800' : 'bg-slate-50 border-gray-200'}`}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={isEditMode ? onConnect : undefined}
+        onConnect={onConnect}
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         fitView
-        minZoom={0.1}
+        fitViewOptions={{ padding: 0.15 }}
+        minZoom={0.08}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
         nodesDraggable={isEditMode}
         elementsSelectable={isEditMode}
+        deleteKeyCode={isEditMode ? 'Backspace' : null}
       >
-        <Background gap={24} size={2} color={isDarkMode ? "#334155" : "#e2e8f0"} />
-        <Controls className={isDarkMode ? "fill-white bg-gray-800 text-white border-gray-700" : ""} />
-        
-        <Panel position="top-right" className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className={`rounded-full h-10 w-10 p-0 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-yellow-400 hover:bg-gray-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'}`}
-          >
-            {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </Button>
+        <Background gap={28} size={1.5} color={gridColor} />
+        <Controls
+          className={isDarkMode ? '[&>button]:bg-gray-800 [&>button]:border-gray-700 [&>button]:text-white' : ''}
+        />
 
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setIsEditMode(!isEditMode)}
-            className={`rounded-full h-10 px-4 font-bold ${isEditMode ? 'bg-emerald-500 border-emerald-600 text-white hover:bg-emerald-600' : (isDarkMode ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100')}`}
-          >
-            {isEditMode ? <><Eye className="w-4 h-4 mr-2" /> Modo Vista</> : <><Edit3 className="w-4 h-4 mr-2" /> Modo Edición</>}
-          </Button>
-
-          {isEditMode && (
-            <Button 
-              size="sm"
-              onClick={handleExportData}
-              className="rounded-full h-10 px-4 font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+        {/* ── Top-right panel: toolbar ── */}
+        <Panel position="top-right" className="flex items-center gap-2 m-2">
+          {/* Dark mode toggle (view mode only) */}
+          {!isEditMode && (
+            <button
+              onClick={toggleDarkMode}
+              title={isDarkMode ? 'Modo claro' : 'Modo oscuro'}
+              className={`h-9 w-9 rounded-full flex items-center justify-center shadow-md border transition-all duration-200
+                ${isDarkMode
+                  ? 'bg-gray-800 border-gray-700 text-yellow-400 hover:bg-gray-700'
+                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'}`}
             >
-              <Save className="w-4 h-4 mr-2" /> Exportar
-            </Button>
+              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+          )}
+
+          {/* Edit mode toggle */}
+          {!isEditMode ? (
+            <button
+              onClick={enterEditMode}
+              className="flex items-center gap-2 h-9 px-4 rounded-full text-sm font-bold bg-white border border-gray-200 text-gray-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 shadow-md transition-all duration-200"
+            >
+              <Edit3 className="w-4 h-4" /> Modo Edición
+            </button>
+          ) : (
+            <>
+              {/* Clear all */}
+              <button
+                onClick={handleClearEdges}
+                title="Borrar todas las conexiones"
+                className="h-9 w-9 rounded-full flex items-center justify-center shadow-md bg-red-100 border border-red-300 text-red-600 hover:bg-red-200 transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+
+              {/* Save */}
+              <button
+                onClick={handleSave}
+                disabled={saveStatus === 'saving'}
+                className={`flex items-center gap-2 h-9 px-4 rounded-full text-sm font-bold shadow-lg transition-all duration-200
+                  ${saveStatus === 'saved'
+                    ? 'bg-emerald-500 text-white border-emerald-600'
+                    : saveStatus === 'error'
+                    ? 'bg-red-500 text-white border-red-600'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700'}`}
+              >
+                {saveStatus === 'saving' && <Loader2 className="w-4 h-4 animate-spin" />}
+                {saveStatus === 'saved'  && <CheckCircle className="w-4 h-4" />}
+                {saveStatus === 'error'  && <AlertCircle className="w-4 h-4" />}
+                {saveStatus === 'idle'   && <Save className="w-4 h-4" />}
+                {saveStatus === 'saving' ? 'Guardando…'
+                  : saveStatus === 'saved'  ? '¡Guardado!'
+                  : saveStatus === 'error'  ? 'Error'
+                  : 'Guardar'}
+              </button>
+
+              {/* Exit edit mode */}
+              <button
+                onClick={exitEditMode}
+                className="flex items-center gap-2 h-9 px-4 rounded-full text-sm font-bold bg-gray-700 border border-gray-600 text-white hover:bg-gray-600 shadow-md transition-all"
+              >
+                <Eye className="w-4 h-4" /> Vista normal
+              </button>
+            </>
           )}
         </Panel>
+
+        {/* MiniMap (view mode only) */}
+        {!isEditMode && (
+          <MiniMap
+            nodeColor={n => {
+              if (n.type === 'headerNode') return 'transparent';
+              const st = n.data?.status as string;
+              if (st === 'completed') return '#eab308';
+              if (st === 'unlocked')  return '#22c55e';
+              return isDarkMode ? '#334155' : '#cbd5e1';
+            }}
+            maskColor={isDarkMode ? 'rgba(15,23,42,0.7)' : 'rgba(248,250,252,0.7)'}
+            className="rounded-lg overflow-hidden"
+          />
+        )}
       </ReactFlow>
 
-      {/* Floating Edit Mode indicator */}
+      {/* ── Edit mode overlay banner ── */}
       {isEditMode && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md text-white px-6 py-3 rounded-full font-medium text-sm flex items-center gap-3 shadow-2xl pointer-events-none z-50 animate-bounce">
-          <Edit3 className="w-5 h-5 text-emerald-400" />
-          <span>Arrastra los nodos para moverlos. Conecta los puntos para crear enlaces. Selecciona una línea y presiona Backspace para borrarla.</span>
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+          <div className="flex items-center gap-3 bg-indigo-900/90 backdrop-blur-md text-white px-5 py-2.5 rounded-full shadow-2xl text-xs font-medium border border-indigo-700/60">
+            <Info className="w-4 h-4 text-indigo-300 shrink-0" />
+            <span>
+              <strong className="text-indigo-200">Modo Edición:</strong>{' '}
+              Arrastra los puntos laterales para conectar cursos · Selecciona una flecha y presiona{' '}
+              <kbd className="bg-indigo-700 px-1.5 py-0.5 rounded text-[10px]">Backspace</kbd> para borrarla
+            </span>
+          </div>
         </div>
+      )}
+
+      {/* ── Edit mode dim overlay ── */}
+      {isEditMode && (
+        <div className="absolute inset-0 pointer-events-none bg-indigo-950/10 rounded-xl ring-4 ring-indigo-500/40 ring-inset" />
       )}
     </div>
   );
