@@ -191,21 +191,48 @@ export default function InteractiveFlowchart() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  // Initialize once loadedEdges is available
+  // Initialize once loadedEdges is available — compute real statuses from loaded edges
   useEffect(() => {
     if (loadedEdges === null) return;
-    setNodes(buildInitialNodes(false, false));
-    setEdges(buildEdges(loadedEdges, false, false));
+    const rawEdges = buildEdges(loadedEdges, false, false);
+    const builtNodes = buildInitialNodes(false, false).map(node => {
+      if (node.type !== 'courseNode') return node;
+      const prerequisites = rawEdges.filter(e => e.target === node.id).map(e => e.source);
+      const status = prerequisites.length === 0 ? 'unlocked' : 'locked';
+      return { ...node, data: { ...node.data, status } };
+    });
+    setNodes(builtNodes);
+    setEdges(rawEdges);
   }, [loadedEdges]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ----- Toggle edit mode ---------------------------------------------------
+  // ── Hover highlighting: glow courses unlocked by the hovered node ──────
+  const onNodeMouseEnter = useCallback((_: React.MouseEvent, node: Node) => {
+    if (isEditMode || node.type !== 'courseNode') return;
+    // Find courses for which this node is a prerequisite
+    const unlocks = edges.filter(e => e.source === node.id).map(e => e.target);
+    if (unlocks.length === 0) return;
+    setNodes(nds => nds.map(n =>
+      unlocks.includes(n.id)
+        ? { ...n, data: { ...n.data, isHighlighted: true } }
+        : n
+    ));
+  }, [isEditMode, edges, setNodes]);
+
+  const onNodeMouseLeave = useCallback((_: React.MouseEvent, node: Node) => {
+    if (isEditMode || node.type !== 'courseNode') return;
+    setNodes(nds => nds.map(n =>
+      n.data?.isHighlighted ? { ...n, data: { ...n.data, isHighlighted: false } } : n
+    ));
+  }, [isEditMode, setNodes]);
+
+  // Toggle edit mode ---------------------------------------------------
   const enterEditMode = useCallback(() => {
     setIsEditMode(true);
-    // Show edges in "edit style" (purple), all nodes unlocked visually
+    // Show edges in "edit style" (purple), all nodes look neutral/edit
     setNodes(nds =>
       nds.map(n => {
         if (n.type === 'courseNode') {
-          return { ...n, data: { ...n.data, status: 'unlocked', isEditMode: true } };
+          return { ...n, data: { ...n.data, status: 'unlocked', isEditMode: true, isHighlighted: false } };
         }
         return n;
       })
@@ -315,9 +342,12 @@ export default function InteractiveFlowchart() {
       const next = nds.map(node => {
         if (node.type !== 'courseNode') return node;
         const newStatus = getStatus(node.id, edges);
-        if (node.data.status !== newStatus) {
+        // Also compute if this node has NO prerequisites (always unlocked from start)
+        const prerequisites = edges.filter(e => e.target === node.id);
+        const finalStatus = prerequisites.length === 0 ? (completedCourses.has(node.id) ? 'completed' : 'unlocked') : newStatus;
+        if (node.data.status !== finalStatus) {
           changed = true;
-          return { ...node, data: { ...node.data, status: newStatus } };
+          return { ...node, data: { ...node.data, status: finalStatus } };
         }
         return node;
       });
@@ -395,6 +425,8 @@ export default function InteractiveFlowchart() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onNodeMouseEnter={onNodeMouseEnter}
+        onNodeMouseLeave={onNodeMouseLeave}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.15 }}
