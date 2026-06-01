@@ -1,7 +1,7 @@
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { CourseCategory } from '../../lib/data/flowcharts/administracion';
 
-type CourseNodeData = {
+export type CourseNodeData = {
   label: string;
   credits: number;
   category: CourseCategory;
@@ -21,7 +21,7 @@ const categoryColors: Record<CourseCategory, string> = {
   derecho: 'bg-teal-600',
 };
 
-export default function CourseNode({ data, id }: NodeProps<CourseNodeData>) {
+export default function CourseNode({ data, id }: NodeProps<Node<CourseNodeData>>) {
   const { label, credits, category, status, onToggle } = data;
 
   // Determinar colores basados en el estado
