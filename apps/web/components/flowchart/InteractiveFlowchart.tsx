@@ -188,8 +188,8 @@ export default function InteractiveFlowchart() {
     []
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // Initialize once loadedEdges is available
   useEffect(() => {
