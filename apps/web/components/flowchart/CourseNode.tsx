@@ -1,5 +1,6 @@
 import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { CourseCategory } from '../../lib/data/flowcharts/administracion';
+import { Lock, CheckCircle2, Unlock } from 'lucide-react';
 
 export type CourseNodeData = {
   label: string;
@@ -24,46 +25,58 @@ const categoryColors: Record<CourseCategory, string> = {
 export default function CourseNode({ data, id }: NodeProps<Node<CourseNodeData>>) {
   const { label, credits, category, status, onToggle } = data;
 
-  // Determinar colores basados en el estado
   let bgClass = 'bg-white';
   let borderClass = 'border-gray-200';
   let textClass = 'text-gray-700';
+  let opacityClass = 'opacity-100';
 
   if (status === 'completed') {
-    bgClass = 'bg-yellow-300';
+    bgClass = 'bg-yellow-100/90'; // Amarillo más suave para ver texto
     borderClass = 'border-yellow-500';
     textClass = 'text-yellow-900';
   } else if (status === 'unlocked') {
-    bgClass = 'bg-green-100';
-    borderClass = 'border-green-500';
+    bgClass = 'bg-green-50';
+    borderClass = 'border-green-500 shadow-emerald-500/20 shadow-lg';
     textClass = 'text-green-900';
   } else {
     // Locked (default)
-    bgClass = 'bg-gray-50';
-    borderClass = 'border-gray-200';
+    bgClass = 'bg-gray-100/50';
+    borderClass = 'border-gray-300 border-dashed';
     textClass = 'text-gray-400';
+    opacityClass = 'opacity-60 saturate-50'; // Opaco y desaturado
   }
 
   return (
     <div 
-      className={`relative w-44 rounded-md border-2 shadow-sm flex flex-col overflow-hidden transition-all duration-200 cursor-pointer hover:shadow-md hover:scale-105 ${bgClass} ${borderClass}`}
+      className={`relative w-48 rounded-md border-2 flex flex-col overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-md hover:scale-105 ${bgClass} ${borderClass} ${opacityClass}`}
       onClick={() => onToggle(id)}
     >
-      <Handle type="target" position={Position.Left} className="w-2 h-2 !bg-gray-400" />
+      <Handle type="target" position={Position.Left} className="w-1.5 h-6 rounded-r bg-gray-400 border-0 -ml-0.5" />
       
       {/* Category Header */}
-      <div className={`h-2 w-full ${categoryColors[category]} opacity-80`} />
+      <div className={`h-1.5 w-full ${categoryColors[category]}`} />
       
-      <div className="p-3 flex flex-col items-center justify-center text-center min-h-[80px]">
-        <p className={`font-bold text-xs leading-tight mb-1 ${textClass}`}>
+      <div className="p-3 flex flex-col items-center justify-center text-center min-h-[80px] relative z-10">
+        <p className={`font-bold text-xs leading-tight mb-1 drop-shadow-sm ${textClass}`}>
           {label}
         </p>
-        <span className={`text-[10px] px-2 py-0.5 rounded-full bg-white/50 font-medium ${textClass}`}>
-          {credits} créd.
-        </span>
+        <div className="flex items-center gap-1 mt-1">
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm ${status === 'locked' ? 'bg-gray-200' : 'bg-white/80'} ${textClass}`}>
+            {credits} créd.
+          </span>
+          {status === 'locked' && <Lock className="w-3 h-3 text-gray-400" />}
+          {status === 'unlocked' && <Unlock className="w-3 h-3 text-green-500 animate-pulse" />}
+        </div>
       </div>
 
-      <Handle type="source" position={Position.Right} className="w-2 h-2 !bg-gray-400" />
+      {/* Completed Watermark */}
+      {status === 'completed' && (
+        <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none z-0">
+          <CheckCircle2 className="w-20 h-20 text-yellow-600" />
+        </div>
+      )}
+
+      <Handle type="source" position={Position.Right} className="w-1.5 h-6 rounded-l bg-gray-400 border-0 -mr-0.5" />
     </div>
   );
 }
