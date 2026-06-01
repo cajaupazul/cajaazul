@@ -7,23 +7,27 @@ import {
   Background,
   useNodesState,
   useEdgesState,
+  addEdge,
   Node,
   Edge,
   MarkerType,
-  Position
+  Connection,
+  Panel
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import CourseNode from './CourseNode';
 import { administracionNodes, administracionEdges } from '../../lib/data/flowcharts/administracion';
+import { Moon, Sun, Edit3, Save, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 function HeaderNode({ data }: { data: any }) {
   return (
-    <div className="w-48 text-center border-b-2 border-gray-300 pb-2">
-      <h3 className="font-black text-gray-800 uppercase tracking-widest text-xs mb-1">{data.label}</h3>
+    <div className={`w-48 text-center border-b-2 pb-2 ${data.isDark ? 'border-gray-700' : 'border-gray-300'}`}>
+      <h3 className={`font-black uppercase tracking-widest text-xs mb-1 ${data.isDark ? 'text-gray-200' : 'text-gray-800'}`}>{data.label}</h3>
       <div className="flex items-center justify-center gap-2">
-        <span className="text-[10px] text-gray-500 font-bold bg-white px-2 py-0.5 rounded-full shadow-sm">{data.coursesCount} cursos</span>
-        <span className="text-[10px] text-gray-500 font-bold bg-white px-2 py-0.5 rounded-full shadow-sm">{data.credits} créd.</span>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${data.isDark ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'}`}>{data.coursesCount} cursos</span>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${data.isDark ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'}`}>{data.credits} créd.</span>
       </div>
     </div>
   );
@@ -50,16 +54,19 @@ const CYCLE_HEADERS = [
 
 export default function InteractiveFlowchart() {
   const [completedCourses, setCompletedCourses] = useState<Set<string>>(new Set());
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
-  const getStatus = useCallback((nodeId: string): 'locked' | 'unlocked' | 'completed' => {
+  const getStatus = useCallback((nodeId: string, currentEdges: Edge[]): 'locked' | 'unlocked' | 'completed' => {
     if (completedCourses.has(nodeId)) return 'completed';
-    const prerequisites = administracionEdges.filter(e => e.target === nodeId).map(e => e.source);
+    const prerequisites = currentEdges.filter(e => e.target === nodeId).map(e => e.source);
     if (prerequisites.length === 0) return 'unlocked';
     const allPrerequisitesCompleted = prerequisites.every(reqId => completedCourses.has(reqId));
     return allPrerequisitesCompleted ? 'unlocked' : 'locked';
   }, [completedCourses]);
 
   const toggleCourse = useCallback((id: string) => {
+    if (isEditMode) return; // Disable toggle in edit mode
     setCompletedCourses((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -69,13 +76,12 @@ export default function InteractiveFlowchart() {
       }
       return next;
     });
-  }, []);
+  }, [isEditMode]);
 
   const initialNodes: Node[] = useMemo(() => {
     const cycleCounts: Record<number, number> = {};
     const nodes: Node[] = [];
 
-    // Add Headers
     CYCLE_HEADERS.forEach((header, cycle) => {
       nodes.push({
         id: `header-${cycle}`,
@@ -83,11 +89,10 @@ export default function InteractiveFlowchart() {
         position: { x: cycle * 280, y: -20 },
         draggable: false,
         selectable: false,
-        data: header,
+        data: { ...header, isDark: isDarkMode },
       });
     });
 
-    // Add Courses
     administracionNodes.forEach((course) => {
       const cycle = course.cycle;
       if (cycleCounts[cycle] === undefined) cycleCounts[cycle] = 0;
@@ -111,31 +116,45 @@ export default function InteractiveFlowchart() {
     });
 
     return nodes;
-  }, [toggleCourse]);
+  }, [toggleCourse, isDarkMode]);
 
   const initialEdges: Edge[] = useMemo(() => {
     return administracionEdges.map((edge, i) => ({
       id: `e-${edge.source}-${edge.target}-${i}`,
       source: edge.source,
       target: edge.target,
-      type: 'smoothstep', // Líneas rectas con esquinas redondeadas
+      type: 'smoothstep',
       animated: false,
-      style: { stroke: '#cbd5e1', strokeWidth: 2 },
+      style: { stroke: isDarkMode ? '#475569' : '#cbd5e1', strokeWidth: 2 },
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        color: '#cbd5e1',
+        color: isDarkMode ? '#475569' : '#cbd5e1',
       },
     }));
-  }, []);
+  }, [isDarkMode]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
+  // Allow edge connections in edit mode
+  const onConnect = useCallback(
+    (params: Connection) => setEdges((eds) => addEdge({ 
+      ...params, 
+      type: 'smoothstep',
+      style: { stroke: isDarkMode ? '#475569' : '#cbd5e1', strokeWidth: 2 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: isDarkMode ? '#475569' : '#cbd5e1' }
+    }, eds)),
+    [setEdges, isDarkMode]
+  );
+
   useEffect(() => {
     setNodes((nds) =>
       nds.map((node) => {
+        if (node.type === 'headerNode') {
+          return { ...node, data: { ...node.data, isDark: isDarkMode } };
+        }
         if (node.type !== 'courseNode') return node;
-        const newStatus = getStatus(node.id);
+        const newStatus = getStatus(node.id, edges);
         if (node.data.status === newStatus) return node;
         return {
           ...node,
@@ -150,37 +169,86 @@ export default function InteractiveFlowchart() {
     setEdges((eds) => 
       eds.map((edge) => {
         const isSourceCompleted = completedCourses.has(edge.source);
+        const defaultColor = isDarkMode ? '#475569' : '#cbd5e1';
         return {
           ...edge,
-          animated: isSourceCompleted,
+          animated: isSourceCompleted && !isEditMode,
           style: { 
-            stroke: isSourceCompleted ? '#22c55e' : '#cbd5e1',
-            strokeWidth: isSourceCompleted ? 3 : 2 
+            stroke: isSourceCompleted && !isEditMode ? '#22c55e' : defaultColor,
+            strokeWidth: isSourceCompleted && !isEditMode ? 3 : 2 
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: isSourceCompleted ? '#22c55e' : '#cbd5e1',
+            color: isSourceCompleted && !isEditMode ? '#22c55e' : defaultColor,
           },
         };
       })
     );
-  }, [completedCourses, getStatus, setNodes, setEdges]);
+  }, [completedCourses, getStatus, setNodes, setEdges, edges, isDarkMode, isEditMode]);
+
+  const handleExportData = () => {
+    const exportedEdges = edges.map(e => ({ source: e.source, target: e.target }));
+    console.log("Nuevos Enlaces Exportados:", JSON.stringify(exportedEdges, null, 2));
+    alert("¡Enlaces exportados a la consola del navegador! Puedes copiarlos para actualizar administracion.ts");
+  };
 
   return (
-    <div className="w-full h-[700px] bg-slate-50 border border-gray-200 rounded-xl overflow-hidden shadow-inner">
+    <div className={`w-full h-[750px] border rounded-xl overflow-hidden shadow-inner transition-colors duration-300 relative ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-slate-50 border-gray-200'}`}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onConnect={isEditMode ? onConnect : undefined}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.1}
         maxZoom={2}
+        proOptions={{ hideAttribution: true }}
+        nodesDraggable={isEditMode}
+        elementsSelectable={isEditMode}
       >
-        <Background gap={24} size={2} color="#e2e8f0" />
-        <Controls />
+        <Background gap={24} size={2} color={isDarkMode ? "#334155" : "#e2e8f0"} />
+        <Controls className={isDarkMode ? "fill-white bg-gray-800 text-white border-gray-700" : ""} />
+        
+        <Panel position="top-right" className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className={`rounded-full h-10 w-10 p-0 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-yellow-400 hover:bg-gray-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'}`}
+          >
+            {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setIsEditMode(!isEditMode)}
+            className={`rounded-full h-10 px-4 font-bold ${isEditMode ? 'bg-emerald-500 border-emerald-600 text-white hover:bg-emerald-600' : (isDarkMode ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100')}`}
+          >
+            {isEditMode ? <><Eye className="w-4 h-4 mr-2" /> Modo Vista</> : <><Edit3 className="w-4 h-4 mr-2" /> Modo Edición</>}
+          </Button>
+
+          {isEditMode && (
+            <Button 
+              size="sm"
+              onClick={handleExportData}
+              className="rounded-full h-10 px-4 font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+            >
+              <Save className="w-4 h-4 mr-2" /> Exportar
+            </Button>
+          )}
+        </Panel>
       </ReactFlow>
+
+      {/* Floating Edit Mode indicator */}
+      {isEditMode && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md text-white px-6 py-3 rounded-full font-medium text-sm flex items-center gap-3 shadow-2xl pointer-events-none z-50 animate-bounce">
+          <Edit3 className="w-5 h-5 text-emerald-400" />
+          <span>Arrastra los nodos para moverlos. Conecta los puntos para crear enlaces. Selecciona una línea y presiona Backspace para borrarla.</span>
+        </div>
+      )}
     </div>
   );
 }
