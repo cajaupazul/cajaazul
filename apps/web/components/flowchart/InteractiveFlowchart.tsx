@@ -14,6 +14,8 @@ import {
   Connection,
   Panel,
   MiniMap,
+  BaseEdge,
+  EdgeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -44,7 +46,177 @@ function HeaderNode({ data }: { data: any }) {
   );
 }
 
+// Custom hash function to deterministically assign colors and offsets
+function getEdgeHashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+const LIGHT_PALETTE = [
+  '#d946ef', // Fuchsia
+  '#a855f7', // Purple
+  '#6366f1', // Indigo
+  '#3b82f6', // Blue
+  '#0ea5e9', // Sky
+  '#0d9488', // Teal
+  '#16a34a', // Green
+  '#ca8a04', // Yellow
+  '#ea580c', // Orange
+  '#e11d48', // Rose
+  '#be185d', // Pink
+  '#4f46e5', // Royal Blue
+  '#059669', // Emerald
+  '#b45309', // Amber
+  '#dc2626', // Red
+  '#0284c7', // Dark Sky
+];
+
+const DARK_PALETTE = [
+  '#f472b6', // Pink
+  '#f43f5e', // Rose
+  '#fb923c', // Orange
+  '#fbbf24', // Yellow
+  '#a78bfa', // Purple
+  '#818cf8', // Indigo
+  '#60a5fa', // Blue
+  '#38bdf8', // Sky
+  '#2dd4bf', // Cyan/Teal
+  '#34d399', // Emerald
+  '#4ade80', // Green
+  '#a3e635', // Lime
+  '#ec4899', // Bright Fuchsia
+];
+
+function getSourceColor(sourceId: string, isDarkMode: boolean): string {
+  const hash = getEdgeHashCode(sourceId);
+  const palette = isDarkMode ? DARK_PALETTE : LIGHT_PALETTE;
+  return palette[hash % palette.length];
+}
+
+// Rounded corner path generator
+function getRoundedPath(points: { x: number; y: number }[], radius: number = 8): string {
+  if (points.length === 0) return '';
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+  let path = `M ${points[0].x} ${points[0].y}`;
+
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const next = points[i + 1];
+
+    const d1x = prev.x - curr.x;
+    const d1y = prev.y - curr.y;
+    const len1 = Math.sqrt(d1x * d1x + d1y * d1y);
+
+    const d2x = next.x - curr.x;
+    const d2y = next.y - curr.y;
+    const len2 = Math.sqrt(d2x * d2x + d2y * d2y);
+
+    const r = Math.min(radius, len1 / 2, len2 / 2);
+
+    if (r > 0) {
+      const p1x = curr.x + (d1x / len1) * r;
+      const p1y = curr.y + (d1y / len1) * r;
+      const p2x = curr.x + (d2x / len2) * r;
+      const p2y = curr.y + (d2y / len2) * r;
+
+      path += ` L ${p1x} ${p1y} Q ${curr.x} ${curr.y} ${p2x} ${p2y}`;
+    } else {
+      path += ` L ${curr.x} ${curr.y}`;
+    }
+  }
+
+  const last = points[points.length - 1];
+  path += ` L ${last.x} ${last.y}`;
+  return path;
+}
+
+function SmartEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  style = {},
+  markerEnd,
+}: EdgeProps) {
+  const col_source = Math.round((sourceX - 192) / 280);
+  const col_target = Math.round(targetX / 280);
+  const d_col = col_target - col_source;
+
+  const edgeHash = getEdgeHashCode(id);
+
+  let path = '';
+
+  if (d_col === 1) {
+    const gapMid = (sourceX + targetX) / 2;
+    const xOffset = ((edgeHash % 7) - 3) * 8; // Stagger vertical segment
+    const routeX = gapMid + xOffset;
+
+    const points = [
+      { x: sourceX, y: sourceY },
+      { x: routeX, y: sourceY },
+      { x: routeX, y: targetY },
+      { x: targetX, y: targetY },
+    ];
+    path = getRoundedPath(points, 8);
+  } else if (d_col > 1) {
+    const corridors = [40, 180, 300, 420, 540, 660, 780, 900, 1020, 1140];
+    const targetYMid = (sourceY + targetY) / 2;
+    
+    let corridorY = corridors[0];
+    let minDiff = Math.abs(corridors[0] - targetYMid);
+    for (let i = 1; i < corridors.length; i++) {
+      const diff = Math.abs(corridors[i] - targetYMid);
+      if (diff < minDiff) {
+        minDiff = diff;
+        corridorY = corridors[i];
+      }
+    }
+
+    const yOffset = ((edgeHash % 5) - 2) * 6; // Stagger horizontal corridor segment
+    const routeY = corridorY + yOffset;
+
+    const gapSourceMid = sourceX + 44;
+    const xOffsetSource = ((edgeHash % 7) - 3) * 8; // Stagger source vertical gap
+    const routeX_source = gapSourceMid + xOffsetSource;
+
+    const gapTargetMid = targetX - 44;
+    const xOffsetTarget = (((edgeHash + 13) % 7) - 3) * 8; // Stagger target vertical gap
+    const routeX_target = gapTargetMid + xOffsetTarget;
+
+    const points = [
+      { x: sourceX, y: sourceY },
+      { x: routeX_source, y: sourceY },
+      { x: routeX_source, y: routeY },
+      { x: routeX_target, y: routeY },
+      { x: routeX_target, y: targetY },
+      { x: targetX, y: targetY },
+    ];
+    path = getRoundedPath(points, 8);
+  } else {
+    const xOffset = ((edgeHash % 5) - 2) * 8;
+    const points = [
+      { x: sourceX, y: sourceY },
+      { x: sourceX + 40 + xOffset, y: sourceY },
+      { x: sourceX + 40 + xOffset, y: (sourceY + targetY) / 2 },
+      { x: targetX - 40 + xOffset, y: (sourceY + targetY) / 2 },
+      { x: targetX - 40 + xOffset, y: targetY },
+      { x: targetX, y: targetY },
+    ];
+    path = getRoundedPath(points, 8);
+  }
+
+  return <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} />;
+}
+
 const nodeTypes = { courseNode: CourseNode, headerNode: HeaderNode };
+const edgeTypes = { smart: SmartEdge };
 
 const CYCLE_HEADERS = [
   { label: 'Ciclo 0',    coursesCount: 3, credits: 0 },
@@ -76,7 +248,7 @@ function buildEdgeObject(
     id: `e-${source}-${target}-${idx}`,
     source,
     target,
-    type: 'smoothstep',
+    type: 'smart',
     animated: false,
     deletable: isEditMode,
     style: { stroke: color, strokeWidth: 2 },
@@ -173,7 +345,6 @@ export default function InteractiveFlowchart() {
   // ----- Build edges from a raw list ----------------------------------------
   const buildEdges = useCallback(
     (rawEdges: { source: string; target: string }[], editMode: boolean, darkMode: boolean): Edge[] => {
-      const color = darkMode ? '#475569' : '#cbd5e1';
       if (editMode) {
         // In edit mode: bright, thick, selectable
         return rawEdges.map((e, i) => ({
@@ -183,9 +354,20 @@ export default function InteractiveFlowchart() {
           selected: false,
         }));
       }
-      return rawEdges.map((e, i) => buildEdgeObject(e.source, e.target, i, color, false));
+      return rawEdges.map((e, i) => {
+        const completed = completedCourses.has(e.source);
+        const baseColor = getSourceColor(e.source, darkMode);
+        const color = completed ? '#22c55e' : baseColor;
+        const width = completed ? 3 : 2;
+        return {
+          ...buildEdgeObject(e.source, e.target, i, color, false),
+          animated: completed,
+          style: { stroke: color, strokeWidth: width },
+          markerEnd: { type: MarkerType.ArrowClosed, color },
+        };
+      });
     },
-    []
+    [completedCourses]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -250,7 +432,6 @@ export default function InteractiveFlowchart() {
 
   const exitEditMode = useCallback(() => {
     setIsEditMode(false);
-    const color = isDarkMode ? '#475569' : '#cbd5e1';
     setNodes(nds =>
       nds.map(n => {
         if (n.type === 'courseNode') {
@@ -263,13 +444,19 @@ export default function InteractiveFlowchart() {
       })
     );
     setEdges(eds =>
-      eds.map(e => ({
-        ...e,
-        deletable: false,
-        animated: false,
-        style: { stroke: color, strokeWidth: 2 },
-        markerEnd: { type: MarkerType.ArrowClosed, color },
-      }))
+      eds.map(e => {
+        const completed = completedCourses.has(e.source);
+        const baseColor = getSourceColor(e.source, isDarkMode);
+        const color = completed ? '#22c55e' : baseColor;
+        const width = completed ? 3 : 2;
+        return {
+          ...e,
+          deletable: false,
+          animated: completed,
+          style: { stroke: color, strokeWidth: width },
+          markerEnd: { type: MarkerType.ArrowClosed, color },
+        };
+      })
     );
     // Recompute statuses from current edges
     setNodes(nds =>
@@ -278,7 +465,7 @@ export default function InteractiveFlowchart() {
         return { ...n, data: { ...n.data, isEditMode: false } };
       })
     );
-  }, [isDarkMode, setNodes, setEdges]);
+  }, [isDarkMode, completedCourses, setNodes, setEdges]);
 
   // ----- Save to Supabase ---------------------------------------------------
   const handleSave = useCallback(async () => {
@@ -314,7 +501,7 @@ export default function InteractiveFlowchart() {
       if (!isEditMode) return;
       setEdges(eds => addEdge({
         ...params,
-        type: 'smoothstep',
+        type: 'smart',
         deletable: true,
         style: { stroke: '#6366f1', strokeWidth: 2.5 },
         markerEnd: { type: MarkerType.ArrowClosed, color: '#6366f1' },
@@ -336,7 +523,6 @@ export default function InteractiveFlowchart() {
   // ----- Update node statuses when completed courses changes (view mode) ----
   useEffect(() => {
     if (isEditMode) return;
-    const color = isDarkMode ? '#475569' : '#cbd5e1';
     setNodes(nds => {
       let changed = false;
       const next = nds.map(node => {
@@ -358,7 +544,8 @@ export default function InteractiveFlowchart() {
       let changed = false;
       const next = eds.map(edge => {
         const completed = completedCourses.has(edge.source);
-        const expectedStroke = completed ? '#22c55e' : color;
+        const baseColor = getSourceColor(edge.source, isDarkMode);
+        const expectedStroke = completed ? '#22c55e' : baseColor;
         const expectedWidth  = completed ? 3 : 2;
         const expectedAnim   = completed;
         if (
@@ -378,14 +565,13 @@ export default function InteractiveFlowchart() {
       });
       return changed ? next : eds;
     });
-  }, [completedCourses, isEditMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [completedCourses, isEditMode, isDarkMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ----- Dark mode toggle (view mode only) ----------------------------------
   const toggleDarkMode = useCallback(() => {
     if (isEditMode) return;
     const next = !isDarkMode;
     setIsDarkMode(next);
-    const color = next ? '#475569' : '#cbd5e1';
     setNodes(nds =>
       nds.map(n => {
         if (n.type === 'headerNode') return { ...n, data: { ...n.data, isDark: next } };
@@ -393,11 +579,17 @@ export default function InteractiveFlowchart() {
       })
     );
     setEdges(eds =>
-      eds.map(e => ({
-        ...e,
-        style: { ...e.style, stroke: completedCourses.has(e.source) ? '#22c55e' : color },
-        markerEnd: { type: MarkerType.ArrowClosed, color: completedCourses.has(e.source) ? '#22c55e' : color },
-      }))
+      eds.map(e => {
+        const completed = completedCourses.has(e.source);
+        const baseColor = getSourceColor(e.source, next);
+        const color = completed ? '#22c55e' : baseColor;
+        const width = completed ? 3 : 2;
+        return {
+          ...e,
+          style: { stroke: color, strokeWidth: width },
+          markerEnd: { type: MarkerType.ArrowClosed, color },
+        };
+      })
     );
   }, [isDarkMode, isEditMode, completedCourses, setNodes, setEdges]);
 
@@ -428,6 +620,7 @@ export default function InteractiveFlowchart() {
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.15 }}
         minZoom={0.08}
