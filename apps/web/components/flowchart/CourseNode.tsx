@@ -7,7 +7,7 @@ export type CourseNodeData = {
   credits: number;
   category: CourseCategory;
   status: 'locked' | 'unlocked' | 'completed';
-  onToggle: (id: string) => void;
+  isEditMode?: boolean;
   id: string;
 };
 
@@ -23,7 +23,7 @@ const categoryColors: Record<CourseCategory, string> = {
 };
 
 export default function CourseNode({ data, id }: NodeProps<Node<CourseNodeData>>) {
-  const { label, credits, category, status, onToggle } = data;
+  const { label, credits, category, status, isEditMode } = data;
 
   let bgClass = 'bg-white';
   let borderClass = 'border-gray-200';
@@ -48,10 +48,13 @@ export default function CourseNode({ data, id }: NodeProps<Node<CourseNodeData>>
 
   return (
     <div 
-      className={`relative w-48 rounded-md border-2 flex flex-col overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-md hover:scale-105 ${bgClass} ${borderClass} ${opacityClass}`}
-      onClick={() => onToggle(id)}
+      className={`relative w-48 rounded-md border-2 flex flex-col overflow-hidden transition-all duration-300 ${isEditMode ? 'cursor-move' : 'cursor-pointer hover:shadow-md hover:scale-105'} ${bgClass} ${borderClass} ${opacityClass}`}
     >
-      <Handle type="target" position={Position.Left} className="w-1.5 h-6 rounded-r bg-gray-400 border-0 -ml-0.5" />
+      <Handle 
+        type="target" 
+        position={Position.Left} 
+        className={`w-1.5 h-6 rounded-r bg-gray-400 border-0 -ml-0.5 transition-opacity duration-300 ${isEditMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
+      />
       
       {/* Category Header */}
       <div className={`h-1.5 w-full ${categoryColors[category]}`} />
@@ -76,7 +79,11 @@ export default function CourseNode({ data, id }: NodeProps<Node<CourseNodeData>>
         </div>
       )}
 
-      <Handle type="source" position={Position.Right} className="w-1.5 h-6 rounded-l bg-gray-400 border-0 -mr-0.5" />
+      <Handle 
+        type="source" 
+        position={Position.Right} 
+        className={`w-1.5 h-6 rounded-l bg-gray-400 border-0 -mr-0.5 transition-opacity duration-300 ${isEditMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
+      />
     </div>
   );
 }

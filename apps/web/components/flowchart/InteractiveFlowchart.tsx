@@ -109,14 +109,14 @@ export default function InteractiveFlowchart() {
         data: {
           ...course,
           status: 'locked',
-          onToggle: toggleCourse,
           id: course.id,
+          isEditMode: isEditMode,
         },
       });
     });
 
     return nodes;
-  }, [toggleCourse, isDarkMode]);
+  }, [isDarkMode, isEditMode]);
 
   const initialEdges: Edge[] = useMemo(() => {
     return administracionEdges.map((edge, i) => ({
@@ -135,6 +135,16 @@ export default function InteractiveFlowchart() {
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  const onNodeClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      if (isEditMode) return;
+      if (node.type === 'courseNode') {
+        toggleCourse(node.id);
+      }
+    },
+    [isEditMode, toggleCourse]
+  );
 
   // Allow edge connections in edit mode
   const onConnect = useCallback(
@@ -158,17 +168,19 @@ export default function InteractiveFlowchart() {
           }
           return node;
         }
-        if (node.type !== 'courseNode') return node;
-        const newStatus = getStatus(node.id, edges);
-        if (node.data.status !== newStatus) {
-          changed = true;
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              status: newStatus,
-            },
-          };
+        if (node.type === 'courseNode') {
+          const newStatus = getStatus(node.id, edges);
+          if (node.data.status !== newStatus || node.data.isEditMode !== isEditMode) {
+            changed = true;
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                status: newStatus,
+                isEditMode: isEditMode,
+              },
+            };
+          }
         }
         return node;
       });
@@ -224,6 +236,7 @@ export default function InteractiveFlowchart() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={isEditMode ? onConnect : undefined}
+        onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.1}
