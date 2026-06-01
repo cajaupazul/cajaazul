@@ -136,6 +136,27 @@ export default function FlowchartsListPage() {
                     </div>
                 </div>
 
+                {/* Banner Interactivo BETA */}
+                <Link href="/dashboard/herramientas/flujogramas/interactivo-admin" className="block">
+                    <div className="w-full bg-gradient-to-r from-emerald-900/40 to-blue-900/40 border border-emerald-500/30 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 hover:border-emerald-500/60 transition-colors group cursor-pointer">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                                <Map className="w-6 h-6 text-emerald-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    Nuevo Flujograma Interactivo (Beta)
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] uppercase font-black">Nuevo</span>
+                                </h3>
+                                <p className="text-bb-text-secondary text-sm">Prueba el nuevo sistema con código inteligente para Administración.</p>
+                            </div>
+                        </div>
+                        <Button className="shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-500/20 font-bold px-6">
+                            Probar Beta <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                        </Button>
+                    </div>
+                </Link>
+
                 {/* Faculty Filters */}
                 {faculties.length > 0 && (
                     <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
