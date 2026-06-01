@@ -148,42 +148,66 @@ export default function InteractiveFlowchart() {
   );
 
   useEffect(() => {
-    setNodes((nds) =>
-      nds.map((node) => {
+    setNodes((nds) => {
+      let changed = false;
+      const nextNodes = nds.map((node) => {
         if (node.type === 'headerNode') {
-          return { ...node, data: { ...node.data, isDark: isDarkMode } };
+          if (node.data.isDark !== isDarkMode) {
+            changed = true;
+            return { ...node, data: { ...node.data, isDark: isDarkMode } };
+          }
+          return node;
         }
         if (node.type !== 'courseNode') return node;
         const newStatus = getStatus(node.id, edges);
-        if (node.data.status === newStatus) return node;
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            status: newStatus,
-          },
-        };
-      })
-    );
+        if (node.data.status !== newStatus) {
+          changed = true;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              status: newStatus,
+            },
+          };
+        }
+        return node;
+      });
+      return changed ? nextNodes : nds;
+    });
 
-    setEdges((eds) => 
-      eds.map((edge) => {
+    setEdges((eds) => {
+      let changed = false;
+      const nextEdges = eds.map((edge) => {
         const isSourceCompleted = completedCourses.has(edge.source);
         const defaultColor = isDarkMode ? '#475569' : '#cbd5e1';
-        return {
-          ...edge,
-          animated: isSourceCompleted && !isEditMode,
-          style: { 
-            stroke: isSourceCompleted && !isEditMode ? '#22c55e' : defaultColor,
-            strokeWidth: isSourceCompleted && !isEditMode ? 3 : 2 
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: isSourceCompleted && !isEditMode ? '#22c55e' : defaultColor,
-          },
-        };
-      })
-    );
+        const expectedAnimated = isSourceCompleted && !isEditMode;
+        const expectedStroke = isSourceCompleted && !isEditMode ? '#22c55e' : defaultColor;
+        const expectedWidth = isSourceCompleted && !isEditMode ? 3 : 2;
+
+        if (
+          edge.animated !== expectedAnimated ||
+          edge.style?.stroke !== expectedStroke ||
+          edge.style?.strokeWidth !== expectedWidth ||
+          (edge.markerEnd as any)?.color !== expectedStroke
+        ) {
+          changed = true;
+          return {
+            ...edge,
+            animated: expectedAnimated,
+            style: { 
+              stroke: expectedStroke,
+              strokeWidth: expectedWidth 
+            },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: expectedStroke,
+            },
+          };
+        }
+        return edge;
+      });
+      return changed ? nextEdges : eds;
+    });
   }, [completedCourses, getStatus, setNodes, setEdges, edges, isDarkMode, isEditMode]);
 
   const handleExportData = () => {
