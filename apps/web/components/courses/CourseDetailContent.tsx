@@ -69,7 +69,8 @@ export default function CourseDetailContent({
     const [selectedProfessorId, setSelectedProfessorId] = useState<string>(searchParams.get('professor') || 'all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [typeFilter, setTypeFilter] = useState<string | null>(null);
-    const [expandedCycleId, setExpandedCycleId] = useState<string | null>(null);
+    const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
+    const [activeSubfolder, setActiveSubfolder] = useState<string | null>(null);
     const [showAdminManager, setShowAdminManager] = useState(false);
     const [showCalculatorModal, setShowCalculatorModal] = useState(false);
 
@@ -483,6 +484,49 @@ export default function CourseDetailContent({
         return map;
     }, [materialsForCounts]);
 
+    const breadcrumbs = useMemo(() => {
+        if (!activeCycleId) return null;
+        let cycleName = '';
+        if (activeCycleId === 'historical') {
+            cycleName = '📦 Archivos Históricos';
+        } else if (activeCycleId === 'general') {
+            cycleName = '🗂 Cajón General';
+        } else {
+            const cycle = courseCycles.find(c => c.id === activeCycleId);
+            cycleName = cycle ? `📁 Ciclo ${cycle.ciclo_name}` : '';
+        }
+
+        return (
+            <div className="flex items-center flex-wrap gap-2 text-xs font-bold text-bb-text-secondary mb-4 bg-bb-darker/50 p-3 rounded-2xl border border-bb-border/30">
+                <button
+                    onClick={() => {
+                        setActiveCycleId(null);
+                        setActiveSubfolder(null);
+                    }}
+                    className="hover:text-white transition-colors uppercase tracking-tight flex items-center gap-1 text-[10px] bg-bb-border/40 px-2.5 py-1 rounded-xl"
+                >
+                    <ArrowLeft className="w-3.5 h-3.5" /> Volver a Raíz
+                </button>
+                <span className="text-bb-border">|</span>
+                <button
+                    onClick={() => {
+                        setActiveSubfolder(null);
+                    }}
+                    className={`hover:text-white transition-colors ${!activeSubfolder ? 'text-blue-400' : ''}`}
+                    disabled={!activeSubfolder}
+                >
+                    {cycleName}
+                </button>
+                {activeSubfolder && (
+                    <>
+                        <span className="text-bb-text/30">/</span>
+                        <span className="text-teal-400">{activeSubfolder}</span>
+                    </>
+                )}
+            </div>
+        );
+    }, [activeCycleId, activeSubfolder, courseCycles]);
+
     return (
         <div className="flex-1 overflow-auto bg-bb-dark">
             <div className="relative h-40 md:h-64 bg-bb-darker border-b border-bb-border">
@@ -561,10 +605,10 @@ export default function CourseDetailContent({
                                         placeholder="Buscar por profesor..."
                                         className="flex-1 sm:w-80"
                                     />
-                                    {/* V6.0: Calculadora integrada en móvil junto al buscador */}
+                                    {/* V6.0: Calculadora integrada junto al buscador (visible en todo dispositivo) */}
                                     <button
                                         onClick={() => setShowCalculatorModal(true)}
-                                        className="sm:hidden p-3 bg-bb-darker/50 border border-bb-border rounded-xl text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 h-11 transition-all active:scale-95"
+                                        className="p-3 bg-bb-darker/50 border border-bb-border rounded-xl text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 h-11 transition-all active:scale-95 flex items-center justify-center"
                                         title="Calculadora de Notas"
                                     >
                                         <Calculator className="w-5 h-5 flex-shrink-0" />
@@ -679,6 +723,9 @@ export default function CourseDetailContent({
                                 </div>
                             )}
 
+                            {/* Breadcrumbs for folder navigation */}
+                            {breadcrumbs}
+
                             <div className="space-y-4">
                                 {typeFilter !== null ? (
                                     /* Flat view when typeFilter is selected */
@@ -745,141 +792,253 @@ export default function CourseDetailContent({
                                         })()}
                                     </div>
                                 ) : viewMode === 'grid' ? (
-                                    /* Grid mode: Only FolderCard tiles */
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                                        {courseCycles.map((cycle) => (
-                                            <FolderCard
-                                                key={cycle.id}
-                                                name={`Ciclo ${cycle.ciclo_name}`}
-                                                count={(cycleMaterialsMap.get(cycle.id) || []).length}
-                                                onClick={() => {
-                                                    setExpandedCycleId(cycle.id);
-                                                    setViewMode('list');
-                                                }}
-                                            />
-                                        ))}
+                                    /* Grid mode: Multi-level Folder Navigation */
+                                    (() => {
+                                        if (!activeCycleId) {
+                                            // Root folders
+                                            return (
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+                                                    {courseCycles.map((cycle) => (
+                                                        <FolderCard
+                                                            key={cycle.id}
+                                                            name={`Ciclo ${cycle.ciclo_name}`}
+                                                            count={(cycleMaterialsMap.get(cycle.id) || []).length}
+                                                            onClick={() => {
+                                                                setActiveCycleId(cycle.id);
+                                                                setActiveSubfolder(null);
+                                                            }}
+                                                        />
+                                                    ))}
 
-                                        {historicalMaterials.length > 0 && (
-                                            <FolderCard
-                                                name="Archivos Históricos"
-                                                count={historicalMaterials.length}
-                                                onClick={() => {
-                                                    setExpandedCycleId('historical');
-                                                    setViewMode('list');
-                                                }}
-                                            />
-                                        )}
+                                                    {historicalMaterials.length > 0 && (
+                                                        <FolderCard
+                                                            name="Archivos Históricos"
+                                                            count={historicalMaterials.length}
+                                                            onClick={() => {
+                                                                setActiveCycleId('historical');
+                                                                setActiveSubfolder(null);
+                                                            }}
+                                                        />
+                                                    )}
 
-                                        {cajonGeneralMaterials.length > 0 && (
-                                            <FolderCard
-                                                name="Cajón General"
-                                                count={cajonGeneralMaterials.length}
-                                                onClick={() => {
-                                                    setExpandedCycleId('general');
-                                                    setViewMode('list');
-                                                }}
-                                            />
-                                        )}
-                                    </div>
+                                                    {cajonGeneralMaterials.length > 0 && (
+                                                        <FolderCard
+                                                            name="Cajón General"
+                                                            count={cajonGeneralMaterials.length}
+                                                            onClick={() => {
+                                                                setActiveCycleId('general');
+                                                                setActiveSubfolder(null);
+                                                            }}
+                                                        />
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+
+                                        if (activeCycleId === 'general') {
+                                            return renderFilteredList(cajonGeneralMaterials);
+                                        }
+
+                                        if (activeCycleId === 'historical') {
+                                            if (!activeSubfolder) {
+                                                return (
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+                                                        {historicalCategories.map((cat) => (
+                                                            <FolderCard
+                                                                key={cat.id}
+                                                                name={cat.label}
+                                                                count={cat.items.length}
+                                                                onClick={() => setActiveSubfolder(cat.label)}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                );
+                                            }
+                                            const cat = historicalCategories.find(c => c.label === activeSubfolder);
+                                            return cat ? renderFilteredList(cat.items) : null;
+                                        }
+
+                                        // Cycle level folder
+                                        const cycle = courseCycles.find(c => c.id === activeCycleId);
+                                        if (!cycle) return null;
+                                        const cycleMats = cycleMaterialsMap.get(cycle.id) || [];
+
+                                        if (!activeSubfolder) {
+                                            // Inside cycle, show predefined subfolders Sílabo, Exámenes, Presentaciones
+                                            const matchedMatsMap = new Map<string, number>();
+                                            PREDEFINED_SUBFOLDERS.forEach((sub) => {
+                                                const count = cycleMats.filter(m => m.tipo === sub).length;
+                                                matchedMatsMap.set(sub, count);
+                                            });
+                                            // Exams count summing subfolders
+                                            const examsMats = cycleMats.filter(m => m.tipo === '📝 Exámenes');
+                                            const customSubfolders = (cycle.active_subfolders || [])
+                                                .filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s) && !GENERAL_TIPOS.includes(s));
+                                            let examsCount = examsMats.length;
+                                            customSubfolders.forEach((sub: string) => {
+                                                examsCount += cycleMats.filter(m => m.tipo === sub).length;
+                                            });
+                                            matchedMatsMap.set('📝 Exámenes', examsCount);
+
+                                            return (
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+                                                    {PREDEFINED_SUBFOLDERS.map((sub) => (
+                                                        <FolderCard
+                                                            key={sub}
+                                                            name={sub}
+                                                            count={matchedMatsMap.get(sub) || 0}
+                                                            onClick={() => setActiveSubfolder(sub)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+
+                                        if (activeSubfolder === '📝 Exámenes') {
+                                            // Exam subfolders
+                                            const customSubfolders = (cycle.active_subfolders || [])
+                                                .filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s) && !GENERAL_TIPOS.includes(s))
+                                                .sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+                                            const examsMats = cycleMats.filter(m => m.tipo === '📝 Exámenes');
+
+                                            if (customSubfolders.length === 0) {
+                                                return renderFilteredList(examsMats);
+                                            }
+
+                                            return (
+                                                <div className="space-y-6">
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+                                                        {customSubfolders.map((sub: string) => {
+                                                            const subMats = cycleMats.filter(m => m.tipo === sub);
+                                                            return (
+                                                                <FolderCard
+                                                                    key={sub}
+                                                                    name={sub}
+                                                                    count={subMats.length}
+                                                                    onClick={() => setActiveSubfolder(sub)}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    {examsMats.length > 0 && (
+                                                        <div className="mt-6 border-t border-bb-border/20 pt-4">
+                                                            <h5 className="text-xs font-bold text-bb-text-secondary uppercase mb-3">Materiales generales de exámenes</h5>
+                                                            {renderFilteredList(examsMats)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+
+                                        // Inside a leaf subfolder (e.g. Sílabo, Presentaciones, or PC 1)
+                                        const subfolderMats = cycleMats.filter(m => m.tipo === activeSubfolder);
+                                        return renderFilteredList(subfolderMats);
+                                    })()
                                 ) : (
                                     /* List mode: Traditional Accordion view */
                                     <Accordion>
                                         {/* Mapped Explicit Course Cycles */}
-                                        {courseCycles.map((cycle) => (
-                                            <AccordionItem 
-                                                key={`${cycle.id}-${expandedCycleId === cycle.id ? 'open' : 'closed'}`}
-                                                defaultOpen={expandedCycleId === cycle.id}
-                                                title={
-                                                    <div className="flex items-center justify-between w-full">
-                                                        <span className="font-bold">📁 Ciclo {cycle.ciclo_name}</span>
-                                                        <Badge className="ml-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 font-black">
-                                                            {(cycleMaterialsMap.get(cycle.id) || []).length}
-                                                        </Badge>
-                                                    </div>
-                                                }
-                                            >
-                                                <Accordion className="space-y-1 pl-1 md:pl-4">
-                                                    {PREDEFINED_SUBFOLDERS.map((mainFolder: string) => {
-                                                        const matchedMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === mainFolder);
-                                                        const isExams = mainFolder === '📝 Exámenes';
-                                                        const customSubfolders = isExams ? (cycle.active_subfolders || []).filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)).sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })) : [];
+                                        {courseCycles
+                                            .filter(c => activeCycleId === null || c.id === activeCycleId)
+                                            .map((cycle) => (
+                                                <AccordionItem 
+                                                    key={`${cycle.id}-${activeCycleId === cycle.id ? 'open' : 'closed'}`}
+                                                    defaultOpen={activeCycleId === cycle.id}
+                                                    title={
+                                                        <div className="flex items-center justify-between w-full">
+                                                            <span className="font-bold">📁 Ciclo {cycle.ciclo_name}</span>
+                                                            <Badge className="ml-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 font-black">
+                                                                {(cycleMaterialsMap.get(cycle.id) || []).length}
+                                                            </Badge>
+                                                        </div>
+                                                    }
+                                                >
+                                                    <Accordion className="space-y-1 pl-1 md:pl-4">
+                                                        {PREDEFINED_SUBFOLDERS.map((mainFolder: string) => {
+                                                            const matchedMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === mainFolder);
+                                                            const isExams = mainFolder === '📝 Exámenes';
+                                                            const customSubfolders = isExams 
+                                                                ? (cycle.active_subfolders || [])
+                                                                    .filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s) && !GENERAL_TIPOS.includes(s))
+                                                                    .sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })) 
+                                                                : [];
 
-                                                        let totalCount = matchedMats.length;
-                                                        if (isExams) {
-                                                            customSubfolders.forEach((sub: string) => {
-                                                                totalCount += (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === sub).length;
-                                                            });
-                                                        }
+                                                            let totalCount = matchedMats.length;
+                                                            if (isExams) {
+                                                                customSubfolders.forEach((sub: string) => {
+                                                                    totalCount += (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === sub).length;
+                                                                });
+                                                            }
 
-                                                        return (
-                                                            <AccordionItem key={mainFolder} variant="minimal" title={
-                                                                <div className="flex items-center justify-between w-full">
-                                                                    <span className="text-sm font-bold text-bb-text/90 tracking-tight">{mainFolder}</span>
-                                                                    <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/10 font-black text-[9px] py-0 px-1.5 h-5">
-                                                                        {totalCount}
-                                                                    </Badge>
-                                                                </div>
-                                                            }>
-                                                                {matchedMats.length > 0 && renderMaterialGrid(matchedMats)}
-                                                                {matchedMats.length === 0 && (!isExams || customSubfolders.length === 0) && (
-                                                                    <div className="flex flex-col items-center justify-center py-8 text-center opacity-40">
-                                                                        <FolderRoot className="w-8 h-8 mb-2 text-bb-text-secondary" />
-                                                                        <p className="text-xs text-bb-text-secondary font-medium">Vacío</p>
+                                                            return (
+                                                                <AccordionItem key={mainFolder} variant="minimal" title={
+                                                                    <div className="flex items-center justify-between w-full">
+                                                                        <span className="text-sm font-bold text-bb-text/90 tracking-tight">{mainFolder}</span>
+                                                                        <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/10 font-black text-[9px] py-0 px-1.5 h-5">
+                                                                            {totalCount}
+                                                                        </Badge>
                                                                     </div>
-                                                                )}
+                                                                }>
+                                                                    {matchedMats.length > 0 && renderMaterialGrid(matchedMats)}
+                                                                    {matchedMats.length === 0 && (!isExams || customSubfolders.length === 0) && (
+                                                                        <div className="flex flex-col items-center justify-center py-8 text-center opacity-40">
+                                                                            <FolderRoot className="w-8 h-8 mb-2 text-bb-text-secondary" />
+                                                                            <p className="text-xs text-bb-text-secondary font-medium">Vacío</p>
+                                                                        </div>
+                                                                    )}
 
-                                                                {isExams && customSubfolders.length > 0 && (
-                                                                    <div className="mt-2 border-l border-bb-border/30 pl-2 space-y-1">
-                                                                        <Accordion className="space-y-1">
-                                                                            {customSubfolders.map((sub: string) => {
-                                                                                const subMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === sub);
-                                                                                return (
-                                                                                    <AccordionItem key={sub} variant="ghost" title={
-                                                                                        <div className="flex items-center justify-between w-full">
-                                                                                            <span className="text-xs font-bold text-bb-text/70 uppercase tracking-tighter flex items-center gap-2">
-                                                                                                <span className="text-blue-500/50">↳</span> {sub}
-                                                                                            </span>
-                                                                                            <Badge className="ml-4 bg-teal-500/10 text-teal-400 border border-teal-500/10 font-black text-[8px] py-0 px-1.5 h-4">{subMats.length}</Badge>
-                                                                                        </div>
-                                                                                    }>
-                                                                                        {subMats.length > 0 ? renderMaterialGrid(subMats) : (
-                                                                                            <div className="text-center py-4 opacity-40 text-xs">Vacío</div>
-                                                                                        )}
-                                                                                    </AccordionItem>
-                                                                                )
-                                                                            })}
-                                                                        </Accordion>
-                                                                    </div>
-                                                                )}
+                                                                    {isExams && customSubfolders.length > 0 && (
+                                                                        <div className="mt-2 border-l border-bb-border/30 pl-2 space-y-1">
+                                                                            <Accordion className="space-y-1">
+                                                                                {customSubfolders.map((sub: string) => {
+                                                                                    const subMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === sub);
+                                                                                    return (
+                                                                                        <AccordionItem key={sub} variant="ghost" title={
+                                                                                            <div className="flex items-center justify-between w-full">
+                                                                                                <span className="text-xs font-bold text-bb-text/70 uppercase tracking-tighter flex items-center gap-2">
+                                                                                                    <span className="text-blue-500/50">↳</span> {sub}
+                                                                                                </span>
+                                                                                                <Badge className="ml-4 bg-teal-500/10 text-teal-400 border border-teal-500/10 font-black text-[8px] py-0 px-1.5 h-4">{subMats.length}</Badge>
+                                                                                            </div>
+                                                                                        }>
+                                                                                            {subMats.length > 0 ? renderMaterialGrid(subMats) : (
+                                                                                                <div className="text-center py-4 opacity-40 text-xs">Vacío</div>
+                                                                                            )}
+                                                                                        </AccordionItem>
+                                                                                    )
+                                                                                })}
+                                                                            </Accordion>
+                                                                        </div>
+                                                                    )}
 
-                                                                {isExams && currentUser && !isGuest && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
-                                                                    <div className="mt-4 flex justify-end">
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                setCycleToEdit(cycle);
-                                                                                setShowAddSubfolderModal(true);
-                                                                            }}
-                                                                            className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-bb-border/50 text-bb-text-secondary hover:text-white hover:bg-bb-card border border-transparent hover:border-bb-border h-9 px-4 active:scale-95 whitespace-nowrap"
-                                                                        >
-                                                                            <div className="flex items-center gap-2">
-                                                                                <FolderRoot className="w-3.5 h-3.5" />
-                                                                                + Evaluación (PC, Parcial...)
-                                                                            </div>
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-                                                            </AccordionItem>
-                                                        );
-                                                    })}
-                                                </Accordion>
-                                            </AccordionItem>
-                                        ))}
+                                                                    {isExams && currentUser && !isGuest && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                                                                        <div className="mt-4 flex justify-end">
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setCycleToEdit(cycle);
+                                                                                    setShowAddSubfolderModal(true);
+                                                                                }}
+                                                                                className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-bb-border/50 text-bb-text-secondary hover:text-white hover:bg-bb-card border border-transparent hover:border-bb-border h-9 px-4 active:scale-95 whitespace-nowrap"
+                                                                            >
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <FolderRoot className="w-3.5 h-3.5" />
+                                                                                    + Evaluación (PC, Parcial...)
+                                                                                </div>
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </AccordionItem>
+                                                            );
+                                                        })}
+                                                    </Accordion>
+                                                </AccordionItem>
+                                            ))}
 
                                         {/* Historical materials accordion */}
-                                        {historicalMaterials.length > 0 && (
+                                        {historicalMaterials.length > 0 && (activeCycleId === null || activeCycleId === 'historical') && (
                                             <AccordionItem 
-                                                key={`historical-${expandedCycleId === 'historical' ? 'open' : 'closed'}`}
-                                                defaultOpen={expandedCycleId === 'historical' || courseCycles.length === 0}
+                                                key={`historical-${activeCycleId === 'historical' ? 'open' : 'closed'}`}
+                                                defaultOpen={activeCycleId === 'historical' || courseCycles.length === 0}
                                                 title={
                                                     <div className="flex items-center justify-between w-full">
                                                         <span className="font-bold">📦 Archivos Históricos (Sin Clasificar)</span>
@@ -912,10 +1071,10 @@ export default function CourseDetailContent({
                                         )}
 
                                         {/* Global Cajón General accordion */}
-                                        {(cajonGeneralMaterials.length > 0 || (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin'))) && (
+                                        {(cajonGeneralMaterials.length > 0 || (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin'))) && (activeCycleId === null || activeCycleId === 'general') && (
                                             <AccordionItem
-                                                key={`general-${expandedCycleId === 'general' ? 'open' : 'closed'}`}
-                                                defaultOpen={expandedCycleId === 'general'}
+                                                key={`general-${activeCycleId === 'general' ? 'open' : 'closed'}`}
+                                                defaultOpen={activeCycleId === 'general'}
                                                 title={
                                                     <div className="flex items-center justify-between w-full">
                                                         <span className="font-bold flex items-center gap-2">🗂 Cajón General (Enlaces y Recursos)</span>
