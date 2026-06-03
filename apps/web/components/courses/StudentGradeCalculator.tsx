@@ -32,6 +32,98 @@ export interface GradingFormula {
   notes?: string;
 }
 
+// ─── Migrate old formulas ───────────────────────────────────────────────────
+export function migrateFormula(raw: any): GradingFormula {
+  if (!raw) return { version: 1, sections: [], passing_score: 11 };
+
+  // Check if sections already have max_pts. If sections already have max_pts, it's the new schema.
+  const isNewSchema = Array.isArray(raw.sections) && raw.sections.every((s: any) => s && s.max_pts !== undefined);
+  if (isNewSchema) {
+    return {
+      version: raw.version ?? 1,
+      sections: (raw.sections || []).map((s: any) => ({
+        id: s.id || Math.random().toString(36).slice(2, 9),
+        label: s.label || '',
+        type: s.type || 'standard',
+        max_pts: s.max_pts ?? 0,
+        description: s.description || '',
+        roundingRule: s.roundingRule || 'round',
+        components: (s.components || []).map((c: any) => ({
+          id: c.id || Math.random().toString(36).slice(2, 9),
+          label: c.label || '',
+          max_pts: c.max_pts ?? 0,
+          roundingRule: c.roundingRule || 'none',
+        })),
+      })),
+      passing_score: raw.passing_score ?? 11,
+      notes: raw.notes || '',
+    };
+  }
+
+  // Old schema migration
+  const rawSections = raw.sections || [];
+  const sumWeights = rawSections.reduce((sum: number, sec: any) => sum + (sec.weight ?? sec.max_pts ?? 0), 0);
+  const scale = sumWeights > 25 ? 20 / sumWeights : 1;
+
+  const sections: GradingSection[] = rawSections.map((s: any) => {
+    const sectionWeight = s.weight ?? s.max_pts ?? 0;
+    const max_pts = sectionWeight * scale;
+
+    // Detect if section is average (PC / TP / etc.)
+    const labelLower = (s.label || '').toLowerCase();
+    const hasPcComponent = s.components?.some((c: any) => c.type === 'PC' || (c.label || '').toLowerCase().includes('pc'));
+    const isAveraged =
+      hasPcComponent ||
+      labelLower.includes('práctica') ||
+      labelLower.includes('calificada') ||
+      labelLower.includes('pc') ||
+      labelLower.includes('trabajo') ||
+      labelLower.includes('tp') ||
+      labelLower.includes('taller') ||
+      labelLower.includes('laboratorio');
+
+    const sectionType = isAveraged ? 'average' : 'standard';
+
+    const components: GradeComponent[] = (s.components || []).map((c: any) => {
+      const compWeight = c.weight ?? c.max_pts ?? 0;
+      let compMax = 0;
+      if (sectionType === 'average') {
+        compMax = max_pts / (s.components?.length || 1);
+      } else {
+        if (sectionWeight > 0) {
+          compMax = (compWeight / sectionWeight) * max_pts;
+        } else {
+          compMax = max_pts / (s.components?.length || 1);
+        }
+      }
+
+      return {
+        id: c.id || Math.random().toString(36).slice(2, 9),
+        label: c.label || '',
+        max_pts: compMax,
+        roundingRule: c.roundingRule || 'none',
+      };
+    });
+
+    return {
+      id: s.id || Math.random().toString(36).slice(2, 9),
+      label: s.label || '',
+      type: sectionType,
+      max_pts,
+      roundingRule: s.roundingRule || 'round',
+      description: s.description || '',
+      components,
+    };
+  });
+
+  return {
+    version: raw.version ?? 1,
+    sections,
+    passing_score: raw.passing_score ?? 11,
+    notes: raw.notes || '',
+  };
+}
+
 // ─── Rounding helper ─────────────────────────────────────────────────────────
 function applyRound(val: number, rule: RoundingRule): number {
   if (rule === 'round') return Math.round(val);
@@ -41,16 +133,15 @@ function applyRound(val: number, rule: RoundingRule): number {
 
 // ─── Per-component contribution (pts earned) ──────────────────────────────────
 function compContribution(grade: number, maxPts: number): number {
-  // grade is 0-20, contribution is grade/20 * max_pts
   return (grade / 20) * maxPts;
 }
 
 // ─── Section contribution ─────────────────────────────────────────────────────
 interface SectionResult {
-  contribution: number | null; // pts earned towards final
-  exactAvg: number | null;     // for 'average' type only — raw avg before rounding
-  roundedAvg: number | null;   // for 'average' type only — after rounding
-  compContribs: Record<string, number | null>; // per component
+  contribution: number | null;
+  exactAvg: number | null;
+  roundedAvg: number | null;
+  compContribs: Record<string, number | null>;
 }
 
 function calcSection(
@@ -58,11 +149,12 @@ function calcSection(
   grades: Record<string, string>
 ): SectionResult {
   const compContribs: Record<string, number | null> = {};
+  const components = section.components || [];
+  const sectionMaxPts = section.max_pts ?? 0;
 
   if (section.type === 'average') {
-    // Average all entered grades (0-20 scale), then apply rounding, then multiply by max_pts/20
     const values: number[] = [];
-    for (const comp of section.components) {
+    for (const comp of components) {
       const raw = grades[comp.id];
       if (raw !== undefined && raw !== '') {
         const v = parseFloat(raw);
@@ -70,33 +162,30 @@ function calcSection(
       }
     }
     if (values.length === 0) {
-      section.components.forEach((c) => (compContribs[c.id] = null));
+      components.forEach((c) => (compContribs[c.id] = null));
       return { contribution: null, exactAvg: null, roundedAvg: null, compContribs };
     }
     const exactAvg = values.reduce((a, b) => a + b, 0) / values.length;
-    const roundedAvg = applyRound(exactAvg, section.roundingRule);
-    // contribution = roundedAvg / 20 * section.max_pts
-    const contribution = (roundedAvg / 20) * section.max_pts;
-    // per-component contribution is proportional to rounded average
-    for (const comp of section.components) {
+    const roundedAvg = applyRound(exactAvg, section.roundingRule || 'round');
+    const contribution = (roundedAvg / 20) * sectionMaxPts;
+    for (const comp of components) {
       const raw = grades[comp.id];
       compContribs[comp.id] =
         raw !== undefined && raw !== '' && !isNaN(parseFloat(raw))
-          ? (roundedAvg / 20) * (section.max_pts / section.components.length)
+          ? (roundedAvg / 20) * (sectionMaxPts / (components.length || 1))
           : null;
     }
     return { contribution, exactAvg, roundedAvg, compContribs };
   }
 
-  // standard: each component contributes independently via its own max_pts
   let total = 0;
   let hasAny = false;
-  for (const comp of section.components) {
+  for (const comp of components) {
     const raw = grades[comp.id];
     if (raw !== undefined && raw !== '') {
       const v = parseFloat(raw);
       if (!isNaN(v)) {
-        const contrib = compContribution(v, comp.max_pts);
+        const contrib = compContribution(v, comp.max_pts ?? 0);
         compContribs[comp.id] = contrib;
         total += contrib;
         hasAny = true;
@@ -159,7 +248,9 @@ export default function StudentGradeCalculator({ courseId, courseName, onClose }
         .select('formula_json')
         .eq('course_id', courseId)
         .maybeSingle();
-      if (data?.formula_json) setFormula(data.formula_json as GradingFormula);
+      if (data?.formula_json) {
+        setFormula(migrateFormula(data.formula_json));
+      }
       setLoading(false);
     })();
   }, [courseId]);
@@ -168,7 +259,7 @@ export default function StudentGradeCalculator({ courseId, courseName, onClose }
   const sectionResults = useMemo<Record<string, SectionResult>>(() => {
     if (!formula) return {};
     const res: Record<string, SectionResult> = {};
-    formula.sections.forEach((sec) => {
+    (formula.sections || []).forEach((sec) => {
       res[sec.id] = calcSection(sec, grades);
     });
     return res;
@@ -179,7 +270,7 @@ export default function StudentGradeCalculator({ courseId, courseName, onClose }
     if (!formula) return null;
     let total = 0;
     let hasAny = false;
-    for (const sec of formula.sections) {
+    for (const sec of (formula.sections || [])) {
       const r = sectionResults[sec.id];
       if (r?.contribution !== null && r?.contribution !== undefined) {
         total += r.contribution;
@@ -189,7 +280,7 @@ export default function StudentGradeCalculator({ courseId, courseName, onClose }
     return hasAny ? total : null;
   }, [formula, sectionResults]);
 
-  const allSectionMax = formula?.sections.reduce((s, sec) => s + sec.max_pts, 0) ?? 20;
+  const allSectionMax = formula?.sections?.reduce((s, sec) => s + (sec.max_pts ?? 0), 0) ?? 20;
   const passed = finalScore !== null && finalScore >= passing;
   const lacking = finalScore !== null && !passed ? passing - finalScore : 0;
 
@@ -339,10 +430,10 @@ export default function StudentGradeCalculator({ courseId, courseName, onClose }
 
               {/* Components grid */}
               <div className={`grid ${cols} gap-px bg-bb-border`}>
-                {section.components.map((comp) => {
+                {(section.components || []).map((comp) => {
                   const compMax = isAvg
-                    ? section.max_pts / section.components.length
-                    : comp.max_pts;
+                    ? (section.max_pts ?? 0) / (section.components?.length || 1)
+                    : (comp.max_pts ?? 0);
                   const grade = grades[comp.id];
                   const gradeVal = grade !== undefined && grade !== '' ? parseFloat(grade) : null;
                   const contrib = result?.compContribs[comp.id] ?? null;
@@ -353,7 +444,9 @@ export default function StudentGradeCalculator({ courseId, courseName, onClose }
                       {/* Label */}
                       <p className="text-xs font-semibold text-bb-text mb-2">
                         {comp.label}
-                        <span className="text-bb-text-secondary font-normal ml-1">(máx {compMax.toFixed(0)} pts)</span>
+                        <span className="text-bb-text-secondary font-normal ml-1">
+                          (máx {compMax % 1 === 0 ? compMax.toFixed(0) : compMax.toFixed(2)} pts)
+                        </span>
                       </p>
 
                       {/* Input — mimics "0 – 20" style */}

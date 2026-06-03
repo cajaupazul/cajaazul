@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { GradingFormula, GradingSection, GradeComponent, RoundingRule } from './StudentGradeCalculator';
+import { migrateFormula } from './StudentGradeCalculator';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 function uid() { return Math.random().toString(36).slice(2, 9); }
@@ -114,10 +115,10 @@ export default function AdminGradingFormulaEditor({ courseId, courseName, onClos
         .maybeSingle();
 
       if (data?.formula_json) {
-        const f = data.formula_json as GradingFormula;
+        const f = migrateFormula(data.formula_json);
         setFormula(f);
         const exp: Record<string, boolean> = {};
-        f.sections?.forEach((s) => (exp[s.id] = true));
+        (f.sections || []).forEach((s) => (exp[s.id] = true));
         setExpandedSections(exp);
         setHasExisting(true);
         setStep('edit');
@@ -356,9 +357,9 @@ export default function AdminGradingFormulaEditor({ courseId, courseName, onClos
         </div>
 
         {/* Sections */}
-        {formula.sections.map((section, sIdx) => {
-          const compSum = section.components.reduce((s, c) => s + c.max_pts, 0);
-          const compSumOk = section.type === 'average' || Math.abs(compSum - section.max_pts) < 0.01;
+        {(formula.sections || []).map((section, sIdx) => {
+          const compSum = (section.components || []).reduce((s, c) => s + (c.max_pts ?? 0), 0);
+          const compSumOk = section.type === 'average' || Math.abs(compSum - (section.max_pts ?? 0)) < 0.01;
 
           return (
             <div key={section.id} className="border border-bb-border rounded-2xl overflow-hidden bg-bb-card">
@@ -471,7 +472,7 @@ export default function AdminGradingFormulaEditor({ courseId, courseName, onClos
                       )}
 
                       {/* Component rows */}
-                      {section.components.map((comp) => (
+                      {(section.components || []).map((comp) => (
                         <div key={comp.id} className="flex items-center gap-2 bg-bb-card border border-bb-border rounded-xl p-2.5">
                           <input
                             value={comp.label}
