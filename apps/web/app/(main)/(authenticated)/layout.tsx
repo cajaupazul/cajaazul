@@ -30,7 +30,8 @@ import {
   Wrench,
   Eye,
   EyeOff,
-  Library
+  Library,
+  Calculator
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -213,6 +214,7 @@ export default function AuthenticatedLayout({
         icon: ShieldCheck,
         children: [
           { label: 'Flujogramas', href: '/admin/flowcharts/new', icon: Layers },
+          { label: 'Calculadoras', href: '/admin/calculators', icon: Calculator },
         ]
       },
       {

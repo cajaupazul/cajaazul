@@ -18,6 +18,8 @@ import MaterialCard from './MaterialCard';
 import { Accordion, AccordionItem } from '@/components/ui/accordion';
 import { Autocomplete } from '@/components/ui/Autocomplete';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import StudentGradeCalculator from './StudentGradeCalculator';
+import AdminGradingFormulaEditor from './AdminGradingFormulaEditor';
 
 const PREDEFINED_SUBFOLDERS = [
     '📖 Sílabo y Cronograma',
@@ -73,6 +75,7 @@ export default function CourseDetailContent({
     const [activeSubfolder, setActiveSubfolder] = useState<string | null>(null);
     const [showAdminManager, setShowAdminManager] = useState(false);
     const [showCalculatorModal, setShowCalculatorModal] = useState(false);
+    const [showAdminCalculatorModal, setShowAdminCalculatorModal] = useState(false);
 
     // Mass Move State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -605,7 +608,7 @@ export default function CourseDetailContent({
                                         placeholder="Buscar por profesor..."
                                         className="flex-1 sm:w-80"
                                     />
-                                    {/* V6.0: Calculadora integrada junto al buscador (visible en todo dispositivo) */}
+                                    {/* V7.0: Calculadora integrada junto al buscador */}
                                     <button
                                         onClick={() => setShowCalculatorModal(true)}
                                         className="p-3 bg-bb-darker/50 border border-bb-border rounded-xl text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 h-11 transition-all active:scale-95 flex items-center justify-center"
@@ -613,6 +616,17 @@ export default function CourseDetailContent({
                                     >
                                         <Calculator className="w-5 h-5 flex-shrink-0" />
                                     </button>
+                                    {/* Admin: Editar fórmula de calificación */}
+                                    {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+                                        <button
+                                            onClick={() => setShowAdminCalculatorModal(true)}
+                                            className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-400/15 h-11 transition-all active:scale-95 flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap px-3"
+                                            title="Editar fórmula de calificación (Admin)"
+                                        >
+                                            <Pencil className="w-3.5 h-3.5 flex-shrink-0" />
+                                            <span className="hidden sm:inline">Editar Fórmula</span>
+                                        </button>
+                                    )}
                                 </div>
                                 {selectedProfessorId !== 'all' && (
                                     <Button
@@ -1459,10 +1473,10 @@ export default function CourseDetailContent({
                 )}
             </AnimatePresence>
 
-            {/* V6.0: Modal de Calculadora de Notas */}
+            {/* V7.0: Modal de Calculadora de Notas — dinámica */}
             <AnimatePresence>
                 {showCalculatorModal && (
-                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-6">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -1471,25 +1485,46 @@ export default function CourseDetailContent({
                             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                         />
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative bg-bb-card border border-bb-border p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center"
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative bg-bb-card border border-bb-border rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+                            style={{ maxHeight: '90vh' }}
                         >
-                            <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/20">
-                                <Calculator className="w-10 h-10 text-blue-400" />
-                            </div>
-                            <h3 className="text-2xl font-bold text-bb-text mb-2 tracking-tight">Calculadora de Notas</h3>
-                            <p className="text-bb-text-secondary text-sm mb-8 leading-relaxed">
-                                Esta herramienta te permitirá simular tus promedios de forma automática basándose en el sílabo del curso. <br /><br />
-                                <span className="text-blue-400 font-bold uppercase tracking-widest text-[10px]">¡Lanzamiento próximamente!</span>
-                            </p>
-                            <Button
-                                onClick={() => setShowCalculatorModal(false)}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
-                            >
-                                Entendido
-                            </Button>
+                            <StudentGradeCalculator
+                                courseId={course.id}
+                                courseName={course.nombre}
+                                onClose={() => setShowCalculatorModal(false)}
+                            />
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* V7.0: Admin Formula Editor Modal */}
+            <AnimatePresence>
+                {showAdminCalculatorModal && (
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowAdminCalculatorModal(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative bg-bb-card border border-bb-border rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
+                            style={{ maxHeight: '92vh' }}
+                        >
+                            <AdminGradingFormulaEditor
+                                courseId={course.id}
+                                courseName={course.nombre}
+                                onClose={() => setShowAdminCalculatorModal(false)}
+                                onSaved={() => setShowAdminCalculatorModal(false)}
+                            />
                         </motion.div>
                     </div>
                 )}
