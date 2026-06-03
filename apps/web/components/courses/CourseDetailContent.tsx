@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2, Pencil, Upload, List, Calculator, CheckSquare } from 'lucide-react';
+import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2, Pencil, Upload, List, Calculator, CheckSquare, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import { extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
@@ -18,6 +18,15 @@ import MaterialCard from './MaterialCard';
 import { Accordion, AccordionItem } from '@/components/ui/accordion';
 import { Autocomplete } from '@/components/ui/Autocomplete';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const PREDEFINED_SUBFOLDERS = [
+    '📖 Sílabo y Cronograma',
+    '📝 Exámenes',
+    '📊 Presentaciones y Diapositivas',
+];
+
+// These types go to the global Cajón General, not per-cycle folders
+const GENERAL_TIPOS = ['🔗 Enlaces Útiles', '📚 Otros Recursos', 'enlace'];
 
 interface CourseDetailContentProps {
     course: Course;
@@ -59,6 +68,8 @@ export default function CourseDetailContent({
     const [viewingFile, setViewingFile] = useState<{ path: string; name: string; useAdvanced?: boolean } | null>(null);
     const [selectedProfessorId, setSelectedProfessorId] = useState<string>(searchParams.get('professor') || 'all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [typeFilter, setTypeFilter] = useState<string | null>(null);
+    const [expandedCycleId, setExpandedCycleId] = useState<string | null>(null);
     const [showAdminManager, setShowAdminManager] = useState(false);
     const [showCalculatorModal, setShowCalculatorModal] = useState(false);
 
@@ -216,10 +227,8 @@ export default function CourseDetailContent({
         try {
             setIsMovingFiles(true);
             const targetCycleUuid = targetCycleId === 'historical' ? null : targetCycleId;
-            const targetTipo = targetCycleId === 'historical' ? targetSubfolder /* Actually for historical it keeps original or we should just reset? Wait, let's keep original if subfolder is empty */ : targetSubfolder;
+            const targetTipo = targetCycleId === 'historical' ? targetSubfolder : targetSubfolder;
 
-            // En caso de Archivos Históricos, user might want to let it keep current tipo, so we just set targetCycleUuid to null. 
-            // We'll update cycle_id. If targetCycleId != 'historical', we also update tipo.
             const updatePayload: any = { cycle_id: targetCycleUuid };
             if (targetCycleUuid) {
                 updatePayload.tipo = targetTipo;
@@ -254,14 +263,6 @@ export default function CourseDetailContent({
             setIsMovingFiles(false);
         }
     };
-
-    const PREDEFINED_SUBFOLDERS = [
-        '📖 Sílabo y Cronograma',
-        '📝 Exámenes',
-        '📊 Presentaciones y Diapositivas',
-        '🔗 Enlaces Útiles',
-        '📚 Otros Recursos'
-    ];
 
     const handleAddSubfolder = async () => {
         if (!selectedSubfolderToAdd || !cycleToEdit) {
@@ -300,12 +301,9 @@ export default function CourseDetailContent({
         }
     };
 
-
-
     const handleEditCourse = () => {
         router.push(`/dashboard/courses/new?id=${course.id}`);
     };
-
 
     // Base materials list filtered ONLY by professor (for counts)
     const materialsForCounts = useMemo(() => {
@@ -317,128 +315,86 @@ export default function CourseDetailContent({
         return results;
     }, [materials, selectedProfessorId]);
 
-    // Derived lists for COUNTS (stable across tabs)
-    const syllabusCount = useMemo(() => {
-        return materialsForCounts.filter(m =>
-            m.tipo?.toLowerCase() === 'syllabus' ||
-            (m.titulo || '').toLowerCase().includes('silabo') ||
-            (m.titulo || '').toLowerCase().includes('sílabo')
-        ).length;
-    }, [materialsForCounts]);
-
-    const presentacionesCount = useMemo(() => {
-        return materialsForCounts.filter(m =>
-            m.tipo?.toLowerCase().includes('ppt') || m.tipo?.toLowerCase().includes('presentacion')
-        ).length;
-    }, [materialsForCounts]);
-
-    const examenesCount = useMemo(() => {
-        return materialsForCounts.filter(m => m.tipo?.toLowerCase().includes('examen')).length;
-    }, [materialsForCounts]);
-
-    const enlacesCount = useMemo(() => {
-        return materialsForCounts.filter(m => m.tipo === 'enlace').length;
-    }, [materialsForCounts]);
-
-    const otrosCount = useMemo(() => {
-        return materialsForCounts.filter(m =>
-            !m.tipo?.toLowerCase().includes('ppt') &&
-            !m.tipo?.toLowerCase().includes('presentacion') &&
-            !m.tipo?.toLowerCase().includes('examen') &&
-            m.tipo !== 'syllabus' &&
-            m.tipo !== 'enlace'
-        ).length;
-    }, [materialsForCounts]);
-
     const handleToggleSelect = (id: string) => {
         setSelectedMaterialIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     };
 
-    const renderMaterialGrid = (mats: any[]) => {
+    // All unique evaluation sub-folder types across all cycles (for filter chips)
+    const allEvaluationTypes = useMemo(() => {
+        const types = new Set<string>();
+        // Add predefined evaluation types to make sure they are always available if needed, or only if they exist in materials or active_subfolders
+        courseCycles.forEach(cycle => {
+            (cycle.active_subfolders || [])
+                .forEach((s: string) => {
+                    if (!PREDEFINED_SUBFOLDERS.includes(s) && !GENERAL_TIPOS.includes(s)) {
+                        types.add(s);
+                    }
+                });
+        });
+        // Also collect from materials directly to ensure any uploaded materials with these types are included
+        materials.forEach(m => {
+            if (m.tipo && !PREDEFINED_SUBFOLDERS.includes(m.tipo) && !GENERAL_TIPOS.includes(m.tipo)) {
+                types.add(m.tipo);
+            }
+        });
+        
+        // Let's sort them logically
+        const order = ['PC 1', 'PC 2', 'PC 3', 'PC 4', 'PC 5', 'Examen Parcial', 'Examen Final', 'Examen Sustitutorio'];
+        return Array.from(types).sort((a, b) => {
+            const idxA = order.indexOf(a);
+            const idxB = order.indexOf(b);
+            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+            if (idxA !== -1) return -1;
+            if (idxB !== -1) return 1;
+            return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+        });
+    }, [courseCycles, materials]);
+
+    // Extracted material click handler (shared across render helpers)
+    const handleMaterialClick = async (material: any) => {
+        if (material.tipo?.toLowerCase() === 'enlace') {
+            window.open(material.url_archivo, '_blank');
+            return;
+        }
+        const isExcel = material.url_archivo.toLowerCase().match(/\.(xls|xlsx|csv)$/i);
+        if (isExcel) {
+            try {
+                const path = extractPathFromUrl(material.url_archivo, 'course-materials');
+                const blob = await getFileFromR2('course-materials', path);
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const extension = material.url_archivo.split('.').pop();
+                a.href = url;
+                a.download = `${material.titulo}.${extension}`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => { window.URL.revokeObjectURL(url); document.body.removeChild(a); }, 100);
+            } catch (err: any) {
+                console.error('Error al descargar Excel:', err);
+                alert('Error al descargar el archivo: ' + err.message);
+            }
+            return;
+        }
+        setViewingFile({ path: material.url_archivo, name: material.titulo, useAdvanced: material.use_advanced_viewer });
+    };
+
+    // Always renders materials in list layout (used for filter results and cajón general)
+    const renderFilteredList = (mats: any[]) => {
         if (mats.length === 0) {
             return (
-                <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
-                    <FolderRoot className="w-12 h-12 mb-3 text-bb-text-secondary" />
-                    <p className="text-bb-text-secondary font-medium">Aún no hay materiales en esta carpeta</p>
+                <div className="flex flex-col items-center justify-center py-8 text-center opacity-40">
+                    <FolderRoot className="w-8 h-8 mb-2 text-bb-text-secondary" />
+                    <p className="text-xs text-bb-text-secondary font-medium">Vacío</p>
                 </div>
             );
         }
-
-        const handleMaterialClick = async (material: any) => {
-            if (material.tipo?.toLowerCase() === 'enlace') {
-                window.open(material.url_archivo, '_blank');
-                return;
-            }
-
-            const isExcel = material.url_archivo.toLowerCase().match(/\.(xls|xlsx|csv)$/i);
-            if (isExcel) {
-                try {
-                    // Start download process
-                    const path = extractPathFromUrl(material.url_archivo, 'course-materials');
-                    const blob = await getFileFromR2('course-materials', path);
-                    
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    const extension = material.url_archivo.split('.').pop();
-                    a.href = url;
-                    a.download = `${material.titulo}.${extension}`;
-                    document.body.appendChild(a);
-                    a.click();
-                    
-                    // Cleanup
-                    setTimeout(() => {
-                        window.URL.revokeObjectURL(url);
-                        document.body.removeChild(a);
-                    }, 100);
-                } catch (err: any) {
-                    console.error('Error al descargar Excel:', err);
-                    alert('Error al descargar el archivo: ' + err.message);
-                }
-                return;
-            }
-
-            // Normal file (PDF, PPTX, Docx, Image) -> open in SecureFileViewer
-            setViewingFile({
-                path: material.url_archivo,
-                name: material.titulo,
-                useAdvanced: material.use_advanced_viewer
-            });
-        };
-
-        if (viewMode === 'list') {
-            return (
-                <div className="space-y-4">
-                    {mats.map((material) => (
-                        <MaterialCard
-                            key={material.id}
-                            material={material}
-                            viewMode="list"
-                            isSelectionMode={isSelectionMode}
-                            isSelected={selectedMaterialIds.includes(material.id)}
-                            onSelect={() => handleToggleSelect(material.id)}
-                            onClick={() => handleMaterialClick(material)}
-                            canDelete={
-                                !!currentUser && (
-                                    (currentUser.role === 'admin' || currentUser.role === 'superadmin') ||
-                                    (material.user_id === currentUser.id && (new Date().getTime() - new Date(material.created_at).getTime()) / (1000 * 60 * 60) < 24)
-                                )
-                            }
-                            onDelete={() => handleDeleteMaterial(material)}
-                        />
-                    ))}
-                </div>
-            );
-        }
-
         return (
-            <div className={`grid ${viewMode === 'grid' 
-                ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4' 
-                : 'grid-cols-1 gap-1 sm:gap-2'}`}>
+            <div className="space-y-4">
                 {mats.map((material) => (
                     <MaterialCard
                         key={material.id}
                         material={material}
-                        viewMode={viewMode}
+                        viewMode="list"
                         isSelectionMode={isSelectionMode}
                         isSelected={selectedMaterialIds.includes(material.id)}
                         onSelect={() => handleToggleSelect(material.id)}
@@ -456,37 +412,76 @@ export default function CourseDetailContent({
         );
     };
 
-        const categories = [
+    // In grid mode, files are hidden — folder tiles are shown by the parent
+    const renderMaterialGrid = (mats: any[]) => {
+        if (viewMode === 'grid') return null;
+        return renderFilteredList(mats);
+    };
+
+    // FolderCard tile for grid view
+    const FolderCard = ({ name, count, onClick }: { name: string; count: number; onClick?: () => void }) => (
+        <button
+            onClick={onClick}
+            className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-bb-darker/55 border border-bb-border/30 rounded-2xl hover:border-blue-500/50 hover:bg-bb-card/90 transition-all active:scale-95 text-center group w-full shadow-md"
+        >
+            <div className="relative">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" className="w-full h-full text-yellow-500 group-hover:text-yellow-400 transition-colors drop-shadow-sm" fill="currentColor">
+                        <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+                    </svg>
+                </div>
+                {count > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none border border-bb-dark">
+                        {count > 99 ? '99+' : count}
+                    </span>
+                )}
+            </div>
+            <span className="text-[11px] sm:text-xs font-bold text-bb-text/90 leading-tight line-clamp-2 w-full uppercase tracking-tighter">
+                {name}
+            </span>
+        </button>
+    );
+
+    // Historical materials — excluding general resources (enlaces/otros)
+    const historicalMaterials = useMemo(() => {
+        return materialsForCounts.filter(m => !m.cycle_id && !GENERAL_TIPOS.includes(m.tipo) && m.tipo?.toLowerCase() !== 'enlace');
+    }, [materialsForCounts]);
+
+    const historicalCategories = useMemo(() => {
+        const cats = [
             { id: 'silabo', label: '📖 Sílabo y Cronograma', items: [] as any[] },
             { id: 'examenes', label: '📝 Exámenes', items: [] as any[] },
             { id: 'presentaciones', label: '📊 Presentaciones y Diapositivas', items: [] as any[] },
-            { id: 'enlaces', label: '🔗 Enlaces Útiles', items: [] as any[] },
-            { id: 'otros', label: '📚 Otros Recursos', items: [] as any[] },
         ];
-
-        // Archivos Históricos (sin ciclo)
-        const historicalMaterials = materialsForCounts.filter(m => !m.cycle_id);
         historicalMaterials.forEach(m => {
             if (m.tipo?.toLowerCase() === 'syllabus' || (m.titulo || '').toLowerCase().includes('silabo') || (m.titulo || '').toLowerCase().includes('sílabo')) {
-                categories[0].items.push(m);
+                cats[0].items.push(m);
             } else if (m.tipo?.toLowerCase().includes('examen')) {
-                categories[1].items.push(m);
+                cats[1].items.push(m);
             } else if (m.tipo?.toLowerCase().includes('ppt') || m.tipo?.toLowerCase().includes('presentacion')) {
-                categories[2].items.push(m);
-            } else if (m.tipo === 'enlace') {
-                categories[3].items.push(m);
-            } else {
-                categories[4].items.push(m);
+                cats[2].items.push(m);
             }
         });
+        return cats;
+    }, [historicalMaterials]);
 
-        // Archivos en Ciclos
-        const cycleMaterialsMap = new Map<string, any[]>();
+    // Cajón General: all links and other resources from ALL materials (any cycle or historical)
+    const cajonGeneralMaterials = useMemo(() => {
+        return materialsForCounts.filter(m =>
+            GENERAL_TIPOS.includes(m.tipo) || m.tipo?.toLowerCase() === 'enlace'
+        );
+    }, [materialsForCounts]);
+
+    // Materials grouped by cycle
+    const cycleMaterialsMap = useMemo(() => {
+        const map = new Map<string, any[]>();
         materialsForCounts.filter(m => !!m.cycle_id).forEach(m => {
-            const arr = cycleMaterialsMap.get(m.cycle_id) || [];
+            const arr = map.get(m.cycle_id) || [];
             arr.push(m);
-            cycleMaterialsMap.set(m.cycle_id, arr);
+            map.set(m.cycle_id, arr);
         });
+        return map;
+    }, [materialsForCounts]);
 
     return (
         <div className="flex-1 overflow-auto bg-bb-dark">
@@ -588,7 +583,7 @@ export default function CourseDetailContent({
                         </div>
 
                         <div className="w-full">
-                            <div className="flex flex-col sm:flex-row items-stretch justify-between gap-4 mb-6">
+                            <div className="flex flex-col sm:flex-row items-stretch justify-between gap-4 mb-4">
                                 <div className="flex-1 flex flex-col justify-center">
                                     <h3 className="text-xl md:text-2xl font-black text-bb-text tracking-tight uppercase flex items-center gap-3">
                                         <FolderRoot className="w-6 h-6 text-blue-500" />
@@ -655,131 +650,286 @@ export default function CourseDetailContent({
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                <Accordion>
-                                    
-                                    {/* Mapped Explicit Course Cycles */}
-                                    {courseCycles.map((cycle) => (
-                                        <AccordionItem 
-                                            key={cycle.id || cycle.ciclo_name}
-                                            title={
-                                                <div className="flex items-center justify-between w-full">
-                                                    <span>📁 Ciclo {cycle.ciclo_name}</span>
-                                                    <Badge className="ml-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 font-black">
-                                                        {(cycleMaterialsMap.get(cycle.id) || []).length}
-                                                    </Badge>
-                                                </div>
-                                            }
+                            {/* Evaluation Filter Chips */}
+                            {allEvaluationTypes.length > 0 && (
+                                <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+                                    <button
+                                        onClick={() => setTypeFilter(null)}
+                                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap active:scale-95 ${
+                                            typeFilter === null
+                                                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10'
+                                                : 'bg-bb-darker/50 hover:bg-bb-card border border-bb-border/30 text-bb-text-secondary hover:text-white'
+                                        }`}
+                                    >
+                                        Todos
+                                    </button>
+                                    {allEvaluationTypes.map((type) => (
+                                        <button
+                                            key={type}
+                                            onClick={() => setTypeFilter(type)}
+                                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap active:scale-95 ${
+                                                typeFilter === type
+                                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10'
+                                                    : 'bg-bb-darker/50 hover:bg-bb-card border border-bb-border/30 text-bb-text-secondary hover:text-white'
+                                            }`}
                                         >
-                                            {/* V6.1: Nested mapped Subfolders permanently rendered */}
-                                            <Accordion className="space-y-1 pl-1 md:pl-4">
-                                                {PREDEFINED_SUBFOLDERS.map((mainFolder: string) => {
-                                                    const matchedMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === mainFolder);
-                                                    const isExams = mainFolder === '📝 Exámenes';
-                                                    const customSubfolders = isExams ? (cycle.active_subfolders || []).filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)).sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })) : [];
-
-                                                    let totalCount = matchedMats.length;
-                                                    if (isExams) {
-                                                        customSubfolders.forEach((sub: string) => {
-                                                            totalCount += (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === sub).length;
-                                                        });
-                                                    }
-
-                                                    return (
-                                                        <AccordionItem key={mainFolder} variant="minimal" title={
-                                                            <div className="flex items-center justify-between w-full">
-                                                                <span className="text-sm font-bold text-bb-text/90 tracking-tight">{mainFolder}</span>
-                                                                <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/10 font-black text-[9px] py-0 px-1.5 h-5">
-                                                                    {totalCount}
-                                                                </Badge>
-                                                            </div>
-                                                        }>
-                                                            {matchedMats.length > 0 && renderMaterialGrid(matchedMats)}
-                                                            {matchedMats.length === 0 && (!isExams || customSubfolders.length === 0) && (
-                                                                <div className="flex flex-col items-center justify-center py-8 text-center opacity-40">
-                                                                    <FolderRoot className="w-8 h-8 mb-2 text-bb-text-secondary" />
-                                                                    <p className="text-xs text-bb-text-secondary font-medium">Vacío</p>
-                                                                </div>
-                                                            )}
-
-                                                            {isExams && customSubfolders.length > 0 && (
-                                                                <div className="mt-2 border-l border-bb-border/30 pl-2 space-y-1">
-                                                                     <Accordion className="space-y-1">
-                                                                        {customSubfolders.map((sub: string) => {
-                                                                            const subMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === sub);
-                                                                            return (
-                                                                                <AccordionItem key={sub} variant="ghost" title={
-                                                                                    <div className="flex items-center justify-between w-full">
-                                                                                        <span className="text-xs font-bold text-bb-text/70 uppercase tracking-tighter flex items-center gap-2">
-                                                                                            <span className="text-blue-500/50">↳</span> {sub}
-                                                                                        </span>
-                                                                                        <Badge className="ml-4 bg-teal-500/10 text-teal-400 border border-teal-500/10 font-black text-[8px] py-0 px-1.5 h-4">{subMats.length}</Badge>
-                                                                                    </div>
-                                                                                }>
-                                                                                    {subMats.length > 0 ? renderMaterialGrid(subMats) : (
-                                                                                        <div className="text-center py-4 opacity-40 text-xs">Vacío</div>
-                                                                                    )}
-                                                                                </AccordionItem>
-                                                                            )
-                                                                        })}
-                                                                     </Accordion>
-                                                                </div>
-                                                            )}
-
-                                                            {isExams && currentUser && !isGuest && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
-                                                                <div className="mt-4 flex justify-end">
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setCycleToEdit(cycle);
-                                                                            setShowAddSubfolderModal(true);
-                                                                        }}
-                                                                        className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-bb-border/50 text-bb-text-secondary hover:text-white hover:bg-bb-card border border-transparent hover:border-bb-border h-9 px-4 active:scale-95 whitespace-nowrap"
-                                                                    >
-                                                                        <div className="flex items-center gap-2">
-                                                                            <FolderRoot className="w-3.5 h-3.5" />
-                                                                            + Evaluación (PC, Parcial...)
-                                                                        </div>
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                        </AccordionItem>
-                                                    );
-                                                })}
-                                            </Accordion>
-                                        </AccordionItem>
+                                            {type}
+                                        </button>
                                     ))}
+                                </div>
+                            )}
 
-                                    <AccordionItem title={
-                                        <div className="flex items-center justify-between w-full">
-                                            <span>📦 Archivos Históricos (Sin Clasificar)</span>
-                                            <Badge className="ml-4 bg-bb-dark border border-bb-border text-bb-text-secondary font-black">
-                                                {historicalMaterials.length}
-                                            </Badge>
+                            <div className="space-y-4">
+                                {typeFilter !== null ? (
+                                    /* Flat view when typeFilter is selected */
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between border-b border-bb-border/35 pb-2">
+                                            <span className="text-sm font-bold text-blue-400 uppercase tracking-wider">
+                                                Filtro Activo: {typeFilter}
+                                            </span>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setTypeFilter(null)}
+                                                className="text-xs text-bb-text-secondary hover:text-white h-7 px-2"
+                                            >
+                                                Limpiar Filtro
+                                            </Button>
                                         </div>
-                                    } defaultOpen={courseCycles.length === 0}>
-                                        
-                                        <Accordion className="space-y-1">
-                                            {categories.map((cat) => (
-                                                <AccordionItem 
-                                                    key={cat.id} 
-                                                    variant="minimal"
-                                                    title={
-                                                        <div className="flex items-center justify-between w-full">
-                                                            <span className="text-sm font-bold text-bb-text/90 tracking-tight">{cat.label}</span>
-                                                            <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/10 font-black text-[9px] py-0 px-1.5 h-5">
-                                                                {cat.items.length}
-                                                            </Badge>
-                                                        </div>
-                                                    } 
-                                                    defaultOpen={cat.id === 'silabo' && courseCycles.length === 0}
-                                                >
-                                                    {renderMaterialGrid(cat.items)}
-                                                </AccordionItem>
-                                            ))}
-                                        </Accordion>
+                                        {(() => {
+                                            let hasResults = false;
+                                            const renderedCycles = courseCycles.map((cycle) => {
+                                                const cycleMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === typeFilter);
+                                                if (cycleMats.length === 0) return null;
+                                                hasResults = true;
+                                                return (
+                                                    <div key={cycle.id} className="bg-bb-card/40 border border-bb-border/30 rounded-2xl p-4 sm:p-5">
+                                                        <h4 className="text-sm font-black text-bb-text mb-3 uppercase tracking-wider flex items-center gap-2">
+                                                            <span className="w-1.5 h-3 bg-blue-500 rounded-full"></span>
+                                                            Ciclo {cycle.ciclo_name}
+                                                        </h4>
+                                                        {renderFilteredList(cycleMats)}
+                                                    </div>
+                                                );
+                                            });
 
-                                    </AccordionItem>
-                                </Accordion>
+                                            const histMats = historicalMaterials.filter(m => m.tipo === typeFilter);
+                                            const renderedHist = histMats.length > 0 ? (() => {
+                                                hasResults = true;
+                                                return (
+                                                    <div className="bg-bb-card/40 border border-bb-border/30 rounded-2xl p-4 sm:p-5">
+                                                        <h4 className="text-sm font-black text-bb-text mb-3 uppercase tracking-wider flex items-center gap-2">
+                                                            <span className="w-1.5 h-3 bg-teal-500 rounded-full"></span>
+                                                            Archivos Históricos
+                                                        </h4>
+                                                        {renderFilteredList(histMats)}
+                                                    </div>
+                                                );
+                                            })() : null;
+
+                                            if (!hasResults) {
+                                                return (
+                                                    <div className="flex flex-col items-center justify-center py-16 bg-bb-card/25 border border-bb-border/20 rounded-2xl text-center opacity-50">
+                                                        <FolderRoot className="w-10 h-10 mb-3 text-bb-text-secondary animate-pulse" />
+                                                        <p className="text-sm text-bb-text-secondary font-medium">No se encontraron materiales de tipo "{typeFilter}"</p>
+                                                    </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <div className="space-y-4">
+                                                    {renderedCycles}
+                                                    {renderedHist}
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                ) : viewMode === 'grid' ? (
+                                    /* Grid mode: Only FolderCard tiles */
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+                                        {courseCycles.map((cycle) => (
+                                            <FolderCard
+                                                key={cycle.id}
+                                                name={`Ciclo ${cycle.ciclo_name}`}
+                                                count={(cycleMaterialsMap.get(cycle.id) || []).length}
+                                                onClick={() => {
+                                                    setExpandedCycleId(cycle.id);
+                                                    setViewMode('list');
+                                                }}
+                                            />
+                                        ))}
+
+                                        {historicalMaterials.length > 0 && (
+                                            <FolderCard
+                                                name="Archivos Históricos"
+                                                count={historicalMaterials.length}
+                                                onClick={() => {
+                                                    setExpandedCycleId('historical');
+                                                    setViewMode('list');
+                                                }}
+                                            />
+                                        )}
+
+                                        {cajonGeneralMaterials.length > 0 && (
+                                            <FolderCard
+                                                name="Cajón General"
+                                                count={cajonGeneralMaterials.length}
+                                                onClick={() => {
+                                                    setExpandedCycleId('general');
+                                                    setViewMode('list');
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                ) : (
+                                    /* List mode: Traditional Accordion view */
+                                    <Accordion>
+                                        {/* Mapped Explicit Course Cycles */}
+                                        {courseCycles.map((cycle) => (
+                                            <AccordionItem 
+                                                key={`${cycle.id}-${expandedCycleId === cycle.id ? 'open' : 'closed'}`}
+                                                defaultOpen={expandedCycleId === cycle.id}
+                                                title={
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span className="font-bold">📁 Ciclo {cycle.ciclo_name}</span>
+                                                        <Badge className="ml-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 font-black">
+                                                            {(cycleMaterialsMap.get(cycle.id) || []).length}
+                                                        </Badge>
+                                                    </div>
+                                                }
+                                            >
+                                                <Accordion className="space-y-1 pl-1 md:pl-4">
+                                                    {PREDEFINED_SUBFOLDERS.map((mainFolder: string) => {
+                                                        const matchedMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === mainFolder);
+                                                        const isExams = mainFolder === '📝 Exámenes';
+                                                        const customSubfolders = isExams ? (cycle.active_subfolders || []).filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)).sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })) : [];
+
+                                                        let totalCount = matchedMats.length;
+                                                        if (isExams) {
+                                                            customSubfolders.forEach((sub: string) => {
+                                                                totalCount += (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === sub).length;
+                                                            });
+                                                        }
+
+                                                        return (
+                                                            <AccordionItem key={mainFolder} variant="minimal" title={
+                                                                <div className="flex items-center justify-between w-full">
+                                                                    <span className="text-sm font-bold text-bb-text/90 tracking-tight">{mainFolder}</span>
+                                                                    <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/10 font-black text-[9px] py-0 px-1.5 h-5">
+                                                                        {totalCount}
+                                                                    </Badge>
+                                                                </div>
+                                                            }>
+                                                                {matchedMats.length > 0 && renderMaterialGrid(matchedMats)}
+                                                                {matchedMats.length === 0 && (!isExams || customSubfolders.length === 0) && (
+                                                                    <div className="flex flex-col items-center justify-center py-8 text-center opacity-40">
+                                                                        <FolderRoot className="w-8 h-8 mb-2 text-bb-text-secondary" />
+                                                                        <p className="text-xs text-bb-text-secondary font-medium">Vacío</p>
+                                                                    </div>
+                                                                )}
+
+                                                                {isExams && customSubfolders.length > 0 && (
+                                                                    <div className="mt-2 border-l border-bb-border/30 pl-2 space-y-1">
+                                                                        <Accordion className="space-y-1">
+                                                                            {customSubfolders.map((sub: string) => {
+                                                                                const subMats = (cycleMaterialsMap.get(cycle.id) || []).filter(m => m.tipo === sub);
+                                                                                return (
+                                                                                    <AccordionItem key={sub} variant="ghost" title={
+                                                                                        <div className="flex items-center justify-between w-full">
+                                                                                            <span className="text-xs font-bold text-bb-text/70 uppercase tracking-tighter flex items-center gap-2">
+                                                                                                <span className="text-blue-500/50">↳</span> {sub}
+                                                                                            </span>
+                                                                                            <Badge className="ml-4 bg-teal-500/10 text-teal-400 border border-teal-500/10 font-black text-[8px] py-0 px-1.5 h-4">{subMats.length}</Badge>
+                                                                                        </div>
+                                                                                    }>
+                                                                                        {subMats.length > 0 ? renderMaterialGrid(subMats) : (
+                                                                                            <div className="text-center py-4 opacity-40 text-xs">Vacío</div>
+                                                                                        )}
+                                                                                    </AccordionItem>
+                                                                                )
+                                                                            })}
+                                                                        </Accordion>
+                                                                    </div>
+                                                                )}
+
+                                                                {isExams && currentUser && !isGuest && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                                                                    <div className="mt-4 flex justify-end">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setCycleToEdit(cycle);
+                                                                                setShowAddSubfolderModal(true);
+                                                                            }}
+                                                                            className="inline-flex items-center justify-center rounded-xl text-xs font-bold transition-all bg-bb-border/50 text-bb-text-secondary hover:text-white hover:bg-bb-card border border-transparent hover:border-bb-border h-9 px-4 active:scale-95 whitespace-nowrap"
+                                                                        >
+                                                                            <div className="flex items-center gap-2">
+                                                                                <FolderRoot className="w-3.5 h-3.5" />
+                                                                                + Evaluación (PC, Parcial...)
+                                                                            </div>
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </AccordionItem>
+                                                        );
+                                                    })}
+                                                </Accordion>
+                                            </AccordionItem>
+                                        ))}
+
+                                        {/* Historical materials accordion */}
+                                        {historicalMaterials.length > 0 && (
+                                            <AccordionItem 
+                                                key={`historical-${expandedCycleId === 'historical' ? 'open' : 'closed'}`}
+                                                defaultOpen={expandedCycleId === 'historical' || courseCycles.length === 0}
+                                                title={
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span className="font-bold">📦 Archivos Históricos (Sin Clasificar)</span>
+                                                        <Badge className="ml-4 bg-bb-dark border border-bb-border text-bb-text-secondary font-black">
+                                                            {historicalMaterials.length}
+                                                        </Badge>
+                                                    </div>
+                                                }
+                                            >
+                                                <Accordion className="space-y-1">
+                                                    {historicalCategories.map((cat) => (
+                                                        <AccordionItem 
+                                                            key={cat.id} 
+                                                            variant="minimal"
+                                                            title={
+                                                                <div className="flex items-center justify-between w-full">
+                                                                    <span className="text-sm font-bold text-bb-text/90 tracking-tight">{cat.label}</span>
+                                                                    <Badge className="ml-4 bg-blue-500/10 text-blue-400 border border-blue-500/10 font-black text-[9px] py-0 px-1.5 h-5">
+                                                                        {cat.items.length}
+                                                                    </Badge>
+                                                                </div>
+                                                            } 
+                                                            defaultOpen={cat.id === 'silabo' && courseCycles.length === 0}
+                                                        >
+                                                            {renderMaterialGrid(cat.items)}
+                                                        </AccordionItem>
+                                                    ))}
+                                                </Accordion>
+                                            </AccordionItem>
+                                        )}
+
+                                        {/* Global Cajón General accordion */}
+                                        {(cajonGeneralMaterials.length > 0 || (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin'))) && (
+                                            <AccordionItem
+                                                key={`general-${expandedCycleId === 'general' ? 'open' : 'closed'}`}
+                                                defaultOpen={expandedCycleId === 'general'}
+                                                title={
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span className="font-bold flex items-center gap-2">🗂 Cajón General (Enlaces y Recursos)</span>
+                                                        <Badge className="ml-4 bg-blue-500/10 border border-blue-500/20 text-blue-400 font-black">
+                                                            {cajonGeneralMaterials.length}
+                                                        </Badge>
+                                                    </div>
+                                                }
+                                            >
+                                                {renderFilteredList(cajonGeneralMaterials)}
+                                            </AccordionItem>
+                                        )}
+                                    </Accordion>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -1188,4 +1338,3 @@ export default function CourseDetailContent({
         </div>
     );
 }
-
