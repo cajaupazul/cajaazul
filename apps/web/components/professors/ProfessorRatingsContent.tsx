@@ -1183,6 +1183,42 @@ export default function ProfessorRatingsContent({
                         </div>
                     </motion.div>
 
+                    {/* Minimalist Recommendation Bar */}
+                    {totalRecommendations > 0 && (
+                        <motion.div variants={itemVariants} className="bg-bb-card/60 backdrop-blur-md border border-bb-border rounded-2xl mb-10 p-5 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                            <div className="flex items-center gap-4 relative z-10">
+                                <div className="w-12 h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center shrink-0">
+                                    <ThumbsUp className="w-6 h-6 text-green-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-bb-text tracking-tight">Índice de Recomendación</h3>
+                                    <p className="text-xs font-bold text-bb-text-secondary uppercase tracking-wider">{totalRecommendations} {totalRecommendations === 1 ? 'voto total' : 'votos totales'}</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex-1 w-full max-w-xl relative z-10">
+                                <div className="flex justify-between items-end mb-2">
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-3xl font-black text-green-400 leading-none drop-shadow-sm">{recommendedPercentage}%</span>
+                                        <span className="text-xs font-bold text-bb-text-secondary uppercase">lo recomienda</span>
+                                    </div>
+                                    <div className="flex gap-3 text-xs font-bold uppercase tracking-wider">
+                                        <span className="text-green-400 drop-shadow-sm">{recommendedCount} Sí</span>
+                                        <span className="text-bb-text-secondary/50">•</span>
+                                        <span className="text-red-400 drop-shadow-sm">{notRecommendedCount} No</span>
+                                    </div>
+                                </div>
+                                <div className="h-3 w-full bg-bb-darker rounded-full overflow-hidden flex border border-bb-border/50">
+                                    <div className="h-full bg-gradient-to-r from-green-600 to-green-400 transition-all duration-1000 ease-out relative" style={{ width: `${recommendedPercentage}%` }}>
+                                        <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ backgroundImage: 'linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent)', backgroundSize: '1rem 1rem' }}></div>
+                                    </div>
+                                    <div className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-1000 ease-out" style={{ width: `${notRecommendedPercentage}%` }} />
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
                     <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
                         <div className="lg:col-span-2 space-y-6">
                             {professor.email && (
@@ -1368,53 +1404,6 @@ export default function ProfessorRatingsContent({
                                 )}
                             </div>
 
-                            {/* Summary Card Below */}
-                            <div className="bg-bb-card border border-bb-border rounded-2xl p-6">
-                                <h3 className="text-lg font-bold text-bb-text mb-4 flex items-center gap-2">
-                                    <TrendingUp className="w-5 h-5 text-blue-400" />
-                                    Resumen
-                                </h3>
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-bb-text-secondary text-sm">Total de Reseñas</span>
-                                        <span className="text-bb-text font-bold text-lg">{ratings.length}</span>
-                                    </div>
-
-                                    <div className="pt-4 border-t border-bb-border space-y-3">
-                                        <div className="flex justify-between items-end">
-                                            <div className="space-y-1">
-                                                <span className="text-xs font-bold text-bb-text uppercase tracking-wider">Recomiendan al profesor</span>
-                                                <div className="text-2xl font-black text-green-400">{recommendedPercentage}%</div>
-                                            </div>
-                                            <div className="text-right space-y-1">
-                                                <span className="text-[10px] text-bb-text-secondary uppercase tracking-widest">{totalRecommendations} votos</span>
-                                                <div className="flex gap-2 text-xs font-medium">
-                                                    <span className="text-green-400">{recommendedCount} Sí</span>
-                                                    <span className="text-bb-text-secondary">•</span>
-                                                    <span className="text-red-400">{notRecommendedCount} No</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="h-3 w-full bg-bb-sidebar rounded-full overflow-hidden flex shadow-inner">
-                                            <div
-                                                className="h-full bg-green-500 transition-all duration-1000 ease-out relative"
-                                                style={{ width: `${recommendedPercentage}%` }}
-                                            >
-                                                <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ backgroundImage: 'linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent)', backgroundSize: '1rem 1rem' }}></div>
-                                            </div>
-                                            <div
-                                                className="h-full bg-red-500 transition-all duration-1000 ease-out"
-                                                style={{ width: `${notRecommendedPercentage}%` }}
-                                            />
-                                        </div>
-
-                                        {totalRecommendations === 0 && (
-                                            <span className="text-[10px] text-bb-text-secondary italic block text-center mt-2">Aún no hay recomendaciones para este profesor.</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </motion.div>
 

@@ -616,7 +616,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                         {fileSource && (
                             <div 
                                 id="secure-pdf-scroll-container" 
-                                className="h-full w-full overflow-auto flex flex-col items-center scroll-smooth scrollbar-none pb-20 pt-4"
+                                className="h-full w-full overflow-auto flex flex-col items-center scroll-smooth pb-20 pt-4"
                                 onScroll={handleScroll}
                             >
                                 <Document
