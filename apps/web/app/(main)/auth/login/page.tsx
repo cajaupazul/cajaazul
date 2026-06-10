@@ -13,21 +13,6 @@ import { useSearchParams } from 'next/navigation';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import { Suspense } from 'react';
 import { AUTH_CONFIG, validateInstitutionalEmail } from '@/lib/auth-config';
-import dynamic from 'next/dynamic';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const Spline = dynamic<{ scene: string; className?: string }>(
-  () => import('@splinetool/react-spline/next' as any) as any,
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0b0d]">
-        <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
-        <p className="text-white/60 text-sm font-medium">Cargando 3D...</p>
-      </div>
-    )
-  }
-);
 
 export default function LoginPage() {
   return (
@@ -204,13 +189,21 @@ function LoginContent() {
       {/* Left Side - Interactive 3D Model */}
       <div className="w-full lg:w-1/2 bg-[#0a0b0d] flex items-center justify-center p-0 m-0 relative overflow-hidden h-64 lg:h-auto">
         <div className="absolute inset-0 w-full h-full">
-            <Spline scene="https://prod.spline.design/xjQkReSUwrhgOdgLGjDOiqGC-zE5/scene.splinecode" />
+          <iframe
+            src="https://my.spline.design/googlyeyes-xjQkReSUwrhgOdgLGjDOiqGC-zE5/"
+            frameBorder="0"
+            width="100%"
+            height="100%"
+            title="Googly Eyes 3D"
+            style={{ border: 'none', display: 'block', width: '100%', height: '100%' }}
+            allow="autoplay"
+          />
         </div>
-        
+
         {/* Branding Overlay (Bottom Left) */}
         <div className="absolute bottom-8 left-8 z-10 pointer-events-none drop-shadow-2xl hidden lg:block">
-            <h2 className="text-white text-3xl font-black tracking-tight">CampusLink</h2>
-            <p className="text-white/60 text-base font-medium">Tu plataforma educativa</p>
+          <h2 className="text-white text-3xl font-black tracking-tight">CampusLink</h2>
+          <p className="text-white/60 text-base font-medium">Tu plataforma educativa</p>
         </div>
       </div>
 
