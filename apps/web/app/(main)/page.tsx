@@ -1,14 +1,41 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, Star, Calendar, Users, TrendingUp, Award, LogIn } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { BookOpen, Star, Calendar, Users, LogIn, ArrowRight } from 'lucide-react';
+import { motion, useInView, useMotionValue, useSpring } from 'framer-motion';
 import HeroCarousel from '@/components/landing/HeroCarousel';
 import SocialSidebar from '@/components/landing/SocialSidebar';
+
+// Animated counter hook
+function useCounter(target: number, inView: boolean) {
+  const motionVal = useMotionValue(0);
+  const spring = useSpring(motionVal, { stiffness: 60, damping: 20 });
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    if (inView) motionVal.set(target);
+  }, [inView, target, motionVal]);
+
+  useEffect(() => spring.on('change', (v) => setDisplay(Math.round(v))), [spring]);
+  return display;
+}
+
+function StatCard({ value, label, suffix = '' }: { value: number; label: string; suffix?: string }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true });
+  const count = useCounter(value, inView);
+  return (
+    <div ref={ref} className="flex flex-col items-center text-center py-10 px-6 border-r border-gray-100 last:border-r-0">
+      <span className="text-5xl md:text-6xl font-black text-[#002d5a] tracking-tighter tabular-nums">
+        {count.toLocaleString()}{suffix}
+      </span>
+      <span className="mt-2 text-xs font-bold uppercase tracking-[0.2em] text-gray-400">{label}</span>
+    </div>
+  );
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -25,226 +52,200 @@ export default function HomePage() {
     try {
       setIsGuestLoading(true);
       const { supabase } = await import('@/lib/supabase');
-
-      // Cerrar sesión previa antes de entrar como invitado
-      // Esto evita que en móvil se reutilice la sesión registrada en lugar de crear una anónima
       await supabase.auth.signOut();
-
       const { error } = await supabase.auth.signInAnonymously();
-      
       if (error) throw error;
-      
       router.push('/dashboard');
     } catch (err: any) {
       console.error('[GUEST_LOGIN] Error:', err.message);
-      alert('Error al ingresar como invitado. Asegúrate de que esta opción esté habilitada en Supabase.');
     } finally {
       setIsGuestLoading(false);
     }
   };
 
+  const features = [
+    { icon: BookOpen, title: 'Material Académico', desc: 'Repositorio colaborativo con apuntes, manuales, guías y exámenes pasados de ciclos anteriores.' },
+    { icon: Star,     title: 'Reseñas de Profesores', desc: 'Calificaciones honestas sobre metodologías, dificultad y carga de trabajo.' },
+    { icon: Calendar, title: 'Eventos del Campus',    desc: 'Mantente al día con talleres, congresos y fechas críticas que no puedes perderte.' },
+    { icon: Users,    title: 'Red de Apoyo',          desc: 'Conéctate con estudiantes de distintas carreras para grupos de estudio y colaboración.' },
+  ];
+
   return (
     <div className="relative w-full bg-white select-none xl:pl-[50px]">
       <SocialSidebar />
 
-      {/* Navbar - Refined and Minimalist */}
-      <nav
-        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${scrolled ? 'bg-white shadow-md py-2' : 'bg-white/95 backdrop-blur-sm py-4 md:py-6'
-          }`}
-      >
-        <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-24 flex justify-between items-center transition-all duration-300">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
-            <div className="w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center transform group-hover:rotate-12 transition-transform shrink-0">
-              <img
-                src="/logo/logo-campuslink-v2.png"
-                alt="CampusLink Logo"
-                className="w-full h-full object-contain drop-shadow-lg"
-              />
+      {/* ─── NAVBAR ─── */}
+      <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${scrolled ? 'bg-white/98 shadow-sm py-3' : 'bg-white py-5 md:py-7'}`}>
+        <div className="max-w-[1440px] mx-auto px-6 md:px-14 lg:px-24 flex justify-between items-center">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300 shrink-0">
+              <img src="/logo/logo-campuslink-v2.png" alt="CampusLink Logo" className="w-full h-full object-contain" />
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-lg sm:text-xl md:text-2xl font-black text-[#002d5a] tracking-tighter">
+              <span className="text-lg sm:text-xl font-black text-[#002d5a] tracking-tighter">
                 CAMPUS<span className="text-blue-600">LINK</span>
               </span>
-              <span className="text-[8px] sm:text-[10px] md:text-[11px] font-black text-gray-400 tracking-[0.2em] uppercase mt-0.5 sm:mt-1">
+              <span className="text-[8px] sm:text-[10px] font-bold text-gray-300 tracking-[0.22em] uppercase mt-0.5">
                 REPOSITORIO COLABORATIVO
               </span>
             </div>
           </Link>
 
-          {/* Actions - Login and Guest buttons */}
-          <div className="flex items-center gap-1.5 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-4">
             <button
               onClick={handleGuestLogin}
               disabled={isGuestLoading}
-              className="flex items-center gap-2 text-[#4b5563] hover:text-[#002d5a] font-semibold text-[10px] sm:text-[11px] tracking-wide sm:tracking-wider uppercase transition-all px-2 sm:px-4 h-10 sm:h-12 border-b-2 border-transparent hover:border-[#002d5a]"
+              className="hidden sm:flex items-center gap-2 text-gray-400 hover:text-[#002d5a] font-semibold text-[10px] tracking-[0.15em] uppercase transition-colors duration-200"
             >
-              {isGuestLoading ? '...' : (
-                <>
-                  <span className="hidden xs:inline">{isGuestLoading ? 'INGRESANDO...' : 'ENTRAR COMO INVITADO'}</span>
-                  <span className="xs:hidden">INVITADO</span>
-                </>
-              )}
+              {isGuestLoading ? 'INGRESANDO...' : 'INVITADO'}
             </button>
+            <div className="hidden sm:block w-px h-5 bg-gray-200" />
             <Link href="/auth/login">
-              <Button className="bg-[#1f2937] hover:bg-black text-white font-semibold px-4 sm:px-6 h-10 sm:h-12 rounded-full flex items-center gap-1.5 sm:gap-2 transition-all active:scale-95 shadow-md hover:shadow-lg text-[10px] sm:text-xs tracking-wide uppercase overflow-hidden">
-                <LogIn size={16} className="sm:w-4 sm:h-4" />
+              <button className="flex items-center gap-2 bg-[#002d5a] hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-full text-[10px] tracking-[0.15em] uppercase transition-all duration-200 hover:shadow-lg hover:shadow-blue-900/20 active:scale-95">
+                <LogIn size={13} />
                 <span className="hidden xxs:inline">INICIAR SESIÓN</span>
                 <span className="xxs:hidden">LOGIN</span>
-              </Button>
+              </button>
             </Link>
           </div>
         </div>
+        {/* Thin bottom border */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gray-100" />
       </nav>
 
-      {/* Hero Section */}
+      {/* ─── HERO CAROUSEL ─── */}
       <HeroCarousel />
 
-      {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-6 py-24 md:py-32 relative">
-        {/* Intro Section */}
-        <div className="text-center mb-16 md:mb-24 max-w-4xl mx-auto space-y-6">
-          <div className="inline-block bg-blue-50/50 text-blue-600 text-[11px] font-semibold px-4 py-1.5 rounded-full uppercase tracking-wider mb-2">
+      {/* ─── STATS STRIP ─── */}
+      <div className="border-b border-gray-100">
+        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4">
+          <StatCard value={1200} label="Recursos subidos" suffix="+" />
+          <StatCard value={340}  label="Profesores calificados" suffix="+" />
+          <StatCard value={48}   label="Cursos disponibles" />
+          <StatCard value={2800} label="Alumnos registrados" suffix="+" />
+        </div>
+      </div>
+
+      {/* ─── MAIN CONTENT ─── */}
+      <main className="max-w-7xl mx-auto px-6 md:px-14">
+
+        {/* Intro */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+          className="text-center pt-24 pb-20 max-w-3xl mx-auto space-y-5"
+        >
+          <span className="inline-flex items-center gap-2 text-blue-600 text-[10px] font-bold tracking-[0.25em] uppercase border border-blue-100 bg-blue-50/60 px-4 py-1.5 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
             De alumnos para alumnos
-          </div>
-          <h2 className="text-3xl md:text-5xl font-extrabold text-[#002d5a] leading-tight tracking-tight">
-            Nuestra propia red académica.
+          </span>
+          <h2 className="text-4xl md:text-6xl font-black text-[#002d5a] leading-[1.05] tracking-tight">
+            Nuestra propia<br />
+            <span className="text-blue-600">red académica.</span>
           </h2>
-          <p className="text-lg md:text-xl text-gray-600 font-medium leading-relaxed max-w-3xl mx-auto">
-            Un espacio donde recopilamos material de ciclos pasados, calificamos profesores basados en la experiencia real
-            y nos ayudamos mutuamente durante la carrera universitaria.
+          <p className="text-base md:text-lg text-gray-500 font-medium leading-relaxed max-w-2xl mx-auto">
+            Un espacio donde recopilamos material de ciclos pasados, calificamos profesores
+            y nos ayudamos mutuamente durante la carrera.
           </p>
+          <div className="pt-4 flex items-center justify-center gap-4">
+            <Link href="/auth/register">
+              <button className="flex items-center gap-2 bg-[#002d5a] hover:bg-blue-700 text-white font-bold px-7 py-3.5 rounded-full text-sm tracking-wide transition-all hover:shadow-xl hover:shadow-blue-900/20 active:scale-95 group">
+                Comenzar gratis
+                <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </Link>
+            <button onClick={handleGuestLogin} className="text-gray-400 hover:text-[#002d5a] font-semibold text-sm transition-colors underline underline-offset-4 decoration-gray-200 hover:decoration-blue-300">
+              Explorar sin cuenta
+            </button>
+          </div>
+        </motion.div>
+
+        {/* ─── DIVIDER ─── */}
+        <div className="flex items-center gap-4 mb-20">
+          <div className="flex-1 h-px bg-gray-100" />
+          <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-gray-300">LO QUE ENCONTRARÁS</span>
+          <div className="flex-1 h-px bg-gray-100" />
         </div>
 
+        {/* ─── FEATURES + VIDEO ─── */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+          className="flex flex-col-reverse md:flex-row items-center gap-16 lg:gap-24 pb-32"
+        >
+          {/* Video */}
+          <div className="w-full md:w-5/12 flex items-center justify-center">
+            <video
+              src="/waifu/fg_video.webm"
+              autoPlay loop muted playsInline
+              className="w-full max-w-xs md:max-w-none h-auto object-contain drop-shadow-2xl"
+            />
+          </div>
 
-
-        {/* Features + Video Section */}
-        <div className="mx-auto max-w-6xl mt-24 md:mt-32 border-t border-gray-100 pt-16 md:pt-24 px-4 sm:px-0 mb-8 md:mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7 }}
-            className="flex flex-col-reverse md:flex-row items-center gap-12 lg:gap-20"
-          >
-            {/* Left: Video — sin fondo ni marco */}
-            <div className="w-full md:w-1/2 flex items-center justify-center">
-              <video
-                src="/waifu/fg_video.webm"
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full max-w-sm md:max-w-none h-auto object-contain drop-shadow-xl"
-              />
-            </div>
-
-            {/* Right: 4 Feature Points */}
-            <div className="w-full md:w-1/2 space-y-8 md:space-y-10">
-              <div>
-                <span className="block text-[10px] md:text-xs font-bold uppercase tracking-[0.25em] text-blue-500 mb-3">
-                  Todo en un solo lugar
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold text-[#002d5a] leading-tight tracking-tight">
-                  Lo que encontrarás en CampusLink
-                </h2>
-              </div>
-
-              <div className="space-y-6 md:space-y-8">
-                {[
-                  {
-                    icon: BookOpen,
-                    title: 'Material Académico',
-                    desc: 'Únete a nuestro repositorio colaborativo para compartir y acceder a apuntes, manuales, guías y exámenes pasados.'
-                  },
-                  {
-                    icon: Star,
-                    title: 'Reseñas de Profesores',
-                    desc: 'Lee calificaciones honestas sobre metodologías, dificultad y carga de trabajo para matricularte con seguridad.'
-                  },
-                  {
-                    icon: Calendar,
-                    title: 'Eventos del Campus',
-                    desc: 'Mantente al día con foros, talleres estudiantiles, congresos y fechas críticas que no nos podemos perder.'
-                  },
-                  {
-                    icon: Users,
-                    title: 'Red de Apoyo',
-                    desc: 'Conéctate con estudiantes de distintas carreras para resolver dudas, armar grupos de estudio y colaborar.'
-                  },
-                ].map((feature, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: 20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1, duration: 0.5 }}
-                    className="flex items-start gap-4 group"
-                  >
-                    <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 bg-blue-50 text-blue-600 transition-all group-hover:bg-blue-100 group-hover:scale-105">
-                      <feature.icon className="w-5 h-5" strokeWidth={1.5} />
-                    </div>
-                    <div>
-                      <h3 className="text-base md:text-lg font-bold text-[#002d5a] mb-1">{feature.title}</h3>
-                      <p className="text-gray-500 text-sm leading-relaxed">{feature.desc}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        </div>
+          {/* Feature list */}
+          <div className="w-full md:w-7/12 space-y-10">
+            {features.map((feature, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: 16 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+                className="flex items-start gap-5 group"
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gray-50 text-[#002d5a] border border-gray-100 group-hover:bg-blue-50 group-hover:border-blue-100 group-hover:text-blue-600 transition-all duration-200">
+                  <feature.icon className="w-4.5 h-4.5" strokeWidth={1.8} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#002d5a] mb-1 tracking-tight">{feature.title}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">{feature.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-100 py-20 px-6 md:px-12">
-        <div className="max-w-[1440px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16">
-          <div className="col-span-1 md:col-span-1 lg:col-span-2 space-y-8">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="w-24 h-24 rounded-xl flex items-center justify-center">
-                <img
-                  src="/logo/logo-campuslink-v2.png"
-                  alt="CampusLink Logo"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <span className="text-2xl font-black text-[#002d5a] tracking-tighter">
+      {/* ─── FOOTER ─── */}
+      <footer className="border-t border-gray-100 py-14 px-6 md:px-14">
+        <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-10">
+          {/* Brand */}
+          <div className="flex items-center gap-3">
+            <img src="/logo/logo-campuslink-v2.png" alt="CampusLink Logo" className="w-9 h-9 object-contain opacity-70" />
+            <div>
+              <span className="block text-sm font-black text-[#002d5a] tracking-tighter">
                 CAMPUS<span className="text-blue-600">LINK</span>
               </span>
-            </Link>
-            <p className="max-w-md text-gray-500 font-bold leading-relaxed italic text-sm">
-              Un repositorio académico independiente construido por estudiantes.
-              Nuestro objetivo es centralizar el conocimiento y facilitar la colaboración libre.
-              <span className="block mt-4 text-blue-600/60 not-italic font-black text-xs uppercase tracking-widest">
-                No somos una entidad oficial universitaria.
+              <span className="block text-[9px] font-bold text-gray-300 tracking-[0.2em] uppercase">
+                Repositorio Estudiantil
               </span>
-            </p>
-            <div className="flex gap-4 pt-4">
-              <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">
-                © {new Date().getFullYear()} CAMPUSLINK NETWORK.
-              </div>
             </div>
           </div>
 
-          <div className="space-y-8">
-            <h4 className="font-black text-[#002d5a] uppercase tracking-[0.2em] text-xs italic border-b border-gray-100 pb-4">Navegación</h4>
-            <ul className="space-y-4 text-gray-400 font-black text-[12px] uppercase tracking-widest">
-              <li><button className="hover:text-blue-600 transition-colors">Material Académico</button></li>
-              <li><button className="hover:text-blue-600 transition-colors">Directorio Profesores</button></li>
-              <li><button className="hover:text-blue-600 transition-colors">Eventos Locales</button></li>
-              <li><button className="hover:text-blue-600 transition-colors">Grupos de Estudio</button></li>
-            </ul>
+          {/* Nav links */}
+          <div className="flex flex-wrap gap-x-8 gap-y-3">
+            {['Material Académico', 'Profesores', 'Eventos', 'Grupos de Estudio'].map((item) => (
+              <button key={item} className="text-[11px] font-bold text-gray-400 hover:text-[#002d5a] uppercase tracking-[0.15em] transition-colors duration-200">
+                {item}
+              </button>
+            ))}
           </div>
 
-          <div className="space-y-8">
-            <h4 className="font-black text-[#002d5a] uppercase tracking-[0.2em] text-xs italic border-b border-gray-100 pb-4">Plataforma</h4>
-            <ul className="space-y-4 text-gray-400 font-black text-[12px] uppercase tracking-widest">
-              <li><button className="hover:text-blue-600 transition-colors">Términos Legales</button></li>
-              <li><button className="hover:text-blue-600 transition-colors">Privacidad</button></li>
-              <li><button className="hover:text-blue-600 transition-colors">Centro de Ayuda</button></li>
-              <li><button className="hover:text-blue-600 transition-colors">Contacto Admin</button></li>
-            </ul>
+          {/* Copyright */}
+          <div className="text-[10px] font-bold text-gray-300 tracking-[0.2em] uppercase whitespace-nowrap">
+            © {new Date().getFullYear()} CAMPUSLINK
           </div>
+        </div>
+
+        {/* Disclaimer */}
+        <div className="max-w-[1440px] mx-auto mt-8 pt-8 border-t border-gray-50">
+          <p className="text-[10px] text-gray-300 font-medium tracking-wide">
+            Repositorio académico independiente construido por estudiantes. No somos una entidad oficial universitaria.
+          </p>
         </div>
       </footer>
     </div>
