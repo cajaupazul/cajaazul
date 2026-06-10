@@ -37,7 +37,14 @@ export default function CampusLinkAIPage() {
       <div 
         className="flex-1 w-full h-full relative"
         dangerouslySetInnerHTML={{
-          __html: '<spline-viewer url="https://prod.spline.design/vCZzyjeuDqJKT0YE/scene.splinecode" class="w-full h-full"></spline-viewer>'
+          __html: `
+            <style>
+              spline-viewer::part(logo) {
+                display: none !important;
+              }
+            </style>
+            <spline-viewer url="https://prod.spline.design/vCZzyjeuDqJKT0YE/scene.splinecode" class="w-full h-full"></spline-viewer>
+          `
         }}
       />
 
