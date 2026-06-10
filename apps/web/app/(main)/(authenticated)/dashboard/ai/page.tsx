@@ -1,25 +1,39 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-
-
+import React, { useEffect, useRef, useState } from 'react';
+import { Application } from '@splinetool/runtime';
 
 export default function CampusLinkAIPage() {
-  const [mounted, setMounted] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setMounted(true);
-    
-    // Dynamically add the Spline viewer script if it's not already on the page
-    if (!document.querySelector('script[src="https://unpkg.com/@splinetool/viewer@1.12.97/build/spline-viewer.js"]')) {
-      const script = document.createElement('script');
-      script.type = 'module';
-      script.src = 'https://unpkg.com/@splinetool/viewer@1.12.97/build/spline-viewer.js';
-      document.body.appendChild(script);
-    }
-  }, []);
+    let app: Application | null = null;
 
-  if (!mounted) return null;
+    if (canvasRef.current) {
+      // Inicializar el runtime de Spline en el canvas
+      app = new Application(canvasRef.current);
+      
+      // Cargar la escena
+      app.load('https://prod.spline.design/vCZzyjeuDqJKT0YE/scene.splinecode')
+        .then(() => {
+          setIsLoading(false);
+          // Aquí podríamos hacer modificaciones por código al robot si fuera necesario,
+          // por ejemplo, cambiar cámaras o acceder a variables.
+        })
+        .catch((err) => {
+          console.error("Error cargando la escena de Spline:", err);
+          setIsLoading(false);
+        });
+    }
+
+    return () => {
+      // Limpiar al desmontar el componente para evitar fugas de memoria
+      if (app) {
+        app.dispose();
+      }
+    };
+  }, []);
 
   return (
     <div className="w-full h-[calc(100vh-80px)] flex flex-col bg-[#0a0b0d] relative overflow-hidden">
@@ -33,20 +47,24 @@ export default function CampusLinkAIPage() {
         </p>
       </div>
 
-      {/* Spline 3D Viewer Environment */}
-      <div 
-        className="flex-1 w-full h-full relative"
-        dangerouslySetInnerHTML={{
-          __html: `
-            <style>
-              spline-viewer::part(logo) {
-                display: none !important;
-              }
-            </style>
-            <spline-viewer url="https://prod.spline.design/vCZzyjeuDqJKT0YE/scene.splinecode" class="w-full h-full"></spline-viewer>
-          `
-        }}
-      />
+      {/* Loading Indicator */}
+      {isLoading && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none">
+          <div className="w-10 h-10 border-4 border-white/10 border-t-blue-500 rounded-full animate-spin mb-4" />
+          <span className="text-white/50 text-xs font-bold uppercase tracking-[0.2em] animate-pulse">
+            Iniciando Robot...
+          </span>
+        </div>
+      )}
+
+      {/* Spline 3D Viewer Environment (Usando Runtime para evitar la marca de agua) */}
+      <div className="flex-1 w-full h-full relative cursor-grab active:cursor-grabbing">
+        <canvas 
+          ref={canvasRef} 
+          id="canvas3d" 
+          className="w-full h-full block outline-none"
+        />
+      </div>
 
       {/* Decorative gradient at the bottom */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0a0b0d] to-transparent pointer-events-none z-10" />
