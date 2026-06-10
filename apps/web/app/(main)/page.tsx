@@ -91,32 +91,7 @@ export default function HomePage() {
       {/* ─── HERO CAROUSEL ─── */}
       <HeroCarousel />
 
-      {/* ─── ROBOT 3D SECTION ─── */}
-      <div className="relative w-full bg-[#0a0b0d] overflow-hidden" style={{ height: '520px' }}>
-        {/* Loading placeholder */}
-        {!splineLoaded && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-            <div className="w-8 h-8 border-2 border-white/10 border-t-white/40 rounded-full animate-spin mb-3" />
-            <span className="text-white/30 text-xs tracking-widest uppercase font-bold">Cargando</span>
-          </div>
-        )}
-        <iframe
-          src="https://my.spline.design/r4xbot-zw8P7sJJxP5nDvGqAWh5PvUl/"
-          frameBorder="0"
-          width="100%"
-          height="100%"
-          title="CampusLink Robot 3D"
-          onLoad={() => setSplineLoaded(true)}
-          style={{ border: 'none', display: 'block', width: '100%', height: '100%' }}
-          allow="autoplay"
-        />
-        {/* Gradient fade at bottom to blend into white */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
-        {/* Subtle label */}
-        <div className="absolute top-6 right-8 z-20 pointer-events-none">
-          <span className="text-white/20 text-[10px] font-bold tracking-[0.3em] uppercase">CAMPUSLINK AI</span>
-        </div>
-      </div>
+
 
       {/* ─── MAIN CONTENT ─── */}
       <main className="max-w-7xl mx-auto px-6 md:px-14">
