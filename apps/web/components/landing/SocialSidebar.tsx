@@ -37,9 +37,9 @@ export default function SocialSidebar() {
             </div>
 
             {/* Decorative bottom part */}
-            <div className="absolute bottom-12 transform -rotate-90 origin-center whitespace-nowrap">
-                <span className="text-[10px] font-black text-white/20 tracking-[0.3em] uppercase">
-                    CAMPUSLINK SITES
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 transform -rotate-90 origin-center">
+                <span className="text-[9px] font-black text-white/20 tracking-[0.25em] uppercase whitespace-nowrap">
+                    CAMPUSLINK
                 </span>
             </div>
         </div>

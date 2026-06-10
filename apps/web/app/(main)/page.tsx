@@ -9,38 +9,13 @@ import { motion, useInView, useMotionValue, useSpring } from 'framer-motion';
 import HeroCarousel from '@/components/landing/HeroCarousel';
 import SocialSidebar from '@/components/landing/SocialSidebar';
 
-// Animated counter hook
-function useCounter(target: number, inView: boolean) {
-  const motionVal = useMotionValue(0);
-  const spring = useSpring(motionVal, { stiffness: 60, damping: 20 });
-  const [display, setDisplay] = useState(0);
 
-  useEffect(() => {
-    if (inView) motionVal.set(target);
-  }, [inView, target, motionVal]);
-
-  useEffect(() => spring.on('change', (v) => setDisplay(Math.round(v))), [spring]);
-  return display;
-}
-
-function StatCard({ value, label, suffix = '' }: { value: number; label: string; suffix?: string }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true });
-  const count = useCounter(value, inView);
-  return (
-    <div ref={ref} className="flex flex-col items-center text-center py-10 px-6 border-r border-gray-100 last:border-r-0">
-      <span className="text-5xl md:text-6xl font-black text-[#002d5a] tracking-tighter tabular-nums">
-        {count.toLocaleString()}{suffix}
-      </span>
-      <span className="mt-2 text-xs font-bold uppercase tracking-[0.2em] text-gray-400">{label}</span>
-    </div>
-  );
-}
 
 export default function HomePage() {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
+  const [splineLoaded, setSplineLoaded] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -116,13 +91,30 @@ export default function HomePage() {
       {/* ─── HERO CAROUSEL ─── */}
       <HeroCarousel />
 
-      {/* ─── STATS STRIP ─── */}
-      <div className="border-b border-gray-100">
-        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4">
-          <StatCard value={1200} label="Recursos subidos" suffix="+" />
-          <StatCard value={340}  label="Profesores calificados" suffix="+" />
-          <StatCard value={48}   label="Cursos disponibles" />
-          <StatCard value={2800} label="Alumnos registrados" suffix="+" />
+      {/* ─── ROBOT 3D SECTION ─── */}
+      <div className="relative w-full bg-[#0a0b0d] overflow-hidden" style={{ height: '520px' }}>
+        {/* Loading placeholder */}
+        {!splineLoaded && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+            <div className="w-8 h-8 border-2 border-white/10 border-t-white/40 rounded-full animate-spin mb-3" />
+            <span className="text-white/30 text-xs tracking-widest uppercase font-bold">Cargando</span>
+          </div>
+        )}
+        <iframe
+          src="https://my.spline.design/r4xbot-zw8P7sJJxP5nDvGqAWh5PvUl/"
+          frameBorder="0"
+          width="100%"
+          height="100%"
+          title="CampusLink Robot 3D"
+          onLoad={() => setSplineLoaded(true)}
+          style={{ border: 'none', display: 'block', width: '100%', height: '100%' }}
+          allow="autoplay"
+        />
+        {/* Gradient fade at bottom to blend into white */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
+        {/* Subtle label */}
+        <div className="absolute top-6 right-8 z-20 pointer-events-none">
+          <span className="text-white/20 text-[10px] font-bold tracking-[0.3em] uppercase">CAMPUSLINK AI</span>
         </div>
       </div>
 
