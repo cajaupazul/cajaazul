@@ -31,7 +31,8 @@ import {
   Eye,
   EyeOff,
   Library,
-  Calculator
+  Calculator,
+  Bot
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -235,6 +236,7 @@ export default function AuthenticatedLayout({
     { label: 'Eventos', href: '/dashboard/events', icon: Calendar },
     { label: 'Grupos', href: '/dashboard/grupos', icon: Layers },
     { label: 'Nosotros', href: '/dashboard/about', icon: Info },
+    { label: 'CampusLink AI', href: '/dashboard/ai', icon: Bot },
   ];
 
   // Filter items for non-admins and guests
@@ -243,7 +245,7 @@ export default function AuthenticatedLayout({
     
     // Guests only see specific public sections
     if (isGuest) {
-      const allowedForGuests = ['Inicio', 'Cursos', 'Biblioteca', 'Profesores', 'Herramientas', 'Nosotros'];
+      const allowedForGuests = ['Inicio', 'Cursos', 'Biblioteca', 'Profesores', 'Herramientas', 'Nosotros', 'CampusLink AI'];
       return allowedForGuests.includes(item.label);
     }
 
