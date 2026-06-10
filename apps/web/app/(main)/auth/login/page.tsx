@@ -15,15 +15,19 @@ import { Suspense } from 'react';
 import { AUTH_CONFIG, validateInstitutionalEmail } from '@/lib/auth-config';
 import dynamic from 'next/dynamic';
 
-const Spline = dynamic(() => import('@splinetool/react-spline'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0b0d]">
-      <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
-      <p className="text-white/60 text-sm font-medium">Cargando 3D...</p>
-    </div>
-  )
-});
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Spline = dynamic<{ scene: string; className?: string }>(
+  () => import('@splinetool/react-spline/next' as any) as any,
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0b0d]">
+        <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
+        <p className="text-white/60 text-sm font-medium">Cargando 3D...</p>
+      </div>
+    )
+  }
+);
 
 export default function LoginPage() {
   return (
