@@ -13,6 +13,17 @@ import { useSearchParams } from 'next/navigation';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import { Suspense } from 'react';
 import { AUTH_CONFIG, validateInstitutionalEmail } from '@/lib/auth-config';
+import dynamic from 'next/dynamic';
+
+const Spline = dynamic(() => import('@splinetool/react-spline'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0b0d]">
+      <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
+      <p className="text-white/60 text-sm font-medium">Cargando 3D...</p>
+    </div>
+  )
+});
 
 export default function LoginPage() {
   return (
@@ -186,39 +197,16 @@ function LoginContent() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50">
-      {/* Left Side - Image (Desktop) / Top Section (Mobile) */}
-      <div className="w-full lg:w-1/2 bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center p-6 sm:p-12 lg:p-16 relative overflow-hidden">
-        {/* Background Decorative Circles */}
-        <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <div className="absolute -top-10 -left-10 w-48 h-48 sm:w-72 sm:h-72 bg-white rounded-full"></div>
-          <div className="absolute -bottom-10 -right-10 w-64 h-64 sm:w-96 sm:h-96 bg-white rounded-full"></div>
+      {/* Left Side - Interactive 3D Model */}
+      <div className="w-full lg:w-1/2 bg-[#0a0b0d] flex items-center justify-center p-0 m-0 relative overflow-hidden h-64 lg:h-auto">
+        <div className="absolute inset-0 w-full h-full">
+            <Spline scene="https://prod.spline.design/xjQkReSUwrhgOdgLGjDOiqGC-zE5/scene.splinecode" />
         </div>
-
-        {/* Branding Container */}
-        <div className="relative z-10 text-center max-w-sm sm:max-w-md w-full">
-          {imageUrl ? (
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-teal-400 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-              <img
-                src={imageUrl}
-                alt="CampusLink"
-                className="relative w-full aspect-square sm:h-96 object-cover rounded-[2rem] shadow-2xl transition-transform duration-500 hover:scale-[1.02]"
-              />
-            </div>
-          ) : (
-            <div className="relative w-full aspect-square sm:h-96 bg-white/20 backdrop-blur-md rounded-[2rem] flex items-center justify-center shadow-2xl overflow-hidden">
-              <img
-                src="/logo/logo-campuslink-v2.png"
-                alt="CampusLink Logo"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-
-          <div className="mt-6 sm:mt-8 space-y-2">
-            <h2 className="text-white text-3xl sm:text-4xl font-black tracking-tight drop-shadow-sm">CampusLink</h2>
-            <p className="text-blue-50 text-base sm:text-lg font-medium opacity-90">Tu plataforma educativa</p>
-          </div>
+        
+        {/* Branding Overlay (Bottom Left) */}
+        <div className="absolute bottom-8 left-8 z-10 pointer-events-none drop-shadow-2xl hidden lg:block">
+            <h2 className="text-white text-3xl font-black tracking-tight">CampusLink</h2>
+            <p className="text-white/60 text-base font-medium">Tu plataforma educativa</p>
         </div>
       </div>
 
