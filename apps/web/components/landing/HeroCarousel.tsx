@@ -78,23 +78,23 @@ export default function HeroCarousel() {
                                 transition={{ duration: 0.6, delay: 0.1 }}
                                 className="space-y-4"
                             >
-                                <div className="h-[2px] w-12 bg-blue-500" />
-                                <p className="text-white/80 font-bold text-sm tracking-[0.2em] uppercase">
-                                    {SLIDES[currentIndex].date}
-                                </p>
-                                <h1 className="text-4xl md:text-7xl font-bold text-white leading-tight uppercase tracking-tight select-none">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="h-[2px] w-12 bg-secondary" />
+                                    <span className="text-on-primary font-label-lg tracking-widest uppercase opacity-90">
+                                        {SLIDES[currentIndex].date}
+                                    </span>
+                                </div>
+                                <h1 className="font-display-lg text-display-lg text-on-primary mb-6 leading-tight uppercase select-none">
                                     {SLIDES[currentIndex].title}
                                 </h1>
-                                <p className="text-xl md:text-2xl text-white/90 font-medium max-w-xl select-none">
+                                <p className="font-body-lg text-body-lg text-surface-variant mb-10 max-w-lg select-none">
                                     {SLIDES[currentIndex].subtitle}
                                 </p>
 
-                                <div className="pt-8 flex flex-col sm:flex-row gap-4 items-center">
-                                    <Link href="/auth/register" className="w-full sm:w-auto">
-                                        <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold px-10 py-7 text-lg rounded-full shadow-2xl transition-all active:scale-95 uppercase tracking-wide group">
-                                            EXPLORAR MATERIAL
-                                            <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-                                        </Button>
+                                <div className="flex flex-col sm:flex-row items-center gap-6 mt-6">
+                                    <Link href="/dashboard" className="group relative px-8 py-4 bg-secondary text-on-primary rounded-xl font-headline-md flex items-center gap-3 overflow-hidden transition-all hover:pr-10 hover:bg-opacity-90 shadow-xl w-full sm:w-auto justify-center">
+                                        <span>Explorar Material</span>
+                                        <ChevronRight className="transition-transform group-hover:translate-x-2" />
                                     </Link>
                                     <button 
                                         onClick={async () => {
@@ -106,7 +106,7 @@ export default function HeroCarousel() {
                                                 console.error(err);
                                             }
                                         }}
-                                        className="text-white/60 hover:text-white font-semibold text-xs tracking-wider uppercase border-b border-white/20 hover:border-white transition-all pb-1"
+                                        className="font-label-lg text-on-primary border-b border-on-primary/30 pb-1 hover:border-secondary transition-colors uppercase tracking-wider"
                                     >
                                         O CONTINUAR COMO INVITADO
                                     </button>

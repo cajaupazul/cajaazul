@@ -87,19 +87,7 @@ export default function HomePage() {
             <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31 0 2.59.1 3.81.3v3.7c-1.18-.36-2.42-.51-3.66-.44v13.06c0 2.15-1.75 3.9-3.9 3.9s-3.9-1.75-3.9-3.9 1.75-3.9 3.9-3.9c.4 0 .78.06 1.15.17V9.11c-3.66.19-6.59 3.23-6.59 6.95 0 3.84 3.12 6.96 6.96 6.96s6.96-3.12 6.96-6.96V6.03C19.34 7.57 21.46 8.5 23.82 8.64V4.9c-1.85-.01-3.59-.83-4.79-2.23C18.17 1.57 17.65 0 17.65 0h-5.125z"></path></svg>
           </a>
         </nav>
-        <div className="mt-auto flex flex-col gap-6 items-center">
-          <a className="text-surface-variant opacity-70 hover:opacity-100" href="#">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </a>
-          <div className="w-8 h-8 rounded-full border-2 border-on-primary/20 overflow-hidden bg-primary/50">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full text-white/50" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-            </svg>
-          </div>
-        </div>
+
       </aside>
 
       <main className="ml-16 min-h-screen flex flex-col">
@@ -147,28 +135,7 @@ export default function HomePage() {
               transition={{ duration: 0.8 }}
               className="max-w-2xl pointer-events-auto"
             >
-              <div className="flex items-center gap-4 mb-6">
-                <div className="h-[2px] w-12 bg-secondary"></div>
-                <span className="text-on-primary font-label-lg tracking-widest uppercase opacity-90">Regístrate gratis hoy</span>
-              </div>
-              <h1 className="font-display-lg text-display-lg text-on-primary mb-6 leading-tight">
-                APOYO ACADÉMICO TOTAL
-              </h1>
-              <p className="font-body-lg text-body-lg text-surface-variant mb-10 max-w-lg">
-                Calificaciones de profesores y apuntes exclusivos. Accede a la red más grande de recursos universitarios compartidos por expertos.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row items-center gap-6">
-                <Link href="/dashboard" className="group relative px-8 py-4 bg-secondary text-on-primary rounded-xl font-headline-md flex items-center gap-3 overflow-hidden transition-all hover:pr-10 hover:bg-opacity-90 shadow-xl">
-                  <span>Explorar Material</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 transition-transform group-hover:translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </Link>
-                <button onClick={handleGuestLogin} disabled={isGuestLoading} className="font-label-lg text-on-primary border-b border-on-primary/30 pb-1 hover:border-secondary transition-colors uppercase tracking-wider">
-                  {isGuestLoading ? 'INGRESANDO...' : 'O continuar como invitado'}
-                </button>
-              </div>
+
 
               {/* Hero Stats */}
               <div className="grid grid-cols-3 gap-4 mt-16 max-w-xl">
@@ -214,10 +181,10 @@ export default function HomePage() {
                 <h3 className="font-headline-lg text-headline-lg text-primary mb-4 group-hover:text-secondary transition-colors duration-300">Repositorio Premium</h3>
                 <p className="text-on-surface-variant max-w-md group-hover:text-on-surface transition-colors duration-300">Accede a las mejores notas y resúmenes de tus cursos, verificados por la comunidad estudiantil de alto rendimiento.</p>
                 <div className="mt-8 flex gap-3 flex-wrap">
-                  <span className="reveal-item bg-surface-container-highest px-4 py-1.5 rounded-full text-label-md text-primary font-semibold" style={{transitionDelay: "0.1s"}}>Ingeniería</span>
-                  <span className="reveal-item bg-surface-container-highest px-4 py-1.5 rounded-full text-label-md text-primary font-semibold" style={{transitionDelay: "0.2s"}}>Medicina</span>
-                  <span className="reveal-item bg-surface-container-highest px-4 py-1.5 rounded-full text-label-md text-primary font-semibold" style={{transitionDelay: "0.3s"}}>Derecho</span>
-                  <span className="reveal-item bg-surface-container-highest px-4 py-1.5 rounded-full text-label-md text-primary font-semibold" style={{transitionDelay: "0.4s"}}>Economía</span>
+                  <span className="reveal-item bg-surface-container-highest px-4 py-1.5 rounded-full text-label-md text-primary font-semibold" style={{transitionDelay: "0.1s"}}>Derecho</span>
+                  <span className="reveal-item bg-surface-container-highest px-4 py-1.5 rounded-full text-label-md text-primary font-semibold" style={{transitionDelay: "0.2s"}}>Ciencias Empresariales</span>
+                  <span className="reveal-item bg-surface-container-highest px-4 py-1.5 rounded-full text-label-md text-primary font-semibold" style={{transitionDelay: "0.3s"}}>Economía y Finanzas</span>
+                  <span className="reveal-item bg-surface-container-highest px-4 py-1.5 rounded-full text-label-md text-primary font-semibold" style={{transitionDelay: "0.4s"}}>Ingeniería</span>
                 </div>
               </div>
               <div className="mt-auto relative z-10 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500 delay-200">
@@ -250,7 +217,7 @@ export default function HomePage() {
                 <p className="opacity-80 font-body-sm group-hover:opacity-100 transition-opacity">Conecta con miles de estudiantes de tu misma carrera y comparte conocimientos de valor.</p>
               </div>
               <div className="mt-6 flex flex-col gap-4 overflow-hidden">
-                <p className="text-xs opacity-0 group-hover:opacity-60 transition-opacity duration-300 translate-y-4 group-hover:translate-y-0">+2,400 alumnos nuevos esta semana</p>
+
                 <a className="flex items-center gap-2 font-label-lg hover:gap-4 transition-all" href="#">
                   Unirse ahora 
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -271,22 +238,16 @@ export default function HomePage() {
                 <h3 className="font-headline-md text-headline-md mb-2">Rankings de Profes</h3>
                 <p className="opacity-80 font-body-sm group-hover:opacity-100 transition-opacity">Consulta las opiniones y métodos de evaluación antes de matricularte en el próximo ciclo.</p>
               </div>
-              <div className="mt-4 h-0 group-hover:h-8 opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span className="text-xs font-semibold">Datos 100% anónimos y seguros</span>
-              </div>
+
             </div>
 
             {/* Investigación sin límites */}
             <div className="md:col-span-8 bg-surface-bright rounded-3xl p-8 border border-outline-variant flex items-center gap-12 group transition-all duration-500 hover:bg-surface-container-high hover:border-secondary hover:shadow-xl cursor-pointer overflow-hidden">
               <div className="flex-1">
-                <h3 className="font-headline-lg text-headline-lg text-primary mb-4 group-hover:text-secondary transition-colors duration-300">Investigación sin límites</h3>
-                <p className="text-on-surface-variant mb-6 group-hover:text-on-surface transition-colors duration-300">Herramientas avanzadas de búsqueda y citación automática para tus trabajos finales.</p>
+                <h3 className="font-headline-lg text-headline-lg text-primary mb-4 group-hover:text-secondary transition-colors duration-300">Herramientas de Productividad</h3>
+                <p className="text-on-surface-variant mb-6 group-hover:text-on-surface transition-colors duration-300">Accede a extensiones útiles para tu navegador y organiza mejor tus horarios de estudio.</p>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <button className="px-6 py-2.5 rounded-xl border border-primary text-primary font-label-lg hover:bg-primary hover:text-on-primary transition-all shadow-sm">Ver Repositorio</button>
-                  <a className="opacity-0 group-hover:opacity-100 sm:translate-x-[-10px] group-hover:translate-x-0 transition-all duration-500 text-sm font-semibold underline underline-offset-4" href="#">Gestor de Citas APA v7</a>
+                  <button className="px-6 py-2.5 rounded-xl border border-primary text-primary font-label-lg hover:bg-primary hover:text-on-primary transition-all shadow-sm">Explorar Herramientas</button>
                 </div>
               </div>
               <div className="hidden sm:flex w-40 h-40 bg-surface-container rounded-2xl items-center justify-center text-primary/20 rotate-3 group-hover:rotate-0 group-hover:scale-110 group-hover:text-secondary/30 transition-all duration-500">
