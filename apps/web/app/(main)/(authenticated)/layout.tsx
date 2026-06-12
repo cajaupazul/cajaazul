@@ -236,7 +236,7 @@ export default function AuthenticatedLayout({
     { label: 'Eventos', href: '/dashboard/events', icon: Calendar },
     { label: 'Grupos', href: '/dashboard/grupos', icon: Layers },
     { label: 'Nosotros', href: '/dashboard/about', icon: Info },
-    { label: 'CampusLink AI', href: '/dashboard/ai', icon: Bot },
+
   ];
 
   // Filter items for non-admins and guests
@@ -245,7 +245,7 @@ export default function AuthenticatedLayout({
     
     // Guests only see specific public sections
     if (isGuest) {
-      const allowedForGuests = ['Inicio', 'Cursos', 'Biblioteca', 'Profesores', 'Herramientas', 'Nosotros', 'CampusLink AI'];
+      const allowedForGuests = ['Inicio', 'Cursos', 'Biblioteca', 'Profesores', 'Herramientas', 'Nosotros'];
       return allowedForGuests.includes(item.label);
     }
 
