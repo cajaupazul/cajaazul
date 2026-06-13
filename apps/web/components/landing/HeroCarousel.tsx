@@ -50,7 +50,7 @@ export default function HeroCarousel() {
     }, [isPlaying, next]);
 
     return (
-        <div className="relative w-full h-[85vh] md:h-[90vh] overflow-hidden bg-[#002d5a]">
+        <div className="relative w-full h-[75vh] sm:h-[85vh] md:h-[90vh] overflow-hidden bg-[#002d5a]">
             {/* Background Images and Content Synchronized */}
             <AnimatePresence mode="wait">
                 <motion.div
@@ -62,7 +62,7 @@ export default function HeroCarousel() {
                     className="absolute inset-0"
                 >
                     {/* Background Image */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#002d5a]/85 via-[#002d5a]/40 to-transparent z-10" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#002d5a]/90 via-[#002d5a]/45 to-transparent z-10" />
                     <img
                         src={SLIDES[currentIndex].image}
                         alt="Carousel Background"
@@ -70,31 +70,31 @@ export default function HeroCarousel() {
                     />
 
                     {/* Content Overlay - Wrapped inside the same motion.div for perfect sync */}
-                    <div className="absolute inset-0 z-20 flex items-center px-6 md:px-20 lg:px-32">
-                        <div className="max-w-3xl space-y-6">
+                    <div className="absolute inset-0 z-20 flex items-center px-4 sm:px-12 md:px-20 lg:px-32 pt-12 sm:pt-0">
+                        <div className="max-w-3xl w-full">
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.6, delay: 0.1 }}
-                                className="space-y-4"
+                                className="space-y-3 sm:space-y-4"
                             >
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="h-[2px] w-12 bg-secondary" />
-                                    <span className="text-on-primary font-label-lg tracking-widest uppercase opacity-90">
+                                <div className="flex items-center gap-2 sm:gap-4 mb-2 sm:mb-4">
+                                    <div className="h-[2px] w-6 sm:w-12 bg-secondary" />
+                                    <span className="text-on-primary text-[10px] sm:text-xs tracking-widest uppercase opacity-90 font-medium">
                                         {SLIDES[currentIndex].date}
                                     </span>
                                 </div>
-                                <h1 className="font-display-lg text-display-lg text-on-primary mb-6 leading-tight uppercase select-none">
+                                <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-display-lg text-on-primary mb-2 sm:mb-4 leading-tight uppercase font-extrabold select-none">
                                     {SLIDES[currentIndex].title}
                                 </h1>
-                                <p className="font-body-lg text-body-lg text-surface-variant mb-10 max-w-lg select-none">
+                                <p className="text-xs sm:text-sm md:text-base lg:text-body-lg text-surface-variant mb-4 sm:mb-8 max-w-md sm:max-w-lg select-none">
                                     {SLIDES[currentIndex].subtitle}
                                 </p>
 
-                                <div className="flex flex-col sm:flex-row items-center gap-6 mt-6">
-                                    <Link href="/dashboard" className="group relative px-8 py-4 bg-secondary text-on-primary rounded-xl font-headline-md flex items-center gap-3 overflow-hidden transition-all hover:pr-10 hover:bg-opacity-90 shadow-xl w-full sm:w-auto justify-center">
+                                <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 mt-4 sm:mt-6">
+                                    <Link href="/dashboard" className="group relative px-6 py-3 sm:px-8 sm:py-4 bg-secondary text-on-primary rounded-xl font-semibold text-sm sm:text-base flex items-center gap-2 overflow-hidden transition-all hover:pr-10 hover:bg-opacity-90 shadow-xl w-full sm:w-auto justify-center">
                                         <span>Explorar Material</span>
-                                        <ChevronRight className="transition-transform group-hover:translate-x-2" />
+                                        <ChevronRight size={18} className="transition-transform group-hover:translate-x-2" />
                                     </Link>
                                     <button 
                                         onClick={async () => {
@@ -106,9 +106,9 @@ export default function HeroCarousel() {
                                                 console.error(err);
                                             }
                                         }}
-                                        className="font-label-lg text-on-primary border-b border-on-primary/30 pb-1 hover:border-secondary transition-colors uppercase tracking-wider"
+                                        className="text-[11px] sm:text-xs md:text-sm font-semibold text-on-primary border-b border-on-primary/30 pb-1 hover:border-secondary transition-colors uppercase tracking-wider w-full sm:w-auto text-center sm:text-left py-2 sm:py-0"
                                     >
-                                        O CONTINUAR COMO INVITADO
+                                        ENTRAR COMO INVITADO
                                     </button>
                                 </div>
                             </motion.div>
@@ -118,36 +118,36 @@ export default function HeroCarousel() {
             </AnimatePresence>
 
             {/* Controls Overlay */}
-            <div className="absolute bottom-10 left-6 md:left-20 lg:left-32 z-30 flex items-center gap-6">
-                <div className="flex items-center gap-4 bg-black/30 backdrop-blur-md p-2 rounded-full border border-white/10">
+            <div className="absolute bottom-6 left-4 sm:bottom-10 sm:left-20 lg:left-32 z-30 flex items-center gap-4 sm:gap-6">
+                <div className="flex items-center gap-2 sm:gap-4 bg-black/35 backdrop-blur-md p-1.5 sm:p-2 rounded-full border border-white/10">
                     <button
                         onClick={prev}
-                        className="p-2 text-white hover:text-blue-400 transition-colors"
+                        className="p-1.5 sm:p-2 text-white hover:text-blue-400 transition-colors"
                     >
-                        <ChevronLeft size={20} />
+                        <ChevronLeft size={16} className="sm:w-5 sm:h-5" />
                     </button>
 
-                    <div className="text-white font-black text-sm tracking-widest min-w-[50px] text-center select-none">
+                    <div className="text-white font-bold text-xs sm:text-sm tracking-widest min-w-[40px] sm:min-w-[50px] text-center select-none">
                         {currentIndex + 1} / {SLIDES.length}
                     </div>
 
                     <button
                         onClick={next}
-                        className="p-2 text-white hover:text-blue-400 transition-colors"
+                        className="p-1.5 sm:p-2 text-white hover:text-blue-400 transition-colors"
                     >
-                        <ChevronRight size={20} />
+                        <ChevronRight size={16} className="sm:w-5 sm:h-5" />
                     </button>
                 </div>
 
                 <button
                     onClick={() => setIsPlaying(!isPlaying)}
-                    className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all border border-white/10 backdrop-blur-md"
+                    className="p-2 sm:p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all border border-white/10 backdrop-blur-md"
                 >
-                    {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+                    {isPlaying ? <Pause size={14} className="sm:w-[18px] sm:h-[18px]" fill="currentColor" /> : <Play size={14} className="sm:w-[18px] sm:h-[18px]" fill="currentColor" />}
                 </button>
 
                 {/* Progress Circle - Reset key ensures it starts fresh with slide change */}
-                <div className="relative w-12 h-12 flex items-center justify-center">
+                <div className="relative w-12 h-12 hidden sm:flex items-center justify-center">
                     <svg className="w-full h-full -rotate-90">
                         <circle
                             cx="24" cy="24" r="21"

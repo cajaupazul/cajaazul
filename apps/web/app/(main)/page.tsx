@@ -19,77 +19,143 @@ const PARTICLE_SETS: Record<ParticleMode, string[]> = {
 const MODES: ParticleMode[] = ['hearts', 'comments', 'tomatoes'];
 
 function ComunidadActiva() {
-  const [modeIdx, setModeIdx] = useState(0);
-  const [particles, setParticles] = useState<Particle[]>([]);
   const [hovered, setHovered] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const nextIdRef = useRef(0);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mouseRef = useRef({ x: 0, y: 0, active: false });
 
-  const spawnParticles = useCallback((mode: ParticleMode) => {
-    const icons = PARTICLE_SETS[mode];
-    const newPs: Particle[] = Array.from({ length: 8 }, (_, i) => ({
-      id: nextIdRef.current++,
-      x: 10 + Math.random() * 80,
-      icon: icons[Math.floor(Math.random() * icons.length)],
-      delay: i * 0.08,
-    }));
-    setParticles(prev => [...prev, ...newPs]);
-    setTimeout(() => {
-      setParticles(prev => prev.filter(p => !newPs.find(n => n.id === p.id)));
-    }, 2000);
-  }, []);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  const handleMouseEnter = useCallback(() => {
-    setHovered(true);
-    const newIdx = (modeIdx + 1) % MODES.length;
-    setModeIdx(newIdx);
-    spawnParticles(MODES[newIdx]);
-    timerRef.current = setInterval(() => spawnParticles(MODES[newIdx]), 800);
-  }, [modeIdx, spawnParticles]);
+    let animationFrameId: number;
+    let width = canvas.width = canvas.offsetWidth;
+    let height = canvas.height = canvas.offsetHeight;
 
-  const handleMouseLeave = useCallback(() => {
-    setHovered(false);
-    if (timerRef.current) clearInterval(timerRef.current);
-  }, []);
+    const handleResize = () => {
+      if (!canvas) return;
+      width = canvas.width = canvas.offsetWidth;
+      height = canvas.height = canvas.offsetHeight;
+    };
+    window.addEventListener('resize', handleResize);
 
-  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+    const particleCount = 28;
+    const particles: { x: number; y: number; vx: number; vy: number; radius: number }[] = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.6,
+        vy: (Math.random() - 0.5) * 0.6,
+        radius: 2 + Math.random() * 2.5,
+      });
+    }
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      particles.forEach((p, idx) => {
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < 0 || p.x > width) p.vx *= -1;
+        if (p.y < 0 || p.y > height) p.vy *= -1;
+
+        p.x = Math.max(0, Math.min(width, p.x));
+        p.y = Math.max(0, Math.min(height, p.y));
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = hovered ? 'rgba(96, 165, 250, 0.5)' : 'rgba(255, 255, 255, 0.15)';
+        ctx.fill();
+
+        for (let j = idx + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+          if (dist < 75) {
+            const alpha = (1 - dist / 75) * (hovered ? 0.25 : 0.08);
+            ctx.strokeStyle = `rgba(96, 165, 250, ${alpha})`;
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+
+        if (mouseRef.current.active && hovered) {
+          const distToMouse = Math.hypot(p.x - mouseRef.current.x, p.y - mouseRef.current.y);
+          if (distToMouse < 110) {
+            const alpha = (1 - distToMouse / 110) * 0.35;
+            ctx.strokeStyle = `rgba(96, 165, 250, ${alpha})`;
+            ctx.lineWidth = 1.1;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(mouseRef.current.x, mouseRef.current.y);
+            ctx.stroke();
+
+            p.x += (mouseRef.current.x - p.x) * 0.015;
+            p.y += (mouseRef.current.y - p.y) * 0.015;
+          }
+        }
+      });
+
+      animationFrameId = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [hovered]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    mouseRef.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+      active: true,
+    };
+  };
 
   return (
     <div
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      className="md:col-span-4 bg-primary text-on-primary rounded-3xl p-8 flex flex-col justify-between shadow-lg relative overflow-hidden cursor-pointer transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl"
+      ref={containerRef}
+      onMouseEnter={() => {
+        setHovered(true);
+        mouseRef.current.active = true;
+      }}
+      onMouseLeave={() => {
+        setHovered(false);
+        mouseRef.current.active = false;
+      }}
+      onMouseMove={handleMouseMove}
+      className="md:col-span-4 bg-[#001736] text-on-primary rounded-3xl p-8 flex flex-col justify-between shadow-lg relative overflow-hidden cursor-pointer transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl border border-white/5 min-h-[320px]"
     >
-      {/* Falling Particles */}
-      <AnimatePresence>
-        {particles.map(p => (
-          <motion.span
-            key={p.id}
-            initial={{ opacity: 1, y: 0, scale: 1 }}
-            animate={{ opacity: 0, y: -180, scale: 1.3 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.6, delay: p.delay, ease: 'easeOut' }}
-            style={{ left: `${p.x}%` }}
-            className="absolute bottom-8 text-2xl pointer-events-none select-none"
-          >
-            {p.icon}
-          </motion.span>
-        ))}
-      </AnimatePresence>
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full pointer-events-none z-0"
+      />
 
       <div className="relative z-10">
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-all duration-300 ${hovered ? 'bg-white/20' : 'bg-white/10'}`}>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         </div>
-        <h3 className="font-headline-md text-headline-md mb-2">Comunidad Activa</h3>
-        <p className={`font-body-sm transition-opacity duration-300 ${hovered ? 'opacity-100' : 'opacity-80'}`}>
+        <h3 className="font-bold text-2xl text-white mb-2">Comunidad Activa</h3>
+        <p className={`text-sm transition-opacity duration-300 ${hovered ? 'opacity-100' : 'opacity-80'}`}>
           Conecta con miles de estudiantes de tu misma carrera y comparte conocimientos de valor.
         </p>
       </div>
       <div className="relative z-10 mt-6 flex flex-col gap-4">
-        <a className="flex items-center gap-2 font-label-lg hover:gap-4 transition-all" href="#">
+        <a className="flex items-center gap-2 font-semibold hover:gap-4 transition-all text-blue-400" href="#">
           Unirse ahora
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -111,33 +177,41 @@ const BARS = [
 
 function RankingsCard() {
   const [hovered, setHovered] = useState(false);
+  const BARS = [
+    { label: 'A+', height: 72, color: '#60a5fa' },
+    { label: 'A',  height: 56, color: '#818cf8' },
+    { label: 'B+', height: 42, color: '#a78bfa' },
+    { label: 'B',  height: 28, color: '#c084fc' },
+    { label: 'C',  height: 16, color: '#e879f9' },
+  ];
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="md:col-span-4 bg-secondary-container text-on-secondary-container rounded-3xl p-8 flex flex-col justify-between shadow-sm transition-all duration-500 hover:scale-[1.03] cursor-pointer overflow-hidden relative"
+      className="md:col-span-4 bg-[#0051d5] text-white rounded-3xl p-8 flex flex-col justify-between shadow-sm transition-all duration-500 hover:scale-[1.03] cursor-pointer overflow-hidden relative min-h-[320px]"
     >
       <div>
-        <div className="bg-on-secondary-container/10 w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-all duration-300">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="bg-white/10 w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-all duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
         </div>
-        <h3 className="font-headline-md text-headline-md mb-2">Rankings de Profes</h3>
-        <p className={`font-body-sm transition-opacity duration-300 ${hovered ? 'opacity-100' : 'opacity-80'}`}>
+        <h3 className="font-bold text-2xl text-white mb-2">Rankings de Profes</h3>
+        <p className={`text-sm transition-opacity duration-300 ${hovered ? 'opacity-100' : 'opacity-85'}`}>
           Consulta las opiniones y métodos de evaluación antes de matricularte en el próximo ciclo.
         </p>
       </div>
 
-      {/* Animated bar chart */}
       <div className="mt-6 flex items-end gap-2 h-20">
         {BARS.map((bar, i) => (
           <div key={bar.label} className="flex flex-col items-center gap-1 flex-1">
             <motion.div
-              animate={{ height: hovered ? `${bar.height}%` : '8px' }}
-              transition={{ duration: 0.5, delay: i * 0.07, ease: 'easeOut' }}
-              style={{ backgroundColor: bar.color, maxHeight: '72px', minHeight: '8px' }}
-              className="w-full rounded-t-lg"
+              initial={{ height: 8 }}
+              animate={{ height: hovered ? bar.height : 8 }}
+              transition={{ type: 'spring', stiffness: 120, damping: 14, delay: i * 0.05 }}
+              style={{ backgroundColor: bar.color }}
+              className="w-full rounded-t-lg min-h-[8px]"
             />
             <span className="text-[9px] font-bold opacity-60">{bar.label}</span>
           </div>
@@ -276,7 +350,7 @@ export default function HomePage() {
       `}} />
 
       {/* SideNavBar */}
-      <aside className="fixed left-0 top-0 h-full flex flex-col items-center py-8 z-40 bg-primary shadow-lg w-14 sm:w-16">
+      <aside className="fixed left-0 top-0 h-full hidden sm:flex flex-col items-center py-8 z-40 bg-primary shadow-lg w-14 sm:w-16">
         <div className="mb-10">
           <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-on-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -300,7 +374,7 @@ export default function HomePage() {
         </nav>
       </aside>
 
-      <main className="ml-14 sm:ml-16 min-h-screen flex flex-col">
+      <main className="ml-0 sm:ml-16 min-h-screen flex flex-col">
         {/* TopNavBar */}
         <header className={`bg-[#001736] shadow-lg sticky top-0 z-30 transition-all duration-300 ${scrolled ? 'py-2' : 'py-0'}`}>
           <div className="flex justify-between items-center h-16 sm:h-20 w-full px-4 sm:px-10 max-w-[1280px] mx-auto">
