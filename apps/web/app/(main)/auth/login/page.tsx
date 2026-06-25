@@ -226,11 +226,25 @@ function LoginContent() {
       <div className="w-full lg:w-1/2 bg-white flex flex-col items-center justify-center p-6 sm:p-12 lg:p-20 relative">
         {/* Mobile Spacer (optional if we want more air) */}
         <div className="w-full max-w-md bg-white rounded-3xl lg:p-0 shadow-2xl lg:shadow-none p-8 -mt-10 lg:mt-0 relative z-20">
+          {/* Back to Home Button */}
+          <div className="mb-6">
+            <a
+              href="/"
+              className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-600 font-medium text-sm transition-colors group"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Volver al inicio
+            </a>
+          </div>
+
           {/* Header */}
           <div className="text-center mb-8 lg:text-left">
             <h1 className="text-3xl sm:text-4xl font-black text-slate-900 mb-2">Welcome back!</h1>
             <p className="text-slate-500 font-medium">Por favor ingresa tus datos para continuar</p>
           </div>
+
 
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-5">

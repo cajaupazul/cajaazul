@@ -190,18 +190,14 @@ export default function GruposContent({
                         <motion.button
                             whileHover={{ scale: 1.02 }}
                             onClick={() => {
-                                if (!profile?.es_vip) {
-                                    alert('Solo los miembros VIP pueden crear nuevos grupos.');
-                                    return;
-                                }
                                 setEditingGrupo(null);
                                 setFormData({ nombre: '', descripcion: '', tipo: '', link_whatsapp: '' });
                                 setShowModal(true);
                             }}
-                            className={`flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold text-white transition-all w-full md:w-auto justify-center ${profile?.es_vip ? 'bg-blue-600 hover:bg-blue-500' : 'bg-gray-600 hover:bg-gray-500 opacity-80'}`}
+                            className="flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold text-white transition-all w-full md:w-auto justify-center bg-blue-600 hover:bg-blue-500"
                         >
                             <Plus className="w-5 h-5 md:w-6 md:h-6" />
-                            {profile?.es_vip ? 'Crear Nuevo Grupo' : 'Crear Grupo (VIP)'}
+                            Crear Nuevo Grupo
                         </motion.button>
                     )}
                 </div>

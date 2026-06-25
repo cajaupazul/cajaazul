@@ -15,6 +15,7 @@ type Bindings = {
     PROFILE_FRAMES: R2Bucket
     GRUPOS: R2Bucket
     COURSE_IMAGES: R2Bucket
+    BLACKBOARD_DOWNLOADS: R2Bucket
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -54,5 +55,42 @@ app.get('/', (c) => {
 app.route('/storage', storageRouter)
 app.route('/checkout', checkout)
 app.route('/shop', shop)
+
+// --- Endpoint exclusivo para la Extensión de Blackboard ---
+const EXTENSION_SECRET_KEY = 'CampusLink-Ext-2026-SuperSecreta';
+
+app.post('/upload-from-extension', async (c) => {
+    try {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader !== `Bearer ${EXTENSION_SECRET_KEY}`) {
+            return c.json({ error: 'Acceso no autorizado' }, 401);
+        }
+
+        const body = await c.req.parseBody();
+        const file = body['file'] as File;
+        const courseId = (body['courseId'] as string) || 'General';
+
+        if (!file) {
+            return c.json({ error: 'No se envió ningún archivo' }, 400);
+        }
+
+        const filePath = `${courseId}/${file.name}`;
+        
+        await c.env.BLACKBOARD_DOWNLOADS.put(filePath, await file.arrayBuffer(), {
+            httpMetadata: { contentType: file.type },
+        });
+
+        return c.json({ 
+            success: true, 
+            message: 'Archivo respaldado en R2 exitosamente',
+            path: filePath
+        });
+
+    } catch (error) {
+        console.error('Error guardando en R2:', error);
+        return c.json({ error: 'Error interno del servidor' }, 500);
+    }
+});
+// --------------------------------------------------------
 
 export default app

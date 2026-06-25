@@ -39,3 +39,7 @@ bucket_name = "announcements"
 [[r2_buckets]]
 binding = "LIBRARY"
 bucket_name = "library"
+
+[[r2_buckets]]
+binding = "BLACKBOARD_DOWNLOADS"
+bucket_name = "blackboard-downloads"
