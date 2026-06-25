@@ -6,6 +6,25 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import HeroCarousel from '@/components/landing/HeroCarousel';
 
+// ── Hook: activa la tarjeta cuando entra al viewport en móvil ──────────────
+function useMobileScroll(threshold = 0.55) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [isActive, setIsActive] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const isMobile = window.matchMedia('(hover: none)').matches;
+    if (!isMobile) return; // Solo en dispositivos táctiles
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsActive(entry.isIntersecting),
+      { threshold }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [threshold]);
+  return { ref, isActive };
+}
+
 // ── Comunidad Activa: cycling emoji particles ──────────────────────────────
 type ParticleMode = 'hearts' | 'comments' | 'tomatoes';
 interface Particle { id: number; x: number; icon: string; delay: number; }
@@ -428,42 +447,63 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
 
             {/* Repositorio Premium (Large) */}
-            <div className="md:col-span-8 bg-surface-container-low rounded-3xl p-6 sm:p-8 flex flex-col justify-between min-h-[380px] group overflow-hidden relative shadow-sm border border-outline-variant/30 transition-all duration-500 hover:shadow-2xl hover:scale-[1.01] cursor-pointer">
-              <div className="relative z-10">
-                <div className="bg-secondary/10 w-12 h-12 rounded-xl flex items-center justify-center text-secondary mb-6 group-hover:bg-secondary group-hover:text-on-primary transition-all duration-300">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                  </svg>
+            {(() => {
+              // eslint-disable-next-line react-hooks/rules-of-hooks
+              const { ref: repoRef, isActive: repoActive } = useMobileScroll();
+              return (
+                <div
+                  ref={repoRef}
+                  className={`md:col-span-8 bg-surface-container-low rounded-3xl p-6 sm:p-8 flex flex-col justify-between min-h-[380px] group overflow-hidden relative shadow-sm border border-outline-variant/30 transition-all duration-500 hover:shadow-2xl hover:scale-[1.01] cursor-pointer ${
+                    repoActive ? 'shadow-2xl scale-[1.01] mobile-active' : ''
+                  }`}
+                >
+                  <div className="relative z-10">
+                    <div className={`bg-secondary/10 w-12 h-12 rounded-xl flex items-center justify-center text-secondary mb-6 transition-all duration-300 ${
+                      repoActive ? 'bg-secondary text-on-primary' : 'group-hover:bg-secondary group-hover:text-on-primary'
+                    }`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                      </svg>
+                    </div>
+                    <h3 className={`font-bold text-2xl mb-4 transition-colors duration-300 ${
+                      repoActive ? 'text-secondary' : 'text-primary group-hover:text-secondary'
+                    }`}>Repositorio Premium</h3>
+                    <p className={`max-w-md transition-colors duration-300 text-sm sm:text-base ${
+                      repoActive ? 'text-on-surface' : 'text-on-surface-variant group-hover:text-on-surface'
+                    }`}>
+                      Accede a las mejores notas y resúmenes de tus cursos, verificados por la comunidad estudiantil de alto rendimiento.
+                    </p>
+                    <div className="mt-6 flex gap-2 sm:gap-3 flex-wrap">
+                      {['Derecho','Ciencias Empresariales','Economía y Finanzas','Ingeniería'].map((f, i) => (
+                        <span
+                          key={f}
+                          className="reveal-item bg-surface-container-highest px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-[12px] text-primary font-semibold"
+                          style={{transitionDelay: `${0.1 + i * 0.1}s`}}
+                        >
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className={`mt-auto relative z-10 transform transition-all duration-500 delay-200 ${
+                    repoActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0'
+                  }`}>
+                    <a className="inline-flex items-center gap-2 text-secondary font-bold hover:underline text-sm" href="#">
+                      Explorar todas las facultades
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </a>
+                  </div>
+                  {/* Waifu video decoration */}
+                  <div className={`absolute -bottom-8 -right-8 w-1/2 sm:w-2/5 transition-all duration-700 pointer-events-none ${
+                    repoActive ? 'opacity-90 scale-105' : 'opacity-20 group-hover:opacity-90 group-hover:scale-105'
+                  }`}>
+                    <video src="/waifu/fg_video.webm" autoPlay loop muted playsInline className="w-full h-auto drop-shadow-2xl" />
+                  </div>
                 </div>
-                <h3 className="font-bold text-2xl text-primary mb-4 group-hover:text-secondary transition-colors duration-300">Repositorio Premium</h3>
-                <p className="text-on-surface-variant max-w-md group-hover:text-on-surface transition-colors duration-300 text-sm sm:text-base">
-                  Accede a las mejores notas y resúmenes de tus cursos, verificados por la comunidad estudiantil de alto rendimiento.
-                </p>
-                <div className="mt-6 flex gap-2 sm:gap-3 flex-wrap">
-                  {['Derecho','Ciencias Empresariales','Economía y Finanzas','Ingeniería'].map((f, i) => (
-                    <span
-                      key={f}
-                      className="reveal-item bg-surface-container-highest px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-[12px] text-primary font-semibold"
-                      style={{transitionDelay: `${0.1 + i * 0.1}s`}}
-                    >
-                      {f}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="mt-auto relative z-10 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500 delay-200">
-                <a className="inline-flex items-center gap-2 text-secondary font-bold hover:underline text-sm" href="#">
-                  Explorar todas las facultades
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </a>
-              </div>
-              {/* Waifu video decoration */}
-              <div className="absolute -bottom-8 -right-8 w-1/2 sm:w-2/5 opacity-20 group-hover:opacity-90 transition-all duration-700 group-hover:scale-105 pointer-events-none">
-                <video src="/waifu/fg_video.webm" autoPlay loop muted playsInline className="w-full h-auto drop-shadow-2xl" />
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Comunidad Activa — interactive component */}
             <ComunidadActiva />
