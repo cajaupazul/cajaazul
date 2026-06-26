@@ -93,4 +93,69 @@ app.post('/upload-from-extension', async (c) => {
 });
 // --------------------------------------------------------
 
+app.get('/list-downloads', async (c) => {
+    try {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader !== `Bearer ${EXTENSION_SECRET_KEY}`) {
+            return c.json({ error: 'Acceso no autorizado' }, 401);
+        }
+
+        const listed = await c.env.BLACKBOARD_DOWNLOADS.list({ limit: 1000 });
+        const files = listed.objects.map(obj => ({
+            key: obj.key,
+            size: obj.size
+        }));
+
+        return c.json({ files });
+    } catch (error: any) {
+        return c.json({ error: error.message }, 500);
+    }
+});
+
+app.get('/download-file', async (c) => {
+    try {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader !== `Bearer ${EXTENSION_SECRET_KEY}`) {
+            return c.json({ error: 'Acceso no autorizado' }, 401);
+        }
+
+        const path = c.req.query('path');
+        if (!path) {
+            return c.json({ error: 'Falta el parámetro "path"' }, 400);
+        }
+
+        const object = await c.env.BLACKBOARD_DOWNLOADS.get(path);
+        if (!object) {
+            return c.json({ error: 'Archivo no encontrado' }, 404);
+        }
+
+        const headers = new Headers();
+        object.writeHttpMetadata(headers);
+        headers.set('Content-Disposition', `attachment; filename="${path.split('/').pop()}"`);
+
+        return new Response(object.body, { headers });
+    } catch (error: any) {
+        return c.json({ error: error.message }, 500);
+    }
+});
+
+app.delete('/delete-file', async (c) => {
+    try {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader !== `Bearer ${EXTENSION_SECRET_KEY}`) {
+            return c.json({ error: 'Acceso no autorizado' }, 401);
+        }
+
+        const path = c.req.query('path');
+        if (!path) {
+            return c.json({ error: 'Falta el parámetro "path"' }, 400);
+        }
+
+        await c.env.BLACKBOARD_DOWNLOADS.delete(path);
+        return c.json({ success: true });
+    } catch (error: any) {
+        return c.json({ error: error.message }, 500);
+    }
+});
+
 export default app
