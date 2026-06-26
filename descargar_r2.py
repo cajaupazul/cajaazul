@@ -10,10 +10,16 @@ SECRET_KEY = "CampusLink-Ext-2026-SuperSecreta"
 # Carpeta de descarga: se guardará por defecto en Descargas/Blackboard_Descargas de tu PC
 DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads", "Blackboard_Descargas")
 
+# User-Agent estándar para evitar bloqueos del WAF de Cloudflare
+HEADERS = {
+    "Authorization": f"Bearer {SECRET_KEY}",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
+
 def list_files():
     req = urllib.request.Request(
         f"{API_URL}/list-downloads",
-        headers={"Authorization": f"Bearer {SECRET_KEY}"}
+        headers=HEADERS
     )
     try:
         with urllib.request.urlopen(req) as response:
@@ -32,7 +38,7 @@ def download_file(path, local_path):
     
     req = urllib.request.Request(
         url,
-        headers={"Authorization": f"Bearer {SECRET_KEY}"}
+        headers=HEADERS
     )
     
     try:
@@ -52,7 +58,7 @@ def delete_file(path):
     
     req = urllib.request.Request(
         url,
-        headers={"Authorization": f"Bearer {SECRET_KEY}"},
+        headers=HEADERS,
         method="DELETE"
     )
     try:
