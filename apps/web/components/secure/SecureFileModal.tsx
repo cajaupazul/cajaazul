@@ -43,7 +43,7 @@ export default function SecureFileModal({ isOpen, onClose, filePath, fileName, u
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogContent 
                 style={{ left: 'auto', right: 0, top: 0, bottom: 0, transform: 'none' }}
-                className="p-0 overflow-hidden bg-[#f5f5f5] border-none shadow-2xl text-white w-full h-[100dvh] max-w-none sm:w-[90vw] md:w-[85vw] lg:w-[1100px] fixed rounded-none z-[99999] !zoom-in-100 !slide-in-from-right-1/2 !slide-out-to-right-1/2 duration-300 ease-in-out [&>button]:text-zinc-500 [&>button]:hover:text-zinc-900 [&>button]:hover:bg-zinc-200 [&>button]:bg-white [&>button]:rounded-md [&>button]:p-2 [&>button]:right-4 [&>button]:top-4 [&>button]:transition-all [&>button]:z-[999999] [&>button]:shadow-sm"
+                className="p-0 overflow-hidden bg-[#f5f5f5] border-none shadow-2xl text-white w-full h-[100dvh] max-w-none sm:w-[calc(100vw-280px)] md:w-[calc(100vw-300px)] lg:w-[calc(100vw-320px)] xl:w-[1200px] fixed rounded-none z-[99999] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-right-full data-[state=closed]:slide-out-to-right-full duration-500 ease-out [&>button]:text-zinc-500 [&>button]:hover:text-zinc-900 [&>button]:hover:bg-zinc-200 [&>button]:bg-white [&>button]:rounded-md [&>button]:p-2.5 [&>button]:right-6 [&>button]:top-5 [&>button]:transition-all [&>button]:z-[999999] [&>button]:shadow-sm"
             >
                 <div className="sr-only">
                     <DialogTitle>Visor de Documento Seguro</DialogTitle>
