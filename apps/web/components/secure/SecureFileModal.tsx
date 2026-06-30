@@ -41,7 +41,9 @@ export default function SecureFileModal({ isOpen, onClose, filePath, fileName, u
 
     return (
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-            <DialogContent className="p-0 overflow-hidden bg-transparent border-none shadow-none text-white w-full h-[100dvh] max-w-none sm:max-w-6xl sm:w-[98vw] sm:h-[95vh] fixed inset-0 sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] translate-x-0 translate-y-0 rounded-none sm:rounded-2xl z-[99999] [&>button]:text-white [&>button]:bg-white/10 [&>button]:hover:bg-white/20 [&>button]:rounded-full [&>button]:p-2 [&>button]:right-6 [&>button]:top-6 [&>button]:transition-all">
+            <DialogContent 
+                className="p-0 overflow-hidden bg-[#e8e8e8] border-none shadow-2xl text-white w-full h-[100dvh] max-w-none sm:w-[90vw] md:w-[85vw] lg:w-[1100px] fixed right-0 top-0 translate-x-0 rounded-none z-[99999] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right duration-500 ease-in-out [&>button]:text-zinc-500 [&>button]:hover:text-zinc-900 [&>button]:hover:bg-zinc-200 [&>button]:bg-white [&>button]:rounded-md [&>button]:p-2 [&>button]:right-4 [&>button]:top-4 [&>button]:transition-all [&>button]:z-[999999] [&>button]:shadow-sm"
+            >
                 <div className="sr-only">
                     <DialogTitle>Visor de Documento Seguro</DialogTitle>
                     <DialogDescription>Visualización protegida del archivo seleccionado</DialogDescription>

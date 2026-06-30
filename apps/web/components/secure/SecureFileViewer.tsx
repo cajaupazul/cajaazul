@@ -510,19 +510,19 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     return (
         <div
             ref={containerRef}
-            className={`w-full ${isFullscreen ? 'h-screen fixed inset-0 z-[9999] rounded-none' : 'h-full rounded-xl'} flex flex-col bg-[#e8e8e8] overflow-hidden relative select-none shadow-sm border border-zinc-200`}
+            className={`w-full ${isFullscreen ? 'h-[100dvh] fixed inset-0 z-[9999] rounded-none' : 'h-[100dvh] border-l border-zinc-300 shadow-2xl'} flex flex-col bg-[#f5f5f5] overflow-hidden relative select-none`}
             onContextMenu={(e) => e.preventDefault()}
         >
             {/* V5: Blackboard-style Title Area */}
             {!isFullscreen && (
-                <div className="px-5 py-3 sm:px-6 sm:py-4 bg-white shrink-0 border-b border-zinc-200 flex flex-col items-start justify-center">
-                    <p className="text-[10px] sm:text-xs text-zinc-500 font-sans mb-0.5 uppercase tracking-wider">CampusLink Document Viewer</p>
-                    <h1 className="text-lg sm:text-2xl font-serif text-zinc-900 truncate w-full">{fileName}</h1>
+                <div className="px-5 py-4 sm:px-8 sm:py-5 bg-white shrink-0 border-b border-zinc-200 flex flex-col items-start justify-center pr-16 relative">
+                    <p className="text-[10px] sm:text-[11px] text-zinc-500 font-sans mb-1 uppercase tracking-wider font-semibold">CampusLink Document Viewer</p>
+                    <h1 className="text-lg sm:text-2xl font-serif text-zinc-900 truncate w-full" title={fileName}>{fileName}</h1>
                 </div>
             )}
 
             {/* BLACKBOARD STYLE TOOLBAR */}
-            <div className="h-12 bg-[#333333] text-[#cccccc] flex items-center justify-between px-2 sm:px-4 z-[110] relative shrink-0 shadow-md">
+            <div className="h-12 bg-[#262626] text-[#e0e0e0] flex items-center justify-between px-2 sm:px-6 z-[110] relative shrink-0 shadow-md">
                 {/* Left Control Group: Page navigation */}
                 <div className="flex items-center gap-1 sm:gap-3 flex-1">
                     {fileType === 'pdf' && numPages && (
