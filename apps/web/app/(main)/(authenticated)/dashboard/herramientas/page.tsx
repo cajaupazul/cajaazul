@@ -167,9 +167,19 @@ export default function HerramientasPage() {
                 </Link>
 
                 {/* Downloader Extension Card */}
-                <div
-                    className="group relative bg-bb-card border border-bb-border rounded-2xl p-6 opacity-80 transition-all duration-300 overflow-hidden grayscale hover:grayscale-0"
+                <Link
+                    href="/dashboard/herramientas/extension"
+                    className="group relative bg-bb-card border border-bb-border rounded-2xl p-6 hover:border-opacity-60 transition-all duration-300 overflow-hidden"
+                    style={{ textDecoration: 'none' }}
                 >
+                    {/* Glow effect */}
+                    <div
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"
+                        style={{
+                            background: `radial-gradient(circle at 30% 30%, #f59e0b10, transparent 70%)`,
+                        }}
+                    />
+
                     <div className="relative z-10">
                         <div className="flex justify-between items-start mb-4">
                             <div
@@ -179,9 +189,6 @@ export default function HerramientasPage() {
                                 <Download className="w-7 h-7 text-amber-500" />
                             </div>
                             <div className="flex flex-col gap-1 items-end">
-                                <span className="px-2 py-1 rounded-md bg-amber-500/10 text-[9px] font-black text-amber-500 border border-amber-500/20 uppercase tracking-widest">
-                                    Próximamente
-                                </span>
                                 <span className="px-2 py-1 rounded-md bg-blue-500/10 text-[9px] font-black text-blue-400 border border-blue-500/20 uppercase tracking-widest">
                                     Solo para PC
                                 </span>
@@ -195,11 +202,11 @@ export default function HerramientasPage() {
                             Descarga todo el contenido de tus cursos de Blackboard de forma instantánea. Olvida las descargas manuales, un clic y listo.
                         </p>
 
-                        <div className="flex items-center gap-1.5 text-sm font-semibold text-bb-text-secondary opacity-50 cursor-not-allowed">
+                        <div className="flex items-center gap-1.5 text-sm font-semibold transition-all group-hover:gap-2.5 text-amber-500">
                             Instalar Extensión <ArrowRight className="w-4 h-4" />
                         </div>
                     </div>
-                </div>
+                </Link>
             </div>
 
             {/* Upload Modal */}
