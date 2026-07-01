@@ -187,6 +187,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const [containerWidth, setContainerWidth] = useState(0);
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
     const [zoomLevel, setZoomLevel] = useState(1);
+    const [isDownloading, setIsDownloading] = useState(false);
     
     // V5 Blackboard UI states
     const [currentPage, setCurrentPage] = useState(1);
@@ -472,12 +473,34 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
         }
     };
 
-    const handleDownload = () => {
-        if (!blobUrl) return;
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = fileName;
-        a.click();
+    const handleDownload = async () => {
+        if (!blobUrl || isDownloading) return;
+        setIsDownloading(true);
+        try {
+            // Siempre hacer fetch autenticado para obtener el blob real
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) throw new Error('Sesión expirada');
+
+            const res = await fetch(blobUrl, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error(`Error ${res.status}`);
+            const blob = await res.blob();
+            const localUrl = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = localUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(localUrl), 5000);
+        } catch (err: any) {
+            alert(`Error al descargar: ${err.message}`);
+        } finally {
+            setIsDownloading(false);
+        }
     };
 
     if (loading && fileType !== 'pptx') {
@@ -591,24 +614,21 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                 {/* Right Control Group: Download */}
                 <div className="flex items-center gap-4 justify-end flex-1">
                     <div className="relative group">
-                        {blobUrl ? (
-                            <a
-                                href={blobUrl}
-                                download={fileName}
-                                className="hover:text-white transition-colors p-1 inline-flex items-center"
-                                title={`Descargar ${fileName}`}
-                            >
-                                <Download className="w-4 h-4 sm:w-5 sm:h-5" />
-                            </a>
-                        ) : (
-                            <button
-                                disabled
-                                className="opacity-40 cursor-not-allowed transition-colors p-1"
-                                title="Cargando..."
-                            >
-                                <Download className="w-4 h-4 sm:w-5 sm:h-5" />
-                            </button>
-                        )}
+                        <button
+                            onClick={handleDownload}
+                            disabled={!blobUrl || isDownloading}
+                            className={`transition-colors p-1 inline-flex items-center ${
+                                blobUrl && !isDownloading 
+                                    ? 'hover:text-white cursor-pointer' 
+                                    : 'opacity-40 cursor-not-allowed'
+                            }`}
+                            title={isDownloading ? 'Descargando...' : `Descargar ${fileName}`}
+                        >
+                            {isDownloading 
+                                ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                                : <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+                            }
+                        </button>
                     </div>
                     {isFullscreen && (
                         <button onClick={toggleFullscreen} className="hover:text-[#ccc] transition-colors bg-[#1a1a1a] p-1.5 rounded-sm sm:hidden ml-2" title="Cerrar">
