@@ -155,7 +155,7 @@ function ComunidadActiva() {
         mouseRef.current.active = false;
       }}
       onMouseMove={handleMouseMove}
-      className="md:col-span-4 bg-[#001736] text-on-primary rounded-3xl p-8 flex flex-col justify-between shadow-lg relative overflow-hidden cursor-pointer transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl border border-white/5 min-h-[320px]"
+      className="md:col-span-4 bg-[#001736] text-on-primary rounded-none p-8 flex flex-col justify-between shadow-lg relative overflow-hidden cursor-pointer transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl border border-white/5 min-h-[320px]"
     >
       <canvas
         ref={canvasRef}
@@ -163,7 +163,7 @@ function ComunidadActiva() {
       />
 
       <div className="relative z-10">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-all duration-300 ${hovered ? 'bg-white/20' : 'bg-white/10'}`}>
+        <div className={`w-12 h-12 rounded-none flex items-center justify-center mb-6 transition-all duration-300 ${hovered ? 'bg-white/20' : 'bg-white/10'}`}>
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
@@ -208,10 +208,10 @@ function RankingsCard() {
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="md:col-span-4 bg-[#0051d5] text-white rounded-3xl p-8 flex flex-col justify-between shadow-sm transition-all duration-500 hover:scale-[1.03] cursor-pointer overflow-hidden relative min-h-[320px]"
+      className="md:col-span-4 bg-[#0051d5] text-white rounded-none p-8 flex flex-col justify-between shadow-sm transition-all duration-500 hover:scale-[1.03] cursor-pointer overflow-hidden relative min-h-[320px]"
     >
       <div>
-        <div className="bg-white/10 w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-all duration-300">
+        <div className="bg-white/10 w-12 h-12 rounded-none flex items-center justify-center mb-6 transition-all duration-300">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
@@ -230,7 +230,7 @@ function RankingsCard() {
               animate={{ height: hovered ? bar.height : 8 }}
               transition={{ type: 'spring', stiffness: 120, damping: 14, delay: i * 0.05 }}
               style={{ backgroundColor: bar.color }}
-              className="w-full rounded-t-lg min-h-[8px]"
+              className="w-full rounded-none min-h-[8px]"
             />
             <span className="text-[9px] font-bold opacity-60">{bar.label}</span>
           </div>
@@ -275,7 +275,7 @@ function TechCard() {
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="md:col-span-8 bg-surface-bright rounded-3xl p-8 border border-outline-variant flex items-center gap-8 sm:gap-12 transition-all duration-500 hover:bg-surface-container-high hover:border-secondary hover:shadow-xl cursor-pointer overflow-hidden relative"
+      className="md:col-span-8 bg-surface-bright rounded-none p-8 border border-outline-variant flex items-center gap-8 sm:gap-12 transition-all duration-500 hover:bg-surface-container-high hover:border-secondary hover:shadow-xl cursor-pointer overflow-hidden relative"
     >
       {/* Matrix rain */}
       <AnimatePresence>
@@ -302,7 +302,7 @@ function TechCard() {
           Accede a extensiones útiles para tu navegador y organiza mejor tus horarios de estudio.
         </p>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <button className="px-6 py-2.5 rounded-xl border border-primary text-primary font-label-lg hover:bg-primary hover:text-on-primary transition-all shadow-sm">
+          <button className="px-6 py-2.5 rounded-none border border-primary text-primary font-label-lg hover:bg-primary hover:text-on-primary transition-all shadow-sm">
             Explorar Herramientas
           </button>
           <motion.span
@@ -316,7 +316,7 @@ function TechCard() {
       </div>
 
       {/* Tech icon orb */}
-      <div className={`hidden sm:flex w-36 h-36 sm:w-40 sm:h-40 bg-surface-container rounded-2xl items-center justify-center transition-all duration-500 relative z-10 shrink-0 ${hovered ? 'rotate-0 scale-110 text-secondary/60' : 'rotate-3 text-primary/20'}`}>
+      <div className={`hidden sm:flex w-36 h-36 sm:w-40 sm:h-40 bg-surface-container rounded-none items-center justify-center transition-all duration-500 relative z-10 shrink-0 ${hovered ? 'rotate-0 scale-110 text-secondary/60' : 'rotate-3 text-primary/20'}`}>
         <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
@@ -369,9 +369,9 @@ export default function HomePage() {
       `}} />
 
       {/* SideNavBar */}
-      <aside className="fixed left-0 top-0 h-full hidden sm:flex flex-col items-center py-8 z-40 bg-primary shadow-lg w-14 sm:w-16">
+      <aside className="fixed left-0 top-0 h-full hidden sm:flex flex-col items-center py-8 z-40 bg-black border-r border-white/10 w-14 sm:w-16">
         <div className="mb-10">
-          <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-none bg-white/10 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-on-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
             </svg>
@@ -379,15 +379,15 @@ export default function HomePage() {
         </div>
         <nav className="flex flex-col gap-7 flex-grow items-center">
           {[
-            { label:'Facebook',  d:'M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z' },
-            { label:'Twitter',   d:'M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z' },
-            { label:'YouTube',   d:'M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z' },
-            { label:'LinkedIn',  d:'M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a2.7 2.7 0 0 0-2.7-2.7c-1.2 0-2 .7-2.3 1.2v-1h-3.1v7.8h3.1v-4.2c0-.6.4-1.1 1-1.1s1 .5 1 1.1v4.2h3.1M6.9 7.6c-1 0-1.7.8-1.7 1.7s.8 1.7 1.7 1.7 1.8-.8 1.8-1.7-.8-1.7-1.8-1.7m1.5 10.9V10.7H5.4v7.8h3z' },
-            { label:'Instagram', d:'M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2m-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6m4.4 3a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m5-2.25a.75.75 0 0 1 .75.75.75.75 0 0 1-.75.75.75.75 0 0 1-.75-.75.75.75 0 0 1 .75-.75z' },
-            { label:'TikTok',    d:'M12.525.02c1.31 0 2.59.1 3.81.3v3.7c-1.18-.36-2.42-.51-3.66-.44v13.06c0 2.15-1.75 3.9-3.9 3.9s-3.9-1.75-3.9-3.9 1.75-3.9 3.9-3.9c.4 0 .78.06 1.15.17V9.11c-3.66.19-6.59 3.23-6.59 6.95 0 3.84 3.12 6.96 6.96 6.96s6.96-3.12 6.96-6.96V6.03C19.34 7.57 21.46 8.5 23.82 8.64V4.9c-1.85-.01-3.59-.83-4.79-2.23C18.17 1.57 17.65 0 17.65 0h-5.125z' },
+            { label:'Facebook',  d:'M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z', hoverColor: 'hover:text-[#1877f2] hover:drop-shadow-[0_0_6px_#1877f2]' },
+            { label:'Twitter',   d:'M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z', hoverColor: 'hover:text-[#1da1f2] hover:drop-shadow-[0_0_6px_#1da1f2]' },
+            { label:'YouTube',   d:'M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z', hoverColor: 'hover:text-[#ff0000] hover:drop-shadow-[0_0_6px_#ff0000]' },
+            { label:'LinkedIn',  d:'M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a2.7 2.7 0 0 0-2.7-2.7c-1.2 0-2 .7-2.3 1.2v-1h-3.1v7.8h3.1v-4.2c0-.6.4-1.1 1-1.1s1 .5 1 1.1v4.2h3.1M6.9 7.6c-1 0-1.7.8-1.7 1.7s.8 1.7 1.7 1.7 1.8-.8 1.8-1.7-.8-1.7-1.8-1.7m1.5 10.9V10.7H5.4v7.8h3z', hoverColor: 'hover:text-[#0a66c2] hover:drop-shadow-[0_0_6px_#0a66c2]' },
+            { label:'Instagram', d:'M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2m-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6A3.6 3.6 0 0 0 16.4 4H7.6m4.4 3a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m5-2.25a.75.75 0 0 1 .75.75.75.75 0 0 1-.75.75.75.75 0 0 1-.75-.75.75.75 0 0 1 .75-.75z', hoverColor: 'hover:text-[#e1306c] hover:drop-shadow-[0_0_6px_#e1306c]' },
+            { label:'TikTok',    d:'M12.525.02c1.31 0 2.59.1 3.81.3v3.7c-1.18-.36-2.42-.51-3.66-.44v13.06c0 2.15-1.75 3.9-3.9 3.9s-3.9-1.75-3.9-3.9 1.75-3.9 3.9-3.9c.4 0 .78.06 1.15.17V9.11c-3.66.19-6.59 3.23-6.59 6.95 0 3.84 3.12 6.96 6.96 6.96s6.96-3.12 6.96-6.96V6.03C19.34 7.57 21.46 8.5 23.82 8.64V4.9c-1.85-.01-3.59-.83-4.79-2.23C18.17 1.57 17.65 0 17.65 0h-5.125z', hoverColor: 'hover:text-[#00f2fe] hover:drop-shadow-[0_0_6px_#00f2fe]' },
           ].map(s => (
-            <a key={s.label} aria-label={s.label} href="#" className="text-white/50 hover:text-white hover:scale-110 transition-all duration-300">
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d={s.d} /></svg>
+            <a key={s.label} aria-label={s.label} href="#" className={`text-white/80 ${s.hoverColor} hover:scale-125 transition-all duration-300`}>
+              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d={s.d} /></svg>
             </a>
           ))}
         </nav>
@@ -412,12 +412,12 @@ export default function HomePage() {
 
             <div className="flex items-center gap-2 sm:gap-3">
               <Link href="/auth/login">
-                <button className="px-4 sm:px-6 py-2 rounded-full border border-white/60 text-white text-[12px] sm:text-[13px] font-semibold tracking-wider hover:bg-white hover:text-[#001736] transition-all duration-300 hidden sm:block">
+                <button className="px-4 sm:px-6 py-2 rounded-none border border-white/60 text-white text-[12px] sm:text-[13px] font-semibold tracking-wider hover:bg-white hover:text-[#001736] transition-all duration-300 hidden sm:block">
                   LOGIN
                 </button>
               </Link>
               <Link href="/auth/register">
-                <button className="px-4 sm:px-6 py-2 rounded-full bg-white text-[#001736] text-[12px] sm:text-[13px] font-bold tracking-wider shadow-lg hover:bg-blue-50 active:scale-95 transition-all duration-200">
+                <button className="px-4 sm:px-6 py-2 rounded-none bg-white text-[#001736] text-[12px] sm:text-[13px] font-bold tracking-wider shadow-lg hover:bg-blue-50 active:scale-95 transition-all duration-200">
                   REGÍSTRATE
                 </button>
               </Link>
@@ -453,12 +453,12 @@ export default function HomePage() {
               return (
                 <div
                   ref={repoRef}
-                  className={`md:col-span-8 bg-surface-container-low rounded-3xl p-6 sm:p-8 flex flex-col justify-between min-h-[380px] group overflow-hidden relative shadow-sm border border-outline-variant/30 transition-all duration-500 hover:shadow-2xl hover:scale-[1.01] cursor-pointer ${
-                    repoActive ? 'shadow-2xl scale-[1.01] mobile-active' : ''
+                  className={`md:col-span-8 bg-surface-container-low rounded-none p-6 sm:p-8 flex flex-col justify-between min-h-[380px] group overflow-hidden relative shadow-sm border border-outline-variant/30 transition-all duration-500 hover:shadow-2xl hover:scale-[1.01] cursor-pointer ${
+                    repoActive ? 'ring-2 ring-primary border-transparent' : ''
                   }`}
                 >
                   <div className="relative z-10">
-                    <div className={`bg-secondary/10 w-12 h-12 rounded-xl flex items-center justify-center text-secondary mb-6 transition-all duration-300 ${
+                    <div className={`bg-secondary/10 w-12 h-12 rounded-none flex items-center justify-center text-secondary mb-6 transition-all duration-300 ${
                       repoActive ? 'bg-secondary text-on-primary' : 'group-hover:bg-secondary group-hover:text-on-primary'
                     }`}>
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -477,7 +477,7 @@ export default function HomePage() {
                       {['Derecho','Ciencias Empresariales','Economía y Finanzas','Ingeniería'].map((f, i) => (
                         <span
                           key={f}
-                          className="reveal-item bg-surface-container-highest px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-[12px] text-primary font-semibold"
+                          className="reveal-item bg-surface-container-highest px-3 sm:px-4 py-1.5 rounded-none text-xs sm:text-[12px] text-primary font-semibold"
                           style={{transitionDelay: `${0.1 + i * 0.1}s`}}
                         >
                           {f}

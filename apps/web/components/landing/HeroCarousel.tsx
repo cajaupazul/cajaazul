@@ -92,7 +92,7 @@ export default function HeroCarousel() {
                                 </p>
 
                                 <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 mt-4 sm:mt-6">
-                                    <Link href="/dashboard" className="group relative px-6 py-3 sm:px-8 sm:py-4 bg-secondary text-on-primary rounded-xl font-semibold text-sm sm:text-base flex items-center gap-2 overflow-hidden transition-all hover:pr-10 hover:bg-opacity-90 shadow-xl w-full sm:w-auto justify-center">
+                                    <Link href="/dashboard" className="group relative px-6 py-3 sm:px-8 sm:py-4 bg-secondary text-on-primary rounded-none font-semibold text-sm sm:text-base flex items-center gap-2 overflow-hidden transition-all hover:pr-10 hover:bg-opacity-90 shadow-xl w-full sm:w-auto justify-center">
                                         <span>Explorar Material</span>
                                         <ChevronRight size={18} className="transition-transform group-hover:translate-x-2" />
                                     </Link>
@@ -119,7 +119,7 @@ export default function HeroCarousel() {
 
             {/* Controls Overlay */}
             <div className="absolute bottom-6 left-4 sm:bottom-10 sm:left-20 lg:left-32 z-30 flex items-center gap-4 sm:gap-6">
-                <div className="flex items-center gap-2 sm:gap-4 bg-black/35 backdrop-blur-md p-1.5 sm:p-2 rounded-full border border-white/10">
+                <div className="flex items-center gap-2 sm:gap-4 bg-black/35 backdrop-blur-md p-1.5 sm:p-2 rounded-none border border-white/10">
                     <button
                         onClick={prev}
                         className="p-1.5 sm:p-2 text-white hover:text-blue-400 transition-colors"
@@ -141,7 +141,7 @@ export default function HeroCarousel() {
 
                 <button
                     onClick={() => setIsPlaying(!isPlaying)}
-                    className="p-2 sm:p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all border border-white/10 backdrop-blur-md"
+                    className="p-2 sm:p-3 bg-white/10 hover:bg-white/20 text-white rounded-none transition-all border border-white/10 backdrop-blur-md"
                 >
                     {isPlaying ? <Pause size={14} className="sm:w-[18px] sm:h-[18px]" fill="currentColor" /> : <Play size={14} className="sm:w-[18px] sm:h-[18px]" fill="currentColor" />}
                 </button>
