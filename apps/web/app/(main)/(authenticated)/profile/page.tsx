@@ -492,7 +492,7 @@ export default function ProfilePage() {
             href={profile.link_instagram?.startsWith('http') ? profile.link_instagram : `https://instagram.com/${instagramUsername}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="absolute bottom-4 right-4 p-2 sm:p-2.5 rounded-none bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 shadow-xl shadow-black/40 hover:scale-110 transition-all active:scale-95 z-20 border border-white/20"
+            className="absolute bottom-4 right-4 p-2 sm:p-2.5 rounded-xl bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 shadow-xl shadow-black/40 hover:scale-110 transition-all active:scale-95 z-20 border border-white/20"
             title="Instagram"
           >
             <Instagram className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -608,7 +608,7 @@ export default function ProfilePage() {
                     value={formData.bio || ''}
                     onChange={handleInputChange}
                     placeholder="Escribe algo sobre ti..."
-                    className={`w-full bg-white/5 border rounded-none px-4 py-2 placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/20 resize-none min-h-[60px] sm:min-h-[80px] leading-relaxed transition-all text-xs sm:text-sm italic ${themeMode === 'light' ? 'border-slate-200 text-slate-600' : 'border-white/10 text-white/60'}`}
+                    className={`w-full bg-white/5 border rounded-xl px-4 py-2 placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/20 resize-none min-h-[60px] sm:min-h-[80px] leading-relaxed transition-all text-xs sm:text-sm italic ${themeMode === 'light' ? 'border-slate-200 text-slate-600' : 'border-white/10 text-white/60'}`}
                   />
                 ) : (
                   <p
@@ -645,7 +645,7 @@ export default function ProfilePage() {
                 <>
                   <button
                     onClick={handleSave}
-                    className="px-4 sm:px-6 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-none transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
+                    className="px-4 sm:px-6 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-full transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
                   >
                     <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Guardar
@@ -653,7 +653,7 @@ export default function ProfilePage() {
                   <button
                     onClick={handleCancel}
                     type="button"
-                    className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-none border transition-all active:scale-95 ${themeMode === 'light' ? 'bg-slate-100 border-slate-200 text-slate-400 hover:text-slate-600' : 'bg-white/5 border-white/10 text-white/50'}`}
+                    className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-full border transition-all active:scale-95 ${themeMode === 'light' ? 'bg-slate-100 border-slate-200 text-slate-400 hover:text-slate-600' : 'bg-white/5 border-white/10 text-white/50'}`}
                   >
                     <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
@@ -661,7 +661,7 @@ export default function ProfilePage() {
               ) : (
                 <button
                   onClick={() => setEditing(true)}
-                  className={`px-5 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-none border transition-all active:scale-95 flex items-center gap-2 ${themeMode === 'light' ? 'bg-slate-900 border-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/10' : 'bg-[#1B1F24] border-white/5 text-white hover:bg-[#252A30]'}`}
+                  className={`px-5 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-full border transition-all active:scale-95 flex items-center gap-2 ${themeMode === 'light' ? 'bg-slate-900 border-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/10' : 'bg-[#1B1F24] border-white/5 text-white hover:bg-[#252A30]'}`}
                 >
                   <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Personalizar
@@ -798,7 +798,7 @@ export default function ProfilePage() {
       {/* Free Avatar Selector Modal */}
       {isAvatarSelectorOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className={`w-full max-w-lg rounded-none border p-6 shadow-2xl transition-colors duration-500 ${themeMode === 'light' ? 'bg-white border-slate-200' : 'bg-[#0F172A] border-white/10'}`}>
+          <div className={`w-full max-w-lg rounded-3xl border p-6 shadow-2xl transition-colors duration-500 ${themeMode === 'light' ? 'bg-white border-slate-200' : 'bg-[#0F172A] border-white/10'}`}>
             <div className="flex items-center justify-between mb-6">
               <h2 className={`text-xl font-black tracking-tight ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>Selecciona un Avatar</h2>
               <button onClick={() => setIsAvatarSelectorOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
@@ -817,7 +817,7 @@ export default function ProfilePage() {
                       setFormData(prev => ({ ...prev, avatar_url: url }));
                       setIsAvatarSelectorOpen(false);
                     }}
-                    className={`relative aspect-square rounded-none overflow-hidden border-4 transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                    className={`relative aspect-square rounded-2xl overflow-hidden border-4 transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
                   >
                     <img src={url} alt="Avatar" className="w-full h-full object-cover" />
                     {isSelected && (
@@ -844,7 +844,7 @@ export default function ProfilePage() {
                         setFormData(prev => ({ ...prev, avatar_url: url }));
                         setIsAvatarSelectorOpen(false);
                       }}
-                      className={`relative aspect-square rounded-none overflow-hidden border-4 bg-white transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                      className={`relative aspect-square rounded-2xl overflow-hidden border-4 bg-white transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
                       title={facName}
                     >
                       <img src={url} alt={facName} className="w-full h-full object-contain p-2" />
@@ -870,9 +870,9 @@ export default function ProfilePage() {
                         router.push('/dashboard/store');
                       }
                     }}
-                    className={`flex items-center gap-4 p-4 rounded-none border border-dashed transition-all cursor-pointer ${themeMode === 'light' ? 'bg-slate-50 border-slate-300 hover:bg-slate-100' : 'bg-white/5 border-white/20 hover:bg-white/10'}`}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border border-dashed transition-all cursor-pointer ${themeMode === 'light' ? 'bg-slate-50 border-slate-300 hover:bg-slate-100' : 'bg-white/5 border-white/20 hover:bg-white/10'}`}
                   >
-                    <div className="w-12 h-12 rounded-none bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
                       <Camera className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1 text-left">
