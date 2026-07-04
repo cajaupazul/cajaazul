@@ -85,7 +85,7 @@ export function GoogleButton({ text = 'Continuar con Google' }: { text?: string 
             variant="outline"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full h-12 rounded-xl flex items-center justify-center gap-3 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold transition-all hover:scale-[1.01] active:scale-[0.98] shadow-sm"
+            className="w-full h-12 rounded-none flex items-center justify-center gap-3 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold transition-all hover:scale-[1.01] active:scale-[0.98] shadow-sm"
         >
             {loading ? (
                 <div className="w-5 h-5 border-2 border-slate-300 border-t-blue-600 rounded-full animate-spin"></div>

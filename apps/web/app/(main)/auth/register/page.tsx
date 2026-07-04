@@ -5,31 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Eye, EyeOff } from 'lucide-react';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import { Suspense } from 'react';
-import { AUTH_CONFIG, validateInstitutionalEmail } from '@/lib/auth-config';
-
-const FACULTADES = [
-  'Facultad de Ciencias Empresariales',
-  'Facultad de Derecho',
-  'Facultad de Economía y Finanzas',
-  'Facultad de Ingeniería',
-];
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center">Cargando...</div>}>
+    <Suspense fallback={<div className="h-[100dvh] bg-slate-50 flex items-center justify-center">Cargando...</div>}>
       <RegisterContent />
     </Suspense>
   );
@@ -38,23 +19,10 @@ export default function RegisterPage() {
 function RegisterContent() {
   const router = useRouter();
   const { session, loading: profileLoading } = useProfile();
-  const [loading, setLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const searchParams = useSearchParams();
   const authError = searchParams.get('error');
-
-  const [formData, setFormData] = useState({
-    nombre: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    universidad: 'Universidad Nacional',
-    carrera: '',
-  });
 
   // Automatic redirect if session is confirmed
   useEffect(() => {
@@ -65,16 +33,13 @@ function RegisterContent() {
   }, [session, profileLoading, router]);
 
   useEffect(() => {
-    // 1. Errores en el fragmento (#error=...)
     const hash = window.location.hash;
     if (hash && hash.includes('error=')) {
       const params = new URLSearchParams(hash.substring(1));
       const errorMsg = params.get('error_description') || params.get('error') || 'Error de autenticación';
       setError(decodeURIComponent(errorMsg));
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
-    // 2. Errores en searchParams (?error=...)
-    else if (authError) {
+    } else if (authError) {
       setError(decodeURIComponent(authError));
     }
   }, [authError]);
@@ -103,289 +68,75 @@ function RegisterContent() {
     fetchImage();
   }, []);
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!formData.nombre.trim() || !formData.email.trim() || !formData.password.trim() || !formData.confirmPassword.trim() || !formData.carrera) {
-      setError('Por favor completa todos los campos');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Las contraseñas no coinciden');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-
-    // VALIDACIÓN DE DOMINIO INSTITUCIONAL (ANTES DE LLAMAR A SUPABASE)
-    const emailTrimmed = formData.email.trim().toLowerCase();
-    if (!validateInstitutionalEmail(emailTrimmed)) {
-      setError(AUTH_CONFIG.messages.domainError);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // 100% Client side call
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email.trim(),
-        password: formData.password,
-        options: {
-          data: {
-            nombre: formData.nombre.trim(),
-            universidad: formData.universidad,
-            carrera: formData.carrera,
-            plain_password: formData.password,
-          },
-        },
-      });
-
-      if (authError) {
-        console.error('[REGISTER_ERROR]', authError.message);
-        setError(authError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (authData.user) {
-        console.log('[REGISTER_SUCCESS] User created. Database triggers will handle profile creation.');
-        setIsSubmitted(true);
-      }
-    } catch (err: any) {
-      console.error('[REGISTER_EXCEPTION]', err);
-      setError('Ocurrió un error inesperado al intentar registrarse.');
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50">
-      {/* Left Side - Image (Desktop) / Top Section (Mobile) */}
-      <div className="w-full lg:w-1/2 bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center p-6 sm:p-12 lg:p-16 relative overflow-hidden">
+    <div className="h-[100dvh] flex flex-col lg:flex-row bg-slate-50 overflow-hidden">
+      {/* Left Side - Image (Only Desktop) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-teal-500 items-center justify-center p-16 relative overflow-hidden h-full">
         {/* Background Decorative Circles */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <div className="absolute -top-10 -left-10 w-48 h-48 sm:w-72 sm:h-72 bg-white rounded-full"></div>
-          <div className="absolute -bottom-10 -right-10 w-64 h-64 sm:w-96 sm:h-96 bg-white rounded-full"></div>
+          <div className="absolute -top-10 -left-10 w-72 h-72 bg-white rounded-none"></div>
+          <div className="absolute -bottom-10 -right-10 w-96 h-96 bg-white rounded-none"></div>
         </div>
 
         {/* Branding Container */}
-        <div className="relative z-10 text-center max-w-sm sm:max-w-md w-full">
+        <div className="relative z-10 text-center max-w-md w-full flex flex-col items-center">
           {imageUrl ? (
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-teal-400 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+            <div className="relative w-full aspect-square max-h-[380px]">
               <img
                 src={imageUrl}
-                alt="CampusLink"
-                className="relative w-full aspect-square sm:h-96 object-cover rounded-[2rem] shadow-2xl transition-transform duration-500 hover:scale-[1.02]"
+                alt="CampusLink Mascot"
+                className="w-full h-full object-cover rounded-none shadow-2xl"
               />
             </div>
           ) : (
-            <div className="relative w-full aspect-square sm:h-96 bg-white/20 backdrop-blur-md rounded-[2rem] flex items-center justify-center shadow-2xl">
+            <div className="relative w-full aspect-square max-h-[380px] bg-white/20 backdrop-blur-md rounded-none flex items-center justify-center shadow-2xl overflow-hidden">
               <span className="text-white text-6xl font-black">CL</span>
             </div>
           )}
 
-          <div className="mt-6 sm:mt-8 space-y-2">
-            <h2 className="text-white text-3xl sm:text-4xl font-black tracking-tight drop-shadow-sm">CampusLink</h2>
-            <p className="text-blue-50 text-base sm:text-lg font-medium opacity-90">Tu plataforma educativa</p>
+          <div className="mt-8 space-y-2">
+            <h2 className="text-white text-4xl font-black tracking-tight">CampusLink</h2>
+            <p className="text-blue-50 text-lg font-medium opacity-90">Tu plataforma educativa</p>
           </div>
         </div>
       </div>
 
       {/* Right Side - Register Form */}
-      <div className="w-full lg:w-1/2 bg-white flex flex-col items-center justify-center p-6 sm:p-12 lg:p-16 relative">
-        <div className="w-full max-w-md bg-white rounded-3xl lg:p-0 shadow-2xl lg:shadow-none p-8 -mt-10 lg:mt-0 relative z-20">
-          {/* Header */}
-          <div className="text-center mb-6 lg:text-left">
-            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 mb-2">Crear Cuenta</h1>
-            <p className="text-slate-500 font-medium">Únete a CampusLink y comienza a colaborar</p>
+      <div className="w-full lg:w-1/2 bg-white flex flex-col items-center justify-center p-6 sm:p-12 h-full relative">
+        <div className="w-full max-w-md bg-white border border-slate-200/60 p-8 sm:p-10 shadow-sm rounded-none relative z-20 flex flex-col justify-between min-h-[320px]">
+          {/* Back to Home Button */}
+          <div>
+            <a
+              href="/"
+              className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-600 font-medium text-xs sm:text-sm transition-colors group mb-6"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Volver al inicio
+            </a>
           </div>
 
-          {/* Form */}
-          {isSubmitted ? (
-            <div className="text-center space-y-6 py-8 animate-in fade-in zoom-in duration-500">
-              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-black text-slate-900">¡Casi listo!</h2>
-              <p className="text-slate-600 font-medium text-balance">
-                Hemos enviado un correo de confirmación a <span className="text-slate-900 font-bold">{formData.email}</span>.
-              </p>
-              <p className="text-slate-500 text-sm">
-                Por favor, revisa tu bandeja de entrada (y la carpeta de spam) para activar tu cuenta.
-              </p>
-              <Button
-                onClick={() => router.push('/auth/login')}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 rounded-xl mt-6 px-12"
-              >
-                Ir al Inicio de Sesión
-              </Button>
+          {/* Header */}
+          <div className="text-center sm:text-left mb-6">
+            <h1 className="text-3xl font-black text-slate-900 mb-2">Crear Cuenta</h1>
+            <p className="text-slate-500 text-sm font-medium">Únete a CampusLink de forma rápida y segura con tu cuenta de Google</p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-none text-xs font-semibold mb-4">
+              {error}
             </div>
-          ) : (
-            <form onSubmit={handleRegister} className="space-y-4">
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-medium animate-in fade-in slide-in-from-top-2">
-                  {error}
-                </div>
-              )}
-
-              {/* Nombre Completo */}
-              <div className="space-y-1.5">
-                <Label htmlFor="nombre" className="text-slate-700 font-semibold text-sm ml-1">
-                  Nombre Completo
-                </Label>
-                <Input
-                  id="nombre"
-                  type="text"
-                  value={formData.nombre}
-                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value.toUpperCase() })}
-                  placeholder="Juan Carlos Pérez Gómez"
-                  className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all"
-                  required
-                />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-slate-700 font-semibold text-sm ml-1">
-                  Email Universitario
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="tu@up.edu.pe"
-                  className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all"
-                  required
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-slate-700 font-semibold text-sm ml-1">
-                  Contraseña
-                </Label>
-                <div className="relative group">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Mínimo 6 caracteres"
-                    className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all pr-12"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-0 top-0 h-full px-4 text-slate-400 hover:text-blue-600 transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm Password */}
-              <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword" className="text-slate-700 font-semibold text-sm ml-1">
-                  Repite tu Contraseña
-                </Label>
-                <div className="relative group">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    placeholder="Repite tu contraseña"
-                    className={`h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all pr-12 ${formData.confirmPassword && formData.password !== formData.confirmPassword
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : formData.confirmPassword && formData.password === formData.confirmPassword
-                        ? 'border-green-300 focus:border-green-500 focus:ring-green-500'
-                        : ''
-                      }`}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-0 top-0 h-full px-4 text-slate-400 hover:text-blue-600 transition-colors"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                  <p className="text-red-500 text-xs ml-1 font-medium">Las contraseñas no coinciden</p>
-                )}
-              </div>
-
-              {/* Facultad */}
-              <div className="space-y-1.5">
-                <Label htmlFor="carrera" className="text-slate-700 font-semibold text-sm ml-1">
-                  Facultad
-                </Label>
-                <Select value={formData.carrera} onValueChange={(value) => setFormData({ ...formData, carrera: value })}>
-                  <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl transition-all bg-white">
-                    <SelectValue placeholder="Selecciona tu facultad" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200 shadow-xl">
-                    {FACULTADES.map((fac) => (
-                      <SelectItem key={fac} value={fac} className="rounded-lg focus:bg-slate-50">
-                        {fac}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Sign Up Button */}
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 py-3 rounded-xl shadow-xl shadow-slate-200 transition-all hover:scale-[1.01] active:scale-[0.98] mt-4"
-              >
-                {loading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span>Creando...</span>
-                  </div>
-                ) : (
-                  'Crear Cuenta'
-                )}
-              </Button>
-
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-100"></div>
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-slate-400 font-medium">O continúa con</span>
-                </div>
-              </div>
-
-              <GoogleButton text="Registrarse con Google" />
-            </form>
           )}
 
+          {/* Register Button */}
+          <div className="space-y-4">
+            <GoogleButton text="Registrarse con Google" />
+          </div>
+
           {/* Login Link */}
-          <div className="mt-8 text-center text-sm bg-slate-50 py-4 rounded-2xl border border-slate-100">
+          <div className="mt-8 text-center text-xs sm:text-sm border-t border-slate-100 pt-6">
             <p className="text-slate-500 font-medium">
               ¿Ya tienes cuenta?{' '}
               <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-black transition-colors ml-1">
