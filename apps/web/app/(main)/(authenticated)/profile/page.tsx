@@ -307,6 +307,174 @@ export default function ProfilePage() {
 
   return (
     <div className={`min-h-screen transition-colors duration-500 selection:bg-blue-500/30 ${themeMode === 'light' ? 'bg-[#F8FAFC] text-[#0F172A]' : 'bg-[#060709] text-[#E1E7EF]'}`}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .dn-toggle-wrap {
+          display: block;
+          user-select: none;
+        }
+        .dn-toggle-checkbox {
+          display: none;
+        }
+        .dn-toggle-btn {
+          display: block;
+          position: relative;
+          height: 38px;
+          width: 70px;
+          border-radius: 38px;
+          border: 3px solid #1c1c1c;
+          background-color: #3c4145;
+          transition: all 350ms ease-in;
+          cursor: pointer;
+        }
+        .dn-toggle-btn::before {
+          content: '';
+          display: block;
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background-color: #fff;
+          border: 3px solid #e3e3c7;
+          transition: all 250ms ease-in;
+        }
+        .dn-toggle-btn::after {
+          content: '';
+          display: block;
+          position: absolute;
+          top: 55%;
+          left: 32px;
+          z-index: 10;
+          width: 6px;
+          height: 6px;
+          opacity: 0;
+          background-color: #fff;
+          border-radius: 50%;
+          box-shadow: 
+            #fff 0 0,
+            #fff 2px 0,
+            #fff 4px 0,
+            #fff 6px 0,
+            #fff 7px 0,
+            #fff 9px 0,
+            #fff 10px 0,
+            #fff 13px -1px 0 1px,
+            #fff 10px -4px 0 -1px,
+            #fff 4px -4px 0 1px,
+            #d3d3d3 0 0 0 2px,
+            #d3d3d3 4px 0 0 2px,
+            #d3d3d3 7px 0 0 2px,
+            #d3d3d3 10px 0 0 2px,
+            #d3d3d3 13px -1px 0 3px,
+            #d3d3d3 10px -4px 0 1px,
+            #d3d3d3 4px -4px 0 3px;
+          transition: all 250ms ease-in, opacity 100ms ease-in;
+        }
+        .dn-toggle-feature {
+          display: block;
+          position: absolute;
+          top: 6px;
+          left: 52%;
+          z-index: 20;
+          width: 3px;
+          height: 3px;
+          border-radius: 50%;
+          background-color: #fff;
+          box-shadow: 
+            rgba(255,255,255,0.1) 18px -2px 0 0,
+            rgba(255,255,255,0.1) 7px 6px 0 -1px,
+            #fff 23px 11px 0 0.5px,
+            rgba(255,255,255,0.1) 19px 20px 0 0,
+            #fff 12px 14px 0 -1px,
+            rgba(255,255,255,0.1) 3px 22px 0 0.5px;
+          animation: starry_star 5s ease-in-out infinite;
+          transition: all 250ms ease-in;
+        }
+        .dn-toggle-feature::before {
+          content: '';
+          display: block;
+          position: absolute;
+          top: -1px;
+          left: -15px;
+          width: 10px;
+          height: 10px;
+          background-color: #fff;
+          border-radius: 50%;
+          border: 3px solid #e3e3c7;
+          box-shadow: 
+            #e3e3c7 -16px 0 0 -2px,
+            #e3e3c7 -5px 14px 0 -1.5px;
+          transform-origin: -3px 130%;
+          transition: all 250ms ease-in;
+        }
+
+        @keyframes starry_star {
+          50% {
+            background-color: rgba(255,255,255,0.1);
+            box-shadow: 
+              #fff 18px -2px 0 0,
+              #fff 7px 6px 0 -1px,
+              rgba(255,255,255,0.1) 23px 11px 0 0.5px,
+              #fff 19px 20px 0 0,
+              rgba(255,255,255,0.1) 12px 14px 0 -1px,
+              #fff 3px 22px 0 0.5px;
+          }
+        }
+        @keyframes bounceIn {
+          0% {
+            opacity: 0;
+            transform: scale(.3);
+          }
+          50% {
+            opacity: 100;
+            transform: scale(1.1);
+          }
+          55% {
+            transform: scale(1.1);
+          }
+          75% {
+            transform: scale(.9);
+          }
+          100% {
+            opacity: 100;
+            transform: scale(1);
+          }
+        }
+
+        .dn-toggle-checkbox:checked + .dn-toggle-btn {
+          background-color: #9ee3fb;
+          border: 3px solid #86c3d7;
+        }
+        .dn-toggle-checkbox:checked + .dn-toggle-btn::before {
+          left: 33px;
+          background-color: #ffdf6d;
+          border: 3px solid #e1c348;
+        }
+        .dn-toggle-checkbox:checked + .dn-toggle-btn::after {
+          opacity: 100;
+          animation-name: bounceIn;
+          animation-duration: 0.60s;
+          animation-delay: 0.10s;
+          animation-fill-mode: backwards;
+          animation-timing-function: ease-in-out;
+        }
+        .dn-toggle-checkbox:checked + .dn-toggle-btn .dn-toggle-feature {
+          opacity: 0;
+          box-shadow: 
+            rgba(255,255,255,0.1) 18px -2px 0 -2px,
+            rgba(255,255,255,0.1) 7px 6px 0 -3px,
+            #fff 23px 11px 0 -2px,
+            rgba(255,255,255,0.1) 19px 20px 0 -2px,
+            #fff 12px 14px 0 -3px,
+            rgba(255,255,255,0.1) 3px 22px 0 -2px;
+          animation: none;
+        }
+        .dn-toggle-checkbox:checked + .dn-toggle-btn .dn-toggle-feature::before {
+          left: 15px;
+          transform: rotate(70deg);
+        }
+      ` }} />
 
       {/* ============================================ */}
       {/* 1. EDGE-TO-EDGE BANNER                      */}
@@ -324,7 +492,7 @@ export default function ProfilePage() {
             href={profile.link_instagram?.startsWith('http') ? profile.link_instagram : `https://instagram.com/${instagramUsername}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="absolute bottom-4 right-4 p-2 sm:p-2.5 rounded-xl bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 shadow-xl shadow-black/40 hover:scale-110 transition-all active:scale-95 z-20 border border-white/20"
+            className="absolute bottom-4 right-4 p-2 sm:p-2.5 rounded-none bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 shadow-xl shadow-black/40 hover:scale-110 transition-all active:scale-95 z-20 border border-white/20"
             title="Instagram"
           >
             <Instagram className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -440,7 +608,7 @@ export default function ProfilePage() {
                     value={formData.bio || ''}
                     onChange={handleInputChange}
                     placeholder="Escribe algo sobre ti..."
-                    className={`w-full bg-white/5 border rounded-xl px-4 py-2 placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/20 resize-none min-h-[60px] sm:min-h-[80px] leading-relaxed transition-all text-xs sm:text-sm italic ${themeMode === 'light' ? 'border-slate-200 text-slate-600' : 'border-white/10 text-white/60'}`}
+                    className={`w-full bg-white/5 border rounded-none px-4 py-2 placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/20 resize-none min-h-[60px] sm:min-h-[80px] leading-relaxed transition-all text-xs sm:text-sm italic ${themeMode === 'light' ? 'border-slate-200 text-slate-600' : 'border-white/10 text-white/60'}`}
                   />
                 ) : (
                   <p
@@ -477,14 +645,15 @@ export default function ProfilePage() {
                 <>
                   <button
                     onClick={handleSave}
-                    className="px-4 sm:px-6 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-full transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
+                    className="px-4 sm:px-6 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-none transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
                   >
                     <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Guardar
                   </button>
                   <button
                     onClick={handleCancel}
-                    className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-full border transition-all active:scale-95 ${themeMode === 'light' ? 'bg-slate-100 border-slate-200 text-slate-400 hover:text-slate-600' : 'bg-white/5 border-white/10 text-white/50'}`}
+                    type="button"
+                    className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-none border transition-all active:scale-95 ${themeMode === 'light' ? 'bg-slate-100 border-slate-200 text-slate-400 hover:text-slate-600' : 'bg-white/5 border-white/10 text-white/50'}`}
                   >
                     <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
@@ -492,7 +661,7 @@ export default function ProfilePage() {
               ) : (
                 <button
                   onClick={() => setEditing(true)}
-                  className={`px-5 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-full border transition-all active:scale-95 flex items-center gap-2 ${themeMode === 'light' ? 'bg-slate-900 border-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/10' : 'bg-[#1B1F24] border-white/5 text-white hover:bg-[#252A30]'}`}
+                  className={`px-5 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-none border transition-all active:scale-95 flex items-center gap-2 ${themeMode === 'light' ? 'bg-slate-900 border-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/10' : 'bg-[#1B1F24] border-white/5 text-white hover:bg-[#252A30]'}`}
                 >
                   <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Personalizar
@@ -578,21 +747,18 @@ export default function ProfilePage() {
             {/* Theme Toggle */}
             <div className="space-y-4">
               <h3 className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${themeMode === 'light' ? 'text-slate-400' : 'text-white/20'}`}>APARIENCIA</h3>
-              <div className={`flex gap-2 p-1 rounded-2xl w-fit ${themeMode === 'light' ? 'bg-slate-200/50' : 'bg-white/5'}`}>
-                <button
-                  onClick={() => setThemeMode('light')}
-                  className={`p-2 sm:p-3 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-wider ${themeMode === 'light' ? 'bg-white text-slate-900 shadow-md' : 'text-white/30 hover:text-white/60'}`}
-                >
-                  <Sun className="w-4 h-4" />
-                  <span className="lg:hidden xl:inline">Claro</span>
-                </button>
-                <button
-                  onClick={() => setThemeMode('dark')}
-                  className={`p-2 sm:p-3 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-wider ${themeMode === 'dark' ? 'bg-[#060709] text-white shadow-xl shadow-black/40' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <Moon className="w-4 h-4" />
-                  <span className="lg:hidden xl:inline">Oscuro</span>
-                </button>
+              
+              <div className="dn-toggle-wrap">
+                <input
+                  type="checkbox"
+                  id="dn-toggle"
+                  className="dn-toggle-checkbox"
+                  checked={themeMode === 'light'}
+                  onChange={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')}
+                />
+                <label className="dn-toggle-btn" htmlFor="dn-toggle">
+                  <span className="dn-toggle-feature"></span>
+                </label>
               </div>
             </div>
 
@@ -632,7 +798,7 @@ export default function ProfilePage() {
       {/* Free Avatar Selector Modal */}
       {isAvatarSelectorOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className={`w-full max-w-lg rounded-3xl border p-6 shadow-2xl transition-colors duration-500 ${themeMode === 'light' ? 'bg-white border-slate-200' : 'bg-[#0F172A] border-white/10'}`}>
+          <div className={`w-full max-w-lg rounded-none border p-6 shadow-2xl transition-colors duration-500 ${themeMode === 'light' ? 'bg-white border-slate-200' : 'bg-[#0F172A] border-white/10'}`}>
             <div className="flex items-center justify-between mb-6">
               <h2 className={`text-xl font-black tracking-tight ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>Selecciona un Avatar</h2>
               <button onClick={() => setIsAvatarSelectorOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
@@ -651,7 +817,7 @@ export default function ProfilePage() {
                       setFormData(prev => ({ ...prev, avatar_url: url }));
                       setIsAvatarSelectorOpen(false);
                     }}
-                    className={`relative aspect-square rounded-2xl overflow-hidden border-4 transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                    className={`relative aspect-square rounded-none overflow-hidden border-4 transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
                   >
                     <img src={url} alt="Avatar" className="w-full h-full object-cover" />
                     {isSelected && (
@@ -678,7 +844,7 @@ export default function ProfilePage() {
                         setFormData(prev => ({ ...prev, avatar_url: url }));
                         setIsAvatarSelectorOpen(false);
                       }}
-                      className={`relative aspect-square rounded-2xl overflow-hidden border-4 bg-white transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                      className={`relative aspect-square rounded-none overflow-hidden border-4 bg-white transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
                       title={facName}
                     >
                       <img src={url} alt={facName} className="w-full h-full object-contain p-2" />
@@ -704,9 +870,9 @@ export default function ProfilePage() {
                         router.push('/dashboard/store');
                       }
                     }}
-                    className={`flex items-center gap-4 p-4 rounded-2xl border border-dashed transition-all cursor-pointer ${themeMode === 'light' ? 'bg-slate-50 border-slate-300 hover:bg-slate-100' : 'bg-white/5 border-white/20 hover:bg-white/10'}`}
+                    className={`flex items-center gap-4 p-4 rounded-none border border-dashed transition-all cursor-pointer ${themeMode === 'light' ? 'bg-slate-50 border-slate-300 hover:bg-slate-100' : 'bg-white/5 border-white/20 hover:bg-white/10'}`}
                   >
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                    <div className="w-12 h-12 rounded-none bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
                       <Camera className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1 text-left">
