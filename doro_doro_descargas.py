@@ -84,7 +84,7 @@ def format_size(size_bytes):
 
 def main():
     print("====================================================")
-    print("   DESCARGADOR ORDENADO DE BLACKBOARD (R2) 🚀   ")
+    print("               DORO DORO DESCARGAS 🚀               ")
     print("====================================================")
     print(f"Conectándose a: {API_URL} ...")
     
