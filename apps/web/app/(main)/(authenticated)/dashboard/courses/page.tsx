@@ -9,7 +9,13 @@ import { useDashboardData } from '@/lib/dashboard-data-context';
 
 export default function CoursesPage() {
   const { profile } = useProfile();
-  const { courses } = useDashboardData();
+  const { courses, fetchCourses } = useDashboardData();
+
+  React.useEffect(() => {
+    if (courses.length === 0) {
+      fetchCourses();
+    }
+  }, [courses.length, fetchCourses]);
 
   return (
     <CoursesContent

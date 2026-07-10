@@ -61,7 +61,7 @@ export default function AuthenticatedLayout({
   const pathname = usePathname();
   const { colors, loading: themeLoading } = useTheme();
   const { profile, session, loading: profileLoading, isGuest } = useProfile();
-  const { refreshAll, courses, professors, grupos } = useDashboardData();
+  const { refreshAll } = useDashboardData();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [equippedFrame, setEquippedFrame] = useState<ShopItem | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -146,13 +146,7 @@ export default function AuthenticatedLayout({
     }
   }, [profileLoading, session, profile, router]);
 
-  // 2. Data fetching - Only when Auth is Ready
-  useEffect(() => {
-    if (isAuthReady && session && profile && !dataFetched.current) {
-      refreshAll(profile.id);
-      dataFetched.current = true;
-    }
-  }, [isAuthReady, session, profile, refreshAll]);
+  // 2. Data fetching is now handled on-demand by individual pages to optimize performance.
 
   // 3. Mobile handling
   useEffect(() => {

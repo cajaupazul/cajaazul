@@ -9,7 +9,16 @@ import { useDashboardData } from '@/lib/dashboard-data-context';
 
 export default function GruposPage() {
   const { profile } = useProfile();
-  const { grupos, userGrupos, miembrosCuenta } = useDashboardData();
+  const { grupos, userGrupos, miembrosCuenta, fetchGrupos, fetchUserGrupos } = useDashboardData();
+
+  React.useEffect(() => {
+    if (grupos.length === 0) {
+      fetchGrupos();
+    }
+    if (profile?.id && userGrupos.size === 0) {
+      fetchUserGrupos(profile.id);
+    }
+  }, [grupos.length, userGrupos.size, profile?.id, fetchGrupos, fetchUserGrupos]);
 
   const userGruposIds = Array.from(userGrupos);
 

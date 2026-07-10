@@ -9,7 +9,13 @@ import { useDashboardData } from '@/lib/dashboard-data-context';
 
 export default function ProfessorsPage() {
   const { profile } = useProfile();
-  const { professors } = useDashboardData();
+  const { professors, fetchProfessors } = useDashboardData();
+
+  React.useEffect(() => {
+    if (professors.length === 0) {
+      fetchProfessors();
+    }
+  }, [professors.length, fetchProfessors]);
 
   const formattedProfessors = useMemo(() => {
     const groupedProfessorsMap = new Map();
