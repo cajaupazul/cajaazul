@@ -32,6 +32,8 @@ const PREDEFINED_SUBFOLDERS = [
     '📚 Otros Recursos'
 ];
 
+interface FileEntry { file: File; relativePath: string; }
+
 export default function FullPageUploadForm({
     courseId,
     courseName,
@@ -42,13 +44,19 @@ export default function FullPageUploadForm({
     const [uploading, setUploading] = useState(false);
     
     // Multi-dropzone structural state
-    const [uploadMethod, setUploadMethod] = useState<'file' | 'link'>('file');
+    const [uploadMethod, setUploadMethod] = useState<'file' | 'link' | 'bb-folder'>('file');
     const [selectedCycleId, setSelectedCycleId] = useState<string>('historical');
     const [selectedSubfolder, setSelectedSubfolder] = useState<string>('');
     
     const [professorId, setProfessorId] = useState<string>(
         allProfessors.length === 1 ? allProfessors[0].id : 'none'
     );
+
+    // Blackboard folder upload states
+    const [bbFiles, setBbFiles] = useState<FileEntry[]>([]);
+    const [bbRootName, setBbRootName] = useState('');
+    const [bbProgress, setBbProgress] = useState(0);
+    const [bbProgressMsg, setBbProgressMsg] = useState('');
 
     // Mapped State: Folder Name -> Files/Links
     const [filesMap, setFilesMap] = useState<Record<string, File[]>>({});
@@ -103,8 +111,151 @@ export default function FullPageUploadForm({
         }));
     };
 
+    const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const picked = Array.from(e.target.files || []);
+        if (!picked.length) return;
+        const entries: FileEntry[] = picked.map(f => ({
+            file: f,
+            relativePath: (f as any).webkitRelativePath || f.name,
+        }));
+        setBbFiles(entries);
+        const root = entries[0]?.relativePath.split('/')[0] || '';
+        setBbRootName(root);
+    };
+
+    const uploadBbFiles = async (setId: string, entries: FileEntry[], isComplement: boolean) => {
+        const folderMap: Record<string, string> = {};
+
+        const allFolderPaths = new Set<string>();
+        for (const entry of entries) {
+            const parts = entry.relativePath.split('/');
+            parts.pop();
+            for (let i = 1; i < parts.length; i++) {
+                allFolderPaths.add(parts.slice(0, i + 1).join('/'));
+            }
+        }
+
+        setBbProgressMsg('Creando estructura de carpetas...');
+        const sortedPaths = Array.from(allFolderPaths).sort((a, b) => a.split('/').length - b.split('/').length);
+
+        for (const folderPath of sortedPaths) {
+            if (isComplement) {
+                const { data: existingFolder } = await supabase
+                    .from('bb_folders').select('id').eq('set_id', setId).eq('path', folderPath).maybeSingle();
+                if (existingFolder) { folderMap[folderPath] = existingFolder.id; continue; }
+            }
+            const parts = folderPath.split('/');
+            const name = parts[parts.length - 1];
+            const parentPath = parts.slice(0, -1).join('/');
+            const parentId = parentPath ? folderMap[parentPath] : null;
+            const { data: folder, error: folderErr } = await supabase
+                .from('bb_folders').insert({ set_id: setId, parent_id: parentId, name, path: folderPath }).select('id').single();
+            if (folderErr) throw folderErr;
+            folderMap[folderPath] = folder.id;
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.huaman.workers.dev';
+
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            setBbProgress(Math.round(((i + 1) / entries.length) * 100));
+            setBbProgressMsg(`Subiendo ${i + 1} de ${entries.length}: ${entry.file.name}`);
+
+            const storagePath = `${setId}/${entry.relativePath}`;
+            const formData = new FormData();
+            formData.append('file', entry.file);
+            formData.append('path', storagePath);
+            formData.append('bucket', 'course-materials');
+
+            await fetch(`${apiBase}/storage/upload`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData,
+            });
+
+            const fileParts = entry.relativePath.split('/');
+            fileParts.pop();
+            const folderPath = fileParts.join('/');
+            const folderId = folderPath ? folderMap[folderPath] : null;
+
+            await supabase.from('bb_files').insert({
+                set_id: setId,
+                folder_id: folderId,
+                name: entry.file.name,
+                storage_path: storagePath,
+                size_bytes: entry.file.size,
+                mime_type: entry.file.type,
+                uploaded_by: session?.user?.id,
+            });
+        }
+    };
+
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (uploadMethod === 'bb-folder') {
+            if (professorId === 'none') {
+                alert('Por favor selecciona un profesor para asociar la carpeta.');
+                return;
+            }
+            if (bbFiles.length === 0) {
+                alert('Por favor selecciona una carpeta para subir.');
+                return;
+            }
+            setUploading(true);
+            try {
+                let cicloName = 'Histórico';
+                if (selectedCycleId !== 'historical') {
+                    const cy = courseCycles.find(c => c.id === selectedCycleId);
+                    if (cy) cicloName = cy.ciclo_name;
+                }
+
+                const { data: existing } = await supabase
+                    .from('bb_material_sets')
+                    .select('id')
+                    .eq('professor_id', professorId)
+                    .eq('course_name', bbRootName)
+                    .eq('ciclo', cicloName)
+                    .maybeSingle();
+
+                let setId = existing?.id;
+                if (existing) {
+                    const { data: existingFiles } = await supabase.from('bb_files').select('storage_path').eq('set_id', setId);
+                    const existingPaths = new Set((existingFiles || []).map((f: any) => f.storage_path));
+                    const newFiles = bbFiles.filter(f => !existingPaths.has(`${setId}/${f.relativePath}`));
+                    if (newFiles.length === 0) {
+                        alert('Todos los archivos de esta carpeta ya existen en este ciclo para este profesor.');
+                        setUploading(false);
+                        return;
+                    }
+                    await uploadBbFiles(setId!, newFiles, true);
+                } else {
+                    const { data: newSet, error: setErr } = await supabase
+                        .from('bb_material_sets')
+                        .insert({
+                            professor_id: professorId,
+                            course_id: courseId,
+                            course_name: bbRootName,
+                            ciclo: cicloName,
+                            uploaded_by: (await supabase.auth.getUser()).data.user?.id,
+                        })
+                        .select('id')
+                        .single();
+                    if (setErr) throw setErr;
+                    setId = newSet.id;
+                    await uploadBbFiles(setId!, bbFiles, false);
+                }
+                router.push(`/dashboard/courses/view?id=${courseId}`);
+                router.refresh();
+            } catch (err: any) {
+                alert(err.message || 'Error al subir la carpeta');
+            } finally {
+                setUploading(false);
+            }
+            return;
+        }
 
         if (!selectedSubfolder) {
             alert('Por favor selecciona la carpeta de destino primero');
@@ -279,6 +430,9 @@ export default function FullPageUploadForm({
     const hasAnyLinksEntered = Object.values(linksMap).some(arr => arr.some(l => l.url));
     const isReadyForFiles = uploadMethod === 'link' ? hasAnyLinksEntered : hasAnyFilesSelected;
 
+    const isReadyForBbFolder = uploadMethod === 'bb-folder' && bbFiles.length > 0 && professorId !== 'none';
+    const isReadyToSubmit = uploadMethod === 'bb-folder' ? isReadyForBbFolder : isReadyForFiles;
+
     return (
         <div className="max-w-5xl mx-auto py-8 px-4 min-h-screen bg-bb-dark">
             <div className="mb-8">
@@ -303,10 +457,10 @@ export default function FullPageUploadForm({
                     {/* Destino */}
                     <div className="space-y-4">
                         <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
-                            <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${selectedSubfolder ? 'bg-green-500/20 text-green-500 border-green-500/50' : 'bg-bb-sidebar text-blue-400 border border-bb-border'}`}>
-                                {selectedSubfolder ? <CheckCircle className="w-4 h-4" /> : '1'}
+                            <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${(selectedSubfolder || uploadMethod === 'bb-folder') ? 'bg-green-500/20 text-green-500 border-green-500/50' : 'bg-bb-sidebar text-blue-400 border border-bb-border'}`}>
+                                {(selectedSubfolder || uploadMethod === 'bb-folder') ? <CheckCircle className="w-4 h-4" /> : '1'}
                             </span>
-                            Destino del Archivo
+                            {uploadMethod === 'bb-folder' ? 'Ciclo y Profesor' : 'Destino del Archivo'}
                         </Label>
 
                         <div className="space-y-4 bg-bb-sidebar/50 p-5 rounded-xl border border-bb-border">
@@ -332,6 +486,7 @@ export default function FullPageUploadForm({
                                 </Select>
                             </div>
 
+                            {uploadMethod !== 'bb-folder' && (
                             <div>
                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">Sección o Carpeta</Label>
                                 <Select value={selectedSubfolder} onValueChange={setSelectedSubfolder}>
@@ -347,6 +502,7 @@ export default function FullPageUploadForm({
                                     </SelectContent>
                                 </Select>
                             </div>
+                            )}
                         </div>
                     </div>
 
@@ -398,14 +554,14 @@ export default function FullPageUploadForm({
                     </div>
                 </div>
 
-                {/* 2. ARCHIVOS / LINKS (Bottom Section) */}
-                <div className={`space-y-4 pt-4 border-t border-bb-border/50 transition-opacity duration-300 ${!selectedSubfolder ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
+                {/* 2. ARCHIVOS / LINKS / CARPETA BB (Bottom Section) */}
+                <div className="space-y-4 pt-4 border-t border-bb-border/50">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
-                            <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${isReadyForFiles ? 'bg-green-500/20 text-green-500 border-green-500/50' : 'bg-bb-sidebar text-blue-400 border border-bb-border'}`}>
-                                {isReadyForFiles ? <CheckCircle className="w-4 h-4" /> : '3'}
+                            <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${isReadyToSubmit ? 'bg-green-500/20 text-green-500 border-green-500/50' : 'bg-bb-sidebar text-blue-400 border border-bb-border'}`}>
+                                {isReadyToSubmit ? <CheckCircle className="w-4 h-4" /> : '3'}
                             </span>
-                            Selecciona los archivos
+                            {uploadMethod === 'bb-folder' ? 'Carpeta Blackboard' : 'Selecciona los archivos'}
                         </Label>
 
                         <div className="flex bg-bb-darker rounded-xl p-1 w-max border border-bb-border">
@@ -420,15 +576,111 @@ export default function FullPageUploadForm({
                                 type="button"
                                 onClick={() => {
                                     setUploadMethod('link');
-                                    // Make sure a default key exists for links
                                     if (!linksMap['General']) setLinksMap(prev => ({ ...prev, 'General': [{ titulo: '', url: '' }]}));
                                 }}
                                 className={`px-4 py-2 text-xs uppercase tracking-widest font-bold rounded-lg transition-all ${uploadMethod === 'link' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
                             >
                                 Enlaces
                             </button>
+                            <button
+                                type="button"
+                                onClick={() => setUploadMethod('bb-folder')}
+                                className={`px-4 py-2 text-xs uppercase tracking-widest font-bold rounded-lg transition-all ${uploadMethod === 'bb-folder' ? 'bg-violet-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                            >
+                                📁 Carpeta BB
+                            </button>
                         </div>
                     </div>
+
+                    {/* BLACKBOARD FOLDER UPLOAD UI */}
+                    {uploadMethod === 'bb-folder' && (
+                        <div className="space-y-4">
+                            <div className="bg-violet-500/10 border border-violet-500/30 rounded-xl p-4 text-sm text-bb-text-secondary leading-relaxed">
+                                <p className="font-bold text-violet-400 mb-1">📁 Subida de Carpeta Blackboard</p>
+                                <p>Selecciona la carpeta descargada con la extensión de Blackboard. La estructura de subcarpetas (Semana 1, Unidad 2, etc.) se replicará automáticamente y quedará asociada al profesor y ciclo que elegiste arriba.</p>
+                            </div>
+
+                            <div
+                                className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer
+                                    ${bbFiles.length > 0
+                                        ? 'border-violet-500 bg-violet-500/10'
+                                        : 'border-bb-border hover:border-violet-500 hover:bg-bb-darker/50'}`}
+                                onClick={() => document.getElementById('bb-folder-input')?.click()}
+                            >
+                                <input
+                                    id="bb-folder-input"
+                                    type="file"
+                                    className="hidden"
+                                    // @ts-ignore
+                                    webkitdirectory=""
+                                    directory=""
+                                    multiple
+                                    onChange={handleFolderSelect}
+                                />
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all
+                                        ${bbFiles.length > 0 ? 'bg-violet-600 shadow-lg' : 'bg-bb-darker border border-bb-border'}`}>
+                                        📁
+                                    </div>
+                                    {bbFiles.length > 0 ? (
+                                        <div className="space-y-1">
+                                            <p className="font-black text-violet-400 text-sm">{bbRootName}</p>
+                                            <p className="text-xs text-bb-text-secondary">{bbFiles.length} archivos listos para subir</p>
+                                            <p className="text-[10px] text-bb-text-secondary/60 italic">Clic para cambiar carpeta</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-1">
+                                            <p className="font-bold text-bb-text text-sm">Seleccionar Carpeta</p>
+                                            <p className="text-xs text-bb-text-secondary">Haz clic para elegir la carpeta descargada de Blackboard</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {bbFiles.length > 0 && (
+                                <div className="bg-bb-sidebar/50 rounded-xl border border-bb-border p-4 space-y-2">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-bb-text-secondary">Vista previa de estructura</p>
+                                    <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1">
+                                        {Array.from(new Set(bbFiles.map(f => f.relativePath.split('/').slice(0, -1).join('/')))).filter(Boolean).slice(0, 20).map((folder, i) => (
+                                            <div key={i} className="flex items-center gap-2 text-xs text-bb-text-secondary py-0.5">
+                                                <span className="text-violet-400">📂</span>
+                                                <span className="font-medium">{folder}</span>
+                                            </div>
+                                        ))}
+                                        {bbFiles.slice(0, 8).map((f, i) => (
+                                            <div key={`f-${i}`} className="flex items-center gap-2 text-xs text-bb-text-secondary py-0.5 pl-4">
+                                                <span className="text-blue-400">📄</span>
+                                                <span className="truncate max-w-[300px]">{f.file.name}</span>
+                                                <span className="text-bb-text-secondary/50 shrink-0">{(f.file.size / 1024 / 1024).toFixed(1)} MB</span>
+                                            </div>
+                                        ))}
+                                        {bbFiles.length > 8 && (
+                                            <p className="text-[10px] text-bb-text-secondary/50 pl-4">...y {bbFiles.length - 8} archivos más</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {uploading && (
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-xs text-bb-text-secondary">
+                                        <span>{bbProgressMsg}</span>
+                                        <span>{bbProgress}%</span>
+                                    </div>
+                                    <div className="w-full bg-bb-sidebar rounded-full h-2">
+                                        <div
+                                            className="bg-violet-500 h-2 rounded-full transition-all duration-300"
+                                            style={{ width: `${bbProgress}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* DYNAMIC DROPZONES (files / links) */}
+                    {uploadMethod !== 'bb-folder' && (
+                    <div className={`transition-opacity duration-300 ${!selectedSubfolder ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
 
                     {/* DYNAMIC DROPZONES */}
                     <div className={dropzoneKeys.length > 1 ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "w-full space-y-4"}>
@@ -540,6 +792,8 @@ export default function FullPageUploadForm({
                             );
                         })}
                     </div>
+                    </div>
+                    )}
                 </div>
 
                 <div className="pt-6 border-t border-bb-border flex flex-col sm:flex-row justify-end gap-3">
@@ -553,10 +807,19 @@ export default function FullPageUploadForm({
                     </Button>
                     <Button
                         type="submit"
-                        disabled={uploading || !selectedSubfolder || !isReadyForFiles}
-                        className="w-full sm:w-64 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all text-white font-black uppercase tracking-widest text-xs h-12 rounded-xl active:scale-95 disabled:opacity-50"
+                        disabled={uploading || !isReadyToSubmit}
+                        className={`w-full sm:w-64 shadow-lg transition-all text-white font-black uppercase tracking-widest text-xs h-12 rounded-xl active:scale-95 disabled:opacity-50
+                            ${uploadMethod === 'bb-folder'
+                                ? 'bg-violet-600 hover:bg-violet-700 shadow-violet-600/20'
+                                : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'}`}
                     >
-                        {uploading ? 'Subiendo...' : (uploadMethod === 'link' ? 'Guardar Enlaces' : `Cargar ${totalSelectedFiles || ''} Archivos`)}
+                        {uploading
+                            ? (uploadMethod === 'bb-folder' ? bbProgressMsg || 'Procesando...' : 'Subiendo...')
+                            : uploadMethod === 'link'
+                                ? 'Guardar Enlaces'
+                                : uploadMethod === 'bb-folder'
+                                    ? `Subir Carpeta (${bbFiles.length} archivos)`
+                                    : `Cargar ${totalSelectedFiles || ''} Archivos`}
                     </Button>
                 </div>
             </form>

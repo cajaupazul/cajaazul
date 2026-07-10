@@ -85,6 +85,13 @@ export default function CourseDetailContent({
     const [targetSubfolder, setTargetSubfolder] = useState<string>('');
     const [isMovingFiles, setIsMovingFiles] = useState(false);
 
+    // Blackboard folder sets state
+    const [bbSets, setBbSets] = useState<any[]>([]);
+    const [activeBbSetId, setActiveBbSetId] = useState<string | null>(null);
+    const [bbFolderTree, setBbFolderTree] = useState<any[]>([]);
+    const [activeBbFolderId, setActiveBbFolderId] = useState<string | null>(null);
+    const [bbFolderFiles, setBbFolderFiles] = useState<any[]>([]);
+
     // Sync state with url param
     useEffect(() => {
         const profId = searchParams.get('professor');
@@ -110,6 +117,43 @@ export default function CourseDetailContent({
                 });
         }
     }, [course.id]);
+
+    // Load BB material sets when entering a specific cycle
+    useEffect(() => {
+        if (!activeCycleId || activeCycleId === 'historical' || activeCycleId === 'general') {
+            setBbSets([]);
+            return;
+        }
+        const cycle = courseCycles.find(c => c.id === activeCycleId);
+        if (!cycle) return;
+        supabase
+            .from('bb_material_sets')
+            .select('id, course_name, ciclo, professor_id, professors(nombre)')
+            .eq('course_id', course.id)
+            .eq('ciclo', cycle.ciclo_name)
+            .then(({ data }) => setBbSets(data || []));
+    }, [activeCycleId, course.id, courseCycles]);
+
+    // Load BB folder tree when a set is selected
+    useEffect(() => {
+        if (!activeBbSetId) { setBbFolderTree([]); setBbFolderFiles([]); return; }
+        supabase
+            .from('bb_folders')
+            .select('id, parent_id, name, path')
+            .eq('set_id', activeBbSetId)
+            .then(({ data }) => setBbFolderTree(data || []));
+    }, [activeBbSetId]);
+
+    // Load BB files for the active folder
+    useEffect(() => {
+        if (!activeBbSetId) { setBbFolderFiles([]); return; }
+        supabase
+            .from('bb_files')
+            .select('id, name, storage_path, size_bytes, mime_type')
+            .eq('set_id', activeBbSetId)
+            .eq('folder_id', activeBbFolderId)
+            .then(({ data }) => setBbFolderFiles(data || []));
+    }, [activeBbSetId, activeBbFolderId]);
 
     const handleMaterialUploaded = () => {
         router.refresh();
@@ -498,6 +542,7 @@ export default function CourseDetailContent({
             const cycle = courseCycles.find(c => c.id === activeCycleId);
             cycleName = cycle ? `📁 Ciclo ${cycle.ciclo_name}` : '';
         }
+        const bbSetName = activeBbSetId ? bbSets.find(s => s.id === activeBbSetId) : null;
 
         return (
             <div className="flex items-center flex-wrap gap-2 text-xs font-bold text-bb-text-secondary mb-4 bg-bb-darker/50 p-3 rounded-2xl border border-bb-border/30">
@@ -505,6 +550,8 @@ export default function CourseDetailContent({
                     onClick={() => {
                         setActiveCycleId(null);
                         setActiveSubfolder(null);
+                        setActiveBbSetId(null);
+                        setActiveBbFolderId(null);
                     }}
                     className="hover:text-white transition-colors uppercase tracking-tight flex items-center gap-1 text-[10px] bg-bb-border/40 px-2.5 py-1 rounded-xl"
                 >
@@ -514,13 +561,33 @@ export default function CourseDetailContent({
                 <button
                     onClick={() => {
                         setActiveSubfolder(null);
+                        setActiveBbSetId(null);
+                        setActiveBbFolderId(null);
                     }}
                     className={`hover:text-white transition-colors ${!activeSubfolder ? 'text-blue-400' : ''}`}
                     disabled={!activeSubfolder}
                 >
                     {cycleName}
                 </button>
-                {activeSubfolder && (
+                {activeSubfolder === '__bb__' && bbSetName && (
+                    <>
+                        <span className="text-bb-text/30">/</span>
+                        <button
+                            onClick={() => setActiveBbFolderId(null)}
+                            className={`transition-colors ${!activeBbFolderId ? 'text-violet-400' : 'hover:text-white'}`}
+                            disabled={!activeBbFolderId}
+                        >
+                            📁 {(bbSetName.professors as any)?.nombre || 'Carpeta BB'}
+                        </button>
+                        {activeBbFolderId && (
+                            <>
+                                <span className="text-bb-text/30">/</span>
+                                <span className="text-violet-300">{bbFolderTree.find(f => f.id === activeBbFolderId)?.name}</span>
+                            </>
+                        )}
+                    </>
+                )}
+                {activeSubfolder && activeSubfolder !== '__bb__' && (
                     <>
                         <span className="text-bb-text/30">/</span>
                         <span className="text-teal-400">{activeSubfolder}</span>
@@ -528,7 +595,7 @@ export default function CourseDetailContent({
                 )}
             </div>
         );
-    }, [activeCycleId, activeSubfolder, courseCycles]);
+    }, [activeCycleId, activeSubfolder, courseCycles, activeBbSetId, bbSets, activeBbFolderId, bbFolderTree]);
 
     return (
         <div className="flex-1 overflow-auto bg-bb-dark">
@@ -904,6 +971,79 @@ export default function CourseDetailContent({
                                                             onClick={() => setActiveSubfolder(sub)}
                                                         />
                                                     ))}
+                                                    {/* Blackboard folder sets for this cycle */}
+                                                    {bbSets.map((set) => (
+                                                        <button
+                                                            key={set.id}
+                                                            onClick={() => { setActiveBbSetId(set.id); setActiveBbFolderId(null); setActiveSubfolder('__bb__'); }}
+                                                            className="flex flex-col items-center gap-2 p-3 bg-violet-500/10 border border-violet-500/30 hover:border-violet-400 hover:bg-violet-500/20 rounded-2xl transition-all text-center group cursor-pointer"
+                                                        >
+                                                            <div className="text-3xl">📁</div>
+                                                            <div className="space-y-0.5">
+                                                                <p className="text-[11px] font-black text-violet-300 leading-tight">
+                                                                    {(set.professors as any)?.nombre || 'Carpeta BB'}
+                                                                </p>
+                                                                <p className="text-[9px] text-bb-text-secondary">{set.course_name}</p>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+                                        if (activeSubfolder === '__bb__' && activeBbSetId) {
+                                            // Render BB folder tree viewer
+                                            const rootFolders = bbFolderTree.filter(f => !f.parent_id);
+                                            const childFolders = activeBbFolderId
+                                                ? bbFolderTree.filter(f => f.parent_id === activeBbFolderId)
+                                                : [];
+
+                                            return (
+                                                <div className="space-y-4">
+                                                    {activeBbFolderId && (
+                                                        <button
+                                                            onClick={() => setActiveBbFolderId(null)}
+                                                            className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 font-bold transition-colors"
+                                                        >
+                                                            <ArrowLeft className="w-3.5 h-3.5" /> Volver a carpetas
+                                                        </button>
+                                                    )}
+                                                    {(activeBbFolderId ? childFolders : rootFolders).length > 0 && (
+                                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                                            {(activeBbFolderId ? childFolders : rootFolders).map((folder: any) => (
+                                                                <button
+                                                                    key={folder.id}
+                                                                    onClick={() => setActiveBbFolderId(folder.id)}
+                                                                    className="flex flex-col items-center gap-2 p-3 bg-violet-500/10 border border-violet-500/30 hover:border-violet-400 hover:bg-violet-500/20 rounded-2xl transition-all text-center cursor-pointer"
+                                                                >
+                                                                    <div className="text-3xl">📂</div>
+                                                                    <p className="text-[11px] font-black text-violet-300 leading-tight">{folder.name}</p>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {bbFolderFiles.length > 0 && (
+                                                        <div className="space-y-2 mt-4">
+                                                            <p className="text-[10px] font-black uppercase tracking-widest text-bb-text-secondary">Archivos</p>
+                                                            <div className="space-y-2">
+                                                                {bbFolderFiles.map((file: any) => (
+                                                                    <button
+                                                                        key={file.id}
+                                                                        onClick={() => setViewingFile({ path: file.storage_path, name: file.name })}
+                                                                        className="flex items-center gap-3 w-full p-3 bg-bb-card border border-bb-border hover:border-violet-500/40 rounded-xl transition-all text-left"
+                                                                    >
+                                                                        <FileText className="h-5 w-5 text-violet-400 shrink-0" />
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <p className="text-sm font-bold text-bb-text truncate">{file.name}</p>
+                                                                            <p className="text-[10px] text-bb-text-secondary">{file.size_bytes ? `${(file.size_bytes / 1024 / 1024).toFixed(1)} MB` : ''}</p>
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {bbFolderFiles.length === 0 && (activeBbFolderId ? childFolders : rootFolders).length === 0 && (
+                                                        <p className="text-sm text-bb-text-secondary text-center py-8">Esta carpeta está vacía.</p>
+                                                    )}
                                                 </div>
                                             );
                                         }
