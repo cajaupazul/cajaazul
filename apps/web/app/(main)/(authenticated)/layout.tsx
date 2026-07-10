@@ -32,8 +32,7 @@ import {
   EyeOff,
   Library,
   Calculator,
-  Bot,
-  FolderOpen
+  Bot
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -224,7 +223,6 @@ export default function AuthenticatedLayout({
     ] : []),
     { label: 'Cursos', href: '/dashboard/courses', icon: BookOpen },
     { label: 'Biblioteca', href: '/dashboard/library', icon: Library },
-    { label: 'Materiales', href: '/dashboard/materiales', icon: FolderOpen },
     { label: 'Profesores', href: '/dashboard/professors', icon: Users },
     { label: 'Herramientas', href: '/dashboard/herramientas', icon: Wrench },
     { label: 'Tienda', href: '/dashboard/store', icon: ShoppingBag },
