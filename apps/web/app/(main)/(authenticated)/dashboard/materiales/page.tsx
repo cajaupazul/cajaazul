@@ -95,7 +95,7 @@ export default function MaterialesPage() {
   };
 
   const handleDeleteSet = async (set: BBSet) => {
-    if (!confirm(`¿Eliminar todos los materiales de "${set.course_name} (${set.ciclo})"? Esta acción no se puede deshacer.`)) return;
+    if (!confirm(`Â¿Eliminar todos los materiales de "${set.course_name} (${set.ciclo})"? Esta acciÃ³n no se puede deshacer.`)) return;
     setDeletingSetId(set.id);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -176,7 +176,7 @@ export default function MaterialesPage() {
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
               <FolderOpen className="w-12 h-12 text-bb-text-secondary/30 mb-3" />
               <p className="text-sm font-bold text-bb-text-secondary">Sin materiales</p>
-              <p className="text-xs text-bb-text-secondary/60 mt-1">Sube la primera carpeta con el botón de arriba</p>
+              <p className="text-xs text-bb-text-secondary/60 mt-1">Sube la primera carpeta con el botÃ³n de arriba</p>
             </div>
           ) : (
             filtered.map(set => (
@@ -190,7 +190,7 @@ export default function MaterialesPage() {
                     <p className="text-[10px] text-bb-text-secondary mt-0.5 truncate">{set.professor?.nombre}</p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ backgroundColor: `${colors?.primary}20`, color: colors?.primary }}>{set.ciclo}</span>
-                      <span className="text-[9px] text-bb-text-secondary">{set._fileCount} archivos · {formatBytes(set._totalSize || 0)}</span>
+                      <span className="text-[9px] text-bb-text-secondary">{set._fileCount} archivos Â· {formatBytes(set._totalSize || 0)}</span>
                     </div>
                   </div>
                   {isAdmin && (

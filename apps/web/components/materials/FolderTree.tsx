@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Folder, FolderOpen, FileText, FileImage, Film, File, ChevronRight, Trash2, Download } from 'lucide-react';
+import { Folder, FolderOpen, FileText, FileImage, Film, File, ChevronRight, Trash2 } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
 import { useProfile } from '@/lib/profile-context';
 import { supabase } from '@/lib/supabase';
@@ -38,7 +38,7 @@ function getFileIcon(mime: string) {
 }
 
 function formatBytes(bytes: number) {
-  if (!bytes) return '—';
+  if (!bytes) return 'â€”';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -53,7 +53,7 @@ function FolderNode({ folder, setId, onDeleted, depth = 0 }: { folder: BBFolder;
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.huaman.workers.dev';
 
   const handleDeleteFile = async (file: BBFile) => {
-    if (!confirm(`¿Eliminar "${file.name}"?`)) return;
+    if (!confirm(`Â¿Eliminar "${file.name}"?`)) return;
     setDeleting(file.id);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -66,7 +66,7 @@ function FolderNode({ folder, setId, onDeleted, depth = 0 }: { folder: BBFolder;
   };
 
   const handleDeleteFolder = async () => {
-    if (!confirm(`¿Eliminar la carpeta "${folder.name}" y todo su contenido?`)) return;
+    if (!confirm(`Â¿Eliminar la carpeta "${folder.name}" y todo su contenido?`)) return;
     setDeleting(folder.id);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -92,7 +92,7 @@ function FolderNode({ folder, setId, onDeleted, depth = 0 }: { folder: BBFolder;
         {open ? <FolderOpen className="w-4 h-4 shrink-0" style={{ color: colors?.primary }} /> : <Folder className="w-4 h-4 shrink-0 text-yellow-500/70" />}
         <span className="text-sm font-semibold text-bb-text flex-1 truncate">{folder.name}</span>
         <span className="text-[10px] text-bb-text-secondary opacity-0 group-hover:opacity-60 transition-opacity">
-          {folder.files.length} arch. · {folder.children.length} carpetas
+          {folder.files.length} arch. Â· {folder.children.length} carpetas
         </span>
         {isAdmin && (
           <button onClick={e => { e.stopPropagation(); handleDeleteFolder(); }}

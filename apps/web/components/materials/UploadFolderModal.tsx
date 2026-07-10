@@ -182,7 +182,7 @@ export function UploadFolderModal({ isOpen, onClose, onSuccess }: UploadFolderMo
                     {files.length > 0 ? (
                       <><p className="text-sm font-bold text-bb-text truncate">{rootName}</p><p className="text-[10px] text-bb-text-secondary">{files.length} archivos</p></>
                     ) : (
-                      <><p className="text-sm text-bb-text-secondary">Haz click para seleccionar la carpeta</p><p className="text-[10px] text-bb-text-secondary opacity-60">Carpeta descargada con la extensión de Blackboard</p></>
+                      <><p className="text-sm text-bb-text-secondary">Haz click para seleccionar la carpeta</p><p className="text-[10px] text-bb-text-secondary opacity-60">Carpeta descargada con la extensiÃ³n de Blackboard</p></>
                     )}
                   </div>
                   <input type="file" className="hidden" onChange={handleFolderSelect} {...{ webkitdirectory: '', multiple: true } as any} />
@@ -220,7 +220,7 @@ export function UploadFolderModal({ isOpen, onClose, onSuccess }: UploadFolderMo
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: colors?.primary }}>Ciclo académico</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: colors?.primary }}>Ciclo acadÃ©mico</label>
                 <div className="flex flex-wrap gap-2">
                   {CICLOS.map(c => (
                     <button key={c} onClick={() => setCiclo(c)}
@@ -271,8 +271,8 @@ export function UploadFolderModal({ isOpen, onClose, onSuccess }: UploadFolderMo
             <div className="py-10 flex flex-col items-center gap-4">
               <CheckCircle2 className="w-16 h-16 text-green-400" />
               <div className="text-center">
-                <p className="text-base font-black text-bb-text">¡Materiales subidos!</p>
-                <p className="text-xs text-bb-text-secondary mt-1">La carpeta ya está disponible en la plataforma.</p>
+                <p className="text-base font-black text-bb-text">Â¡Materiales subidos!</p>
+                <p className="text-xs text-bb-text-secondary mt-1">La carpeta ya estÃ¡ disponible en la plataforma.</p>
               </div>
               <button onClick={() => { reset(); onSuccess(); onClose(); }}
                 className="px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest text-white"
