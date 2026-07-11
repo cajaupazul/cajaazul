@@ -82,7 +82,8 @@ export async function parseOfertaFile(file: File): Promise<{
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (ext === 'pdf') return parseFromPDF(file);
     if (ext === 'docx' || ext === 'doc') return parseFromWord(file);
-    return { periodo: '', ofertas: [], errors: [`Formato no soportado: .${ext}. Usa PDF o Word.`] };
+    if (ext === 'xlsx' || ext === 'xls') return parseFromExcel(file);
+    return { periodo: '', ofertas: [], errors: [`Formato no soportado: .${ext}. Usa PDF, Word o Excel.`] };
 }
 
 /**
@@ -171,6 +172,26 @@ async function parseFromWord(file: File): Promise<{ periodo: string; ofertas: Pa
     const mammoth = await import('mammoth');
     const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
     return parseLines(result.value.split('\n'));
+}
+
+async function parseFromExcel(file: File): Promise<{ periodo: string; ofertas: ParsedOferta[]; errors: string[] }> {
+    const XLSX = await import('xlsx');
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+    
+    const lines: string[] = [];
+    for (const row of rows) {
+        if (!Array.isArray(row)) continue;
+        const line = row
+            .map(cell => String(cell).trim())
+            .filter(Boolean)
+            .join(' ');
+        if (line) lines.push(line);
+    }
+    return parseLines(lines);
 }
 
 // ────────────────────────────────────────────────────────────────────────────────

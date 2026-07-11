@@ -29,7 +29,7 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
         const f = e.target.files?.[0];
         if (!f) return;
         const ext = f.name.split('.').pop()?.toLowerCase();
-        if (!['pdf', 'docx', 'doc'].includes(ext || '')) return;
+        if (!['pdf', 'docx', 'doc', 'xlsx', 'xls'].includes(ext || '')) return;
         setFile(f);
         setParsing(true);
 
@@ -272,16 +272,16 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                                     ) : (
                                         <>
                                             <p className="text-bb-text-secondary text-center text-sm max-w-md">
-                                                Sube el PDF o Word (.docx) de la oferta académica. El sistema leerá automáticamente los cursos, secciones, horarios y profesores.
+                                                Sube el PDF, Word (.docx) o Excel (.xlsx) de la oferta académica. El sistema leerá automáticamente los cursos, secciones, horarios y profesores.
                                             </p>
                                             <label
                                                 className="cursor-pointer px-6 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
                                                 style={{ backgroundColor: colors?.primary }}
                                             >
-                                                Seleccionar PDF o Word
+                                                Seleccionar Archivo
                                                 <input
                                                     type="file"
-                                                    accept=".pdf,.docx,.doc"
+                                                    accept=".pdf,.docx,.doc,.xlsx,.xls"
                                                     className="hidden"
                                                     onChange={handleFileSelect}
                                                 />
