@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { X, Upload, FileText, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { parseOfertaFile, parseOfertaText, ParsedOferta } from '@/lib/pdf-schedule-parser';
+import { debugExcel } from '@/lib/excel-debug';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
 import { useTheme } from '@/lib/theme-context';
@@ -38,6 +39,10 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
 
         try {
             console.log('[OFERTA_UPLOAD] Parsing file:', f.name, 'type:', ext);
+            // Run diagnostic first for Excel files
+            if (ext === 'xlsx' || ext === 'xls') {
+                await debugExcel(f);
+            }
             const result = await parseOfertaFile(f);
             console.log('[OFERTA_UPLOAD] Parse result:', result.ofertas.length, 'ofertas,', result.errors.length, 'errors');
             setParsedData(result);
