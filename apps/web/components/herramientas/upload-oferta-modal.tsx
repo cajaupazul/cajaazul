@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { X, Upload, FileText, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { parseOfertaFile, parseOfertaText, ParsedOferta } from '@/lib/pdf-schedule-parser';
 import { supabase } from '@/lib/supabase';
@@ -24,6 +24,9 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
     const [isPasteMode, setIsPasteMode] = useState(false);
     const [pastedText, setPastedText] = useState('');
     const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload');
+    const [showManagePeriodos, setShowManagePeriodos] = useState(false);
+    const [periodos, setPeriodos] = useState<string[]>([]);
+    const [loadingPeriodos, setLoadingPeriodos] = useState(false);
 
     const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         const f = e.target.files?.[0];
@@ -88,19 +91,33 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
         }
     };
 
-    const handleClearAll = async () => {
-        if (!confirm('⚠️ ¿Estás MUY SEGURO? Esto BORRARÁ TODA la oferta académica de TODOS los periodos. No se puede deshacer.')) return;
+    const handleLoadPeriodos = async () => {
+        if (showManagePeriodos) { setShowManagePeriodos(false); return; }
+        setLoadingPeriodos(true);
+        try {
+            const { data } = await supabase
+                .from('sche_sections')
+                .select('periodo')
+                .order('periodo', { ascending: false });
+            const unique = Array.from(new Set((data || []).map((r: any) => r.periodo).filter(Boolean)));
+            setPeriodos(unique);
+            setShowManagePeriodos(true);
+        } finally {
+            setLoadingPeriodos(false);
+        }
+    };
+
+    const handleDeletePeriodo = async (per: string) => {
+        if (!confirm(`¿Eliminar toda la oferta del periodo "${per}"? Esta acción no se puede deshacer.`)) return;
         setUploading(true);
         try {
-            // Delete all sections (schedule_blocks cascade via FK)
-            const { error } = await supabase.from('sche_sections').delete().neq('id', '');
+            await supabase.from('oferta_academica').delete().eq('periodo', per);
+            const { error } = await supabase.from('sche_sections').delete().eq('periodo', per);
             if (error) throw error;
-            await supabase.from('oferta_academica').delete().neq('id', '');
-            alert('✅ Toda la oferta académica ha sido eliminada correctamente.');
+            setPeriodos(prev => prev.filter(p => p !== per));
             onSuccess();
         } catch (err: any) {
-            console.error('[OFERTA_UPLOAD] ClearAll error:', err);
-            alert('Error al limpiar: ' + err.message);
+            alert('Error al eliminar: ' + err.message);
         } finally {
             setUploading(false);
         }
@@ -302,15 +319,40 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                                                     onChange={handleFileSelect}
                                                 />
                                             </label>
-                                            {/* Clear all old data button */}
-                                            <button
-                                                onClick={handleClearAll}
-                                                disabled={uploading}
-                                                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                                            >
-                                                <AlertTriangle className="w-3.5 h-3.5" />
-                                                Limpiar toda la oferta anterior
-                                            </button>
+
+                                            {/* Manage Periods Panel */}
+                                            <div className="w-full max-w-md">
+                                                <button
+                                                    onClick={handleLoadPeriodos}
+                                                    disabled={uploading || loadingPeriodos}
+                                                    className="flex items-center gap-2 w-full justify-center px-4 py-2 rounded-lg text-xs font-semibold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                                >
+                                                    {loadingPeriodos ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                                                    {showManagePeriodos ? 'Ocultar administrador de periodos' : 'Administrar / eliminar oferta anterior'}
+                                                </button>
+
+                                                {showManagePeriodos && (
+                                                    <div className="mt-2 rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+                                                        <p className="text-xs text-red-400 font-semibold">Periodos guardados en la base de datos:</p>
+                                                        {periodos.length === 0 ? (
+                                                            <p className="text-xs text-bb-text-secondary">No hay periodos guardados.</p>
+                                                        ) : (
+                                                            periodos.map(per => (
+                                                                <div key={per} className="flex items-center justify-between bg-bb-card rounded-lg px-3 py-2">
+                                                                    <span className="text-sm text-bb-text font-medium">{per}</span>
+                                                                    <button
+                                                                        onClick={() => handleDeletePeriodo(per)}
+                                                                        disabled={uploading}
+                                                                        className="text-xs text-red-400 hover:text-red-300 font-semibold px-2 py-1 rounded hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                                                    >
+                                                                        Eliminar
+                                                                    </button>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </>
                                     )}
                                 </div>
