@@ -61,12 +61,15 @@ const COURSE_HEADER_RE = /^"?([A-Z0-9]{4,8})\s*(?:[-–]\s*)?(.+)/i;
 // Noise lines to ignore entirely (but NOT reset course context)
 const NOISE_RE = [
     /^Se sugiere revisar/i,
-    /^Horarios ofertados:/i,
+    /^Horarios ofertados/i,
     /^Dirección de Asuntos/i,
     /^Página\s+\d/i,
     /^OFERTA/i,
     /^SISTEMA/i,
-    /^Secc\s+Tipo\s+Docentes/i,   // table header row
+    /^Secc\s+Tipo/i,              // table header row
+    /^CURSOS ACADÉMICOS/i,        // yellow section header
+    /^\d{2}\/\d{2}\/\d{4}/,       // date stamp (e.g. 07/07/2026 V1)
+    /^Cred\s+Teoría/i,            // table header continuation
 ];
 
 // ────────────────────────────────────────────────────────────────────────────────

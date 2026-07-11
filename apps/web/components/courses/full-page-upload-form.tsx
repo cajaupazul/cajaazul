@@ -451,7 +451,60 @@ export default function FullPageUploadForm({
             </div>
 
             <form onSubmit={handleUpload} className="space-y-8 bg-bb-card p-6 md:p-8 rounded-xl shadow-2xl border border-bb-border shadow-black/10 dark:shadow-black/40 flex flex-col">
-                
+
+                {/* BB UPLOAD PROGRESS OVERLAY */}
+                {uploading && uploadMethod === 'bb-folder' && (
+                    <div className="flex flex-col items-center justify-center py-12 gap-6">
+                        {/* Animated folder icon */}
+                        <div className="relative">
+                            <div className="w-20 h-20 rounded-2xl bg-violet-500/20 border-2 border-violet-500/40 flex items-center justify-center animate-pulse">
+                                <span className="text-4xl">📁</span>
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-violet-600 rounded-full flex items-center justify-center">
+                                <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div className="text-center space-y-1">
+                            <p className="text-lg font-black text-bb-text">Subiendo carpeta...</p>
+                            <p className="text-sm text-violet-400 font-bold">{bbRootName}</p>
+                        </div>
+
+                        {/* Main progress bar */}
+                        <div className="w-full max-w-md space-y-2">
+                            <div className="flex justify-between text-xs font-bold">
+                                <span className="text-bb-text-secondary truncate max-w-[80%]">{bbProgressMsg}</span>
+                                <span className="text-violet-400 shrink-0 ml-2">{bbProgress}%</span>
+                            </div>
+                            <div className="w-full bg-bb-sidebar rounded-full h-3 overflow-hidden border border-bb-border">
+                                <div
+                                    className="h-3 rounded-full transition-all duration-500 ease-out relative overflow-hidden"
+                                    style={{
+                                        width: `${bbProgress}%`,
+                                        background: 'linear-gradient(90deg, #7c3aed, #a855f7, #c084fc)',
+                                    }}
+                                >
+                                    {/* Shimmer effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_1.5s_infinite]" style={{transform: 'skewX(-20deg)'}} />
+                                </div>
+                            </div>
+                            <p className="text-[10px] text-bb-text-secondary/60 text-center">
+                                {bbProgress < 10 ? 'Preparando estructura de carpetas...' : `${Math.round(bbProgress / 100 * bbFiles.length)} de ${bbFiles.length} archivos subidos`}
+                            </p>
+                        </div>
+
+                        <p className="text-[11px] text-bb-text-secondary/50 text-center max-w-xs">
+                            No cierres esta página hasta que termine la subida.
+                        </p>
+                    </div>
+                )}
+
+                {/* NORMAL FORM CONTENT — hidden while bb-folder uploading */}
+                <div className={uploading && uploadMethod === 'bb-folder' ? 'hidden' : ''}>
+
                 {/* 1. DESTINO Y ASOCIACIÓN (Top Row) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Destino */}
@@ -822,6 +875,7 @@ export default function FullPageUploadForm({
                                     : `Cargar ${totalSelectedFiles || ''} Archivos`}
                     </Button>
                 </div>
+                </div>{/* end normal form content */}
             </form>
         </div>
     );
