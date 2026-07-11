@@ -184,9 +184,6 @@ async function parseFromExcel(file: File): Promise<{ periodo: string; ofertas: P
     // Read WITHOUT raw so times come as formatted strings (avoids fraction parsing issues)
     const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '', raw: false });
 
-    console.log('[EXCEL] Total rows:', rows.length);
-    console.log('[EXCEL] First 10 rows:', JSON.stringify(rows.slice(0, 10)));
-
     // ── Strip diacritics util ─────────────────────────────────────────────────
     const normCell = (s: any) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
 
@@ -200,52 +197,65 @@ async function parseFromExcel(file: File): Promise<{ periodo: string; ofertas: P
         const iSecc  = normed.findIndex(c => c === 'SECC' || c === 'SECCION');
         const iDia   = normed.findIndex(c => c === 'DIA');
         const iHora  = normed.findIndex(c => c === 'HORARIO');
-        const iDur   = normed.findIndex(c => c === 'DURACION');
         const iAula  = normed.findIndex(c => c === 'AULA');
-        const iTipo  = normed.findIndex(c => c.includes('PRACTICA') || c.includes('TEORIA') || c === 'TIPO');
 
         if (iSecc >= 0 && iDia >= 0) {
             colSecc  = iSecc;
             colDoc   = iSecc + 1;
-            colTipo  = iTipo >= 0 ? iTipo : (iDia > 0 ? iDia - 1 : 3);
             colDia   = iDia;
             colStart = iHora >= 0 ? iHora : iDia + 1;
-            colEnd   = iDur  >= 0 ? iDur  : iDia + 2;
+            colEnd   = colStart + 1; // always right after start (header "Duración" is unreliable)
             colAula  = iAula >= 0 ? iAula : iDia + 4;
-            console.log(`[EXCEL] Header detected at row ${ri}:`, { colSecc, colDoc, colTipo, colDia, colStart, colEnd, colAula });
+            // colTipo will be calibrated below from actual data
+            console.log(`[EXCEL] Header detected at row ${ri}:`, { colSecc, colDoc, colDia, colStart, colEnd, colAula });
             break;
         }
     }
 
-    // Fallback: scan data rows for a schedule-looking row (has a known day + two times)
-    if (colDia < 0) {
-        for (let ri = 0; ri < Math.min(rows.length, 60); ri++) {
+    // ── Calibrate colTipo (and verify colStart/colEnd/colAula) from real data ─
+    // Header-detected tipo position is unreliable; find it from real data rows.
+    {
+        for (let ri = 0; ri < Math.min(rows.length, 80); ri++) {
             const row = rows[ri];
             if (!Array.isArray(row)) continue;
             const cells = row.map(c => String(c).trim());
+
+            // Need a row that has BOTH a TIPO keyword AND a DAY keyword AND two times
+            const tipoIdx = cells.findIndex(c => TIPOS.has(c.toUpperCase()) && c.toUpperCase() !== 'PRACCALIFI');
+            if (tipoIdx < 0) continue;
             const diaIdx = cells.findIndex(c => DIAS.has(c.toUpperCase()));
             if (diaIdx < 0) continue;
             const timeIdxs = cells.map((c, i) => /^\d{1,2}:\d{2}/.test(c) ? i : -1).filter(i => i >= 0);
-            if (timeIdxs.length >= 2) {
-                colDia   = diaIdx;
-                colStart = timeIdxs[0];
-                colEnd   = timeIdxs[1];
-                colTipo  = diaIdx - 1 >= 0 ? diaIdx - 1 : 0;
-                colSecc  = 0;
-                colDoc   = 1;
-                colAula  = timeIdxs[1] + 2;
-                if (colAula >= cells.length) colAula = cells.length - 1;
-                console.log(`[EXCEL] Layout inferred from data row ${ri}:`, { colSecc, colDoc, colTipo, colDia, colStart, colEnd, colAula });
-                break;
+            if (timeIdxs.length < 2) continue;
+
+            // Calibrate all columns from this data row
+            colTipo  = tipoIdx;
+            colDia   = diaIdx;
+            colStart = timeIdxs[0];
+            colEnd   = timeIdxs[1];
+            if (colSecc < 0) { colSecc = 0; colDoc = 1; }
+
+            // Aula: after end time, skip cupos number, find room code
+            for (let ai = timeIdxs[1] + 1; ai < cells.length; ai++) {
+                const c = cells[ai];
+                if (/^[A-Z]-/.test(c) || /^(A-PEND|POR ASIGNAR|VIRTUAL)$/i.test(c)) {
+                    colAula = ai;
+                    break;
+                }
             }
+            if (colAula < 0) colAula = timeIdxs[1] + 2;
+
+            console.log(`[EXCEL] Calibrated from data row ${ri}:`, { colSecc, colDoc, colTipo, colDia, colStart, colEnd, colAula });
+            break;
+        }
+
+        // Last resort defaults if nothing was calibrated
+        if (colTipo < 0) {
+            colSecc = 0; colDoc = 1; colTipo = 2; colDia = 4; colStart = 5; colEnd = 6; colAula = 9;
+            console.warn('[EXCEL] Using last-resort defaults:', { colSecc, colDoc, colTipo, colDia, colStart, colEnd, colAula });
         }
     }
 
-    // Last resort defaults
-    if (colDia < 0) {
-        colSecc = 0; colDoc = 1; colTipo = 3; colDia = 4; colStart = 5; colEnd = 6; colAula = 8;
-        console.warn('[EXCEL] Could not detect columns — using defaults:', { colSecc, colDoc, colTipo, colDia, colStart, colEnd, colAula });
-    }
 
     // ── Detect periodo ─────────────────────────────────────────────────────────
     let periodo = '';

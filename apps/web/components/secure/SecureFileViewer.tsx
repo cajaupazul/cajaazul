@@ -391,7 +391,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
             setFileType(type);
 
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev';
             let cleanPath = filePath;
             if (filePath.includes('path=')) {
                 const urlObj = new URL(filePath, 'http://dummy.com');

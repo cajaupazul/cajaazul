@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -147,12 +147,14 @@ export default function CourseDetailContent({
     // Load BB files for the active folder
     useEffect(() => {
         if (!activeBbSetId) { setBbFolderFiles([]); return; }
-        supabase
+        const baseQuery = supabase
             .from('bb_files')
             .select('id, name, storage_path, size_bytes, mime_type')
-            .eq('set_id', activeBbSetId)
-            .eq('folder_id', activeBbFolderId)
-            .then(({ data }) => setBbFolderFiles(data || []));
+            .eq('set_id', activeBbSetId);
+        const query = activeBbFolderId === null
+            ? baseQuery.is('folder_id', null)
+            : baseQuery.eq('folder_id', activeBbFolderId);
+        query.then(({ data }) => setBbFolderFiles(data || []));
     }, [activeBbSetId, activeBbFolderId]);
 
     const handleMaterialUploaded = () => {
@@ -808,7 +810,137 @@ export default function CourseDetailContent({
                             {breadcrumbs}
 
                             <div className="space-y-4">
-                                {typeFilter !== null ? (
+                                {/* ── BB Folder Tree: shown regardless of grid/list mode ── */}
+                                {activeSubfolder === '__bb__' && activeBbSetId ? (() => {
+                                    const sortFolders = (folders: any[]) =>
+                                        [...folders].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
+                                    const rootFolders = sortFolders(bbFolderTree.filter(f => !f.parent_id));
+                                    const childFolders = activeBbFolderId
+                                        ? sortFolders(bbFolderTree.filter(f => f.parent_id === activeBbFolderId))
+                                        : [];
+                                    const sortedFiles = [...bbFolderFiles].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
+                                    const buildPath = (folderId: string | null): any[] => {
+                                        if (!folderId) return [];
+                                        const folder = bbFolderTree.find(f => f.id === folderId);
+                                        if (!folder) return [];
+                                        return [...buildPath(folder.parent_id), folder];
+                                    };
+                                    const crumb = buildPath(activeBbFolderId);
+                                    const displayFolders = activeBbFolderId ? childFolders : rootFolders;
+
+                                    if (viewMode === 'list') {
+                                        // ── List mode: Left panel tree + right panel files ──────
+                                        const renderTreeNode = (folder: any, depth: number = 0): ReactNode => {
+                                            const children = sortFolders(bbFolderTree.filter(f => f.parent_id === folder.id));
+                                            const isActive = activeBbFolderId === folder.id;
+                                            return (
+                                                <div key={folder.id} style={{ paddingLeft: depth * 16 }}>
+                                                    <button
+                                                        onClick={() => setActiveBbFolderId(isActive ? folder.parent_id || null : folder.id)}
+                                                        className={`flex items-center gap-2 w-full py-1.5 px-2 rounded-lg text-left text-sm transition-all ${isActive ? 'bg-violet-500/20 text-violet-300 font-bold' : 'hover:bg-violet-500/10 text-bb-text/80 hover:text-violet-300'}`}
+                                                    >
+                                                        <span className="text-base">{isActive ? '📂' : '📁'}</span>
+                                                        <span className="truncate flex-1 font-medium">{folder.name}</span>
+                                                        {children.length > 0 && <span className="text-[10px] text-bb-text-secondary shrink-0">{children.length}</span>}
+                                                    </button>
+                                                    {isActive && children.map(child => renderTreeNode(child, depth + 1))}
+                                                </div>
+                                            );
+                                        };
+                                        return (
+                                            <div className="flex gap-4">
+                                                <div className="w-56 shrink-0 border-r border-bb-border/30 pr-3 space-y-0.5 max-h-[60vh] overflow-y-auto">
+                                                    <button onClick={() => setActiveBbFolderId(null)} className={`flex items-center gap-2 w-full py-1.5 px-2 rounded-lg text-left text-sm transition-all ${!activeBbFolderId ? 'bg-violet-500/20 text-violet-300 font-bold' : 'hover:bg-violet-500/10 text-bb-text/80 hover:text-violet-300'}`}>
+                                                        <span className="text-base">📁</span>
+                                                        <span className="truncate flex-1 font-medium">Raíz</span>
+                                                    </button>
+                                                    {rootFolders.map(f => renderTreeNode(f, 1))}
+                                                </div>
+                                                <div className="flex-1 min-w-0 space-y-1.5">
+                                                    {crumb.length > 0 && (
+                                                        <div className="flex flex-wrap items-center gap-1 text-[11px] text-bb-text-secondary font-medium pb-2 border-b border-bb-border/20">
+                                                            <button onClick={() => setActiveBbFolderId(null)} className="hover:text-violet-300 transition-colors">Raíz</button>
+                                                            {crumb.map((f, i) => (
+                                                                <span key={f.id} className="flex items-center gap-1">
+                                                                    <span>/</span>
+                                                                    <button onClick={() => setActiveBbFolderId(f.id)} className={`hover:text-violet-300 transition-colors ${i === crumb.length - 1 ? 'text-violet-300 font-bold' : ''}`}>{f.name}</button>
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {sortedFiles.length > 0 ? sortedFiles.map((file: any) => (
+                                                        <button key={file.id} onClick={() => setViewingFile({ path: file.storage_path, name: file.name })}
+                                                            className="flex items-center gap-3 w-full p-2.5 bg-bb-card border border-bb-border hover:border-violet-500/40 rounded-xl transition-all text-left">
+                                                            <FileText className="h-4 w-4 text-violet-400 shrink-0" />
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="text-sm font-bold text-bb-text truncate">{file.name}</p>
+                                                                <p className="text-[10px] text-bb-text-secondary">{file.size_bytes ? `${(file.size_bytes / 1024 / 1024).toFixed(1)} MB` : ''}</p>
+                                                            </div>
+                                                        </button>
+                                                    )) : (
+                                                        <p className="text-sm text-bb-text-secondary text-center py-8 opacity-50">
+                                                            {activeBbFolderId ? 'Esta carpeta no tiene archivos directos.' : 'Selecciona una carpeta del árbol.'}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    // ── Grid mode ───────────────────────────────────────────
+                                    return (
+                                        <div className="space-y-4">
+                                            {crumb.length > 0 && (
+                                                <div className="flex flex-wrap items-center gap-1 text-[11px] text-bb-text-secondary font-medium">
+                                                    <button onClick={() => setActiveBbFolderId(null)} className="hover:text-violet-300 transition-colors">Raíz</button>
+                                                    {crumb.map((f, i) => (
+                                                        <span key={f.id} className="flex items-center gap-1">
+                                                            <span>/</span>
+                                                            <button onClick={() => setActiveBbFolderId(f.id)} className={`hover:text-violet-300 transition-colors ${i === crumb.length - 1 ? 'text-violet-300 font-bold' : ''}`}>{f.name}</button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {activeBbFolderId && (
+                                                <button onClick={() => setActiveBbFolderId(crumb.length > 1 ? crumb[crumb.length - 2].id : null)}
+                                                    className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 font-bold transition-colors">
+                                                    <ArrowLeft className="w-3.5 h-3.5" /> Volver
+                                                </button>
+                                            )}
+                                            {displayFolders.length > 0 && (
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                                    {displayFolders.map((folder: any) => (
+                                                        <button key={folder.id} onClick={() => setActiveBbFolderId(folder.id)}
+                                                            className="flex flex-col items-center gap-2 p-3 bg-violet-500/10 border border-violet-500/30 hover:border-violet-400 hover:bg-violet-500/20 rounded-2xl transition-all text-center cursor-pointer">
+                                                            <div className="text-3xl">📂</div>
+                                                            <p className="text-[11px] font-black text-violet-300 leading-tight">{folder.name}</p>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {sortedFiles.length > 0 && (
+                                                <div className="space-y-2 mt-4">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-bb-text-secondary">Archivos</p>
+                                                    <div className="space-y-2">
+                                                        {sortedFiles.map((file: any) => (
+                                                            <button key={file.id} onClick={() => setViewingFile({ path: file.storage_path, name: file.name })}
+                                                                className="flex items-center gap-3 w-full p-3 bg-bb-card border border-bb-border hover:border-violet-500/40 rounded-xl transition-all text-left">
+                                                                <FileText className="h-5 w-5 text-violet-400 shrink-0" />
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="text-sm font-bold text-bb-text truncate">{file.name}</p>
+                                                                    <p className="text-[10px] text-bb-text-secondary">{file.size_bytes ? `${(file.size_bytes / 1024 / 1024).toFixed(1)} MB` : ''}</p>
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {sortedFiles.length === 0 && displayFolders.length === 0 && (
+                                                <p className="text-sm text-bb-text-secondary text-center py-8">Esta carpeta está vacía.</p>
+                                            )}
+                                        </div>
+                                    );
+                                })() : typeFilter !== null ? (
                                     /* Flat view when typeFilter is selected */
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between border-b border-bb-border/35 pb-2">
@@ -875,6 +1007,7 @@ export default function CourseDetailContent({
                                 ) : viewMode === 'grid' ? (
                                     /* Grid mode: Multi-level Folder Navigation */
                                     (() => {
+                                        const currentViewMode = (viewMode as string); // prevent TS narrowing
                                         if (!activeCycleId) {
                                             // Root folders
                                             return (
@@ -987,63 +1120,6 @@ export default function CourseDetailContent({
                                                             </div>
                                                         </button>
                                                     ))}
-                                                </div>
-                                            );
-                                        }
-                                        if (activeSubfolder === '__bb__' && activeBbSetId) {
-                                            // Render BB folder tree viewer
-                                            const rootFolders = bbFolderTree.filter(f => !f.parent_id);
-                                            const childFolders = activeBbFolderId
-                                                ? bbFolderTree.filter(f => f.parent_id === activeBbFolderId)
-                                                : [];
-
-                                            return (
-                                                <div className="space-y-4">
-                                                    {activeBbFolderId && (
-                                                        <button
-                                                            onClick={() => setActiveBbFolderId(null)}
-                                                            className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 font-bold transition-colors"
-                                                        >
-                                                            <ArrowLeft className="w-3.5 h-3.5" /> Volver a carpetas
-                                                        </button>
-                                                    )}
-                                                    {(activeBbFolderId ? childFolders : rootFolders).length > 0 && (
-                                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                                                            {(activeBbFolderId ? childFolders : rootFolders).map((folder: any) => (
-                                                                <button
-                                                                    key={folder.id}
-                                                                    onClick={() => setActiveBbFolderId(folder.id)}
-                                                                    className="flex flex-col items-center gap-2 p-3 bg-violet-500/10 border border-violet-500/30 hover:border-violet-400 hover:bg-violet-500/20 rounded-2xl transition-all text-center cursor-pointer"
-                                                                >
-                                                                    <div className="text-3xl">📂</div>
-                                                                    <p className="text-[11px] font-black text-violet-300 leading-tight">{folder.name}</p>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                    {bbFolderFiles.length > 0 && (
-                                                        <div className="space-y-2 mt-4">
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-bb-text-secondary">Archivos</p>
-                                                            <div className="space-y-2">
-                                                                {bbFolderFiles.map((file: any) => (
-                                                                    <button
-                                                                        key={file.id}
-                                                                        onClick={() => setViewingFile({ path: file.storage_path, name: file.name })}
-                                                                        className="flex items-center gap-3 w-full p-3 bg-bb-card border border-bb-border hover:border-violet-500/40 rounded-xl transition-all text-left"
-                                                                    >
-                                                                        <FileText className="h-5 w-5 text-violet-400 shrink-0" />
-                                                                        <div className="min-w-0 flex-1">
-                                                                            <p className="text-sm font-bold text-bb-text truncate">{file.name}</p>
-                                                                            <p className="text-[10px] text-bb-text-secondary">{file.size_bytes ? `${(file.size_bytes / 1024 / 1024).toFixed(1)} MB` : ''}</p>
-                                                                        </div>
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    {bbFolderFiles.length === 0 && (activeBbFolderId ? childFolders : rootFolders).length === 0 && (
-                                                        <p className="text-sm text-bb-text-secondary text-center py-8">Esta carpeta está vacía.</p>
-                                                    )}
                                                 </div>
                                             );
                                         }
