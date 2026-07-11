@@ -126,15 +126,23 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
             });
             const sectionRows = Array.from(sectionsMap.values());
 
-            // 3. Extract Schedule Blocks
-            const blockRows = parsedData.ofertas.map(o => ({
-                section_id: `${periodo}-${o.codigo_curso}-${o.seccion}`,
-                type: o.tipo,
-                day: o.dia,
-                start_time: o.hora_inicio,
-                end_time: o.hora_fin,
-                classroom: o.aula || null
-            }));
+            // 3. Extract Schedule Blocks (Deduplicated)
+            const blockRowsMap = new Map<string, any>();
+            parsedData.ofertas.forEach(o => {
+                const section_id = `${periodo}-${o.codigo_curso}-${o.seccion}`;
+                const key = `${section_id}-${o.tipo}-${o.dia}-${o.hora_inicio}-${o.hora_fin}`;
+                if (!blockRowsMap.has(key)) {
+                    blockRowsMap.set(key, {
+                        section_id,
+                        type: o.tipo,
+                        day: o.dia,
+                        start_time: o.hora_inicio,
+                        end_time: o.hora_fin,
+                        classroom: o.aula || null
+                    });
+                }
+            });
+            const blockRows = Array.from(blockRowsMap.values());
 
             // PERSISTENCE (The Shield)
             // A. Upsert Courses
