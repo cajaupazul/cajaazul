@@ -180,19 +180,158 @@ async function parseFromExcel(file: File): Promise<{ periodo: string; ofertas: P
     const workbook = XLSX.read(data, { type: 'array' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
-    
-    const lines: string[] = [];
-    for (const row of rows) {
+    // raw=true keeps numeric time values as numbers instead of formatted strings
+    const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '', raw: true });
+
+    // ── Detect column positions from the first header row that contains "Secc" ─
+    let colSecc = 0, colDoc = 1, colTipo = 3, colDia = 4, colStart = 5, colEnd = 6, colAula = 8;
+    for (const row of rows.slice(0, 15)) {
         if (!Array.isArray(row)) continue;
-        const line = row
-            .map(cell => String(cell).trim())
-            .filter(Boolean)
-            .join(' ');
-        if (line) lines.push(line);
+        const norm = row.map((c: any) => String(c).trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+        const iSecc = norm.findIndex(c => c === 'SECC' || c === 'SECCION' || c === 'SECCIÓN');
+        const iDia  = norm.findIndex(c => c === 'DIA' || c === 'DÍA');
+        if (iSecc >= 0 && iDia >= 0) {
+            colSecc  = iSecc;
+            colDoc   = iSecc + 1;
+            colTipo  = norm.findIndex(c => c.includes('PRACTICA') || c.includes('TEORIA') || c === 'TIPO');
+            if (colTipo < 0) colTipo = iDia - 1;
+            colDia   = iDia;
+            colStart = iDia + 1;
+            colEnd   = iDia + 2;
+            colAula  = norm.findIndex(c => c === 'AULA' || c === 'SALON' || c === 'SALÓN');
+            if (colAula < 0) colAula = iDia + 4;
+            break;
+        }
     }
-    return parseLines(lines);
+
+    // ── Detect periodo ─────────────────────────────────────────────────────────
+    let periodo = '';
+    for (const row of rows.slice(0, 15)) {
+        const flat = Array.isArray(row) ? row.map(c => String(c)).join(' ') : '';
+        const m = flat.match(/Horarios\s+ofertados[:\s]*([^\n]+)/i);
+        if (m) { periodo = m[1].trim(); break; }
+        const m2 = flat.match(/(\d{4}-[IV]+(?:\s+PERIODO[- \w]*)?)/i);
+        if (m2) { periodo = m2[1].trim(); break; }
+    }
+
+    const ofertas: ParsedOferta[] = [];
+    const blocksSeen = new Set<string>();
+
+    let currentCodigo = '';
+    let currentNombre = '';
+    let currentCreditos = 0;
+    let currentSeccion = '';
+    let currentProfesor = '';
+
+    for (const rawRow of rows) {
+        if (!Array.isArray(rawRow)) continue;
+        const row = rawRow.map((c: any) => {
+            // Convert Excel numeric time fractions to "HH:MM"
+            if (typeof c === 'number' && c > 0 && c < 1) {
+                const totalMin = Math.round(c * 24 * 60);
+                const h = Math.floor(totalMin / 60);
+                const m = totalMin % 60;
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            }
+            return String(c).trim();
+        });
+
+        if (row.every(c => !c)) continue; // fully empty row
+
+        const cell0 = row[colSecc] || '';
+
+        // ── Course header: "120253 - Nombre del Curso" ─────────────────────────
+        const courseMatch = cell0.match(/^([A-Z0-9]{4,8})\s*[-–]\s*(.+)/i);
+        if (courseMatch && /\d/.test(courseMatch[1])) {
+            currentCodigo = courseMatch[1].toUpperCase();
+            let namePart  = courseMatch[2].replace(/\s+PREREQUISITO[:\s].*/i, '').trim();
+            // credits may be in adjacent columns
+            currentCreditos = 0;
+            for (let i = 1; i <= 5; i++) {
+                const cm = (row[i] || '').match(/(\d+[.,]\d+)/);
+                if (cm) { currentCreditos = parseFloat(cm[1].replace(',', '.')); break; }
+            }
+            currentNombre  = namePart;
+            currentSeccion = '';
+            currentProfesor = '';
+            continue;
+        }
+
+        if (!currentCodigo) continue;
+
+        // Skip the "CURSOS ACADÉMICOS" yellow-band rows and noise
+        if (/^(CURSOS ACADÉMICOS|CURSOS ACADEMICOS|SECC|DÍA|DIA)/i.test(cell0)) continue;
+
+        // ── Forward-fill section letter ────────────────────────────────────────
+        if (cell0 && /^[A-Z0-9]{1,3}$/i.test(cell0) &&
+            !TIPOS.has(cell0.toUpperCase()) && !DIAS.has(cell0.toUpperCase())) {
+            currentSeccion = cell0.toUpperCase();
+        }
+
+        // ── Forward-fill teacher name ──────────────────────────────────────────
+        const cellDoc = row[colDoc] || '';
+        if (cellDoc && !TIPOS.has(cellDoc.split(/\s+/)[0]?.toUpperCase())) {
+            currentProfesor = cellDoc.trim();
+        }
+
+        // ── Extract tipo ───────────────────────────────────────────────────────
+        const tipoRaw = (row[colTipo] || '').trim().toUpperCase();
+        if (!tipoRaw || !TIPOS.has(tipoRaw) || tipoRaw === 'PRACCALIFI') continue;
+        const tipo = normalizeTipo(tipoRaw);
+
+        // ── Extract day ───────────────────────────────────────────────────────
+        const dia = (row[colDia] || '').trim().toUpperCase();
+        if (!DIAS.has(dia)) continue;
+
+        // ── Extract times ─────────────────────────────────────────────────────
+        const start = normalizeTimeCell(row[colStart] || '');
+        const end   = normalizeTimeCell(row[colEnd]   || '');
+        if (!start || !end) continue;
+
+        // ── Extract aula ──────────────────────────────────────────────────────
+        const aula = (row[colAula] || 'POR ASIGNAR').trim() || 'POR ASIGNAR';
+
+        // ── Deduplicate ───────────────────────────────────────────────────────
+        const key = `${currentCodigo}-${currentSeccion}-${tipo}-${dia}-${start}-${end}`;
+        if (blocksSeen.has(key)) continue;
+        blocksSeen.add(key);
+
+        const [h1, m1] = start.split(':').map(Number);
+        const [h2, m2] = end.split(':').map(Number);
+
+        ofertas.push({
+            codigo_curso:  currentCodigo,
+            nombre_curso:  currentNombre,
+            seccion:       currentSeccion || '?',
+            profesor:      currentProfesor || 'Sin profesor',
+            creditos:      currentCreditos,
+            tipo,
+            dia,
+            hora_inicio:   start,
+            hora_fin:      end,
+            duracion:      Math.max(0, (h2 * 60 + m2) - (h1 * 60 + m1)),
+            cupos:         0,
+            aula,
+        });
+    }
+
+    const errors: string[] = [];
+    if (ofertas.length === 0) {
+        errors.push('No se encontraron horarios en el Excel. Verifica que el formato tenga columnas: Secc, Docentes, Tipo, Día, Horario, Duración, Aula.');
+    }
+
+    return { periodo: periodo || 'Periodo sin identificar', ofertas, errors };
 }
+
+/** Normalise a time cell value that may be a string "11:30" or a numeric Excel fraction */
+function normalizeTimeCell(raw: string): string | null {
+    if (!raw) return null;
+    const m = raw.match(/^(\d{1,2}):(\d{2})/);
+    if (m) return `${m[1].padStart(2, '0')}:${m[2]}`;
+    // Already converted from numeric fraction above; handle edge case
+    return null;
+}
+
 
 // ────────────────────────────────────────────────────────────────────────────────
 //  Core parser  (line-by-line state machine)

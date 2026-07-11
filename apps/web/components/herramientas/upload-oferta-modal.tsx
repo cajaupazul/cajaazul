@@ -75,9 +75,7 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
 
         setUploading(true);
         try {
-            // Also clean legacy table to avoid user confusion in Supabase Studio
             await supabase.from('oferta_academica').delete().eq('periodo', periodo);
-
             const { error } = await supabase.from('sche_sections').delete().eq('periodo', periodo);
             if (error) throw error;
             alert(`Toda la oferta del periodo ${periodo} ha sido borrada.`);
@@ -85,6 +83,24 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
         } catch (err: any) {
             console.error('[OFERTA_UPLOAD] Clear error:', err);
             alert('Error al borrar: ' + err.message);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleClearAll = async () => {
+        if (!confirm('⚠️ ¿Estás MUY SEGURO? Esto BORRARÁ TODA la oferta académica de TODOS los periodos. No se puede deshacer.')) return;
+        setUploading(true);
+        try {
+            // Delete all sections (schedule_blocks cascade via FK)
+            const { error } = await supabase.from('sche_sections').delete().neq('id', '');
+            if (error) throw error;
+            await supabase.from('oferta_academica').delete().neq('id', '');
+            alert('✅ Toda la oferta académica ha sido eliminada correctamente.');
+            onSuccess();
+        } catch (err: any) {
+            console.error('[OFERTA_UPLOAD] ClearAll error:', err);
+            alert('Error al limpiar: ' + err.message);
         } finally {
             setUploading(false);
         }
@@ -286,6 +302,15 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                                                     onChange={handleFileSelect}
                                                 />
                                             </label>
+                                            {/* Clear all old data button */}
+                                            <button
+                                                onClick={handleClearAll}
+                                                disabled={uploading}
+                                                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                            >
+                                                <AlertTriangle className="w-3.5 h-3.5" />
+                                                Limpiar toda la oferta anterior
+                                            </button>
                                         </>
                                     )}
                                 </div>
