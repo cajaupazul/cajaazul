@@ -656,7 +656,8 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                                     onLoadError={async (err) => {
                                         console.error('CRITICAL PDF ERROR:', err);
                                         try {
-                                            const res = await fetch(fileSource?.url || '', { headers: { Authorization: `Bearer ${sessionToken}`, Range: 'bytes=0-3' } });
+                                            const urlToFetch = typeof fileSource === 'string' ? fileSource : fileSource?.url || '';
+                                            const res = await fetch(urlToFetch, { headers: { Authorization: `Bearer ${sessionToken}`, Range: 'bytes=0-3' } });
                                             const buffer = await res.arrayBuffer();
                                             const view = new Uint8Array(buffer);
                                             if (view[0] === 0x50 && view[1] === 0x4B) {
