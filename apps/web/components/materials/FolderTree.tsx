@@ -50,7 +50,7 @@ function FolderNode({ folder, setId, onDeleted, depth = 0 }: { folder: BBFolder;
   const { colors } = useTheme();
   const { profile } = useProfile();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.huaman.workers.dev';
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev';
 
   const handleDeleteFile = async (file: BBFile) => {
     if (!confirm(`¿Eliminar "${file.name}"?`)) return;

@@ -156,7 +156,7 @@ export default function FullPageUploadForm({
 
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.huaman.workers.dev';
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev';
 
         for (let i = 0; i < entries.length; i++) {
             const entry = entries[i];

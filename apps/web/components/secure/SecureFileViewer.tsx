@@ -204,7 +204,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
     const fileSource = useMemo(() => {
         if (!blobUrl || !sessionToken) return null;
-        if (filePath.toLowerCase().endsWith('.pdf')) {
+        if (fileType === 'pdf') {
             return {
                 url: blobUrl,
                 httpHeaders: { 'Authorization': `Bearer ${sessionToken}` },
@@ -214,7 +214,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             };
         }
         return blobUrl;
-    }, [filePath, blobUrl, sessionToken]);
+    }, [filePath, fileType, blobUrl, sessionToken]);
 
     const pdfPageWidth = useMemo(() => {
         if (containerWidth === 0) return 300;

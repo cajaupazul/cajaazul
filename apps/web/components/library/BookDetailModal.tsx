@@ -77,7 +77,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({ book, isOpen, 
       ].filter(f => f.path);
 
       for (const file of filesToDelete) {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.huaman.workers.dev'}/storage/delete?bucket=${file.bucket}&path=${encodeURIComponent(file.path!)}`, {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev'}/storage/delete?bucket=${file.bucket}&path=${encodeURIComponent(file.path!)}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
