@@ -653,9 +653,20 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                                         setNumPages(n);
                                         setTimeout(() => setPdfReady(true), 150);
                                     }}
-                                    onLoadError={(err) => {
+                                    onLoadError={async (err) => {
                                         console.error('CRITICAL PDF ERROR:', err);
-                                        setError('Error de motor local. Prueba "Reintentar" o desactiva "Modo Pro".');
+                                        try {
+                                            const res = await fetch(fileSource?.url || '', { headers: { Authorization: `Bearer ${sessionToken}`, Range: 'bytes=0-3' } });
+                                            const buffer = await res.arrayBuffer();
+                                            const view = new Uint8Array(buffer);
+                                            if (view[0] === 0x50 && view[1] === 0x4B) {
+                                                console.log("Disguised OOXML detected, switching to docx mode");
+                                                setLoading(true);
+                                                loadContent(false, 'docx');
+                                                return;
+                                            }
+                                        } catch(e) {}
+                                        setError('Error de motor local. El archivo parece no ser un PDF válido o está corrupto.');
                                     }}
                                     loading={<div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin text-white mx-auto" /><p className="text-xs font-bold text-gray-300 mt-4 uppercase tracking-[0.2em]">Cargando Documento Seguro...</p></div>}
                                     className="max-w-full border-none"
