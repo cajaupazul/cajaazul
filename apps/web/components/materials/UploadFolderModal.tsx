@@ -96,15 +96,14 @@ export function UploadFolderModal({ isOpen, onClose, onSuccess }: UploadFolderMo
       setProgressMsg(`Subiendo ${i + 1} de ${entries.length}: ${entry.file.name}`);
 
       const storagePath = `${setId}/${entry.relativePath}`;
-      const formData = new FormData();
-      formData.append('file', entry.file);
-      formData.append('path', storagePath);
-      formData.append('bucket', 'course-materials');
 
-      await fetch(`${apiBase}/storage/upload`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+      await fetch(`${apiBase}/storage/upload?path=${encodeURIComponent(storagePath)}&bucket=course-materials`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': entry.file.type || 'application/octet-stream',
+        },
+        body: entry.file,
       });
 
       const fileParts = entry.relativePath.split('/');
