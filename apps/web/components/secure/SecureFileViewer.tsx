@@ -348,7 +348,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
         }
     };
 
-    const loadContent = async (forceExternal = false) => {
+    const loadContent = async (forceExternal = false, forceFileType?: 'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'other') => {
         setLoading(true);
         setError(null);
         setBlobUrl(null);
@@ -389,7 +389,8 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             else if (effectivePath.match(/\.(xls|xlsx|csv)$/)) type = 'xlsx';
             else if (effectivePath.match(/\.(ppt|pptx)$/)) type = 'pptx';
 
-            setFileType(type);
+            setFileType(forceFileType || type);
+            const resolvedType = forceFileType || type;
 
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev';
             let cleanPath = filePath;
@@ -399,7 +400,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             }
             cleanPath = decodeURIComponent(cleanPath);
 
-            if (type === 'pptx') {
+            if (resolvedType === 'pptx') {
                 setLoading(false);
                 return;
             }
@@ -427,7 +428,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                 if (length) setFileSize(parseInt(length));
             } catch (e) { console.warn("Falló detección de tamaño, usando modo seguro (Páginas)"); setFileSize(10 * 1024 * 1024); }
 
-            if (type === 'pdf') {
+            if (resolvedType === 'pdf') {
                 // FORZAR SIEMPRE EL MODO AVANZADO (PRO)
                 // Es la única forma de aislar el visor y prevenir la descarga/clic derecho en el iframe nativo del navegador.
                 setBlobUrl(secureUrl);
@@ -441,7 +442,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             const objUrl = URL.createObjectURL(blob);
             setBlobUrl(objUrl);
 
-            if (type === 'docx') {
+            if (resolvedType === 'docx') {
                 setTimeout(async () => {
                     if (docxContainerRef.current) {
                         try {
@@ -455,7 +456,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                 }, 100);
             }
 
-            if (type === 'xlsx') {
+            if (resolvedType === 'xlsx') {
                 setTimeout(async () => {
                     try {
                         const buffer = await blob.arrayBuffer();
