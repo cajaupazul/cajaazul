@@ -117,6 +117,14 @@ export function UploadFolderModal({ isOpen, onClose, onSuccess }: UploadFolderMo
         size_bytes: entry.file.size, mime_type: entry.file.type,
         uploaded_by: profile?.id,
       });
+
+      // Trigger automatic conversion to PDF (for docx, pptx, etc) via the external worker
+      try {
+        const { triggerFileConversion } = await import('@/lib/converter');
+        triggerFileConversion(decodeURIComponent(storagePath), 'course-materials').catch(console.error);
+      } catch (err) {
+        console.error("Failed to trigger conversion", err);
+      }
     }
     setProgress(100);
   };
