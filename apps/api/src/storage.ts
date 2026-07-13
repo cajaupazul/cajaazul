@@ -343,15 +343,20 @@ storageRouter.get('/secure-url', async (c) => {
     try {
         let r2Range: any = undefined;
         if (rangeHeader) {
-            // Parse range header like "bytes=0-100" or "bytes=500-"
-            const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
-            if (match) {
-                const offset = parseInt(match[1], 10);
-                if (match[2]) {
-                    const end = parseInt(match[2], 10);
-                    r2Range = { offset, length: end - offset + 1 };
-                } else {
-                    r2Range = { offset };
+            // Soporta "bytes=0-100", "bytes=500-", y "bytes=-100" (suffix)
+            const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
+            if (match && (match[1] || match[2])) {
+                if (!match[1] && match[2]) {
+                    // Suffix range: bytes=-100 (last 100 bytes)
+                    r2Range = { suffix: parseInt(match[2], 10) };
+                } else if (match[1]) {
+                    const offset = parseInt(match[1], 10);
+                    if (match[2]) {
+                        const end = parseInt(match[2], 10);
+                        r2Range = { offset, length: end - offset + 1 };
+                    } else {
+                        r2Range = { offset };
+                    }
                 }
             }
         }
@@ -379,6 +384,11 @@ storageRouter.get('/secure-url', async (c) => {
             if (r.offset !== undefined) {
                 const length = r.length || (object.size - r.offset);
                 headers.set('Content-Range', `bytes ${r.offset}-${r.offset + length - 1}/${object.size}`)
+                status = 206
+            } else if (r.suffix !== undefined) {
+                // R2 API returns { suffix: number } sometimes for suffix ranges. We calculate offset manually.
+                const offset = Math.max(0, object.size - r.suffix);
+                headers.set('Content-Range', `bytes ${offset}-${object.size - 1}/${object.size}`)
                 status = 206
             }
         }
