@@ -20,6 +20,7 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import CourseNode from './CourseNode';
+import SmartEdge from './SmartEdge';
 import { administracionNodes, administracionEdges as defaultEdges } from '../../lib/data/flowcharts/administracion';
 import { Moon, Sun, Edit3, Save, Eye, Loader2, CheckCircle, AlertCircle, Trash2, Info, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -91,8 +92,8 @@ const DARK_PALETTE = [
   '#ec4899', // Bright Fuchsia
 ];
 
-function getSourceColor(sourceId: string, isDarkMode: boolean): string {
-  const hash = getEdgeHashCode(sourceId);
+function getEdgeColor(edgeId: string, isDarkMode: boolean): string {
+  const hash = getEdgeHashCode(edgeId);
   const palette = isDarkMode ? DARK_PALETTE : LIGHT_PALETTE;
   return palette[hash % palette.length];
 }
@@ -136,9 +137,8 @@ function getRoundedPath(points: { x: number; y: number }[], radius: number = 8):
   return path;
 }
 
-// Removed SmartEdge as it's not optimal for mobile performance and overlaps badly.
-
 const nodeTypes = { courseNode: CourseNode, headerNode: HeaderNode };
+const edgeTypes = { smart: SmartEdge };
 
 const CYCLE_HEADERS = [
   { label: 'Ciclo 0',    coursesCount: 3, credits: 0 },
@@ -170,7 +170,7 @@ function buildEdgeObject(
     id: `e-${source}-${target}-${idx}`,
     source,
     target,
-    type: 'smoothstep',
+    type: 'smart',
     animated: false,
     deletable: isEditMode,
     style: { stroke: color, strokeWidth: 2 },
@@ -309,7 +309,8 @@ export default function InteractiveFlowchart() {
       }
       return rawEdges.map((e, i) => {
         const completed = completedCourses.has(e.source);
-        const baseColor = getSourceColor(e.source, darkMode);
+        const edgeId = `e-${e.source}-${e.target}-${i}`;
+        const baseColor = getEdgeColor(edgeId, darkMode);
         const color = completed ? '#22c55e' : baseColor;
         const width = completed ? 3 : 2;
         return {
@@ -399,7 +400,7 @@ export default function InteractiveFlowchart() {
     setEdges(eds =>
       eds.map(e => {
         const completed = completedCourses.has(e.source);
-        const baseColor = getSourceColor(e.source, isDarkMode);
+        const baseColor = getEdgeColor(e.id, isDarkMode);
         const color = completed ? '#22c55e' : baseColor;
         const width = completed ? 3 : 2;
         return {
@@ -454,7 +455,7 @@ export default function InteractiveFlowchart() {
       if (!isEditMode) return;
       setEdges(eds => addEdge({
         ...params,
-        type: 'smoothstep',
+        type: 'smart',
         deletable: true,
         style: { stroke: '#6366f1', strokeWidth: 2.5 },
         markerEnd: { type: MarkerType.ArrowClosed, color: '#6366f1' },
@@ -497,7 +498,7 @@ export default function InteractiveFlowchart() {
       let changed = false;
       const next = eds.map(edge => {
         const completed = completedCourses.has(edge.source);
-        const baseColor = getSourceColor(edge.source, isDarkMode);
+        const baseColor = getEdgeColor(edge.id, isDarkMode);
         const expectedStroke = completed ? '#22c55e' : baseColor;
         const expectedWidth  = completed ? 3 : 2;
         const expectedAnim   = completed;
@@ -534,7 +535,7 @@ export default function InteractiveFlowchart() {
     setEdges(eds =>
       eds.map(e => {
         const completed = completedCourses.has(e.source);
-        const baseColor = getSourceColor(e.source, next);
+        const baseColor = getEdgeColor(e.id, next);
         const color = completed ? '#22c55e' : baseColor;
         const width = completed ? 3 : 2;
         return {
@@ -561,6 +562,30 @@ export default function InteractiveFlowchart() {
   const bgColor  = isDarkMode ? '#0f172a' : '#f8fafc';
   const gridColor = isDarkMode ? '#1e293b' : '#e2e8f0';
 
+  const onNodeDragStop = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      if (!isEditMode) return;
+      
+      // Snap logic: Nodes should align to multiples of 320 on X axis.
+      // We do not change Y axis.
+      const snapTo = 320;
+      const newX = Math.round(node.position.x / snapTo) * snapTo;
+
+      setNodes(nds =>
+        nds.map(n => {
+          if (n.id === node.id) {
+            return {
+              ...n,
+              position: { ...n.position, x: newX },
+            };
+          }
+          return n;
+        })
+      );
+    },
+    [isEditMode, setNodes]
+  );
+
   return (
     <div
       ref={containerRef}
@@ -577,9 +602,11 @@ export default function InteractiveFlowchart() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onNodeDragStop={onNodeDragStop}
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.15 }}
         minZoom={0.08}
