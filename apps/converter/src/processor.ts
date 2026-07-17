@@ -97,6 +97,7 @@ export async function processConversion(data: {
             // 5. Update Supabase URL IMMEDIATELY (Priority #1)
             // We do this BEFORE potentially memory-heavy thumbnailing to ensure the PDF state is saved.
             if (key) {
+                // Update `materials` table
                 const { data: materials, error: fetchError } = await supabase
                     .from('materials')
                     .select('id, url_archivo')
@@ -117,6 +118,29 @@ export async function processConversion(data: {
                         else console.log(`✨ Supabase URL updated to PDF for ${materials[0].id}`);
                     } catch (urlErr) {
                         console.error('Failed to parse original URL:', originalUrl);
+                    }
+                }
+
+                // Update `bb_files` table (for folder uploads)
+                const { data: bbFiles, error: fetchBbError } = await supabase
+                    .from('bb_files')
+                    .select('id, storage_path')
+                    .eq('storage_path', key);
+
+                if (!fetchBbError && bbFiles && bbFiles.length > 0) {
+                    for (const file of bbFiles) {
+                        // For bb_files, we just update the storage_path directly and set mime_type to PDF
+                        const { error: updateBbError } = await supabase
+                            .from('bb_files')
+                            .update({ 
+                                storage_path: destinationPdfKey,
+                                mime_type: 'application/pdf',
+                                name: file.name ? file.name.replace(/\.[^/.]+$/, "") + ".pdf" : undefined
+                            })
+                            .eq('id', file.id);
+                            
+                        if (updateBbError) console.error('Error updating bb_files:', updateBbError);
+                        else console.log(`✨ Supabase bb_files updated to PDF for ${file.id}`);
                     }
                 }
             }
