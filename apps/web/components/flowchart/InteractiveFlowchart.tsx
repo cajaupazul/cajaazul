@@ -301,100 +301,6 @@ export default function InteractiveFlowchart() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  // ─── Compute crossing data for each edge and inject into edge.data ──────────
-  // This runs every time edges or nodes change. It:
-  // 1. Computes a vertX for each edge (middle of the gap between source and target columns).
-  // 2. Detects which OTHER edges' vertical segments cross this edge's horizontal segments.
-  // 3. Injects vertX and crossings into edge.data so SmartEdge can draw bumps at real crossings.
-  const edgesWithCrossings = useMemo(() => {
-    if (edges.length === 0 || nodes.length === 0) return edges;
-
-    // Build a position map: nodeId → { x, y }
-    const posMap: Record<string, { x: number; y: number }> = {};
-    for (const n of nodes) {
-      posMap[n.id] = n.position;
-    }
-
-    // For each edge, compute:
-    //   sx = sourceX (right handle = node.x + NODE_WIDTH)
-    //   sy = sourceY (vertical center of node = node.y + ~50)
-    //   tx = targetX (left handle  = node.x)
-    //   ty = targetY
-    //   vertX = midpoint of the inter-column gap
-    const edgeGeom: Array<{
-      id: string;
-      sx: number; sy: number;
-      tx: number; ty: number;
-      vertX: number;
-    }> = [];
-
-    for (const e of edges) {
-      const sp = posMap[e.source];
-      const tp = posMap[e.target];
-      if (!sp || !tp) continue;
-
-      const sx = sp.x + NODE_WIDTH;
-      const sy = sp.y + 50;  // approximate handle Y
-      const tx = tp.x;
-      const ty = tp.y + 50;
-
-      // vertX: the shared vertical segment, placed in the gap between columns
-      const gapStart = sp.x + NODE_WIDTH;
-      const gapEnd   = tp.x;
-      const vertX    = (gapStart + gapEnd) / 2;
-
-      edgeGeom.push({ id: e.id, sx, sy, tx, ty, vertX });
-    }
-
-    // For each edge, find crossings:
-    // A crossing occurs when another edge's vertical segment (at vertX_other)
-    // lies within our horizontal corridor (between our own horizontals).
-    return edges.map(e => {
-      const eg = edgeGeom.find(g => g.id === e.id);
-      if (!eg) return e;
-
-      const crossings: number[] = [];
-
-      for (const other of edgeGeom) {
-        if (other.id === e.id) continue;
-
-        const otherVertX = other.vertX;
-
-        // Check if other's vertical segment crosses our SOURCE horizontal (at sy):
-        // other vertX must be strictly between our sx and our vertX
-        const srcBetween =
-          Math.min(eg.sx, eg.vertX) + 20 < otherVertX &&
-          otherVertX < Math.max(eg.sx, eg.vertX) - 20;
-
-        // Check if other's vertical segment crosses our TARGET horizontal (at ty):
-        const tgtBetween =
-          Math.min(eg.vertX, eg.tx) + 20 < otherVertX &&
-          otherVertX < Math.max(eg.vertX, eg.tx) - 20;
-
-        // Also: the vertical range of other's vertical segment must overlap our horizontal Y
-        const otherMinY = Math.min(other.sy, other.ty);
-        const otherMaxY = Math.max(other.sy, other.ty);
-
-        if (srcBetween && otherMinY <= eg.sy && otherMaxY >= eg.sy) {
-          crossings.push(otherVertX);
-        }
-        if (tgtBetween && otherMinY <= eg.ty && otherMaxY >= eg.ty) {
-          // Avoid duplicates
-          if (!crossings.includes(otherVertX)) crossings.push(otherVertX);
-        }
-      }
-
-      return {
-        ...e,
-        data: {
-          ...(e.data ?? {}),
-          vertX: eg.vertX,
-          crossings,
-        },
-      };
-    });
-  }, [edges, nodes]);
-
   // ----- Initialize or re-build nodes and edges when loadedEdges changes -----
   useEffect(() => {
     if (loadedEdges === null) return;
@@ -693,7 +599,7 @@ export default function InteractiveFlowchart() {
     >
       <ReactFlow
         nodes={nodes}
-        edges={edgesWithCrossings}
+        edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
