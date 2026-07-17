@@ -547,21 +547,6 @@ export default function InteractiveFlowchart() {
     );
   }, [isDarkMode, isEditMode, completedCourses, setNodes, setEdges]);
 
-  // ----- Loading state ------------------------------------------------------
-  if (loadedEdges === null) {
-    return (
-      <div className="w-full h-[750px] flex items-center justify-center bg-slate-50 border border-gray-200 rounded-xl">
-        <div className="flex flex-col items-center gap-3 text-gray-400">
-          <Loader2 className="w-8 h-8 animate-spin" />
-          <p className="text-sm font-medium">Cargando malla curricular…</p>
-        </div>
-      </div>
-    );
-  }
-
-  const bgColor  = isDarkMode ? '#0f172a' : '#f8fafc';
-  const gridColor = isDarkMode ? '#1e293b' : '#e2e8f0';
-
   const onNodeDragStop = useCallback(
     (_: React.MouseEvent, node: Node) => {
       if (!isEditMode) return;
@@ -585,6 +570,23 @@ export default function InteractiveFlowchart() {
     },
     [isEditMode, setNodes]
   );
+
+  // ----- Loading state ------------------------------------------------------
+  if (loadedEdges === null) {
+    return (
+      <div className="w-full h-[750px] flex items-center justify-center bg-slate-50 border border-gray-200 rounded-xl">
+        <div className="flex flex-col items-center gap-3 text-gray-400">
+          <Loader2 className="w-8 h-8 animate-spin" />
+          <p className="text-sm font-medium">Cargando malla curricular…</p>
+        </div>
+      </div>
+    );
+  }
+
+  const bgColor  = isDarkMode ? '#0f172a' : '#f8fafc';
+  const gridColor = isDarkMode ? '#1e293b' : '#e2e8f0';
+
+
 
   return (
     <div
