@@ -152,7 +152,7 @@ export default function InteractiveFlowchart() {
   const [isDarkMode, setIsDarkMode]   = useState(false);
   const [isEditMode, setIsEditMode]   = useState(false);
   const [saveStatus, setSaveStatus]   = useState<SaveStatus>('idle');
-  const [loadedEdges, setLoadedEdges] = useState<{ source: string; target: string }[] | null>(null);
+  const [loadedEdges, setLoadedEdges] = useState<{ source: string; target: string; sourceHandle?: string; targetHandle?: string }[] | null>(null);
   const [loadedNodes, setLoadedNodes] = useState<{ id: string; position: { x: number; y: number } }[] | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   // History stack for undo (only active in edit mode)
@@ -265,6 +265,15 @@ export default function InteractiveFlowchart() {
         });
       });
 
+      if (savedNodes && savedNodes.length > 0) {
+        const posMap = new Map(savedNodes.map(n => [n.id, n.position]));
+        nodes.forEach(n => {
+          if (n.type === 'courseNode' && posMap.has(n.id)) {
+            n.position = posMap.get(n.id)!;
+          }
+        });
+      }
+
       return nodes;
     },
     []
@@ -272,11 +281,13 @@ export default function InteractiveFlowchart() {
 
   // ----- Build edges from a raw list ----------------------------------------
   const buildEdges = useCallback(
-    (rawEdges: { source: string; target: string }[], editMode: boolean, darkMode: boolean): Edge[] => {
+    (rawEdges: { source: string; target: string; sourceHandle?: string; targetHandle?: string }[], editMode: boolean, darkMode: boolean): Edge[] => {
       if (editMode) {
         // In edit mode: bright, thick, selectable
         return rawEdges.map((e, i) => ({
           ...buildEdgeObject(e.source, e.target, i, '#6366f1', true),
+          sourceHandle: e.sourceHandle,
+          targetHandle: e.targetHandle,
           style: { stroke: '#6366f1', strokeWidth: 2.5 },
           markerEnd: { type: MarkerType.ArrowClosed, color: '#6366f1' },
           selected: false,
@@ -290,6 +301,8 @@ export default function InteractiveFlowchart() {
         const width = completed ? 3 : 2;
         return {
           ...buildEdgeObject(e.source, e.target, i, color, false),
+          sourceHandle: e.sourceHandle,
+          targetHandle: e.targetHandle,
           animated: completed,
           style: { stroke: color, strokeWidth: width },
           markerEnd: { type: MarkerType.ArrowClosed, color },
@@ -404,7 +417,12 @@ export default function InteractiveFlowchart() {
     setSaveStatus('saving');
     const rawEdges = edges
       .filter(e => !e.id.startsWith('header-'))
-      .map(e => ({ source: e.source, target: e.target }));
+      .map(e => ({ 
+        source: e.source, 
+        target: e.target,
+        sourceHandle: e.sourceHandle || undefined,
+        targetHandle: e.targetHandle || undefined
+      }));
 
     const rawNodes = nodes
       .filter(n => n.type === 'courseNode')
@@ -551,17 +569,14 @@ export default function InteractiveFlowchart() {
     (_: React.MouseEvent, node: Node) => {
       if (!isEditMode) return;
       
-      // Snap logic: Nodes should align to multiples of 320 on X axis.
-      // We do not change Y axis.
-      const snapTo = 320;
-      const newX = Math.round(node.position.x / snapTo) * snapTo;
-
+      // We do not snap automatically anymore per user request:
+      // "no arregles la posición de los cursos dejalo como yo lo dejé"
       setNodes(nds =>
         nds.map(n => {
           if (n.id === node.id) {
             return {
               ...n,
-              position: { ...n.position, x: newX },
+              position: node.position,
             };
           }
           return n;
