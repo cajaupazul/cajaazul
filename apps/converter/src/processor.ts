@@ -124,7 +124,7 @@ export async function processConversion(data: {
                 // Update `bb_files` table (for folder uploads)
                 const { data: bbFiles, error: fetchBbError } = await supabase
                     .from('bb_files')
-                    .select('id, storage_path')
+                    .select('id, storage_path, name')
                     .eq('storage_path', key);
 
                 if (!fetchBbError && bbFiles && bbFiles.length > 0) {
