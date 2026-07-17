@@ -136,87 +136,9 @@ function getRoundedPath(points: { x: number; y: number }[], radius: number = 8):
   return path;
 }
 
-function SmartEdge({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  style = {},
-  markerEnd,
-}: EdgeProps) {
-  const col_source = Math.round((sourceX - 192) / 280);
-  const col_target = Math.round(targetX / 280);
-  const d_col = col_target - col_source;
-
-  const edgeHash = getEdgeHashCode(id);
-
-  let path = '';
-
-  if (d_col === 1) {
-    const gapMid = (sourceX + targetX) / 2;
-    const xOffset = ((edgeHash % 7) - 3) * 8; // Stagger vertical segment
-    const routeX = gapMid + xOffset;
-
-    const points = [
-      { x: sourceX, y: sourceY },
-      { x: routeX, y: sourceY },
-      { x: routeX, y: targetY },
-      { x: targetX, y: targetY },
-    ];
-    path = getRoundedPath(points, 8);
-  } else if (d_col > 1) {
-    const corridors = [40, 180, 300, 420, 540, 660, 780, 900, 1020, 1140];
-    const targetYMid = (sourceY + targetY) / 2;
-    
-    let corridorY = corridors[0];
-    let minDiff = Math.abs(corridors[0] - targetYMid);
-    for (let i = 1; i < corridors.length; i++) {
-      const diff = Math.abs(corridors[i] - targetYMid);
-      if (diff < minDiff) {
-        minDiff = diff;
-        corridorY = corridors[i];
-      }
-    }
-
-    const yOffset = ((edgeHash % 5) - 2) * 6; // Stagger horizontal corridor segment
-    const routeY = corridorY + yOffset;
-
-    const gapSourceMid = sourceX + 44;
-    const xOffsetSource = ((edgeHash % 7) - 3) * 8; // Stagger source vertical gap
-    const routeX_source = gapSourceMid + xOffsetSource;
-
-    const gapTargetMid = targetX - 44;
-    const xOffsetTarget = (((edgeHash + 13) % 7) - 3) * 8; // Stagger target vertical gap
-    const routeX_target = gapTargetMid + xOffsetTarget;
-
-    const points = [
-      { x: sourceX, y: sourceY },
-      { x: routeX_source, y: sourceY },
-      { x: routeX_source, y: routeY },
-      { x: routeX_target, y: routeY },
-      { x: routeX_target, y: targetY },
-      { x: targetX, y: targetY },
-    ];
-    path = getRoundedPath(points, 8);
-  } else {
-    const xOffset = ((edgeHash % 5) - 2) * 8;
-    const points = [
-      { x: sourceX, y: sourceY },
-      { x: sourceX + 40 + xOffset, y: sourceY },
-      { x: sourceX + 40 + xOffset, y: (sourceY + targetY) / 2 },
-      { x: targetX - 40 + xOffset, y: (sourceY + targetY) / 2 },
-      { x: targetX - 40 + xOffset, y: targetY },
-      { x: targetX, y: targetY },
-    ];
-    path = getRoundedPath(points, 8);
-  }
-
-  return <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} />;
-}
+// Removed SmartEdge as it's not optimal for mobile performance and overlaps badly.
 
 const nodeTypes = { courseNode: CourseNode, headerNode: HeaderNode };
-const edgeTypes = { smart: SmartEdge };
 
 const CYCLE_HEADERS = [
   { label: 'Ciclo 0',    coursesCount: 3, credits: 0 },
@@ -248,7 +170,7 @@ function buildEdgeObject(
     id: `e-${source}-${target}-${idx}`,
     source,
     target,
-    type: 'smart',
+    type: 'smoothstep',
     animated: false,
     deletable: isEditMode,
     style: { stroke: color, strokeWidth: 2 },
@@ -346,7 +268,7 @@ export default function InteractiveFlowchart() {
         nodes.push({
           id: `header-${cycle}`,
           type: 'headerNode',
-          position: { x: cycle * 280, y: -20 },
+          position: { x: cycle * 320, y: -20 },
           draggable: false,
           selectable: false,
           data: { ...header, isDark: darkMode },
@@ -356,8 +278,8 @@ export default function InteractiveFlowchart() {
       administracionNodes.forEach(course => {
         const cycle = course.cycle;
         if (cycleCounts[cycle] === undefined) cycleCounts[cycle] = 0;
-        const x = cycle * 280;
-        const y = cycleCounts[cycle] * 120 + 80;
+        const x = cycle * 320;
+        const y = cycleCounts[cycle] * 150 + 80;
         cycleCounts[cycle]++;
 
         nodes.push({
@@ -532,7 +454,7 @@ export default function InteractiveFlowchart() {
       if (!isEditMode) return;
       setEdges(eds => addEdge({
         ...params,
-        type: 'smart',
+        type: 'smoothstep',
         deletable: true,
         style: { stroke: '#6366f1', strokeWidth: 2.5 },
         markerEnd: { type: MarkerType.ArrowClosed, color: '#6366f1' },
@@ -658,7 +580,6 @@ export default function InteractiveFlowchart() {
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
         nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.15 }}
         minZoom={0.08}
