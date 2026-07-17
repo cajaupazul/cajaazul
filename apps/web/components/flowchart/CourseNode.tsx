@@ -1,3 +1,4 @@
+import React from 'react';
 import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { CourseCategory } from '../../lib/data/flowcharts/administracion';
 import { Lock, CheckCircle2, Unlock } from 'lucide-react';
@@ -21,6 +22,29 @@ const categoryColors: Record<CourseCategory, string> = {
   administracion:'bg-green-600',
   contabilidad:  'bg-red-700',
   derecho:       'bg-teal-600',
+};
+
+// ── Shared handle style builders ─────────────────────────────────────────────
+function editHandleStyle(offset: React.CSSProperties): React.CSSProperties {
+  return {
+    width: 14,
+    height: 14,
+    borderRadius: '50%',
+    border: '2.5px solid',
+    boxShadow: '0 0 8px currentColor',
+    cursor: 'crosshair',
+    zIndex: 10,
+    ...offset,
+  };
+}
+
+const HIDDEN: React.CSSProperties = {
+  width: 1,
+  height: 1,
+  background: 'transparent',
+  border: 'none',
+  pointerEvents: 'none',
+  opacity: 0,
 };
 
 export default function CourseNode({ data }: NodeProps<Node<CourseNodeData>>) {
@@ -68,33 +92,57 @@ export default function CourseNode({ data }: NodeProps<Node<CourseNodeData>>) {
     shadowClass  = 'shadow-indigo-500/30 shadow-md';
   }
 
+  // Styles for each handle in edit mode
+  const sourceStyle = isEditMode
+    ? editHandleStyle({ background: '#34d399', borderColor: '#10b981', color: '#10b981' })
+    : HIDDEN;
+
+  const targetStyle = isEditMode
+    ? editHandleStyle({ background: '#818cf8', borderColor: '#6366f1', color: '#6366f1' })
+    : HIDDEN;
+
   return (
     <div
       className={`relative w-48 rounded-lg border-2 flex flex-col overflow-visible transition-all duration-300
         ${isEditMode ? 'cursor-move' : 'cursor-pointer hover:shadow-lg hover:scale-[1.03]'}
         ${bgClass} ${borderClass} ${opacityClass} ${shadowClass}`}
     >
-      {/* ── Target handle (LEFT) — big in edit mode ── */}
+      {/* ══ TARGET handles (incoming arrows) ══════════════════════════════════ */}
+      {/* Left */}
       <Handle
+        id="target-left"
         type="target"
         position={Position.Left}
-        style={isEditMode ? {
-          width: 18,
-          height: 18,
-          background: '#818cf8',
-          border: '3px solid #6366f1',
-          borderRadius: '50%',
-          left: -10,
-          boxShadow: '0 0 10px #6366f1aa',
-          cursor: 'crosshair',
-        } : {
-          width: 8,
-          height: 8,
-          background: 'transparent',
-          border: 'none',
-          left: 0,
-          pointerEvents: 'none',
-        }}
+        style={isEditMode
+          ? { ...targetStyle, left: -8, top: '50%', transform: 'translateY(-50%)' }
+          : HIDDEN}
+      />
+      {/* Top */}
+      <Handle
+        id="target-top"
+        type="target"
+        position={Position.Top}
+        style={isEditMode
+          ? { ...targetStyle, top: -8, left: '50%', transform: 'translateX(-50%)' }
+          : HIDDEN}
+      />
+      {/* Bottom */}
+      <Handle
+        id="target-bottom"
+        type="target"
+        position={Position.Bottom}
+        style={isEditMode
+          ? { ...targetStyle, bottom: -8, left: '50%', transform: 'translateX(-50%)' }
+          : HIDDEN}
+      />
+      {/* Right (also as target for backwards connections) */}
+      <Handle
+        id="target-right"
+        type="target"
+        position={Position.Right}
+        style={isEditMode
+          ? { ...targetStyle, right: -8, top: '50%', transform: 'translateY(-50%)' }
+          : HIDDEN}
       />
 
       {/* Category color bar */}
@@ -124,27 +172,42 @@ export default function CourseNode({ data }: NodeProps<Node<CourseNodeData>>) {
         </div>
       )}
 
-      {/* ── Source handle (RIGHT) — big in edit mode ── */}
+      {/* ══ SOURCE handles (outgoing arrows) ══════════════════════════════════ */}
+      {/* Right */}
       <Handle
+        id="source-right"
         type="source"
         position={Position.Right}
-        style={isEditMode ? {
-          width: 18,
-          height: 18,
-          background: '#34d399',
-          border: '3px solid #10b981',
-          borderRadius: '50%',
-          right: -10,
-          boxShadow: '0 0 10px #10b981aa',
-          cursor: 'crosshair',
-        } : {
-          width: 8,
-          height: 8,
-          background: 'transparent',
-          border: 'none',
-          right: 0,
-          pointerEvents: 'none',
-        }}
+        style={isEditMode
+          ? { ...sourceStyle, right: -8, top: '50%', transform: 'translateY(-50%)' }
+          : HIDDEN}
+      />
+      {/* Left (also as source for backwards connections) */}
+      <Handle
+        id="source-left"
+        type="source"
+        position={Position.Left}
+        style={isEditMode
+          ? { ...sourceStyle, left: -8, top: '25%', transform: 'translateY(-50%)' }
+          : HIDDEN}
+      />
+      {/* Top */}
+      <Handle
+        id="source-top"
+        type="source"
+        position={Position.Top}
+        style={isEditMode
+          ? { ...sourceStyle, top: -8, left: '75%', transform: 'translateX(-50%)' }
+          : HIDDEN}
+      />
+      {/* Bottom */}
+      <Handle
+        id="source-bottom"
+        type="source"
+        position={Position.Bottom}
+        style={isEditMode
+          ? { ...sourceStyle, bottom: -8, left: '75%', transform: 'translateX(-50%)' }
+          : HIDDEN}
       />
     </div>
   );
