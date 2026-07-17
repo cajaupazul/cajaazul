@@ -98,44 +98,10 @@ function getEdgeColor(edgeId: string, isDarkMode: boolean): string {
   return palette[hash % palette.length];
 }
 
-// Rounded corner path generator
-function getRoundedPath(points: { x: number; y: number }[], radius: number = 8): string {
-  if (points.length === 0) return '';
-  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
-
-  let path = `M ${points[0].x} ${points[0].y}`;
-
-  for (let i = 1; i < points.length - 1; i++) {
-    const prev = points[i - 1];
-    const curr = points[i];
-    const next = points[i + 1];
-
-    const d1x = prev.x - curr.x;
-    const d1y = prev.y - curr.y;
-    const len1 = Math.sqrt(d1x * d1x + d1y * d1y);
-
-    const d2x = next.x - curr.x;
-    const d2y = next.y - curr.y;
-    const len2 = Math.sqrt(d2x * d2x + d2y * d2y);
-
-    const r = Math.min(radius, len1 / 2, len2 / 2);
-
-    if (r > 0) {
-      const p1x = curr.x + (d1x / len1) * r;
-      const p1y = curr.y + (d1y / len1) * r;
-      const p2x = curr.x + (d2x / len2) * r;
-      const p2y = curr.y + (d2y / len2) * r;
-
-      path += ` L ${p1x} ${p1y} Q ${curr.x} ${curr.y} ${p2x} ${p2y}`;
-    } else {
-      path += ` L ${curr.x} ${curr.y}`;
-    }
-  }
-
-  const last = points[points.length - 1];
-  path += ` L ${last.x} ${last.y}`;
-  return path;
-}
+// NODE_WIDTH is the approximate rendered width of a courseNode.
+// Used to compute where the right edge handle exits and left handle enters.
+const NODE_WIDTH = 220;
+const COL_STEP   = 320;
 
 const nodeTypes = { courseNode: CourseNode, headerNode: HeaderNode };
 const edgeTypes = { smart: SmartEdge };
@@ -323,9 +289,102 @@ export default function InteractiveFlowchart() {
     },
     [completedCourses]
   );
-
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  // ─── Compute crossing data for each edge and inject into edge.data ──────────
+  // This runs every time edges or nodes change. It:
+  // 1. Computes a vertX for each edge (middle of the gap between source and target columns).
+  // 2. Detects which OTHER edges' vertical segments cross this edge's horizontal segments.
+  // 3. Injects vertX and crossings into edge.data so SmartEdge can draw bumps at real crossings.
+  const edgesWithCrossings = useMemo(() => {
+    if (edges.length === 0 || nodes.length === 0) return edges;
+
+    // Build a position map: nodeId → { x, y }
+    const posMap: Record<string, { x: number; y: number }> = {};
+    for (const n of nodes) {
+      posMap[n.id] = n.position;
+    }
+
+    // For each edge, compute:
+    //   sx = sourceX (right handle = node.x + NODE_WIDTH)
+    //   sy = sourceY (vertical center of node = node.y + ~50)
+    //   tx = targetX (left handle  = node.x)
+    //   ty = targetY
+    //   vertX = midpoint of the inter-column gap
+    const edgeGeom: Array<{
+      id: string;
+      sx: number; sy: number;
+      tx: number; ty: number;
+      vertX: number;
+    }> = [];
+
+    for (const e of edges) {
+      const sp = posMap[e.source];
+      const tp = posMap[e.target];
+      if (!sp || !tp) continue;
+
+      const sx = sp.x + NODE_WIDTH;
+      const sy = sp.y + 50;  // approximate handle Y
+      const tx = tp.x;
+      const ty = tp.y + 50;
+
+      // vertX: the shared vertical segment, placed in the gap between columns
+      const gapStart = sp.x + NODE_WIDTH;
+      const gapEnd   = tp.x;
+      const vertX    = (gapStart + gapEnd) / 2;
+
+      edgeGeom.push({ id: e.id, sx, sy, tx, ty, vertX });
+    }
+
+    // For each edge, find crossings:
+    // A crossing occurs when another edge's vertical segment (at vertX_other)
+    // lies within our horizontal corridor (between our own horizontals).
+    return edges.map(e => {
+      const eg = edgeGeom.find(g => g.id === e.id);
+      if (!eg) return e;
+
+      const crossings: number[] = [];
+
+      for (const other of edgeGeom) {
+        if (other.id === e.id) continue;
+
+        const otherVertX = other.vertX;
+
+        // Check if other's vertical segment crosses our SOURCE horizontal (at sy):
+        // other vertX must be strictly between our sx and our vertX
+        const srcBetween =
+          Math.min(eg.sx, eg.vertX) + 20 < otherVertX &&
+          otherVertX < Math.max(eg.sx, eg.vertX) - 20;
+
+        // Check if other's vertical segment crosses our TARGET horizontal (at ty):
+        const tgtBetween =
+          Math.min(eg.vertX, eg.tx) + 20 < otherVertX &&
+          otherVertX < Math.max(eg.vertX, eg.tx) - 20;
+
+        // Also: the vertical range of other's vertical segment must overlap our horizontal Y
+        const otherMinY = Math.min(other.sy, other.ty);
+        const otherMaxY = Math.max(other.sy, other.ty);
+
+        if (srcBetween && otherMinY <= eg.sy && otherMaxY >= eg.sy) {
+          crossings.push(otherVertX);
+        }
+        if (tgtBetween && otherMinY <= eg.ty && otherMaxY >= eg.ty) {
+          // Avoid duplicates
+          if (!crossings.includes(otherVertX)) crossings.push(otherVertX);
+        }
+      }
+
+      return {
+        ...e,
+        data: {
+          ...(e.data ?? {}),
+          vertX: eg.vertX,
+          crossings,
+        },
+      };
+    });
+  }, [edges, nodes]);
 
   // Initialize once loadedEdges is available — compute real statuses from loaded edges
   useEffect(() => {
@@ -599,7 +658,7 @@ export default function InteractiveFlowchart() {
     >
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={edgesWithCrossings}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
