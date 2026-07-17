@@ -1,9 +1,10 @@
 'use client';
 import React from 'react';
-import { BaseEdge, EdgeProps, Position } from '@xyflow/react';
+import { BaseEdge, EdgeProps } from '@xyflow/react';
 
-const CORNER_R = 10;
-const BUMP_R   = 7;
+const CORNER_R  = 14;  // radius of rounded corners
+const BUMP_R    = 7;   // radius of bridge bumps at crossings
+const CLEARANCE = 28;  // minimum distance from node border before turning
 
 /** Returns true if cx is strictly between a and b (±margin). */
 function isBetween(cx: number, a: number, b: number, margin = 20): boolean {
@@ -12,49 +13,22 @@ function isBetween(cx: number, a: number, b: number, margin = 20): boolean {
   return cx >= lo && cx <= hi;
 }
 
-/** Emit arc bump commands along a horizontal line at each crossing X. */
-function emitHorizBumps(
-  bumpXs: number[],
-  y: number,
-  goRight: boolean,
-  br: number,
-): string {
+/** Emit arc bumps along a horizontal segment. */
+function emitHorizBumps(bumpXs: number[], y: number, goRight: boolean, br: number): string {
   let d = '';
   const sweep = goRight ? 1 : 0;
   const sorted = [...bumpXs].sort((a, b) => goRight ? a - b : b - a);
   for (const cx of sorted) {
-    d += ` L ${cx - br} ${y}`;
-    d += ` A ${br} ${br} 0 0 ${sweep} ${cx + br} ${y}`;
-  }
-  return d;
-}
-
-/** Emit arc bump commands along a vertical line at each crossing Y. */
-function emitVertBumps(
-  bumpYs: number[],
-  x: number,
-  goDown: boolean,
-  br: number,
-): string {
-  let d = '';
-  const sweep = goDown ? 0 : 1;
-  const sorted = [...bumpYs].sort((a, b) => goDown ? a - b : b - a);
-  for (const cy of sorted) {
-    d += ` L ${x} ${cy - br}`;
-    d += ` A ${br} ${br} 0 0 ${sweep} ${x} ${cy + br}`;
+    d += ` L ${cx - br} ${y} A ${br} ${br} 0 0 ${sweep} ${cx + br} ${y}`;
   }
   return d;
 }
 
 /**
- * Build a clean orthogonal path that routes around nodes.
- * 
- * The routing strategy depends on the handle positions:
- *  - Right→Left (normal):  horizontal gap routing with vertX in the gap
- *  - Top→*  or  *→Bottom: use vertical corridor routing
- *  - Backwards or same column: loop around using extra margin
- * 
- * crossings: X positions where OTHER edges' vertical lines intersect our horizontal segments.
+ * Build an orthogonal path with:
+ * - CLEARANCE gap from node borders before any turn
+ * - Rounded corners (CORNER_R)
+ * - Arc bumps at real crossings (BUMP_R)
  */
 function buildPath(
   sx: number, sy: number,
@@ -66,30 +40,37 @@ function buildPath(
 ): string {
   const r  = CORNER_R;
   const br = BUMP_R;
+  const cl = CLEARANCE;
 
-  const goRight = tx >= sx;
-  const goDown  = ty >= sy;
-
-  // ── Case 1: Top or Bottom handles — use vertical corridor routing ──────────
+  // ── Top / Bottom handles: route through a mid-Y corridor ──────────────────
   if (sourcePos === 'top' || sourcePos === 'bottom' || targetPos === 'top' || targetPos === 'bottom') {
-    // Pick a horizontal corridor Y midway between source and target
-    const corridorY = (sy + ty) / 2;
-    const vDir1 = corridorY > sy ? 1 : -1;
-    const vDir2 = ty > corridorY ? 1 : -1;
-    const hDir  = tx >= sx ? 1 : -1;
+    const mid = (sy + ty) / 2;
+    const vd1 = mid > sy ? 1 : -1;
+    const vd2 = ty > mid ? 1 : -1;
+    const hd  = tx > sx ? 1 : -1;
+
+    // Leg 1: exit node vertically with clearance
+    const leg1y = sy + vd1 * cl;
+    // Corner 1: vertical → horizontal
+    const c1ey = mid - vd1 * r;
+    // Corner 2: horizontal → vertical
+    const c2ex = tx - hd * r;
+    // Leg 2: arrive at target with clearance
+    const leg2y = ty - vd2 * cl;
 
     return [
       `M ${sx} ${sy}`,
-      `L ${sx} ${corridorY - vDir1 * r}`,
-      `Q ${sx} ${corridorY} ${sx + hDir * r} ${corridorY}`,
-      `L ${tx - hDir * r} ${corridorY}`,
-      `Q ${tx} ${corridorY} ${tx} ${corridorY + vDir2 * r}`,
+      `L ${sx} ${c1ey}`,
+      `Q ${sx} ${mid} ${sx + hd * r} ${mid}`,
+      `L ${c2ex} ${mid}`,
+      `Q ${tx} ${mid} ${tx} ${mid + vd2 * r}`,
       `L ${tx} ${ty}`,
     ].join(' ');
   }
 
-  // ── Case 2: Same Y — straight horizontal ──────────────────────────────────
+  // ── Straight horizontal (same Y) ──────────────────────────────────────────
   if (Math.abs(sy - ty) < 2) {
+    const goRight = tx > sx;
     const sorted = crossings
       .filter(cx => isBetween(cx, sx, tx))
       .sort((a, b) => goRight ? a - b : b - a);
@@ -99,52 +80,54 @@ function buildPath(
     return d;
   }
 
-  // ── Case 3: Same column or backwards — loop around ────────────────────────
-  if (!goRight || Math.abs(sx - tx) < 20) {
-    const loopX = Math.min(sx, tx) - 50;
+  // ── Backwards / same column: loop around the left side ─────────────────────
+  const goRight = tx > sx;
+  if (!goRight || Math.abs(sx - tx) < 10) {
+    const loopX = Math.min(sx, tx) - cl - r;
+    const vDir = ty > sy ? 1 : -1;
     return [
       `M ${sx} ${sy}`,
       `L ${sx - r} ${sy}`,
-      `Q ${loopX} ${sy} ${loopX} ${(sy + ty) / 2}`,
-      `Q ${loopX} ${ty} ${tx - r} ${ty}`,
+      `Q ${loopX + r} ${sy} ${loopX} ${sy + vDir * r}`,
+      `L ${loopX} ${ty - vDir * r}`,
+      `Q ${loopX} ${ty} ${loopX + r} ${ty}`,
       `L ${tx} ${ty}`,
     ].join(' ');
   }
 
-  // ── Case 4: Normal left-to-right — L-shaped through the column gap ────────
-  // Crossings on SOURCE horizontal segment (at height sy)
+  // ── Normal left-to-right: L-shaped with CLEARANCE from both nodes ──────────
+  // Anchor the vertical segment inside the gap, respecting clearance on both sides
+  const minVertX = sx + cl;          // must be at least CLEARANCE right of source
+  const maxVertX = tx - cl;          // must be at least CLEARANCE left of target
+  const clampedVertX = Math.max(minVertX, Math.min(maxVertX, vertX));
+
+  const vDir  = ty > sy ? 1 : -1;
+
+  // Crossings on SOURCE horizontal segment (sy level, from sx to clampedVertX)
   const srcCrossings = crossings
-    .filter(cx => isBetween(cx, sx, vertX))
-    .sort((a, b) => goRight ? a - b : b - a);
+    .filter(cx => isBetween(cx, sx, clampedVertX))
+    .sort((a, b) => a - b);
 
-  // Crossings on TARGET horizontal segment (at height ty)
+  // Crossings on TARGET horizontal segment (ty level, from clampedVertX to tx)
   const tgtCrossings = crossings
-    .filter(cx => isBetween(cx, vertX, tx))
-    .sort((a, b) => goRight ? a - b : b - a);
-
-  const vDir  = goDown ? 1 : -1;
-  const hDir1 = vertX >= sx ? 1 : -1;
-  const hDir2 = tx >= vertX ? 1 : -1;
+    .filter(cx => isBetween(cx, clampedVertX, tx))
+    .sort((a, b) => a - b);
 
   let d = `M ${sx} ${sy}`;
 
-  // Source horizontal with bumps
-  d += emitHorizBumps(srcCrossings, sy, hDir1 > 0, br);
-
-  // Corner 1 (source end of horizontal → start of vertical)
-  d += ` L ${vertX - hDir1 * r} ${sy}`;
-  d += ` Q ${vertX} ${sy} ${vertX} ${sy + vDir * r}`;
+  // Source horizontal → bumps → corner 1
+  d += emitHorizBumps(srcCrossings, sy, true, br);
+  d += ` L ${clampedVertX - r} ${sy}`;
+  d += ` Q ${clampedVertX} ${sy} ${clampedVertX} ${sy + vDir * r}`;
 
   // Vertical segment
-  d += ` L ${vertX} ${ty - vDir * r}`;
+  d += ` L ${clampedVertX} ${ty - vDir * r}`;
 
-  // Corner 2 (end of vertical → target horizontal)
-  d += ` Q ${vertX} ${ty} ${vertX + hDir2 * r} ${ty}`;
-
-  // Target horizontal with bumps
-  d += emitHorizBumps(tgtCrossings, ty, hDir2 > 0, br);
-
+  // Corner 2 → bumps → target
+  d += ` Q ${clampedVertX} ${ty} ${clampedVertX + r} ${ty}`;
+  d += emitHorizBumps(tgtCrossings, ty, true, br);
   d += ` L ${tx} ${ty}`;
+
   return d;
 }
 
@@ -161,7 +144,6 @@ export default function SmartEdge({
   markerEnd,
   data,
 }: EdgeProps) {
-  // vertX and crossings are injected by InteractiveFlowchart via edge.data
   const vertX: number       = (data as any)?.vertX     ?? (sourceX + targetX) / 2;
   const crossings: number[] = (data as any)?.crossings ?? [];
 

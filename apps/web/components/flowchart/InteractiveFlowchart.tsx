@@ -22,7 +22,7 @@ import '@xyflow/react/dist/style.css';
 import CourseNode from './CourseNode';
 import SmartEdge from './SmartEdge';
 import { administracionNodes, administracionEdges as defaultEdges } from '../../lib/data/flowcharts/administracion';
-import { Moon, Sun, Edit3, Save, Eye, Loader2, CheckCircle, AlertCircle, Trash2, Info, Maximize, Minimize } from 'lucide-react';
+import { Moon, Sun, Edit3, Save, Eye, Loader2, CheckCircle, AlertCircle, Trash2, Info, Maximize, Minimize, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 
@@ -154,6 +154,8 @@ export default function InteractiveFlowchart() {
   const [saveStatus, setSaveStatus]   = useState<SaveStatus>('idle');
   const [loadedEdges, setLoadedEdges] = useState<{ source: string; target: string }[] | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // History stack for undo (only active in edit mode)
+  const [edgeHistory, setEdgeHistory] = useState<Edge[][]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -423,6 +425,7 @@ export default function InteractiveFlowchart() {
   // Toggle edit mode ---------------------------------------------------
   const enterEditMode = useCallback(() => {
     setIsEditMode(true);
+    setEdgeHistory([]); // clear undo history on each edit session
     // Show edges in "edit style" (purple), all nodes look neutral/edit
     setNodes(nds =>
       nds.map(n => {
@@ -445,6 +448,7 @@ export default function InteractiveFlowchart() {
 
   const exitEditMode = useCallback(() => {
     setIsEditMode(false);
+    setEdgeHistory([]); // discard history when leaving edit mode
     setNodes(nds =>
       nds.map(n => {
         if (n.type === 'courseNode') {
@@ -502,16 +506,19 @@ export default function InteractiveFlowchart() {
     saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 3000);
   }, [edges]);
 
-  // ----- Clear all edges in edit mode ---------------------------------------
+  // ----- Clear all edges in edit mode (push to history first) ---------------
   const handleClearEdges = useCallback(() => {
     if (!isEditMode) return;
+    setEdgeHistory(h => [...h, edges]);
     setEdges([]);
-  }, [isEditMode, setEdges]);
+  }, [isEditMode, setEdges, edges]);
 
   // ----- Connect handler (edit mode only) -----------------------------------
   const onConnect = useCallback(
     (params: Connection) => {
       if (!isEditMode) return;
+      // Push current edges to history before adding a new one
+      setEdgeHistory(h => [...h, edges]);
       setEdges(eds => addEdge({
         ...params,
         type: 'smart',
@@ -520,8 +527,16 @@ export default function InteractiveFlowchart() {
         markerEnd: { type: MarkerType.ArrowClosed, color: '#6366f1' },
       }, eds));
     },
-    [isEditMode, setEdges]
+    [isEditMode, setEdges, edges]
   );
+
+  // ----- Undo last action (edit mode only) ----------------------------------
+  const handleUndo = useCallback(() => {
+    if (!isEditMode || edgeHistory.length === 0) return;
+    const prev = edgeHistory[edgeHistory.length - 1];
+    setEdgeHistory(h => h.slice(0, -1));
+    setEdges(prev);
+  }, [isEditMode, edgeHistory, setEdges]);
 
   // ----- Node click (view mode): toggle completed ---------------------------
   const onNodeClick = useCallback(
@@ -721,6 +736,19 @@ export default function InteractiveFlowchart() {
             </button>
           ) : (
             <>
+              {/* Undo */}
+              <button
+                onClick={handleUndo}
+                disabled={edgeHistory.length === 0}
+                title="Deshacer última acción"
+                className={`h-9 w-9 rounded-full flex items-center justify-center shadow-md border transition-all duration-200
+                  ${edgeHistory.length === 0
+                    ? 'bg-gray-700 border-gray-600 text-gray-500 opacity-40 cursor-not-allowed'
+                    : 'bg-gray-800 border-gray-600 text-white hover:bg-gray-700'}`}
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+
               {/* Clear all */}
               <button
                 onClick={handleClearEdges}
