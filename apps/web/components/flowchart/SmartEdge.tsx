@@ -88,14 +88,42 @@ export default function SmartEdge({
 }: EdgeProps) {
   const crossings: number[] = (data as any)?.crossings ?? [];
 
-  // 1. Generate a perfect orthogonal path using XY Flow's robust router
-  // This automatically respects sourcePosition/targetPosition and guarantees clearance (offset)
-  const [basePath] = getSmoothStepPath({
-    sourceX, sourceY, sourcePosition,
-    targetX, targetY, targetPosition,
-    borderRadius: CORNER_R,
-    offset: CLEARANCE,
-  });
+  // 1. Generate perfect orthogonal path
+  let basePath = '';
+  const isHorizontalSkip =
+    sourcePosition === 'right' &&
+    targetPosition === 'left' &&
+    targetX - sourceX > 300 &&
+    Math.abs(targetY - sourceY) < 10;
+
+  if (isHorizontalSkip) {
+    // Custom detour to avoid hitting nodes in the middle column
+    const r = CORNER_R;
+    const cl = CLEARANCE;
+    const detourY = sourceY + 75; // go halfway between rows
+    
+    basePath = [
+      `M ${sourceX} ${sourceY}`,
+      `L ${sourceX + cl} ${sourceY}`,
+      `Q ${sourceX + cl + r} ${sourceY} ${sourceX + cl + r} ${sourceY + r}`,
+      `L ${sourceX + cl + r} ${detourY - r}`,
+      `Q ${sourceX + cl + r} ${detourY} ${sourceX + cl + r * 2} ${detourY}`,
+      `L ${targetX - cl - r * 2} ${detourY}`,
+      `Q ${targetX - cl - r} ${detourY} ${targetX - cl - r} ${detourY - r}`,
+      `L ${targetX - cl - r} ${targetY + r}`,
+      `Q ${targetX - cl - r} ${targetY} ${targetX - cl} ${targetY}`,
+      `L ${targetX} ${targetY}`
+    ].join(' ');
+  } else {
+    // Use standard robust router
+    const [path] = getSmoothStepPath({
+      sourceX, sourceY, sourcePosition,
+      targetX, targetY, targetPosition,
+      borderRadius: CORNER_R,
+      offset: CLEARANCE,
+    });
+    basePath = path;
+  }
 
   // 2. Inject arc bumps wherever the path's horizontal segments cross a vertical line
   const path = injectBumps(basePath, crossings, BUMP_R);

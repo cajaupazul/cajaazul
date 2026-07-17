@@ -153,6 +153,7 @@ export default function InteractiveFlowchart() {
   const [isEditMode, setIsEditMode]   = useState(false);
   const [saveStatus, setSaveStatus]   = useState<SaveStatus>('idle');
   const [loadedEdges, setLoadedEdges] = useState<{ source: string; target: string }[] | null>(null);
+  const [loadedNodes, setLoadedNodes] = useState<{ id: string; position: { x: number; y: number } }[] | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   // History stack for undo (only active in edit mode)
   const [edgeHistory, setEdgeHistory] = useState<Edge[][]>([]);
@@ -197,10 +198,16 @@ export default function InteractiveFlowchart() {
         .eq('carrera', 'administracion')
         .single();
 
-      if (!error && data && Array.isArray(data.edges) && data.edges.length > 0) {
-        setLoadedEdges(data.edges);
+      if (!error && data && data.edges) {
+        if (Array.isArray(data.edges) && data.edges.length > 0) {
+          setLoadedEdges(data.edges);
+        } else if (!Array.isArray(data.edges) && data.edges.version === 2) {
+          setLoadedEdges(data.edges.edges);
+          setLoadedNodes(data.edges.nodes || null);
+        } else {
+          setLoadedEdges(defaultEdges);
+        }
       } else {
-        // Use the default hardcoded edges as seed
         setLoadedEdges(defaultEdges);
       }
     }
@@ -228,7 +235,7 @@ export default function InteractiveFlowchart() {
 
   // ----- Build initial nodes ------------------------------------------------
   const buildInitialNodes = useCallback(
-    (editMode: boolean, darkMode: boolean): Node[] => {
+    (editMode: boolean, darkMode: boolean, savedNodes: {id: string, position: {x: number, y: number}}[] | null): Node[] => {
       const cycleCounts: Record<number, number> = {};
       const nodes: Node[] = [];
 
@@ -388,11 +395,13 @@ export default function InteractiveFlowchart() {
     });
   }, [edges, nodes]);
 
-  // Initialize once loadedEdges is available — compute real statuses from loaded edges
+  // ----- Initialize or re-build nodes and edges when loadedEdges changes -----
   useEffect(() => {
     if (loadedEdges === null) return;
+    const initialNodes = buildInitialNodes(isEditMode, isDarkMode, loadedNodes);
     const rawEdges = buildEdges(loadedEdges, false, false);
-    const builtNodes = buildInitialNodes(false, false).map(node => {
+    
+    const builtNodes = initialNodes.map(node => {
       if (node.type !== 'courseNode') return node;
       const prerequisites = rawEdges.filter(e => e.target === node.id).map(e => e.source);
       const status = prerequisites.length === 0 ? 'unlocked' : 'locked';
@@ -491,20 +500,31 @@ export default function InteractiveFlowchart() {
       .filter(e => !e.id.startsWith('header-'))
       .map(e => ({ source: e.source, target: e.target }));
 
+    const rawNodes = nodes
+      .filter(n => n.type === 'courseNode')
+      .map(n => ({ id: n.id, position: n.position }));
+
+    const payload = {
+      version: 2,
+      edges: rawEdges,
+      nodes: rawNodes
+    };
+
     const { error } = await supabase
       .from('flowchart_edges')
-      .upsert({ carrera: 'administracion', edges: rawEdges, updated_at: new Date().toISOString() }, { onConflict: 'carrera' });
+      .upsert({ carrera: 'administracion', edges: payload, updated_at: new Date().toISOString() }, { onConflict: 'carrera' });
 
     if (error) {
       setSaveStatus('error');
     } else {
       setSaveStatus('saved');
       setLoadedEdges(rawEdges);
+      setLoadedNodes(rawNodes);
     }
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 3000);
-  }, [edges]);
+  }, [edges, nodes]);
 
   // ----- Clear all edges in edit mode (push to history first) ---------------
   const handleClearEdges = useCallback(() => {
