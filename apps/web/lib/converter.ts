@@ -6,7 +6,7 @@ export async function triggerFileConversion(fileKey: string, bucket: string = 'c
         // If we are in production (cajaazul.pages.dev) but no env var is set, 
         // we fallback to a likely worker/service URL based on the project naming
         if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-            return 'https://campuslink-converter.cajaupazul.workers.dev';
+            return 'https://campuslink-converter.onrender.com';
         }
 
         return 'http://localhost:3000';
