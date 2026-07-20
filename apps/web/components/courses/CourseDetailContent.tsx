@@ -209,6 +209,104 @@ export default function CourseDetailContent({
         }
     };
 
+    const handleDeleteBbSet = async (setId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+        if (!isAdmin) {
+            alert('No tienes permisos para eliminar carpetas.');
+            return;
+        }
+
+        if (!confirm('¿Estás seguro de que deseas eliminar TODA esta carpeta de Blackboard y todo su contenido? Esta acción no se puede deshacer.')) {
+            return;
+        }
+
+        try {
+            // Get all files to delete from R2
+            const { data: files } = await supabase
+                .from('bb_files')
+                .select('file_url')
+                .eq('set_id', setId);
+
+            if (files && files.length > 0) {
+                const { deleteFileFromR2 } = await import('@/lib/r2-storage');
+                for (const file of files) {
+                    if (file.file_url) {
+                        try {
+                            await deleteFileFromR2('course-materials', file.file_url);
+                        } catch (err) {
+                            console.error('Error deleting file from R2:', file.file_url, err);
+                        }
+                    }
+                }
+            }
+
+            // Delete from database
+            const { error: dbError } = await supabase
+                .from('bb_material_sets')
+                .delete()
+                .eq('id', setId);
+
+            if (dbError) throw dbError;
+
+            // Update state
+            setBbSets(prev => prev.filter(s => s.id !== setId));
+            if (activeBbSetId === setId) {
+                setActiveBbSetId(null);
+                setActiveSubfolder(null);
+            }
+
+            alert('Carpeta eliminada exitosamente');
+        } catch (error: any) {
+            console.error('Error deleting folder:', error);
+            alert('Error al eliminar la carpeta: ' + error.message);
+        }
+    };
+
+    const handleDeleteBbFile = async (file: any, e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+        if (!isAdmin) {
+            alert('No tienes permisos para eliminar archivos.');
+            return;
+        }
+
+        if (!confirm(`¿Estás seguro de que deseas eliminar "${file.name}"? Esta acción no se puede deshacer.`)) {
+            return;
+        }
+
+        try {
+            // Delete file from R2 storage
+            if (file.storage_path || file.file_url) {
+                const { deleteFileFromR2 } = await import('@/lib/r2-storage');
+                const urlToDelete = file.storage_path || file.file_url;
+                try {
+                    await deleteFileFromR2('course-materials', urlToDelete);
+                } catch (err) {
+                    console.error('Error deleting file from R2:', urlToDelete, err);
+                }
+            }
+
+            // Delete from database
+            const { error: dbError } = await supabase
+                .from('bb_files')
+                .delete()
+                .eq('id', file.id);
+
+            if (dbError) throw dbError;
+
+            // Update local state
+            setBbFolderFiles(prev => prev.filter(f => f.id !== file.id));
+
+            alert('Archivo eliminado exitosamente');
+        } catch (error: any) {
+            console.error('Error deleting bb file:', error);
+            alert('Error al eliminar el archivo: ' + error.message);
+        }
+    };
+
     // Generates cycles from 2020 up to current year
     const availableCycleOptions = useMemo(() => {
         const options = [];
@@ -869,14 +967,25 @@ export default function CourseDetailContent({
                                                         </div>
                                                     )}
                                                     {sortedFiles.length > 0 ? sortedFiles.map((file: any) => (
-                                                        <button key={file.id} onClick={() => setViewingFile({ path: file.storage_path, name: file.name })}
-                                                            className="flex items-center gap-3 w-full p-2.5 bg-bb-card border border-bb-border hover:border-violet-500/40 rounded-xl transition-all text-left">
-                                                            <FileText className="h-4 w-4 text-violet-400 shrink-0" />
-                                                            <div className="min-w-0 flex-1">
-                                                                <p className="text-sm font-bold text-bb-text truncate">{file.name}</p>
-                                                                <p className="text-[10px] text-bb-text-secondary">{file.size_bytes ? `${(file.size_bytes / 1024 / 1024).toFixed(1)} MB` : ''}</p>
-                                                            </div>
-                                                        </button>
+                                                        <div key={file.id} className="relative group/file">
+                                                            <button onClick={() => setViewingFile({ path: file.storage_path, name: file.name })}
+                                                                className="flex items-center gap-3 w-full p-2.5 bg-bb-card border border-bb-border hover:border-violet-500/40 rounded-xl transition-all text-left">
+                                                                <FileText className="h-4 w-4 text-violet-400 shrink-0" />
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="text-sm font-bold text-bb-text truncate">{file.name}</p>
+                                                                    <p className="text-[10px] text-bb-text-secondary">{file.size_bytes ? `${(file.size_bytes / 1024 / 1024).toFixed(1)} MB` : ''}</p>
+                                                                </div>
+                                                            </button>
+                                                            {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+                                                                <button
+                                                                    onClick={(e) => handleDeleteBbFile(file, e)}
+                                                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-red-500/80 hover:bg-red-500 text-white rounded-lg opacity-0 group-hover/file:opacity-100 transition-opacity shadow-lg"
+                                                                    title="Eliminar archivo"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     )) : (
                                                         <p className="text-sm text-bb-text-secondary text-center py-8 opacity-50">
                                                             {activeBbFolderId ? 'Esta carpeta no tiene archivos directos.' : 'Selecciona una carpeta del árbol.'}
@@ -923,14 +1032,25 @@ export default function CourseDetailContent({
                                                     <p className="text-[10px] font-black uppercase tracking-widest text-bb-text-secondary">Archivos</p>
                                                     <div className="space-y-2">
                                                         {sortedFiles.map((file: any) => (
-                                                            <button key={file.id} onClick={() => setViewingFile({ path: file.storage_path, name: file.name })}
-                                                                className="flex items-center gap-3 w-full p-3 bg-bb-card border border-bb-border hover:border-violet-500/40 rounded-xl transition-all text-left">
-                                                                <FileText className="h-5 w-5 text-violet-400 shrink-0" />
-                                                                <div className="min-w-0 flex-1">
-                                                                    <p className="text-sm font-bold text-bb-text truncate">{file.name}</p>
-                                                                    <p className="text-[10px] text-bb-text-secondary">{file.size_bytes ? `${(file.size_bytes / 1024 / 1024).toFixed(1)} MB` : ''}</p>
-                                                                </div>
-                                                            </button>
+                                                            <div key={file.id} className="relative group/file">
+                                                                <button onClick={() => setViewingFile({ path: file.storage_path, name: file.name })}
+                                                                    className="flex items-center gap-3 w-full p-3 bg-bb-card border border-bb-border hover:border-violet-500/40 rounded-xl transition-all text-left">
+                                                                    <FileText className="h-5 w-5 text-violet-400 shrink-0" />
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="text-sm font-bold text-bb-text truncate">{file.name}</p>
+                                                                        <p className="text-[10px] text-bb-text-secondary">{file.size_bytes ? `${(file.size_bytes / 1024 / 1024).toFixed(1)} MB` : ''}</p>
+                                                                    </div>
+                                                                </button>
+                                                                {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+                                                                    <button
+                                                                        onClick={(e) => handleDeleteBbFile(file, e)}
+                                                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 bg-red-500/80 hover:bg-red-500 text-white rounded-lg opacity-0 group-hover/file:opacity-100 transition-opacity shadow-lg"
+                                                                        title="Eliminar archivo"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -1106,19 +1226,29 @@ export default function CourseDetailContent({
                                                     ))}
                                                     {/* Blackboard folder sets for this cycle */}
                                                     {bbSets.map((set) => (
-                                                        <button
-                                                            key={set.id}
-                                                            onClick={() => { setActiveBbSetId(set.id); setActiveBbFolderId(null); setActiveSubfolder('__bb__'); }}
-                                                            className="flex flex-col items-center gap-2 p-3 bg-violet-500/10 border border-violet-500/30 hover:border-violet-400 hover:bg-violet-500/20 rounded-2xl transition-all text-center group cursor-pointer"
-                                                        >
-                                                            <div className="text-3xl">📁</div>
-                                                            <div className="space-y-0.5">
-                                                                <p className="text-[11px] font-black text-violet-300 leading-tight">
-                                                                    {(set.professors as any)?.nombre || 'Carpeta BB'}
-                                                                </p>
-                                                                <p className="text-[9px] text-bb-text-secondary">{set.course_name}</p>
-                                                            </div>
-                                                        </button>
+                                                        <div key={set.id} className="relative group/folder">
+                                                            <button
+                                                                onClick={() => { setActiveBbSetId(set.id); setActiveBbFolderId(null); setActiveSubfolder('__bb__'); }}
+                                                                className="flex flex-col w-full h-full items-center justify-center gap-2 p-3 bg-violet-500/10 border border-violet-500/30 hover:border-violet-400 hover:bg-violet-500/20 rounded-2xl transition-all text-center group cursor-pointer"
+                                                            >
+                                                                <div className="text-3xl">📁</div>
+                                                                <div className="space-y-0.5">
+                                                                    <p className="text-[11px] font-black text-violet-300 leading-tight">
+                                                                        {(set.professors as any)?.nombre || 'Carpeta BB'}
+                                                                    </p>
+                                                                    <p className="text-[9px] text-bb-text-secondary">{set.course_name}</p>
+                                                                </div>
+                                                            </button>
+                                                            {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+                                                                <button
+                                                                    onClick={(e) => handleDeleteBbSet(set.id, e)}
+                                                                    className="absolute -top-2 -right-2 p-1.5 bg-red-500/80 hover:bg-red-500 text-white rounded-full opacity-0 group-hover/folder:opacity-100 transition-opacity shadow-lg"
+                                                                    title="Eliminar carpeta completa"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     ))}
                                                 </div>
                                             );
