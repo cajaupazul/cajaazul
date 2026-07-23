@@ -95,7 +95,7 @@ export function UploadFolderModal({ isOpen, onClose, onSuccess }: UploadFolderMo
       setProgress(Math.round(((i + 1) / entries.length) * 100));
       setProgressMsg(`Subiendo ${i + 1} de ${entries.length}: ${entry.file.name}`);
 
-      const storagePath = `${setId}/${entry.relativePath}`;
+      const storagePath = `bb_sets/${setId}/${entry.relativePath}`;
 
       await fetch(`${apiBase}/storage/upload?path=${encodeURIComponent(storagePath)}&bucket=course-materials`, {
         method: 'PUT',

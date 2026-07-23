@@ -112,7 +112,7 @@ export default function UploadMaterialsForm({
             } else {
                 for (const file of files) {
                     const fileExt = file.name.split('.').pop();
-                    const storagePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+                    const storagePath = `courses/${courseId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
                     const { uploadFileToR2 } = await import('@/lib/r2-storage');
                     const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
