@@ -125,7 +125,7 @@ storageRouter.put('/upload', async (c) => {
 
         // Trigger automatic conversion to PDF in background via Cloudflare Worker
         const fileExt = path.split('.').pop()?.toLowerCase() || ''
-        const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx']
+        const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx']
 
         if (normalizedBucket === 'course-materials' && triggerExtensions.includes(fileExt)) {
             const converterUrl = (c.env as any).CONVERTER_API_URL || 'https://campuslink-converter.onrender.com'

@@ -73,8 +73,8 @@ export async function processConversion(data: {
         let pdfPath: string | null = null;
         let thumbnailPath: string | null = path.join(jobDir, 'thumb.webp');
 
-        // 3. Conversion to PDF (if Office file)
-        const officeExtensions = ['.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx'];
+        // 3. Conversion to PDF (if Office file: Word or PowerPoint)
+        const officeExtensions = ['.doc', '.docx', '.ppt', '.pptx'];
         if (officeExtensions.includes(fileExt)) {
             pdfPath = await convertToPdf(currentInputPath, jobDir);
             console.log(`✅ Conversion successful: ${pdfPath}`);
