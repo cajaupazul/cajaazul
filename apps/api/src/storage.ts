@@ -123,6 +123,38 @@ storageRouter.put('/upload', async (c) => {
 
         console.log(`✅ Archivo subido exitosamente: ${path}`)
 
+        // Trigger automatic conversion to PDF in background via Cloudflare Worker
+        const fileExt = path.split('.').pop()?.toLowerCase() || ''
+        const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx']
+
+        if (normalizedBucket === 'course-materials' && triggerExtensions.includes(fileExt)) {
+            const converterUrl = (c.env as any).CONVERTER_API_URL || 'https://campuslink-converter.onrender.com'
+            c.executionCtx.waitUntil((async () => {
+                try {
+                    console.log(`[WORKER BACKGROUND] Triggering conversion for ${path} via ${converterUrl}`)
+                    
+                    // Warmup ping first in case Render is cold-starting
+                    await fetch(`${converterUrl}/`, { method: 'GET' }).catch(() => {})
+                    
+                    // Send conversion request
+                    const res = await fetch(`${converterUrl}/convert-stored`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key: path, bucket: normalizedBucket })
+                    })
+                    
+                    if (res.ok) {
+                        const data: any = await res.json().catch(() => ({}))
+                        console.log(`[WORKER BACKGROUND] Conversion job queued successfully on Render! JobId: ${data?.jobId}`)
+                    } else {
+                        console.error(`[WORKER BACKGROUND] Render returned status ${res.status}`)
+                    }
+                } catch (err: any) {
+                    console.error(`[WORKER BACKGROUND] Error calling converter: ${err.message}`)
+                }
+            })())
+        }
+
         return c.json({
             success: true,
             path: path,
