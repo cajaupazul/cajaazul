@@ -6,9 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Plus, Image as ImageIcon, CheckCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Plus, Image as ImageIcon, CheckCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-// import { getPublicFileUrl } from '@/lib/r2-storage';
 import {
     Select,
     SelectContent,
@@ -18,6 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Autocomplete } from '@/components/ui/Autocomplete';
 import { courseCatalog } from '@/lib/data/courseCatalog';
+import { useDashboardData } from '@/lib/dashboard-data-context';
 
 const FACULTADES = [
     'Facultad de Ciencias Empresariales',
@@ -27,17 +27,6 @@ const FACULTADES = [
 ];
 
 const CICLOS = Array.from({ length: 13 }, (_, i) => i.toString());
-
-const generateRandomCode = () => {
-    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-};
-
-import { useDashboardData } from '@/lib/dashboard-data-context';
 
 export default function NewCourseForm() {
     const router = useRouter();
@@ -49,10 +38,9 @@ export default function NewCourseForm() {
 
     const [creatingCourse, setCreatingCourse] = useState(false);
     const [imagePreview, setImagePreview] = useState<string>('');
-    const [isGeneratingCode, setIsGeneratingCode] = useState(!isEditing); // Only generate if not editing
 
     const [catalogItems, setCatalogItems] = useState<string[]>([]);
-    const [catalogCourses, setCatalogCourses] = useState<any[]>([]);
+    const [catalogCourses, setCatalogCourses] = useState<{ id: string; nombre: string; codigo: string | null }[]>([]);
 
     const [formData, setFormData] = useState({
         nombre: '',
@@ -61,7 +49,7 @@ export default function NewCourseForm() {
         ciclo: '',
         descripcion: '',
         imagen: null as File | null,
-        currentImageUrl: '', // To store existing image URL when editing
+        currentImageUrl: '',
         catalog_course_id: null as string | null,
     });
 
@@ -69,7 +57,7 @@ export default function NewCourseForm() {
         const fetchCatalog = async () => {
             const { data } = await supabase
                 .from('catalog_courses')
-                .select('id, nombre')
+                .select('id, nombre, codigo')
                 .order('nombre');
 
             if (data && data.length > 0) {
@@ -84,7 +72,6 @@ export default function NewCourseForm() {
         const loadCourseData = async () => {
             if (!courseId) return;
 
-            setIsGeneratingCode(false); // Stop code generation
             try {
                 const { data, error } = await supabase
                     .from('courses')
@@ -96,7 +83,7 @@ export default function NewCourseForm() {
                 if (data) {
                     setFormData({
                         nombre: data.nombre,
-                        codigo: data.codigo,
+                        codigo: data.codigo || '',
                         facultad: data.facultad || '',
                         ciclo: data.ciclo?.toString() || '',
                         descripcion: data.descripcion || '',
@@ -117,34 +104,6 @@ export default function NewCourseForm() {
 
         if (isEditing) {
             loadCourseData();
-        } else {
-            // Original init code logic for new courses
-            const initCode = async () => {
-                setIsGeneratingCode(true);
-                let code = generateRandomCode();
-                let isUnique = false;
-                let attempts = 0;
-
-                while (!isUnique && attempts < 10) {
-                    const { data } = await supabase
-                        .from('courses')
-                        .select('codigo')
-                        .eq('codigo', code)
-                        .maybeSingle();
-
-                    if (!data) {
-                        isUnique = true;
-                    } else {
-                        code = generateRandomCode();
-                        attempts++;
-                    }
-                }
-
-                setFormData(prev => ({ ...prev, codigo: code }));
-                setIsGeneratingCode(false);
-            };
-
-            initCode();
         }
     }, [courseId, isEditing]);
 
@@ -163,8 +122,8 @@ export default function NewCourseForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.nombre.trim() || !formData.codigo || !formData.facultad || !formData.ciclo) {
-            alert('Por favor completa los campos requeridos');
+        if (!formData.nombre.trim() || !formData.facultad || !formData.ciclo) {
+            alert('Por favor completa los campos requeridos (Nombre, Facultad y Ciclo)');
             return;
         }
 
@@ -173,13 +132,6 @@ export default function NewCourseForm() {
 
         try {
             if (formData.imagen) {
-                // Delete old image if it exists and looks like it's ours and we are uploading a new one
-                if (isEditing && formData.currentImageUrl && formData.currentImageUrl.includes('course-images')) {
-                    // Optional: implement explicit delete if needed, or rely on R2/bucket policies. 
-                    // Ideally we delete to save space.
-                    // For now, let's focus on upload.
-                }
-
                 const fileExt = formData.imagen.name.split('.').pop();
                 const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
@@ -192,12 +144,13 @@ export default function NewCourseForm() {
                     .from('courses')
                     .update({
                         nombre: formData.nombre.trim().toUpperCase(),
-                        // codigo: formData.codigo.toUpperCase(), // Usually code should not change, or be careful
+                        codigo: formData.codigo ? formData.codigo.toUpperCase() : null,
                         facultad: formData.facultad,
                         ciclo: parseInt(formData.ciclo),
                         descripcion: formData.descripcion.trim() || null,
                         carrera: formData.facultad,
                         imagen_url: imagenUrl || null,
+                        catalog_course_id: formData.catalog_course_id
                     })
                     .eq('id', courseId);
 
@@ -208,12 +161,13 @@ export default function NewCourseForm() {
                     .from('courses')
                     .insert({
                         nombre: formData.nombre.trim().toUpperCase(),
-                        codigo: formData.codigo.toUpperCase(),
+                        codigo: formData.codigo ? formData.codigo.toUpperCase() : null,
                         facultad: formData.facultad,
                         ciclo: parseInt(formData.ciclo),
                         descripcion: formData.descripcion.trim() || null,
                         carrera: formData.facultad,
                         imagen_url: imagenUrl || null,
+                        catalog_course_id: formData.catalog_course_id
                     })
                     .select()
                     .single();
@@ -272,6 +226,7 @@ export default function NewCourseForm() {
                                         setFormData((prev) => ({
                                             ...prev,
                                             nombre: val,
+                                            codigo: match?.codigo || prev.codigo,
                                             catalog_course_id: match?.id || null,
                                         }));
                                     }}
@@ -279,21 +234,14 @@ export default function NewCourseForm() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="codigo" className="text-bb-text font-bold">Código del Curso (Autogenerado)</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="codigo"
-                                        value={formData.codigo}
-                                        readOnly
-                                        className="bg-bb-darker border-bb-border text-blue-400 h-12 font-mono text-xl tracking-widest cursor-not-allowed"
-                                    />
-                                    {isGeneratingCode && (
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                            <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />
-                                        </div>
-                                    )}
-                                </div>
-                                <p className="text-[10px] text-bb-text-secondary/60 italic">Este código es único y se asigna automáticamente.</p>
+                                <Label htmlFor="codigo" className="text-bb-text font-bold">Código Oficial del Curso</Label>
+                                <Input
+                                    id="codigo"
+                                    value={formData.codigo}
+                                    readOnly
+                                    placeholder="Selecciona un curso del catálogo"
+                                    className="bg-bb-darker border-bb-border text-blue-400 h-12 font-mono text-xl tracking-widest cursor-not-allowed"
+                                />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -384,7 +332,7 @@ export default function NewCourseForm() {
                                 <div>
                                     <p className="text-sm text-bb-text font-medium">Revisión de Seguridad</p>
                                     <p className="text-[11px] text-bb-text-secondary leading-relaxed mt-1">
-                                        Al crear este curso, asegúrate de que el nombre y el código sean precisos según el plan de estudios oficial. El código generado garantiza integridad referencial.
+                                        Al crear este curso, el código oficial se asigna automáticamente desde el catálogo institucional para garantizar integridad referencial.
                                     </p>
                                 </div>
                             </div>
@@ -392,7 +340,7 @@ export default function NewCourseForm() {
                             <Button
                                 type="submit"
                                 className="w-full bg-blue-600 hover:bg-blue-700 h-14 text-white text-lg font-black shadow-2xl shadow-blue-600/20 mt-4"
-                                disabled={creatingCourse || isGeneratingCode}
+                                disabled={creatingCourse}
                             >
                                 {creatingCourse ? (isEditing ? 'ACTUALIZANDO...' : 'CREANDO CURSO...') : (isEditing ? 'ACTUALIZAR CURSO' : 'AGREGAR CURSO')}
                             </Button>
