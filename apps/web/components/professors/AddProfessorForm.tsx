@@ -227,53 +227,38 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
             let finalProfessorId = existingProfessorId;
             let finalProfessorObj = null;
 
-            // 1. Get Course ID for linking (Fetch or create)
-            let courseId = null;
-            const { data: coursesData } = await supabase
-                .from('courses')
+            // 1. Get Catalog Course ID for linking (Fetch or create)
+            let catalogCourseId = null;
+            const { data: catalogData } = await supabase
+                .from('catalog_courses')
                 .select('id')
                 .ilike('nombre', newMateria)
                 .limit(1);
 
-            if (coursesData && coursesData.length > 0) {
-                courseId = coursesData[0].id;
+            if (catalogData && catalogData.length > 0) {
+                catalogCourseId = catalogData[0].id;
             } else {
-                // Course doesn't exist, we must create it dynamically (rare, but protects integrity)
-                const { data: newCourse } = await supabase.from('courses').insert({
+                // Catalog course doesn't exist, create it in catalog_courses
+                const { data: newCatalogCourse } = await supabase.from('catalog_courses').insert({
                     nombre: newMateria,
                     codigo: null,
                     facultad: formData.facultad.trim().toUpperCase()
                 }).select('id').single();
-                if (newCourse) courseId = newCourse.id;
+                if (newCatalogCourse) catalogCourseId = newCatalogCourse.id;
             }
 
-            if (!courseId) throw new Error('No se pudo resolver el ID de la materia.');
+            if (!catalogCourseId) throw new Error('No se pudo resolver la materia en el catálogo.');
 
             // 2. Professor Handling
             if (existingProfessorId && existingProfessorData) {
                 // UPDATE EXISTING PROFESSOR
-                // Append the new course to otros_cursos
-                const previousCourses = (existingProfessorData.otros_cursos || '').split(',').map(s => s.trim()).filter(Boolean);
-                if (!previousCourses.includes(newMateria) && (existingProfessorData.especialidad?.toUpperCase() !== newMateria)) {
-                    previousCourses.push(newMateria);
-                }
-                const updatedOtrosCursos = previousCourses.join(', ');
-
-                const { data, error } = await supabase.from('professors').update({
-                    otros_cursos: updatedOtrosCursos || null,
-                }).eq('id', existingProfessorId).select().single();
-
-                if (error) throw error;
-                finalProfessorObj = data;
-                
+                finalProfessorObj = existingProfessorData;
             } else {
                 // CREATE NEW PROFESSOR
                 const { data, error } = await supabase.from('professors').insert({
                     nombre: formData.nombre.trim().toUpperCase(),
-                    especialidad: newMateria, // Aquí sí se inserta como especialidad primaria
                     facultad: formData.facultad.trim().toUpperCase() || null,
                     email: formData.email.trim() || null,
-                    otros_cursos: formData.otros_cursos.trim().toUpperCase() || null,
                     background_image_url: getRandomBackgroundImage(),
                     avatar_url: '/profes/tl.webp', // Default avatar
                 }).select().single();
@@ -283,22 +268,14 @@ export default function AddProfessorForm({ profile, onSuccess, onCancel, isModal
                 finalProfessorId = data.id;
             }
 
-            // 3. Create relational mapping
-            if (finalProfessorId && courseId) {
-                // Prevent duplicate relationship via upsert/ignore or simply querying first
-                const { data: existingLink } = await supabase
+            // 3. Create relational mapping to catalog_courses
+            if (finalProfessorId && catalogCourseId) {
+                await supabase
                     .from('course_professors')
-                    .select('id')
-                    .eq('course_id', courseId)
-                    .eq('professor_id', finalProfessorId)
-                    .limit(1);
-
-                if (!existingLink || existingLink.length === 0) {
-                    await supabase.from('course_professors').insert({
-                        course_id: courseId,
-                        professor_id: finalProfessorId
-                    });
-                }
+                    .upsert(
+                        { catalog_course_id: catalogCourseId, professor_id: finalProfessorId },
+                        { onConflict: 'professor_id,catalog_course_id', ignoreDuplicates: true }
+                    );
             }
 
             // 4. Update UI using DashboardContext

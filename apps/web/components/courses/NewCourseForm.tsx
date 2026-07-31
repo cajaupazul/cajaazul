@@ -51,6 +51,9 @@ export default function NewCourseForm() {
     const [imagePreview, setImagePreview] = useState<string>('');
     const [isGeneratingCode, setIsGeneratingCode] = useState(!isEditing); // Only generate if not editing
 
+    const [catalogItems, setCatalogItems] = useState<string[]>([]);
+    const [catalogCourses, setCatalogCourses] = useState<any[]>([]);
+
     const [formData, setFormData] = useState({
         nombre: '',
         codigo: '',
@@ -59,7 +62,23 @@ export default function NewCourseForm() {
         descripcion: '',
         imagen: null as File | null,
         currentImageUrl: '', // To store existing image URL when editing
+        catalog_course_id: null as string | null,
     });
+
+    useEffect(() => {
+        const fetchCatalog = async () => {
+            const { data } = await supabase
+                .from('catalog_courses')
+                .select('id, nombre, codigo, facultad, ciclo')
+                .order('facultad');
+
+            if (data && data.length > 0) {
+                setCatalogCourses(data);
+                setCatalogItems(data.map((c) => c.nombre));
+            }
+        };
+        fetchCatalog();
+    }, []);
 
     useEffect(() => {
         const loadCourseData = async () => {
@@ -78,11 +97,12 @@ export default function NewCourseForm() {
                     setFormData({
                         nombre: data.nombre,
                         codigo: data.codigo,
-                        facultad: data.facultad || '', // Handle potential nulls based on original types (though types say string | null)
+                        facultad: data.facultad || '',
                         ciclo: data.ciclo?.toString() || '',
                         descripcion: data.descripcion || '',
                         imagen: null,
-                        currentImageUrl: data.imagen_url || ''
+                        currentImageUrl: data.imagen_url || '',
+                        catalog_course_id: data.catalog_course_id || null
                     });
                     if (data.imagen_url) {
                         setImagePreview(data.imagen_url);
@@ -243,9 +263,20 @@ export default function NewCourseForm() {
                                 <Autocomplete
                                     label="Nombre del Curso *"
                                     placeholder="EJ: CÁLCULO DIFERENCIAL"
-                                    items={courseCatalog}
+                                    items={catalogItems.length > 0 ? catalogItems : courseCatalog}
                                     value={formData.nombre}
-                                    onChange={(val) => setFormData({ ...formData, nombre: val })}
+                                    onChange={(val) => {
+                                        const match = catalogCourses.find(
+                                            (c) => c.nombre.trim().toLowerCase() === val.trim().toLowerCase()
+                                        );
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            nombre: val,
+                                            facultad: match?.facultad || prev.facultad,
+                                            ciclo: match?.ciclo !== undefined && match?.ciclo !== null ? match.ciclo.toString() : prev.ciclo,
+                                            catalog_course_id: match?.id || null,
+                                        }));
+                                    }}
                                 />
                             </div>
 
