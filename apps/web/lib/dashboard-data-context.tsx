@@ -76,40 +76,28 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     const fetchProfessors = useCallback(async () => {
         setLoading(prev => ({ ...prev, professors: true }));
         try {
+            // Usamos la VIEW professor_with_courses que ya calcula:
+            // - courses: array JSON de cursos del catálogo
+            // - avg_puntuacion, avg_claridad, avg_facilidad
+            // - total_ratings, total_comments
             const { data, error } = await supabase
-                .from('professors')
-                .select(`
-                  *,
-                  professor_ratings (puntuacion),
-                  course_professors (
-                    courses (
-                      nombre
-                    )
-                  )
-                `)
+                .from('professor_with_courses')
+                .select('*')
                 .order('nombre', { ascending: true });
 
             if (!error && data) {
                 const formatted = data.map((prof: any) => {
-                    const ratings = prof.professor_ratings || [];
-                    const averageRating = ratings.length > 0
-                        ? (ratings.reduce((sum: number, r: any) => sum + (r.puntuacion || 0), 0) / ratings.length)
-                        : 0;
-
-                    const joinCourses = prof.course_professors
-                        ?.map((cp: any) => cp.courses?.nombre)
-                        .filter(Boolean) || [];
-
-                    const especialidad = prof.especialidad || joinCourses[0] || null;
-                    const otrosCursos = prof.otros_cursos || (joinCourses.length > 1 ? joinCourses.slice(1).join(', ') : null);
-
+                    const courses = Array.isArray(prof.courses) ? prof.courses : [];
                     return {
                         ...prof,
-                        especialidad,
-                        otros_cursos: otrosCursos,
-                        courses: joinCourses,
-                        averageRating: Math.round(averageRating * 10) / 10,
-                        ratingCount: ratings.length,
+                        // Compatibilidad con código existente que usa especialidad/otros_cursos
+                        especialidad: courses[0]?.nombre || null,
+                        otros_cursos: courses.length > 1
+                            ? courses.slice(1).map((c: any) => c.nombre).join(', ')
+                            : null,
+                        courses: courses.map((c: any) => c.nombre),
+                        averageRating: prof.avg_puntuacion ? Math.round(prof.avg_puntuacion * 10) / 10 : 0,
+                        ratingCount: prof.total_ratings || 0,
                     };
                 });
                 setProfessors(formatted);
@@ -118,6 +106,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
             setLoading(prev => ({ ...prev, professors: false }));
         }
     }, [session]);
+
 
     const fetchGrupos = useCallback(async () => {
         setLoading(prev => ({ ...prev, grupos: true }));

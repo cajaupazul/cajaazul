@@ -14,7 +14,9 @@ import {
   Calculator,
   ArrowRight,
   Package,
-  Wrench
+  Wrench,
+  FileSpreadsheet,
+  Users
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -63,6 +65,14 @@ export default function AdminDashboardPage() {
   ];
 
   const academicModules = [
+    {
+      title: 'Gestión Cursos & Profesores',
+      description: 'Sube un CSV con Curso|Profesor, edítalo en pantalla como una hoja de cálculo y guarda directo a la BD.',
+      href: '/admin/professors-courses',
+      icon: FileSpreadsheet,
+      badge: 'CSV Upload',
+      color: 'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400'
+    },
     {
       title: 'Moderación de Biblioteca',
       description: 'Revisa, aprueba o gestiona los materiales y documentos subidos por alumnos.',
