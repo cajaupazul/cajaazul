@@ -366,23 +366,40 @@ export default function ProfessorsContent({
                                                         <h3 className="text-sm md:text-lg font-bold text-bb-text mb-1 truncate group-hover:text-blue-400 transition-colors">
                                                             {professor.nombre}
                                                         </h3>
-                                                        <div className="flex flex-col gap-0.5 mb-2 md:mb-3 overflow-hidden">
+                                                        <div className="flex flex-col gap-1 mb-2 md:mb-3 overflow-hidden min-h-[32px]">
                                                             {(() => {
                                                                 const courses = new Set<string>();
                                                                 if (professor.especialidad && professor.especialidad !== 'General') {
-                                                                    courses.add(professor.especialidad.trim().toUpperCase());
+                                                                    courses.add(professor.especialidad.trim());
                                                                 }
                                                                 if (professor.otros_cursos) {
                                                                     professor.otros_cursos.split(',').forEach((c: string) => {
-                                                                        const trimmed = c.trim().toUpperCase();
-                                                                        if (trimmed && trimmed !== 'GENERAL') {
+                                                                        const trimmed = c.trim();
+                                                                        if (trimmed && trimmed.toLowerCase() !== 'general') {
                                                                             courses.add(trimmed);
                                                                         }
                                                                     });
                                                                 }
-                                                                return Array.from(courses).map((course, idx) => (
-                                                                    <p key={idx} className="text-[10px] md:text-xs text-bb-text-secondary truncate leading-tight">
-                                                                        {course}
+                                                                if (Array.isArray(professor.courses)) {
+                                                                    professor.courses.forEach((c: string) => {
+                                                                        const trimmed = c.trim();
+                                                                        if (trimmed && trimmed.toLowerCase() !== 'general') {
+                                                                            courses.add(trimmed);
+                                                                        }
+                                                                    });
+                                                                }
+                                                                const courseList = Array.from(courses);
+                                                                if (courseList.length === 0) {
+                                                                    return (
+                                                                        <p className="text-[10px] md:text-xs text-bb-text-secondary/50 italic truncate leading-tight">
+                                                                            Sin cursos asignados
+                                                                        </p>
+                                                                    );
+                                                                }
+                                                                return courseList.slice(0, 2).map((course, idx) => (
+                                                                    <p key={idx} className="text-[10px] md:text-xs text-blue-400/90 font-medium truncate leading-tight flex items-center gap-1">
+                                                                        <span className="w-1 h-1 rounded-full bg-blue-400 flex-shrink-0" />
+                                                                        <span className="truncate">{course}</span>
                                                                     </p>
                                                                 ));
                                                             })()}

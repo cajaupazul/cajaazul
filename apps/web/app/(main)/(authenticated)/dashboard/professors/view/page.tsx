@@ -79,26 +79,6 @@ function ProfessorRatingsWrapper() {
           });
         }
 
-        // Add text-based courses from especialidad and otros_cursos from ALL duplicates
-        const profsToProcess = duplicateProfs && duplicateProfs.length > 0 ? duplicateProfs : [currentProf];
-        
-        profsToProcess.forEach((p: any) => {
-          if (p.especialidad && !seenNames.has(p.especialidad.trim().toLowerCase())) {
-            seenNames.add(p.especialidad.trim().toLowerCase());
-            finalCourses.push({ id: `virtual-esp-${p.id}`, nombre: p.especialidad.trim() });
-          }
-          
-          if (p.otros_cursos) {
-            const others = p.otros_cursos.split(',').map((c: string) => c.trim()).filter(Boolean);
-            others.forEach((o: string, idx: number) => {
-              if (!seenNames.has(o.toLowerCase())) {
-                seenNames.add(o.toLowerCase());
-                finalCourses.push({ id: `virtual-oth-${p.id}-${idx}`, nombre: o });
-              }
-            });
-          }
-        });
-        
         setCoursesTaught(finalCourses);
 
         // 3. Resolve effective course ID

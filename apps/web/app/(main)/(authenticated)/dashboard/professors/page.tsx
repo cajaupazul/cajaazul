@@ -24,13 +24,20 @@ export default function ProfessorsPage() {
       const normalizedName = prof.nombre.trim().toLowerCase();
 
       if (!groupedProfessorsMap.has(normalizedName)) {
+        const initialCourses = new Set<string>();
+        if (prof.especialidad) initialCourses.add(prof.especialidad);
+        if (prof.otros_cursos) {
+          prof.otros_cursos.split(',').forEach((c: string) => initialCourses.add(c.trim()));
+        }
+        if (Array.isArray(prof.courses)) {
+          prof.courses.forEach((c: string) => initialCourses.add(c.trim()));
+        }
+
         groupedProfessorsMap.set(normalizedName, {
           ...prof,
-          // ratings and averageRating are already calculated in the context, 
-          // but we might want to re-consolidate if there are duplicates by name
           ratingsCount: prof.ratingCount || 0,
           totalRating: (prof.averageRating || 0) * (prof.ratingCount || 0),
-          courses: new Set(prof.especialidad ? [prof.especialidad] : [])
+          courses: initialCourses
         });
       } else {
         const existing = groupedProfessorsMap.get(normalizedName);
@@ -42,6 +49,9 @@ export default function ProfessorsPage() {
         }
         if (prof.otros_cursos) {
           prof.otros_cursos.split(',').forEach((c: string) => existing.courses.add(c.trim()));
+        }
+        if (Array.isArray(prof.courses)) {
+          prof.courses.forEach((c: string) => existing.courses.add(c.trim()));
         }
       }
     });

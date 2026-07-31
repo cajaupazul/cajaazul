@@ -204,22 +204,7 @@ export default function AuthenticatedLayout({
   const allNavItems = [
     { label: 'Inicio', href: '/dashboard', icon: Home },
     ...(isAdmin ? [
-      {
-        label: 'Administración',
-        icon: ShieldCheck,
-        children: [
-          { label: 'Flujogramas', href: '/admin/flowcharts/new', icon: Layers },
-          { label: 'Calculadoras', href: '/admin/calculators', icon: Calculator },
-        ]
-      },
-      {
-        label: 'Administración Tienda',
-        icon: ShoppingBag,
-        children: [
-          { label: 'Nuevo Producto', href: '/admin/shop/new', icon: ShoppingBag },
-          { label: 'Marco VIP', href: '/admin/shop/vip-frame', icon: ShieldCheck },
-        ]
-      }
+      { label: 'Panel Admin', href: '/admin', icon: ShieldCheck }
     ] : []),
     { label: 'Cursos', href: '/dashboard/courses', icon: BookOpen },
     { label: 'Biblioteca', href: '/dashboard/library', icon: Library },

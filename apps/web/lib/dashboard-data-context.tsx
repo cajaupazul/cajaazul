@@ -80,7 +80,12 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
                 .from('professors')
                 .select(`
                   *,
-                  professor_ratings (puntuacion)
+                  professor_ratings (puntuacion),
+                  course_professors (
+                    courses (
+                      nombre
+                    )
+                  )
                 `)
                 .order('nombre', { ascending: true });
 
@@ -91,8 +96,18 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
                         ? (ratings.reduce((sum: number, r: any) => sum + (r.puntuacion || 0), 0) / ratings.length)
                         : 0;
 
+                    const joinCourses = prof.course_professors
+                        ?.map((cp: any) => cp.courses?.nombre)
+                        .filter(Boolean) || [];
+
+                    const especialidad = prof.especialidad || joinCourses[0] || null;
+                    const otrosCursos = prof.otros_cursos || (joinCourses.length > 1 ? joinCourses.slice(1).join(', ') : null);
+
                     return {
                         ...prof,
+                        especialidad,
+                        otros_cursos: otrosCursos,
+                        courses: joinCourses,
                         averageRating: Math.round(averageRating * 10) / 10,
                         ratingCount: ratings.length,
                     };
