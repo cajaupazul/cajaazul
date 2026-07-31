@@ -69,8 +69,8 @@ export default function NewCourseForm() {
         const fetchCatalog = async () => {
             const { data } = await supabase
                 .from('catalog_courses')
-                .select('id, nombre, codigo, facultad, ciclo')
-                .order('facultad');
+                .select('id, nombre')
+                .order('nombre');
 
             if (data && data.length > 0) {
                 setCatalogCourses(data);
@@ -272,8 +272,6 @@ export default function NewCourseForm() {
                                         setFormData((prev) => ({
                                             ...prev,
                                             nombre: val,
-                                            facultad: match?.facultad || prev.facultad,
-                                            ciclo: match?.ciclo !== undefined && match?.ciclo !== null ? match.ciclo.toString() : prev.ciclo,
                                             catalog_course_id: match?.id || null,
                                         }));
                                     }}
