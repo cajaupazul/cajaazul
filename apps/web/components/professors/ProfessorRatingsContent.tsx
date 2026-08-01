@@ -1367,7 +1367,7 @@ export default function ProfessorRatingsContent({
                                         {relatedProfessors.slice(0, 6).map((prof) => (
                                             <Link
                                                 key={prof.id}
-                                                href={`/dashboard/professors/view?id=${prof.id}`}
+                                                href={`/dashboard/professors/${prof.id}/${selectedCourseId || ''}`}
                                                 className="block p-4 rounded-xl bg-bb-darker border border-bb-border hover:border-green-500/50 hover:bg-green-500/5 transition-all group"
                                             >
                                                 <div className="flex items-start gap-3">

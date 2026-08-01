@@ -24,6 +24,7 @@ export default function ProfessorCourseProfilePage({ params }: PageProps) {
   const [ratings, setRatings] = useState<any[]>([]);
   const [comments, setComments] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
+  const [relatedProfessors, setRelatedProfessors] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [frameMap, setFrameMap] = useState<Record<string, any>>({});
 
@@ -142,7 +143,20 @@ export default function ProfessorCourseProfilePage({ params }: PageProps) {
 
         setMaterials(materialsData || []);
 
-        // 8. Fetch shop frames for user badges
+        // 8. Fetch other professors teaching the SAME catalog_course_id (exclude current professor)
+        const { data: relatedData } = await supabase
+          .from('course_professors')
+          .select('professors(id, nombre, avatar_url, facultad)')
+          .eq('catalog_course_id', catalogCourseId)
+          .neq('professor_id', professorId);
+
+        const related = (relatedData || [])
+          .map((item: any) => item.professors)
+          .filter(Boolean);
+
+        setRelatedProfessors(related);
+
+        // 9. Fetch shop frames for user badges
         const { data: frames } = await supabase.from('shop_items').select('*').eq('category', 'frame');
         if (frames) {
           const map: Record<string, any> = {};
@@ -188,6 +202,7 @@ export default function ProfessorCourseProfilePage({ params }: PageProps) {
       initialComments={comments}
       initialMaterials={materials}
       coursesTaught={coursesTaught}
+      relatedProfessors={relatedProfessors}
       selectedCourse={currentCourse?.nombre || null}
       selectedCourseId={catalogCourseId}
       profile={profile}
