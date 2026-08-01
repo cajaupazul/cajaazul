@@ -51,6 +51,9 @@ function CourseDetailWrapper() {
         const courseNameClean = courseData.nombre.trim();
 
         // 2. Parallel fetch for associated data
+        // courses.catalog_course_id is the FK to catalog_courses.id
+        const catalogCourseId = courseData.catalog_course_id;
+
         const [
           { data: materialsData },
           { data: linkedData },
@@ -61,15 +64,18 @@ function CourseDetailWrapper() {
             .select('*, professors(nombre), profiles(*)')
             .eq('course_id', courseId)
             .order('created_at', { ascending: false }),
-          supabase.from('course_professors')
-            .select(`
-              professor_id,
-              professors (
-                *,
-                professor_ratings (puntuacion, course_name)
-              )
-            `)
-            .eq('course_id', courseId),
+          // ← Use catalog_course_id instead of course_id
+          catalogCourseId
+            ? supabase.from('course_professors')
+                .select(`
+                  professor_id,
+                  professors (
+                    *,
+                    professor_ratings (puntuacion, catalog_course_id)
+                  )
+                `)
+                .eq('catalog_course_id', catalogCourseId)
+            : Promise.resolve({ data: [] }),
           supabase.auth.getUser(),
           supabase.from('course_cycles')
             .select('*')
@@ -109,10 +115,10 @@ function CourseDetailWrapper() {
           const materialCount = materialsPerProf.get(p.id) || 0;
           const isContributor = materialCount > 0;
 
-          // STRICT Rating Filter: Only include ratings for THIS course
-          const courseSpecificRatings = (p.professor_ratings || []).filter((r: any) => 
-            r.course_name && normalizeString(r.course_name) === normalizeString(courseNameClean)
-          );
+          // STRICT Rating Filter: Only include ratings for THIS catalog_course_id
+          const courseSpecificRatings = catalogCourseId
+            ? (p.professor_ratings || []).filter((r: any) => r.catalog_course_id === catalogCourseId)
+            : [];
           
           const hasCourseRatings = courseSpecificRatings.length > 0;
           const avg = hasCourseRatings 
@@ -121,6 +127,7 @@ function CourseDetailWrapper() {
 
           professorsMap.set(p.id, {
             ...p,
+            catalogCourseId,
             averageRating: avg,
             hasMaterials: isContributor
           });
