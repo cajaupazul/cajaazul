@@ -157,7 +157,11 @@ export default function ProfessorCourseProfilePage({ params }: PageProps) {
         setRelatedProfessors(related);
 
         // 9. Fetch shop frames for user badges
-        const { data: frames } = await supabase.from('shop_items').select('*').eq('category', 'frame');
+        const { data: frames } = await supabase
+          .from('shop_items')
+          .select('*')
+          .eq('type', 'profile_frame')
+          .eq('is_active', true);
         if (frames) {
           const map: Record<string, any> = {};
           frames.forEach((f) => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -438,6 +438,8 @@ export default function ProfessorRatingsContent({
 }: ProfessorRatingsContentProps) {
     const { profile, isGuest } = useProfile();
     const router = useRouter();
+    const params = useParams();
+    const urlCourseId = (params?.courseId as string) || null;
     const { colors } = useTheme();
     const [ratings, setRatings] = useState<Rating[]>(initialRatings);
     const [comments, setComments] = useState<ProfessorComment[]>(initialComments);
@@ -673,7 +675,22 @@ export default function ProfessorRatingsContent({
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const validCourseId = selectedCourseId && !selectedCourseId.startsWith('virtual-') ? selectedCourseId : null;
+        const rawCourseId = selectedCourseId || urlCourseId || null;
+        const validCourseId = rawCourseId && !rawCourseId.startsWith('virtual-') ? rawCourseId : null;
+
+        console.log('[handleSubmitRating] Payload check before upsert:', {
+            professor_id: professor.id,
+            user_id: user.id,
+            catalog_course_id: validCourseId,
+            selectedCourseId,
+            urlCourseId
+        });
+
+        if (!validCourseId) {
+            console.error('[handleSubmitRating] Missing catalog_course_id for rating');
+            alert('Error: No se encontró un ID de curso válido para registrar la calificación.');
+            return;
+        }
 
         const { error } = await supabase.from('professor_ratings').upsert({
             professor_id: professor.id,
@@ -682,9 +699,7 @@ export default function ProfessorRatingsContent({
             puntuacion: formData.puntuacion,
             claridad: formData.claridad,
             facilidad: formData.facilidad,
-            recommended: formData.recommended,
-            course_id: validCourseId,
-            course_name: selectedCourse
+            recommended: formData.recommended
         }, { onConflict: 'professor_id,user_id,catalog_course_id' });
 
         if (!error) {
@@ -739,16 +754,15 @@ export default function ProfessorRatingsContent({
         if (parentId) setIsSubmittingReply(true);
         else setIsSubmittingComment(true);
 
-        const validCourseId = selectedCourseId && !selectedCourseId.startsWith('virtual-') ? selectedCourseId : null;
+        const rawCourseId = selectedCourseId || urlCourseId || null;
+        const validCourseId = rawCourseId && !rawCourseId.startsWith('virtual-') ? rawCourseId : null;
 
         const { error } = await supabase.from('professor_comments').insert({
             professor_id: professor.id,
             user_id: user.id,
             catalog_course_id: validCourseId,
             contenido: textToSubmit.trim(),
-            parent_id: parentId,
-            course_id: validCourseId,
-            course_name: selectedCourse
+            parent_id: parentId
         });
 
         if (!error) {
