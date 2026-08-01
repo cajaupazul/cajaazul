@@ -1481,7 +1481,7 @@ export default function CourseDetailContent({
                                         {allProfessors.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0)).map((prof) => (
                                             <Link
                                                 key={prof.id}
-                                                href={`/dashboard/professors/view?id=${prof.id}&course=${course.nombre}`}
+                                                href={`/dashboard/professors/${prof.id}/${course.catalog_course_id || course.id}`}
                                                 className={`group p-3 bg-bb-card rounded-2xl border transition-all hover:shadow-lg hover:shadow-blue-500/10 active:scale-95 ${selectedProfessorId === prof.id ? 'border-blue-500/50 bg-blue-500/5' : 'border-bb-border hover:border-blue-500/30'}`}
                                             >
                                                 <div className="flex items-center gap-3">

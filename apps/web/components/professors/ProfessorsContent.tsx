@@ -410,25 +410,35 @@ export default function ProfessorsContent({
                                                 <div className="h-px w-full bg-bb-border" />
 
                                                 <div className="grid grid-cols-2 p-2 md:p-4 gap-2 md:gap-3 mt-auto">
-                                                    <Button
-                                                        variant="outline"
-                                                        className="w-full border-bb-border bg-bb-darker hover:bg-bb-hover text-bb-text-secondary hover:text-bb-text text-[10px] md:text-xs h-8 md:h-10 transition-all px-1"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            router.push(`/dashboard/professors/view?id=${professor.id}`);
-                                                        }}
-                                                    >
-                                                        Calificar
-                                                    </Button>
-                                                    <Button
-                                                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] md:text-xs h-8 md:h-10 px-1"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            router.push(`/dashboard/professors/view?id=${professor.id}`);
-                                                        }}
-                                                    >
-                                                        Ver Perfil
-                                                    </Button>
+                                                    {(() => {
+                                                        const firstCourseId = professor.catalogCourses?.[0]?.id || professor.firstCourseId || null;
+                                                        const profLink = firstCourseId
+                                                            ? `/dashboard/professors/${professor.id}/${firstCourseId}`
+                                                            : `/dashboard/professors/${professor.id}`;
+                                                        return (
+                                                            <>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    className="w-full border-bb-border bg-bb-darker hover:bg-bb-hover text-bb-text-secondary hover:text-bb-text text-[10px] md:text-xs h-8 md:h-10 transition-all px-1"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        router.push(profLink);
+                                                                    }}
+                                                                >
+                                                                    Calificar
+                                                                </Button>
+                                                                <Button
+                                                                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] md:text-xs h-8 md:h-10 px-1"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        router.push(profLink);
+                                                                    }}
+                                                                >
+                                                                    Ver Perfil
+                                                                </Button>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </CardContent>
                                         </Card>

@@ -113,6 +113,7 @@ export type Course = {
   syllabus_url: string | null;
   views: number;
   created_at: string;
+  catalog_course_id: string | null;
 };
 
 export type CourseProfessor = {

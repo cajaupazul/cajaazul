@@ -678,13 +678,14 @@ export default function ProfessorRatingsContent({
         const { error } = await supabase.from('professor_ratings').upsert({
             professor_id: professor.id,
             user_id: user.id,
+            catalog_course_id: validCourseId,
             puntuacion: formData.puntuacion,
             claridad: formData.claridad,
             facilidad: formData.facilidad,
             recommended: formData.recommended,
             course_id: validCourseId,
             course_name: selectedCourse
-        }, { onConflict: 'professor_id,user_id,course_id' });
+        }, { onConflict: 'professor_id,user_id,catalog_course_id' });
 
         if (!error) {
             // Optimistic update: update local ratings state immediately so
@@ -693,6 +694,7 @@ export default function ProfessorRatingsContent({
                 id: `optimistic-${Date.now()}`,
                 professor_id: professor.id,
                 user_id: user.id,
+                catalog_course_id: validCourseId,
                 puntuacion: formData.puntuacion,
                 claridad: formData.claridad,
                 facilidad: formData.facilidad,
@@ -712,8 +714,7 @@ export default function ProfessorRatingsContent({
             };
 
             setRatings(prev => {
-                // If user already rated, replace — otherwise append
-                const existingIdx = prev.findIndex((r: any) => r.user_id === user.id);
+                const existingIdx = prev.findIndex((r: any) => r.user_id === user.id && r.catalog_course_id === validCourseId);
                 if (existingIdx >= 0) {
                     const updated = [...prev];
                     updated[existingIdx] = { ...updated[existingIdx], ...optimisticRating };
@@ -723,7 +724,7 @@ export default function ProfessorRatingsContent({
             });
 
             setCreateDialogOpen(false);
-            router.refresh(); // Refresh server state for other data (materials, comments, etc.)
+            router.refresh();
         }
     };
 
@@ -743,6 +744,7 @@ export default function ProfessorRatingsContent({
         const { error } = await supabase.from('professor_comments').insert({
             professor_id: professor.id,
             user_id: user.id,
+            catalog_course_id: validCourseId,
             contenido: textToSubmit.trim(),
             parent_id: parentId,
             course_id: validCourseId,
@@ -1025,7 +1027,7 @@ export default function ProfessorRatingsContent({
                                                         return (
                                                             <div key={course.id} className="flex items-center gap-1 group/current">
                                                                 <Link
-                                                                    href={`/dashboard/professors/view?id=${professor.id}&courseId=${course.id}&course=${encodeURIComponent(course.nombre)}`}
+                                                                    href={`/dashboard/professors/${professor.id}/${course.id}`}
                                                                     className={cn(
                                                                         "px-3 py-1 rounded-lg border transition-all text-[11px] font-bold flex items-center gap-1.5",
                                                                         isSelected

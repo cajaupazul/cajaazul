@@ -95,7 +95,11 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
                         otros_cursos: courses.length > 1
                             ? courses.slice(1).map((c: any) => c.nombre).join(', ')
                             : null,
+                        // Backward-compat: courses as name strings
                         courses: courses.map((c: any) => c.nombre),
+                        // New: full catalog course objects with id for linking
+                        catalogCourses: courses,
+                        firstCourseId: courses[0]?.id || null,
                         averageRating: prof.avg_puntuacion ? Math.round(prof.avg_puntuacion * 10) / 10 : 0,
                         ratingCount: prof.total_ratings || 0,
                     };
