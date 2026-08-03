@@ -137,7 +137,7 @@ export default function FlowchartsListPage() {
                 </div>
 
                 {/* Banner Interactivo BETA */}
-                <Link href="/dashboard/herramientas/flujogramas/interactivo-admin" className="block">
+                <Link href="/dashboard/herramientas/flujograma/admin" className="block">
                     <div className="w-full bg-gradient-to-r from-emerald-900/40 to-blue-900/40 border border-emerald-500/30 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 hover:border-emerald-500/60 transition-colors group cursor-pointer">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">

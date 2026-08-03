@@ -6,7 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FlujogramaAdminInteractivo from '@/components/flowchart/FlujogramaAdminInteractivo';
 
-export default function AdministracionInteractivoPage() {
+export default function FlujogramaAdminPage() {
   return (
     <div className="min-h-screen bg-bb-dark p-4 sm:p-6 lg:p-8 space-y-6">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
