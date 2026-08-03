@@ -46,11 +46,15 @@ function UploadWrapper() {
                 // 3. Fetch professors
                 const courseNameClean = courseData.nombre.trim();
 
+                const catalogCourseId = courseData.catalog_course_id;
+
                 const [
                     { data: cpData },
                     { data: matchedProfs }
                 ] = await Promise.all([
-                    supabase.from('course_professors').select('professor_id').eq('course_id', courseId),
+                    catalogCourseId
+                        ? supabase.from('course_professors').select('professor_id').eq('catalog_course_id', catalogCourseId)
+                        : Promise.resolve({ data: [] }),
                     supabase.from('professors')
                         .select('*')
                         .or(`especialidad.ilike.%${courseNameClean}%,otros_cursos.ilike.%${courseNameClean}%`)

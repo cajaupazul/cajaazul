@@ -260,15 +260,15 @@ export default function SyncProfessorsModal({ open, onOpenChange, onSuccess }: S
 
                     for (const chunk of dbChunks) {
                         const { data } = await supabase
-                            .from('courses')
+                            .from('catalog_courses')
                             .select('id, codigo')
                             .in('codigo', chunk);
                         if (data) dbCourses.push(...data);
                     }
 
-                    const codeToIdMap = new Map(dbCourses.map(c => [c.codigo, c.id]));
+                    const codeToCatalogIdMap = new Map(dbCourses.map(c => [c.codigo, c.id]));
 
-                    const linksToInsert: { course_id: string; professor_id: string }[] = [];
+                    const linksToInsert: { catalog_course_id: string; professor_id: string }[] = [];
 
                     for (const p of parsedProfessors) {
                         const profId = nameToIdMap.get(p.nombre);
@@ -276,18 +276,16 @@ export default function SyncProfessorsModal({ open, onOpenChange, onSuccess }: S
 
                         for (const course of p.courses) {
                             if (course.exists) {
-                                const courseId = codeToIdMap.get(course.codigo);
-                                if (courseId) {
-                                    linksToInsert.push({ course_id: courseId, professor_id: profId });
+                                const catalogCourseId = codeToCatalogIdMap.get(course.codigo);
+                                if (catalogCourseId) {
+                                    linksToInsert.push({ catalog_course_id: catalogCourseId, professor_id: profId });
                                 }
                             }
                         }
                     }
 
                     if (linksToInsert.length > 0) {
-                        // Upsert links, but we need to ignore conflicts or just let them silently fail if unique constraint exists
-                        // We will try inserting ignoring duplicates
-                        const { error: lErr } = await supabase.from('course_professors').upsert(linksToInsert, { onConflict: 'course_id, professor_id', ignoreDuplicates: true });
+                        const { error: lErr } = await supabase.from('course_professors').upsert(linksToInsert, { onConflict: 'professor_id,catalog_course_id', ignoreDuplicates: true });
                         if (lErr) console.warn("Failed to insert course_professors links", lErr);
                     }
                 }
