@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -30,6 +30,8 @@ import {
   Sparkles,
   Layers,
   Award,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -111,41 +113,38 @@ export const COURSES: CourseData[] = [
 
 export const PREREQUISITES: Record<string, string[]> = {
   "matematicas-i": ["nivelacion-matematica"],
+  "economia-general-i": ["nivelacion-matematica"],
   "lenguaje-i": ["nivelacion-lenguaje"],
-  "economia-general-i": ["nivelacion-informatica"],
   "lenguaje-ii": ["lenguaje-i"],
-  "fund-contabilidad": ["fund-ciencias-empresariales"],
   "economia-general-ii": ["economia-general-i"],
   "matematicas-negocios": ["matematicas-i"],
+  "estadistica-i": ["matematicas-i", "nivelacion-informatica"],
   "contabilidad-financiera-intermedia": ["fund-contabilidad"],
-  "derecho-civil-comercial": ["lenguaje-ii"],
-  "estadistica-i": ["matematicas-negocios"],
+  "derecho-civil-comercial": ["fund-ciencias-empresariales"],
   "diseno-organizacional": ["fund-ciencias-empresariales"],
-  "analitica-datos-negocios": ["estadistica-i", "matematicas-negocios"],
-  "marketing-estrategico": ["economia-general-ii"],
-  "fund-finanzas": ["contabilidad-financiera-intermedia", "economia-general-ii"],
+  "analitica-datos-negocios": ["estadistica-i"],
+  "fund-finanzas": ["nivelacion-informatica", "fund-contabilidad"],
   "derecho-laboral-tributario": ["derecho-civil-comercial"],
-  "metodos-cuantitativos": ["analitica-datos-negocios"],
-  "investigacion-mercados": ["marketing-estrategico", "estadistica-i"],
+  "metodos-cuantitativos": ["estadistica-i"],
+  "investigacion-mercados": ["marketing-estrategico"],
   "contabilidad-toma-decisiones": ["contabilidad-financiera-intermedia"],
   "gestion-cambio-cultural": ["diseno-organizacional"],
-  "analisis-multivariado": ["estadistica-i", "analitica-datos-negocios"],
-  "innovacion-negocios-digitales": ["marketing-estrategico"],
-  "finanzas-corporativas-i": ["fund-finanzas"],
+  "analisis-multivariado": ["analitica-datos-negocios"],
+  "innovacion-negocios-digitales": ["diseno-organizacional"],
+  "finanzas-corporativas-i": ["estadistica-i", "fund-finanzas"],
   "gestion-personas": ["gestion-cambio-cultural"],
-  "investigacion-academica": ["analisis-multivariado"],
   "gestion-operaciones": ["metodos-cuantitativos"],
-  "sistemas-informacion-datos": ["gestion-operaciones", "analitica-datos-negocios"],
-  "evaluacion-financiera": ["finanzas-corporativas-i", "contabilidad-toma-decisiones"],
-  "creacion-valor": ["gestion-personas"],
-  "gestion-comercio-internacional": ["investigacion-mercados"],
+  "sistemas-informacion-datos": ["analisis-multivariado"],
+  "evaluacion-financiera": ["finanzas-corporativas-i"],
+  "creacion-valor": ["fund-finanzas", "gestion-cambio-cultural", "marketing-estrategico"],
+  "gestion-comercio-internacional": ["economia-general-ii", "marketing-estrategico"],
   "gestion-cadena-suministros": ["gestion-operaciones"],
-  "business-agility": ["creacion-valor"],
-  "gestion-sostenibilidad": ["gestion-personas"],
-  "gestion-internacional-empresas": ["gestion-comercio-internacional"],
-  "direccion-estrategica": ["creacion-valor", "business-agility"],
-  "investigacion-aplicada-negocios": ["investigacion-academica"],
-  "proyecto-empresarial": ["direccion-estrategica", "investigacion-aplicada-negocios"],
+  "business-agility": ["gestion-operaciones"],
+  "gestion-sostenibilidad": ["diseno-organizacional", "gestion-operaciones"],
+  "gestion-internacional-empresas": ["gestion-comercio-internacional", "diseno-organizacional"],
+  "direccion-estrategica": ["diseno-organizacional", "finanzas-corporativas-i", "gestion-operaciones"],
+  "investigacion-aplicada-negocios": ["investigacion-academica", "investigacion-mercados", "analisis-multivariado", "gestion-personas", "gestion-operaciones", "creacion-valor"],
+  "proyecto-empresarial": ["direccion-estrategica", "gestion-sostenibilidad", "investigacion-mercados", "gestion-internacional-empresas", "contabilidad-toma-decisiones", "gestion-personas", "gestion-cadena-suministros", "evaluacion-financiera"],
 };
 
 export const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
@@ -242,10 +241,27 @@ export default function FlujogramaAdminInteractivo() {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Professor details for selected course
   const [topProfessors, setTopProfessors] = useState<any[]>([]);
   const [loadingProfs, setLoadingProfs] = useState(false);
+
+  // ── Fullscreen logic ──
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }, []);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
 
   // ── Load User Progress from Supabase ──
   useEffect(() => {
@@ -526,7 +542,12 @@ export default function FlujogramaAdminInteractivo() {
   }, [selectedCourseId]);
 
   return (
-    <div className="relative w-full h-[calc(100vh-100px)] min-h-[600px] bg-bb-darker rounded-3xl border border-bb-border overflow-hidden flex flex-col">
+    <div
+      ref={containerRef}
+      className={`relative w-full bg-bb-darker border border-bb-border overflow-hidden flex flex-col transition-all ${
+        isFullscreen ? 'h-screen rounded-none' : 'h-[calc(100vh-100px)] min-h-[600px] rounded-3xl'
+      }`}
+    >
       {/* ── TOP BAR (Fija) ── */}
       <div className="bg-bb-card/90 backdrop-blur-md border-b border-bb-border p-4 sm:p-5 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 z-20 shrink-0 shadow-lg">
         {/* Title and Badge */}
@@ -541,6 +562,16 @@ export default function FlujogramaAdminInteractivo() {
             Selecciona cualquier curso para marcar tu progreso, ver prerrequisitos y mejores profesores.
           </p>
         </div>
+
+        {/* Fullscreen Button */}
+        <button
+          onClick={toggleFullscreen}
+          title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+          className="absolute top-4 right-4 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/10 hover:border-white/30 shadow-lg"
+        >
+          {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          <span className="hidden sm:inline">{isFullscreen ? 'Salir' : 'Pantalla completa'}</span>
+        </button>
 
         {/* Progress Bars & Counters */}
         <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full lg:w-auto">
