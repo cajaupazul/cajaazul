@@ -468,120 +468,148 @@ export default function FlujogramaAdminInteractivo() {
   // ── Build Nodes con posiciones hardcodeadas (layout oficial) ──
   const initialNodes = useMemo(() => {
     const NODE_W = 160;
-    const LABEL_Y = 80;
+    const NODE_H = 90;
+    const LABEL_Y = 50;
     const ROMAN = ['0','I','II','III','IV','V','VI','VII','VIII','IX','X'];
+    const CANVAS_HEIGHT = 980; // height of background bands
 
-    // Posiciones X por ciclo
+    // Posiciones X por ciclo (380px spacing = 160px nodo + 220px canal)
     const CICLO_X: Record<number, number> = {
-      0: 40,
-      1: 320,
-      2: 600,
-      3: 880,
-      4: 1160,
-      5: 1440,
-      6: 1720,
-      7: 2000,
-      8: 2280,
-      9: 2560,
-      10: 2840,
+      0:    20,
+      1:   400,
+      2:   780,
+      3:  1160,
+      4:  1540,
+      5:  1920,
+      6:  2300,
+      7:  2680,
+      8:  3060,
+      9:  3440,
+      10: 3820,
     };
 
-    // Posiciones Y exactas por course.id (layout oficial)
+    // Posiciones Y exactas por course.id (layout oficial, 150px row spacing)
     const NODE_Y: Record<string, number> = {
       // CICLO 0
-      "nivelacion-matematica":    150,
-      "nivelacion-informatica":   350,
-      "nivelacion-lenguaje":      550,
+      "nivelacion-matematica":    160,
+      "nivelacion-informatica":   390,
+      "nivelacion-lenguaje":      620,
       // CICLO 1
-      "fund-ciencias-empresariales": 200,
-      "lenguaje-i":                  400,
-      "matematicas-i":               500,
-      "economia-general-i":          600,
+      "fund-ciencias-empresariales": 160,
+      "lenguaje-i":                  390,
+      "matematicas-i":               510,
+      "economia-general-i":          620,
       // CICLO 2
-      "lenguaje-ii":                 150,
+      "lenguaje-ii":                 160,
       "fund-contabilidad":           280,
-      "bloque-ciencias-sociales":    410,
-      "economia-general-ii":         540,
-      "matematicas-negocios":        670,
+      "bloque-ciencias-sociales":    430,
+      "economia-general-ii":         550,
+      "matematicas-negocios":        680,
       // CICLO 3
-      "contabilidad-financiera-intermedia": 150,
-      "derecho-civil-comercial":            320,
-      "estadistica-i":                      450,
-      "bloque-pensamiento-critico":         580,
-      "bloque-desarrollo-personal":         710,
+      "contabilidad-financiera-intermedia": 160,
+      "derecho-civil-comercial":            330,
+      "estadistica-i":                      460,
+      "bloque-pensamiento-critico":         590,
+      "bloque-desarrollo-personal":         720,
       // CICLO 4
-      "diseno-organizacional":       150,
-      "analitica-datos-negocios":    280,
-      "marketing-estrategico":       410,
-      "fund-finanzas":               540,
-      "derecho-laboral-tributario":  670,
+      "diseno-organizacional":       160,
+      "analitica-datos-negocios":    290,
+      "marketing-estrategico":       420,
+      "fund-finanzas":               550,
+      "derecho-laboral-tributario":  680,
       // CICLO 5
-      "gestion-cambio-cultural":         150,
-      "investigacion-mercados":          280,
-      "contabilidad-toma-decisiones":    410,
-      "metodos-cuantitativos":           540,
-      "analisis-multivariado":           670,
+      "gestion-cambio-cultural":         160,
+      "investigacion-mercados":          290,
+      "contabilidad-toma-decisiones":    420,
+      "metodos-cuantitativos":           550,
+      "analisis-multivariado":           680,
       // CICLO 6
-      "gestion-personas":               150,
-      "innovacion-negocios-digitales":   280,
-      "finanzas-corporativas-i":         410,
-      "investigacion-academica":         540,
-      "gestion-operaciones":             670,
+      "gestion-personas":               160,
+      "innovacion-negocios-digitales":   290,
+      "finanzas-corporativas-i":         420,
+      "investigacion-academica":         550,
+      "gestion-operaciones":             680,
       // CICLO 7
-      "creacion-valor":                  150,
-      "sistemas-informacion-datos":      280,
-      "evaluacion-financiera":           410,
-      "gestion-comercio-internacional":  540,
-      "gestion-cadena-suministros":      670,
+      "creacion-valor":                  160,
+      "sistemas-informacion-datos":      290,
+      "evaluacion-financiera":           420,
+      "gestion-comercio-internacional":  550,
+      "gestion-cadena-suministros":      680,
       // CICLO 8
-      "business-agility":               150,
-      "gestion-sostenibilidad":          280,
-      "bloque-procesos-sociales":        410,
-      "bloque-quehacer-cientifico":      540,
-      "gestion-internacional-empresas":  670,
+      "business-agility":               160,
+      "gestion-sostenibilidad":          290,
+      "bloque-procesos-sociales":        420,
+      "bloque-quehacer-cientifico":      550,
+      "gestion-internacional-empresas":  680,
       // CICLO 9
-      "etica":                           150,
-      "direccion-estrategica":           280,
-      "bloque-pensamiento-critico-ix":   410,
-      "investigacion-aplicada-negocios": 540,
+      "etica":                           160,
+      "direccion-estrategica":           290,
+      "bloque-pensamiento-critico-ix":   420,
+      "investigacion-aplicada-negocios": 550,
       // CICLO 10
-      "proyeccion-social":              150,
-      "bloque-procesos-sociales-x":     280,
-      "proyecto-empresarial":           410,
+      "proyeccion-social":              160,
+      "bloque-procesos-sociales-x":     290,
+      "proyecto-empresarial":           420,
     };
 
     const courseNodes: Node[] = [];
     const labelNodes: Node[] = [];
+    const bgNodes: Node[] = [];
     const seenCiclos = new Set<number>();
 
     COURSES.forEach((course) => {
-      const x = CICLO_X[course.ciclo] ?? course.ciclo * 280 + 40;
-      const y = NODE_Y[course.id] ?? 150;
+      const x = CICLO_X[course.ciclo] ?? course.ciclo * 380 + 20;
+      const y = NODE_Y[course.id] ?? 160;
       const status = progressMap[course.code] || 'pendiente';
       const available = isCourseAvailable(course.id);
       const style = CATEGORY_COLORS[course.categoria] || CATEGORY_COLORS.administracion;
 
-      // Add cycle label once per ciclo
+      // Per-ciclo: add background band + cycle label once
       if (!seenCiclos.has(course.ciclo)) {
         seenCiclos.add(course.ciclo);
+
+        // Column background band
+        bgNodes.push({
+          id: `bg-ciclo-${course.ciclo}`,
+          type: 'default',
+          position: { x, y: 100 },
+          data: { label: '' },
+          draggable: false,
+          selectable: false,
+          focusable: false,
+          style: {
+            width: NODE_W,
+            height: CANVAS_HEIGHT,
+            background: 'rgba(255,255,255,0.025)',
+            border: '1px dashed rgba(255,255,255,0.07)',
+            borderRadius: 12,
+            zIndex: -1,
+            pointerEvents: 'none',
+          },
+        });
+
+        // Cycle label
         labelNodes.push({
           id: `label-ciclo-${course.ciclo}`,
           type: 'default',
-          position: { x: x + (NODE_W / 2) - 35, y: LABEL_Y },
+          position: { x, y: LABEL_Y },
           data: { label: course.ciclo === 0 ? 'CICLO 0' : `CICLO ${ROMAN[course.ciclo]}` },
           draggable: false,
           selectable: false,
+          focusable: false,
           style: {
-            background: 'transparent',
-            border: 'none',
-            boxShadow: 'none',
-            color: '#9CA3AF',
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 8,
+            color: '#E5E7EB',
             fontSize: '10px',
             fontWeight: 800,
-            letterSpacing: '0.12em',
-            padding: 0,
-            width: 70,
+            letterSpacing: '0.10em',
+            padding: '4px 0',
+            width: NODE_W,
             textAlign: 'center',
+            boxShadow: 'none',
+            pointerEvents: 'none',
           },
         });
       }
@@ -599,7 +627,7 @@ export default function FlujogramaAdminInteractivo() {
       });
     });
 
-    return [...labelNodes, ...courseNodes];
+    return [...bgNodes, ...labelNodes, ...courseNodes];
   }, [progressMap, isCourseAvailable]);
 
   // ── Build Edges ──
@@ -626,18 +654,19 @@ export default function FlujogramaAdminInteractivo() {
           id: `edge-${sourceId}-${targetId}`,
           source: sourceId,
           target: targetId,
-          type: 'smoothstep',
+          type: 'step',
           animated: isHighlighted,
+          zIndex: -1,
           style: {
             stroke: edgeColor,
-            strokeWidth: isHighlighted ? 3 : 2,
-            opacity: isHighlighted ? 1 : 0.65,
+            strokeWidth: isHighlighted ? 2.5 : 1.5,
+            opacity: isHighlighted ? 1 : 0.55,
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
             color: edgeColor,
-            width: 16,
-            height: 16,
+            width: 14,
+            height: 14,
           },
         });
       });
@@ -771,11 +800,12 @@ export default function FlujogramaAdminInteractivo() {
           onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.15 }}
-          minZoom={0.1}
+          fitViewOptions={{ padding: 0.12 }}
+          minZoom={0.08}
           maxZoom={2}
-          defaultEdgeOptions={{ type: 'smoothstep' }}
+          defaultEdgeOptions={{ type: 'step' }}
           proOptions={{ hideAttribution: true }}
+          elevateEdgesOnSelect={false}
           panOnScroll
           panOnDrag
           zoomOnPinch
