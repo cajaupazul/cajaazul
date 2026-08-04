@@ -154,12 +154,7 @@ checkout.post('/', authMiddleware, async (c) => {
                         currency_id: 'PEN'
                     }
                 ],
-                back_urls: {
-                    success: `${redirectBase}/dashboard/store?payment=success`,
-                    failure: `${redirectBase}/dashboard/store?payment=failure`,
-                    pending: `${redirectBase}/dashboard/store?payment=pending`,
-                },
-                auto_return: 'approved',
+                back_urls: {},
                 payment_methods: {
                     installments: 1,
                     default_installments: 1
@@ -175,7 +170,7 @@ checkout.post('/', authMiddleware, async (c) => {
     const data = await response.json() as any
     if (!response.ok) return c.json({ error: data }, 500)
 
-    return c.json({ init_point: data.init_point })
+    return c.json({ preference_id: data.id, id: data.id, init_point: data.init_point })
 })
 
 // 3. Webhook Handler

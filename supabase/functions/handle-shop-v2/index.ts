@@ -101,15 +101,14 @@ serve(async (req) => {
                     body: JSON.stringify({
                         items: [{ id: product.id, title: product.name, quantity: 1, unit_price: Number(product.price), currency_id: 'PEN' }],
                         metadata: { user_id: user.id, product_id: product.id, type: product.type, amount: product.amount },
-                        back_urls: { success: `${origin}/dashboard?payment=success`, failure: `${origin}/dashboard?payment=failure`, pending: `${origin}/dashboard?payment=pending` },
-                        auto_return: 'approved',
+                        back_urls: {},
                         notification_url: WEBHOOK_URL,
                     }),
                 });
 
                 if (!mpRes.ok) throw new Error('Mercado Pago preference creation failed');
                 const preference = await mpRes.json();
-                return new Response(JSON.stringify({ id: preference.id, init_point: preference.init_point }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                return new Response(JSON.stringify({ preference_id: preference.id, id: preference.id, init_point: preference.init_point }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
             }
         }
     } catch (err) {
