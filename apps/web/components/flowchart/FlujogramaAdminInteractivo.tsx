@@ -5,6 +5,7 @@ import {
   ReactFlow,
   Controls,
   Background,
+  BackgroundVariant,
   MiniMap,
   Node,
   Edge,
@@ -442,31 +443,77 @@ export default function FlujogramaAdminInteractivo() {
 
   // ── Build Nodes ──
   const initialNodes = useMemo(() => {
-    // Group courses by ciclo for layout
-    const cycleCounts: Record<number, number> = {};
+    const NODE_W = 160;
+    const NODE_H = 82;
+    const COL_SPACING = 280;  // 160px node + 120px arrow channel
+    const ROW_SPACING = 120;
+    const LABEL_Y = -52;
 
-    return COURSES.map((course) => {
-      const cycleIndex = cycleCounts[course.ciclo] || 0;
-      cycleCounts[course.ciclo] = cycleIndex + 1;
-
-      const x = course.ciclo * 230 + 50;
-      const y = cycleIndex * 110 + 60;
-      const status = progressMap[course.code] || 'pendiente';
-      const available = isCourseAvailable(course.id);
-      const style = CATEGORY_COLORS[course.categoria] || CATEGORY_COLORS.administracion;
-
-      return {
-        id: course.id,
-        type: 'courseNode',
-        position: { x, y },
-        data: {
-          ...course,
-          status,
-          isAvailable: available,
-          categoryStyle: style,
-        },
-      };
+    // Group courses by ciclo
+    const byCiclo: Record<number, CourseData[]> = {};
+    COURSES.forEach((c) => {
+      if (!byCiclo[c.ciclo]) byCiclo[c.ciclo] = [];
+      byCiclo[c.ciclo].push(c);
     });
+
+    // Max rows to compute total canvas height for centering
+    const maxRows = Math.max(...Object.values(byCiclo).map((g) => g.length));
+    const totalHeight = maxRows * ROW_SPACING;
+
+    const courseNodes: Node[] = [];
+    const labelNodes: Node[] = [];
+
+    const ROMAN = ['0','I','II','III','IV','V','VI','VII','VIII','IX','X'];
+
+    Object.entries(byCiclo).forEach(([cicloStr, courses]) => {
+      const ciclo = Number(cicloStr);
+      const x = ciclo * COL_SPACING + 40;
+      const groupH = courses.length * ROW_SPACING - (ROW_SPACING - NODE_H);
+      const startY = (totalHeight - groupH) / 2 + 20;
+
+      // Cycle label node
+      labelNodes.push({
+        id: `label-ciclo-${ciclo}`,
+        type: 'default',
+        position: { x: x + (NODE_W / 2) - 35, y: LABEL_Y },
+        data: { label: ciclo === 0 ? 'CICLO 0' : `CICLO ${ROMAN[ciclo]}` },
+        draggable: false,
+        selectable: false,
+        style: {
+          background: 'transparent',
+          border: 'none',
+          boxShadow: 'none',
+          color: '#9CA3AF',
+          fontSize: '10px',
+          fontWeight: 800,
+          letterSpacing: '0.12em',
+          padding: 0,
+          width: 70,
+          textAlign: 'center',
+        },
+      });
+
+      courses.forEach((course, idx) => {
+        const y = startY + idx * ROW_SPACING;
+        const status = progressMap[course.code] || 'pendiente';
+        const available = isCourseAvailable(course.id);
+        const style = CATEGORY_COLORS[course.categoria] || CATEGORY_COLORS.administracion;
+
+        courseNodes.push({
+          id: course.id,
+          type: 'courseNode',
+          position: { x, y },
+          data: {
+            ...course,
+            status,
+            isAvailable: available,
+            categoryStyle: style,
+          },
+        });
+      });
+    });
+
+    return [...labelNodes, ...courseNodes];
   }, [progressMap, isCourseAvailable]);
 
   // ── Build Edges ──
@@ -477,15 +524,17 @@ export default function FlujogramaAdminInteractivo() {
       const targetCourse = COURSE_MAP.get(targetId);
       if (!targetCourse) return;
 
-      const targetStyle = CATEGORY_COLORS[targetCourse.categoria] || CATEGORY_COLORS.administracion;
       const isTargetSelected = selectedCourseId === targetId;
 
       prereqIds.forEach((sourceId) => {
         const sourceCourse = COURSE_MAP.get(sourceId);
         if (!sourceCourse) return;
 
+        // Color by SOURCE category
+        const sourceStyle = CATEGORY_COLORS[sourceCourse.categoria] || CATEGORY_COLORS.administracion;
         const isSourceSelected = selectedCourseId === sourceId;
         const isHighlighted = isTargetSelected || isSourceSelected;
+        const edgeColor = isHighlighted ? '#FFFFFF' : sourceStyle.border;
 
         edgeList.push({
           id: `edge-${sourceId}-${targetId}`,
@@ -494,13 +543,15 @@ export default function FlujogramaAdminInteractivo() {
           type: 'smoothstep',
           animated: isHighlighted,
           style: {
-            stroke: isHighlighted ? '#FFFFFF' : targetStyle.border,
-            strokeWidth: isHighlighted ? 3 : 1.5,
-            opacity: isHighlighted ? 1 : 0.6,
+            stroke: edgeColor,
+            strokeWidth: isHighlighted ? 3 : 2,
+            opacity: isHighlighted ? 1 : 0.65,
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: isHighlighted ? '#FFFFFF' : targetStyle.border,
+            color: edgeColor,
+            width: 16,
+            height: 16,
           },
         });
       });
@@ -634,18 +685,35 @@ export default function FlujogramaAdminInteractivo() {
           onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
-          minZoom={0.2}
-          maxZoom={1.5}
+          fitViewOptions={{ padding: 0.15 }}
+          minZoom={0.1}
+          maxZoom={2}
           defaultEdgeOptions={{ type: 'smoothstep' }}
           proOptions={{ hideAttribution: true }}
+          panOnScroll
+          panOnDrag
+          zoomOnPinch
+          zoomOnScroll
+          selectionOnDrag={false}
         >
-          <Background color="#374151" gap={20} size={1} />
-          <Controls className="!bg-bb-card !border-bb-border !rounded-xl !shadow-xl !fill-white text-white" />
+          <Background
+            variant={BackgroundVariant.Dots}
+            color="#ffffff14"
+            gap={20}
+            size={1}
+          />
+          <Controls
+            className="!bg-bb-card/90 !border-bb-border !rounded-xl !shadow-2xl"
+            style={{ bottom: 16, left: 16 }}
+          />
           <MiniMap
-            nodeColor={(node: any) => node.data?.categoryStyle?.border || '#3B82F6'}
-            maskColor="rgba(17, 24, 39, 0.7)"
-            className="!bg-bb-card !border-bb-border !rounded-xl overflow-hidden shadow-xl"
+            nodeColor={(node: any) =>
+              node.type === 'default' ? 'transparent' : (node.data?.categoryStyle?.border || '#3B82F6')
+            }
+            maskColor="rgba(0,0,0,0.7)"
+            style={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }}
+            className="!shadow-2xl"
+            position="bottom-right"
           />
         </ReactFlow>
       </div>
