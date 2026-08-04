@@ -148,6 +148,30 @@ export const PREREQUISITES: Record<string, string[]> = {
   "proyecto-empresarial": ["direccion-estrategica", "gestion-sostenibilidad", "investigacion-mercados", "gestion-internacional-empresas", "contabilidad-toma-decisiones", "gestion-personas", "gestion-cadena-suministros", "evaluacion-financiera"],
 };
 
+// Requisitos especiales (créditos o mixtos) adicionales a los de curso
+export const PREREQ_SPECIAL: Record<string, { tipo: 'creditos' | 'mixto'; descripcion: string }> = {
+  "marketing-estrategico": {
+    tipo: "creditos",
+    descripcion: "Requiere 60 créditos cursados"
+  },
+  "proyeccion-social": {
+    tipo: "creditos",
+    descripcion: "Requiere 160 créditos cursados"
+  },
+  "business-agility": {
+    tipo: "mixto",
+    descripcion: "Requiere 100 créditos cursados + Gestión de Operaciones"
+  },
+  "gestion-sostenibilidad": {
+    tipo: "mixto",
+    descripcion: "Requiere 140 créditos cursados + Diseño Organizacional + Gestión de Operaciones"
+  },
+  "investigacion-aplicada-negocios": {
+    tipo: "mixto",
+    descripcion: "Requiere Investigación Académica + Inv. de Mercados + Análisis Multivariado + Gestión de Personas + Gestión de Operaciones + Creación de Valor"
+  },
+};
+
 export const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
   nivelacion:     { bg: "#1F2937", border: "#6B7280", text: "#E5E7EB" },
   economia:       { bg: "#451A03", border: "#F97316", text: "#FFEDD5" },
@@ -441,75 +465,137 @@ export default function FlujogramaAdminInteractivo() {
     });
   }, [progressMap]);
 
-  // ── Build Nodes ──
+  // ── Build Nodes con posiciones hardcodeadas (layout oficial) ──
   const initialNodes = useMemo(() => {
     const NODE_W = 160;
-    const NODE_H = 82;
-    const COL_SPACING = 280;  // 160px node + 120px arrow channel
-    const ROW_SPACING = 120;
-    const LABEL_Y = -52;
+    const LABEL_Y = 80;
+    const ROMAN = ['0','I','II','III','IV','V','VI','VII','VIII','IX','X'];
 
-    // Group courses by ciclo
-    const byCiclo: Record<number, CourseData[]> = {};
-    COURSES.forEach((c) => {
-      if (!byCiclo[c.ciclo]) byCiclo[c.ciclo] = [];
-      byCiclo[c.ciclo].push(c);
-    });
+    // Posiciones X por ciclo
+    const CICLO_X: Record<number, number> = {
+      0: 40,
+      1: 320,
+      2: 600,
+      3: 880,
+      4: 1160,
+      5: 1440,
+      6: 1720,
+      7: 2000,
+      8: 2280,
+      9: 2560,
+      10: 2840,
+    };
 
-    // Max rows to compute total canvas height for centering
-    const maxRows = Math.max(...Object.values(byCiclo).map((g) => g.length));
-    const totalHeight = maxRows * ROW_SPACING;
+    // Posiciones Y exactas por course.id (layout oficial)
+    const NODE_Y: Record<string, number> = {
+      // CICLO 0
+      "nivelacion-matematica":    150,
+      "nivelacion-informatica":   350,
+      "nivelacion-lenguaje":      550,
+      // CICLO 1
+      "fund-ciencias-empresariales": 200,
+      "lenguaje-i":                  400,
+      "matematicas-i":               500,
+      "economia-general-i":          600,
+      // CICLO 2
+      "lenguaje-ii":                 150,
+      "fund-contabilidad":           280,
+      "bloque-ciencias-sociales":    410,
+      "economia-general-ii":         540,
+      "matematicas-negocios":        670,
+      // CICLO 3
+      "contabilidad-financiera-intermedia": 150,
+      "derecho-civil-comercial":            320,
+      "estadistica-i":                      450,
+      "bloque-pensamiento-critico":         580,
+      "bloque-desarrollo-personal":         710,
+      // CICLO 4
+      "diseno-organizacional":       150,
+      "analitica-datos-negocios":    280,
+      "marketing-estrategico":       410,
+      "fund-finanzas":               540,
+      "derecho-laboral-tributario":  670,
+      // CICLO 5
+      "gestion-cambio-cultural":         150,
+      "investigacion-mercados":          280,
+      "contabilidad-toma-decisiones":    410,
+      "metodos-cuantitativos":           540,
+      "analisis-multivariado":           670,
+      // CICLO 6
+      "gestion-personas":               150,
+      "innovacion-negocios-digitales":   280,
+      "finanzas-corporativas-i":         410,
+      "investigacion-academica":         540,
+      "gestion-operaciones":             670,
+      // CICLO 7
+      "creacion-valor":                  150,
+      "sistemas-informacion-datos":      280,
+      "evaluacion-financiera":           410,
+      "gestion-comercio-internacional":  540,
+      "gestion-cadena-suministros":      670,
+      // CICLO 8
+      "business-agility":               150,
+      "gestion-sostenibilidad":          280,
+      "bloque-procesos-sociales":        410,
+      "bloque-quehacer-cientifico":      540,
+      "gestion-internacional-empresas":  670,
+      // CICLO 9
+      "etica":                           150,
+      "direccion-estrategica":           280,
+      "bloque-pensamiento-critico-ix":   410,
+      "investigacion-aplicada-negocios": 540,
+      // CICLO 10
+      "proyeccion-social":              150,
+      "bloque-procesos-sociales-x":     280,
+      "proyecto-empresarial":           410,
+    };
 
     const courseNodes: Node[] = [];
     const labelNodes: Node[] = [];
+    const seenCiclos = new Set<number>();
 
-    const ROMAN = ['0','I','II','III','IV','V','VI','VII','VIII','IX','X'];
+    COURSES.forEach((course) => {
+      const x = CICLO_X[course.ciclo] ?? course.ciclo * 280 + 40;
+      const y = NODE_Y[course.id] ?? 150;
+      const status = progressMap[course.code] || 'pendiente';
+      const available = isCourseAvailable(course.id);
+      const style = CATEGORY_COLORS[course.categoria] || CATEGORY_COLORS.administracion;
 
-    Object.entries(byCiclo).forEach(([cicloStr, courses]) => {
-      const ciclo = Number(cicloStr);
-      const x = ciclo * COL_SPACING + 40;
-      const groupH = courses.length * ROW_SPACING - (ROW_SPACING - NODE_H);
-      const startY = (totalHeight - groupH) / 2 + 20;
-
-      // Cycle label node
-      labelNodes.push({
-        id: `label-ciclo-${ciclo}`,
-        type: 'default',
-        position: { x: x + (NODE_W / 2) - 35, y: LABEL_Y },
-        data: { label: ciclo === 0 ? 'CICLO 0' : `CICLO ${ROMAN[ciclo]}` },
-        draggable: false,
-        selectable: false,
-        style: {
-          background: 'transparent',
-          border: 'none',
-          boxShadow: 'none',
-          color: '#9CA3AF',
-          fontSize: '10px',
-          fontWeight: 800,
-          letterSpacing: '0.12em',
-          padding: 0,
-          width: 70,
-          textAlign: 'center',
-        },
-      });
-
-      courses.forEach((course, idx) => {
-        const y = startY + idx * ROW_SPACING;
-        const status = progressMap[course.code] || 'pendiente';
-        const available = isCourseAvailable(course.id);
-        const style = CATEGORY_COLORS[course.categoria] || CATEGORY_COLORS.administracion;
-
-        courseNodes.push({
-          id: course.id,
-          type: 'courseNode',
-          position: { x, y },
-          data: {
-            ...course,
-            status,
-            isAvailable: available,
-            categoryStyle: style,
+      // Add cycle label once per ciclo
+      if (!seenCiclos.has(course.ciclo)) {
+        seenCiclos.add(course.ciclo);
+        labelNodes.push({
+          id: `label-ciclo-${course.ciclo}`,
+          type: 'default',
+          position: { x: x + (NODE_W / 2) - 35, y: LABEL_Y },
+          data: { label: course.ciclo === 0 ? 'CICLO 0' : `CICLO ${ROMAN[course.ciclo]}` },
+          draggable: false,
+          selectable: false,
+          style: {
+            background: 'transparent',
+            border: 'none',
+            boxShadow: 'none',
+            color: '#9CA3AF',
+            fontSize: '10px',
+            fontWeight: 800,
+            letterSpacing: '0.12em',
+            padding: 0,
+            width: 70,
+            textAlign: 'center',
           },
         });
+      }
+
+      courseNodes.push({
+        id: course.id,
+        type: 'courseNode',
+        position: { x, y },
+        data: {
+          ...course,
+          status,
+          isAvailable: available,
+          categoryStyle: style,
+        },
       });
     });
 
@@ -858,6 +944,34 @@ export default function FlujogramaAdminInteractivo() {
                 </p>
               )}
             </div>
+
+            {/* 2b. Requisito especial (créditos / mixto) */}
+            {PREREQ_SPECIAL[selectedCourse.id] && (() => {
+              const special = PREREQ_SPECIAL[selectedCourse.id];
+              const isCreditos = special.tipo === 'creditos';
+              return (
+                <div
+                  className="p-3.5 rounded-xl border flex items-start gap-3"
+                  style={{
+                    backgroundColor: isCreditos ? '#713F12' : '#7C2D12',
+                    borderColor: isCreditos ? '#EAB308' : '#F97316',
+                  }}
+                >
+                  <span className="text-lg shrink-0 mt-0.5">{isCreditos ? '🎓' : '⚡'}</span>
+                  <div className="min-w-0">
+                    <p
+                      className="text-xs font-extrabold uppercase tracking-wider mb-1"
+                      style={{ color: isCreditos ? '#EAB308' : '#F97316' }}
+                    >
+                      {isCreditos ? 'Requisito de Créditos' : 'Requisito Especial'}
+                    </p>
+                    <p className="text-xs leading-relaxed" style={{ color: isCreditos ? '#FEF9C3' : '#FFEDD5' }}>
+                      {special.descripcion}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* 3. Top 3 Profesores del Curso */}
             <div className="space-y-2.5">
