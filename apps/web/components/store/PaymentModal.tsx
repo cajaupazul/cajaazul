@@ -37,6 +37,7 @@ export default function PaymentModal({
     // Initialize MP SDK once
     useEffect(() => {
         const mpPublicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-f349d479-7a6b-4e0d-b2b7-0b1e428e2098';
+        console.log('MP Public Key:', process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || mpPublicKey);
         try {
             initMercadoPago(mpPublicKey, { locale: 'es-PE' });
         } catch (err) {
@@ -75,6 +76,8 @@ export default function PaymentModal({
                         { body: { product_id: product.id, user_id: profile?.id } }
                     );
 
+                    console.log('data completo:', JSON.stringify(edgeData));
+                    console.log('preference_id (Edge Function):', edgeData?.preference_id || edgeData?.id);
                     console.log('Respuesta Edge Function create-payment:', { data: edgeData, error: edgeError });
 
                     if (!edgeError && (edgeData?.preference_id || edgeData?.id)) {
@@ -94,9 +97,21 @@ export default function PaymentModal({
                             origin: window.location.origin,
                         })
                     });
-                    console.log('Respuesta Worker API:', workerData);
+                    console.log('data completo (Worker API):', JSON.stringify(workerData));
+                    console.log('preference_id (Worker API):', workerData?.preference_id || workerData?.id);
                     prefId = workerData?.preference_id || workerData?.id;
                 }
+
+                // Sanitizar para asegurar que sea el ID de preferencia y NO la URL init_point
+                if (prefId && prefId.startsWith('http')) {
+                    console.warn('Se detectó URL init_point en lugar de ID de preferencia. Extrayendo ID...');
+                    const urlParts = prefId.split('pref_id=');
+                    if (urlParts.length > 1) {
+                        prefId = urlParts[1].split('&')[0];
+                    }
+                }
+
+                console.log('preference_id final asignado al Payment Brick:', prefId);
 
                 if (isMounted) {
                     if (prefId) {
