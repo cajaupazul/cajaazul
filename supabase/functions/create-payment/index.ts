@@ -13,7 +13,7 @@ serve(async (req) => {
 
   try {
     console.log('create-payment invocado');
-    const MP_ACCESS_TOKEN = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
+    const MP_ACCESS_TOKEN = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN') || 'APP_USR-4922371222532387-011017-25a8fdc92b392d510fa3ddcc55aec975-2624882322';
     console.log('MERCADOPAGO_ACCESS_TOKEN existe:', !!MP_ACCESS_TOKEN);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
