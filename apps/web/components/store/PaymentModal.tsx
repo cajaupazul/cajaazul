@@ -61,20 +61,48 @@ export default function PaymentModal({
                 setErrorMsg(null);
                 setPreferenceId(null);
 
-                const data = await apiFetch('/checkout', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        product_id: product.id,
-                        origin: window.location.origin,
-                    })
+                console.log('Invocando create-payment con:', {
+                    product_id: product.id,
+                    user_id: profile?.id
                 });
 
-                const prefId = data?.preference_id || data?.id;
+                let prefId: string | null = null;
+
+                // 1. Intentar llamar a Supabase Edge Function 'create-payment'
+                try {
+                    const { data: edgeData, error: edgeError } = await supabase.functions.invoke(
+                        'create-payment',
+                        { body: { product_id: product.id, user_id: profile?.id } }
+                    );
+
+                    console.log('Respuesta Edge Function create-payment:', { data: edgeData, error: edgeError });
+
+                    if (!edgeError && (edgeData?.preference_id || edgeData?.id)) {
+                        prefId = edgeData.preference_id || edgeData.id;
+                    }
+                } catch (e) {
+                    console.warn('[PaymentModal] Edge Function invocation failed, tratando vía Worker API...', e);
+                }
+
+                // 2. Fallback vía Worker API si la Edge Function no retornó preference_id
+                if (!prefId) {
+                    console.log('Invocando Worker API (/checkout)...');
+                    const workerData = await apiFetch('/checkout', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            product_id: product.id,
+                            origin: window.location.origin,
+                        })
+                    });
+                    console.log('Respuesta Worker API:', workerData);
+                    prefId = workerData?.preference_id || workerData?.id;
+                }
+
                 if (isMounted) {
                     if (prefId) {
                         setPreferenceId(prefId);
                     } else {
-                        throw new Error('No se pudo generar la preferencia de pago');
+                        throw new Error('No se recibió preference_id');
                     }
                 }
             } catch (err: any) {
