@@ -36,7 +36,7 @@ export default function PaymentModal({
 
     // Initialize MP SDK once
     useEffect(() => {
-        const mpPublicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-f349d479-7a6b-4e0d-b2b7-0b1e428e2098';
+        const mpPublicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-c89b2d7b-b44e-4926-ba40-3d456209235d';
         console.log('MP Public Key:', process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || mpPublicKey);
         try {
             initMercadoPago(mpPublicKey, { locale: 'es-PE' });
