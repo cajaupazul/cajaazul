@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ShoppingBag, ShieldCheck, X, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { ShoppingBag, ShieldCheck, X, CheckCircle2, Loader2, AlertCircle, CreditCard, Smartphone, QrCode } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useProfile } from '@/lib/profile-context';
 import { supabase } from '@/lib/supabase';
@@ -29,10 +29,17 @@ export default function PaymentModal({
     onPaymentError
 }: PaymentModalProps) {
     const { profile, refreshProfile } = useProfile();
+    const [activeTab, setActiveTab] = useState<'brick' | 'yape'>('brick');
     const [preferenceId, setPreferenceId] = useState<string | null>(null);
     const [loadingPreference, setLoadingPreference] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [isSuccess, setIsSuccess] = useState(false);
+
+    // Yape Form State
+    const [yapePhone, setYapePhone] = useState('');
+    const [yapeOtp, setYapeOtp] = useState('');
+    const [yapeLoading, setYapeLoading] = useState(false);
+    const [yapeError, setYapeError] = useState<string | null>(null);
 
     // Initialize MP SDK once
     useEffect(() => {
@@ -51,6 +58,10 @@ export default function PaymentModal({
             setPreferenceId(null);
             setErrorMsg(null);
             setIsSuccess(false);
+            setYapePhone('');
+            setYapeOtp('');
+            setYapeError(null);
+            setActiveTab('brick');
             return;
         }
 
@@ -78,7 +89,6 @@ export default function PaymentModal({
 
                     console.log('data completo:', JSON.stringify(edgeData));
                     console.log('preference_id (Edge Function):', edgeData?.preference_id || edgeData?.id);
-                    console.log('Respuesta Edge Function create-payment:', { data: edgeData, error: edgeError });
 
                     if (!edgeError && (edgeData?.preference_id || edgeData?.id)) {
                         prefId = edgeData.preference_id || edgeData.id;
@@ -98,7 +108,6 @@ export default function PaymentModal({
                         })
                     });
                     console.log('data completo (Worker API):', JSON.stringify(workerData));
-                    console.log('preference_id (Worker API):', workerData?.preference_id || workerData?.id);
                     prefId = workerData?.preference_id || workerData?.id;
                 }
 
@@ -166,6 +175,96 @@ export default function PaymentModal({
         };
     }, [isOpen, profile?.id, refreshProfile, onPaymentSuccess]);
 
+    // Handle Yape Payment submission
+    const handleYapePay = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!product) return;
+
+        if (!yapePhone || yapePhone.trim().length !== 9) {
+            setYapeError('Ingresa un número de celular válido de 9 dígitos (Perú).');
+            return;
+        }
+
+        if (!yapeOtp || yapeOtp.trim().length !== 6) {
+            setYapeError('Ingresa el código de aprobación OTP de 6 dígitos de tu app de Yape.');
+            return;
+        }
+
+        setYapeLoading(true);
+        setYapeError(null);
+
+        try {
+            const mpPublicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-c89b2d7b-b44e-4926-ba40-3d456209235d';
+            let token: string | null = null;
+
+            // 1. Intentar tokenizar Yape mediante SDK de Mercado Pago
+            if (typeof window !== 'undefined' && (window as any).MercadoPago) {
+                try {
+                    const mp = new (window as any).MercadoPago(mpPublicKey, { locale: 'es-PE' });
+                    if (typeof mp.yape === 'function') {
+                        const yapeRes = await mp.yape({
+                            otp: yapeOtp.trim(),
+                            phoneNumber: yapePhone.trim(),
+                        });
+                        token = yapeRes?.id;
+                    }
+                } catch (sdkErr: any) {
+                    console.warn('[Yape] SDK method warn:', sdkErr);
+                }
+            }
+
+            // 2. Fallback tokenización directa vía MP API si el wrapper del SDK no está disponible
+            if (!token) {
+                const res = await fetch(`https://api.mercadopago.com/v1/card_tokens?public_key=${mpPublicKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        otp: yapeOtp.trim(),
+                        phone_number: yapePhone.trim(),
+                    }),
+                });
+                const tokenData = await res.json();
+                if (!res.ok || !tokenData.id) {
+                    throw new Error(tokenData.message || tokenData.cause?.[0]?.description || 'Código OTP o teléfono inválido en Yape.');
+                }
+                token = tokenData.id;
+            }
+
+            console.log('[Yape] Token generado correctamente:', token);
+
+            // 3. Enviar token a la Edge Function 'create-yape-payment'
+            const { data: yapeData, error: yapeErr } = await supabase.functions.invoke(
+                'create-yape-payment',
+                {
+                    body: {
+                        token: token,
+                        amount: product.price,
+                        product_id: product.id,
+                        user_id: profile?.id,
+                        description: product.name,
+                        email: profile?.email || 'cliente@campuslink.pe',
+                    },
+                }
+            );
+
+            console.log('[Yape] Respuesta create-yape-payment:', { data: yapeData, error: yapeErr });
+
+            if (yapeErr || !yapeData?.success) {
+                throw new Error(yapeData?.message || yapeErr?.message || 'Error al procesar el pago con Yape.');
+            }
+
+            setIsSuccess(true);
+            refreshProfile();
+            onPaymentSuccess(yapeData);
+
+        } catch (err: any) {
+            console.error('[Yape] Error:', err);
+            setYapeError(err.message || 'Ocurrió un error al procesar tu pago con Yape.');
+        } finally {
+            setYapeLoading(false);
+        }
+    };
+
     if (!isOpen || !product) return null;
 
     return (
@@ -191,6 +290,35 @@ export default function PaymentModal({
                     </button>
                 </div>
 
+                {/* Tabs Selector */}
+                {!isSuccess && (
+                    <div className="flex border-b border-white/10 bg-[#141416] p-1.5 gap-2 shrink-0">
+                        <button
+                            onClick={() => setActiveTab('brick')}
+                            className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                                activeTab === 'brick'
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                            <CreditCard size={16} />
+                            <span>Tarjeta / Mercado Pago</span>
+                        </button>
+
+                        <button
+                            onClick={() => setActiveTab('yape')}
+                            className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                                activeTab === 'yape'
+                                    ? 'bg-[#6C3DD3] text-white shadow-lg shadow-purple-950/60'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                            <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
+                            <span>🟣 Yape</span>
+                        </button>
+                    </div>
+                )}
+
                 {/* Body */}
                 <div className="p-6 overflow-y-auto flex-1 text-gray-200">
                     {isSuccess ? (
@@ -210,12 +338,95 @@ export default function PaymentModal({
                                 Volver a la tienda
                             </button>
                         </div>
+                    ) : activeTab === 'yape' ? (
+                        /* Tab 2: Yape Form */
+                        <form onSubmit={handleYapePay} className="space-y-5 py-2">
+                            {/* Instruction Card */}
+                            <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 space-y-2">
+                                <div className="flex items-center gap-2 text-purple-300 text-xs font-bold uppercase tracking-wider">
+                                    <QrCode size={16} /> Instrucciones de Pago Yape
+                                </div>
+                                <ol className="text-xs text-purple-200/90 space-y-1.5 list-decimal list-inside leading-relaxed">
+                                    <li>Abre tu app de <strong>Yape</strong> en tu teléfono.</li>
+                                    <li>Ve a <strong>Servicios / Código de Aprobación</strong>.</li>
+                                    <li>Obtén tu código <strong>OTP de 6 dígitos</strong>.</li>
+                                </ol>
+                            </div>
+
+                            {/* Phone Input */}
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                                    <Smartphone size={14} className="text-purple-400" />
+                                    Número de Celular (Yape)
+                                </label>
+                                <div className="flex items-center rounded-xl bg-black/40 border border-white/10 overflow-hidden focus-within:border-purple-500 transition-colors">
+                                    <span className="px-3.5 text-xs font-bold text-gray-400 bg-white/5 py-3 border-r border-white/10">
+                                        +51
+                                    </span>
+                                    <input
+                                        type="tel"
+                                        maxLength={9}
+                                        placeholder="987654321"
+                                        value={yapePhone}
+                                        onChange={(e) => setYapePhone(e.target.value.replace(/\D/g, ''))}
+                                        className="w-full bg-transparent px-3 py-2.5 text-sm font-mono text-white placeholder-gray-500 focus:outline-none"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {/* OTP Input */}
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-300 flex items-center justify-between">
+                                    <span>Código de Aprobación (OTP de 6 dígitos)</span>
+                                    <span className="text-[10px] text-purple-400 font-semibold">Generado en app Yape</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    maxLength={6}
+                                    placeholder="123456"
+                                    value={yapeOtp}
+                                    onChange={(e) => setYapeOtp(e.target.value.replace(/\D/g, ''))}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-center text-lg font-mono tracking-[0.4em] text-purple-300 placeholder-gray-600 focus:border-purple-500 focus:outline-none transition-colors"
+                                    required
+                                />
+                            </div>
+
+                            {/* Error Alert */}
+                            {yapeError && (
+                                <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/30 text-xs text-red-300 flex items-center gap-2">
+                                    <AlertCircle size={16} className="shrink-0 text-red-400" />
+                                    <span>{yapeError}</span>
+                                </div>
+                            )}
+
+                            {/* Submit Button */}
+                            <button
+                                type="submit"
+                                disabled={yapeLoading || yapePhone.length !== 9 || yapeOtp.length !== 6}
+                                className="w-full py-3.5 px-4 bg-[#6C3DD3] hover:bg-[#5c33b8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-purple-950/60 flex items-center justify-center gap-2 active:scale-95"
+                            >
+                                {yapeLoading ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>Procesando Yape...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <ShieldCheck size={18} />
+                                        <span>Pagar con Yape | S/ {product.price.toFixed(2)}</span>
+                                    </>
+                                )}
+                            </button>
+                        </form>
                     ) : loadingPreference ? (
+                        /* Tab 1: Brick Loading */
                         <div className="flex flex-col items-center justify-center py-12 space-y-4">
                             <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
                             <p className="text-sm font-semibold text-gray-300">Cargando pasarela de pago segura...</p>
                         </div>
                     ) : errorMsg ? (
+                        /* Tab 1: Error */
                         <div className="p-6 text-center space-y-4">
                             <div className="w-12 h-12 mx-auto bg-red-500/20 text-red-400 rounded-full flex items-center justify-center">
                                 <AlertCircle size={28} />
@@ -229,6 +440,7 @@ export default function PaymentModal({
                             </button>
                         </div>
                     ) : preferenceId ? (
+                        /* Tab 1: Mercado Pago Brick */
                         <div className="w-full">
                             <Payment
                                 initialization={{
@@ -237,11 +449,9 @@ export default function PaymentModal({
                                 }}
                                 customization={{
                                     paymentMethods: {
-                                        ticket: 'all',
-                                        bankTransfer: 'all',
+                                        mercadoPago: 'all',
                                         creditCard: 'all',
                                         debitCard: 'all',
-                                        mercadoPago: 'all',
                                     },
                                     visual: {
                                         style: {
