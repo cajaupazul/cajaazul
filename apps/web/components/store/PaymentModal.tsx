@@ -313,8 +313,8 @@ export default function PaymentModal({
                                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
                         >
-                            <span className="w-2 h-2 rounded-full bg-purple-300 animate-ping" />
-                            <span>🟣 Yape</span>
+                            <img src="/yape-logo.png.png" alt="Yape" className="w-5 h-5 object-contain" />
+                            <span>Yape</span>
                         </button>
                     </div>
                 )}
@@ -341,27 +341,57 @@ export default function PaymentModal({
                     ) : activeTab === 'yape' ? (
                         /* Tab 2: Yape Form */
                         <form onSubmit={handleYapePay} className="space-y-5 py-2">
-                            {/* Instruction Card */}
-                            <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 space-y-2">
-                                <div className="flex items-center gap-2 text-purple-300 text-xs font-bold uppercase tracking-wider">
-                                    <QrCode size={16} /> Instrucciones de Pago Yape
+
+                            {/* Yape Brand Header */}
+                            <div className="rounded-2xl overflow-hidden border border-purple-500/20 bg-gradient-to-br from-[#6C3DD3]/20 via-[#4a1fa8]/10 to-black/30">
+                                {/* Top brand row */}
+                                <div className="flex items-center justify-between px-5 pt-4 pb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center p-1.5 shadow-lg">
+                                            <img src="/yape-logo.png.png" alt="Yape" className="w-full h-full object-contain" />
+                                        </div>
+                                        <div>
+                                            <p className="text-base font-extrabold text-white tracking-tight">Pago con Yape</p>
+                                            <p className="text-[11px] text-purple-300/80">Transferencia instantánea · Perú</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-2.5 py-1">
+                                        <ShieldCheck size={11} className="text-emerald-400" />
+                                        <span className="text-[10px] font-bold text-emerald-400">Seguro</span>
+                                    </div>
                                 </div>
-                                <ol className="text-xs text-purple-200/90 space-y-1.5 list-decimal list-inside leading-relaxed">
-                                    <li>Abre tu app de <strong>Yape</strong> en tu teléfono.</li>
-                                    <li>Ve a <strong>Servicios / Código de Aprobación</strong>.</li>
-                                    <li>Obtén tu código <strong>OTP de 6 dígitos</strong>.</li>
-                                </ol>
+
+                                {/* Steps */}
+                                <div className="px-5 pb-4 space-y-2">
+                                    <p className="text-[10px] font-bold text-purple-300/70 uppercase tracking-widest mb-2">Cómo obtener tu código</p>
+                                    {[
+                                        { step: '1', text: 'Abre tu app de Yape en tu teléfono' },
+                                        { step: '2', text: 'Ve a Servicios → Código de Aprobación' },
+                                        { step: '3', text: 'Copia el código OTP de 6 dígitos' },
+                                    ].map(({ step, text }) => (
+                                        <div key={step} className="flex items-center gap-3">
+                                            <span className="w-5 h-5 rounded-full bg-[#6C3DD3]/60 border border-purple-500/40 flex items-center justify-center text-[10px] font-black text-purple-200 shrink-0">{step}</span>
+                                            <span className="text-xs text-purple-100/80">{text}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Monto a pagar */}
+                            <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/5 border border-white/8">
+                                <span className="text-xs text-gray-400 font-medium">Monto a pagar</span>
+                                <span className="text-lg font-extrabold text-white font-mono">S/ {product.price.toFixed(2)}</span>
                             </div>
 
                             {/* Phone Input */}
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
                                     <Smartphone size={14} className="text-purple-400" />
-                                    Número de Celular (Yape)
+                                    Número de Celular vinculado a Yape
                                 </label>
                                 <div className="flex items-center rounded-xl bg-black/40 border border-white/10 overflow-hidden focus-within:border-purple-500 transition-colors">
                                     <span className="px-3.5 text-xs font-bold text-gray-400 bg-white/5 py-3 border-r border-white/10">
-                                        +51
+                                        🇵🇪 +51
                                     </span>
                                     <input
                                         type="tel"
