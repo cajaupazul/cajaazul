@@ -17,17 +17,12 @@ serve(async (req) => {
     const body = await req.json();
     console.log('[create-yape-payment] Payload recibido:', JSON.stringify(body));
 
-    const { token, amount, product_id, user_id, description, userEmail, email, isTest } = body;
+    const { token, amount, product_id, user_id, description, userEmail, email } = body;
     
-    // Seleccionar token según entorno test/prod o flag enviado
-    let MP_ACCESS_TOKEN = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN') || 'APP_USR-8919084992296803-080917-7445864cf7f14745456c6bc4f76ec2fb-2915256654';
-
-    if (isTest || Deno.env.get('MP_ENV') === 'test') {
-      const testToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN_TEST');
-      if (testToken) MP_ACCESS_TOKEN = testToken;
-    }
+    const MP_ACCESS_TOKEN = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN') || 'APP_USR-8919084992296803-080917-7445864cf7f14745456c6bc4f76ec2fb-2915256654';
 
     console.log('[create-yape-payment] Token prefix:', MP_ACCESS_TOKEN?.substring(0, 8));
+
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

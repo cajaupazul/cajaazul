@@ -10,10 +10,8 @@ import { supabase } from '@/lib/supabase';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 
 // ─── Credenciales según entorno ───────────────────────────────────────────────
-const IS_TEST = process.env.NEXT_PUBLIC_MP_ENV === 'test';
-const MP_PUBLIC_KEY = IS_TEST
-    ? (process.env.NEXT_PUBLIC_MP_PUBLIC_KEY_TEST || '')
-    : (process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-d1beec08-a1c0-46cb-88b7-651a857c9dbb');
+const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-d1beec08-a1c0-46cb-88b7-651a857c9dbb';
+
 
 
 // Inicializar Payment Brick SDK una sola vez
@@ -130,7 +128,6 @@ export default function PaymentModal({
                         product_id: product?.id,
                         user_id: profile?.id,
                         userEmail: profile?.email || 'cliente@campuslink.pe',
-                        isTest: IS_TEST,
                     },
                 });
                 console.log('[Brick] process-payment response:', data, error);
@@ -203,7 +200,6 @@ export default function PaymentModal({
                     user_id: profile?.id,
                     userEmail: profile?.email || 'cliente@campuslink.pe',
                     description: product.name,
-                    isTest: IS_TEST,
                 },
             });
 
@@ -401,11 +397,6 @@ export default function PaymentModal({
                                         required
                                     />
                                 </div>
-                                {IS_TEST && (
-                                    <p className="text-[10px] text-yellow-400/80">
-                                        🧪 Modo test — usa celular: <strong>111111111</strong>
-                                    </p>
-                                )}
                             </div>
 
                             {/* OTP */}
@@ -424,11 +415,6 @@ export default function PaymentModal({
                                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-center text-xl font-mono tracking-[0.5em] text-purple-300 placeholder-gray-600 focus:border-purple-500 focus:outline-none transition-colors"
                                     required
                                 />
-                                {IS_TEST && (
-                                    <p className="text-[10px] text-yellow-400/80">
-                                        🧪 Modo test — usa OTP: <strong>123456</strong>
-                                    </p>
-                                )}
                             </div>
 
                             {/* Error */}
