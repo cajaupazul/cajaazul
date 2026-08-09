@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { X, CheckCircle2, Loader2, AlertCircle, ExternalLink, ShieldCheck, CreditCard, Smartphone, Wallet, Landmark } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useProfile } from '@/lib/profile-context';
 import { supabase } from '@/lib/supabase';
-import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 
 interface PaymentModalProps {
     isOpen: boolean;
@@ -29,26 +28,15 @@ export default function PaymentModal({
     onPaymentError
 }: PaymentModalProps) {
     const { profile, refreshProfile } = useProfile();
-    const [preferenceId, setPreferenceId] = useState<string | null>(null);
+    const [initPoint, setInitPoint] = useState<string | null>(null);
     const [loadingPreference, setLoadingPreference] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [isSuccess, setIsSuccess] = useState(false);
 
-    // Initialize MP SDK once
-    useEffect(() => {
-        const mpPublicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-c89b2d7b-b44e-4926-ba40-3d456209235d';
-        console.log('MP Public Key:', process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || mpPublicKey);
-        try {
-            initMercadoPago(mpPublicKey, { locale: 'es-PE' });
-        } catch (err) {
-            console.error('[PaymentModal] Error initializing Mercado Pago:', err);
-        }
-    }, []);
-
-    // Fetch preferenceId when modal opens with a valid product
+    // Fetch preference init_point when modal opens with a valid product
     useEffect(() => {
         if (!isOpen || !product) {
-            setPreferenceId(null);
+            setInitPoint(null);
             setErrorMsg(null);
             setIsSuccess(false);
             return;
@@ -60,14 +48,14 @@ export default function PaymentModal({
             try {
                 setLoadingPreference(true);
                 setErrorMsg(null);
-                setPreferenceId(null);
+                setInitPoint(null);
 
-                console.log('Invocando create-payment con:', {
+                console.log('[PaymentModal] Invocando create-payment con:', {
                     product_id: product.id,
                     user_id: profile?.id
                 });
 
-                let prefId: string | null = null;
+                let link: string | null = null;
 
                 // 1. Intentar llamar a Supabase Edge Function 'create-payment'
                 try {
@@ -76,19 +64,18 @@ export default function PaymentModal({
                         { body: { product_id: product.id, user_id: profile?.id } }
                     );
 
-                    console.log('data completo:', JSON.stringify(edgeData));
-                    console.log('preference_id (Edge Function):', edgeData?.preference_id || edgeData?.id);
+                    console.log('[PaymentModal] Edge Function response:', edgeData);
 
-                    if (!edgeError && (edgeData?.preference_id || edgeData?.id)) {
-                        prefId = edgeData.preference_id || edgeData.id;
+                    if (!edgeError && edgeData?.init_point) {
+                        link = edgeData.init_point;
                     }
                 } catch (e) {
-                    console.warn('[PaymentModal] Edge Function invocation failed, tratando vía Worker API...', e);
+                    console.warn('[PaymentModal] Edge Function failed, fallback a Worker API...', e);
                 }
 
-                // 2. Fallback vía Worker API si la Edge Function no retornó preference_id
-                if (!prefId) {
-                    console.log('Invocando Worker API (/checkout)...');
+                // 2. Fallback vía Worker API si la Edge Function no retornó init_point
+                if (!link) {
+                    console.log('[PaymentModal] Invocando Worker API (/checkout)...');
                     const workerData = await apiFetch('/checkout', {
                         method: 'POST',
                         body: JSON.stringify({
@@ -96,26 +83,15 @@ export default function PaymentModal({
                             origin: window.location.origin,
                         })
                     });
-                    console.log('data completo (Worker API):', JSON.stringify(workerData));
-                    prefId = workerData?.preference_id || workerData?.id;
+                    console.log('[PaymentModal] Worker API response:', workerData);
+                    link = workerData?.init_point || workerData?.initPoint || workerData?.url;
                 }
-
-                // Sanitizar para asegurar que sea el ID de preferencia y NO la URL init_point
-                if (prefId && prefId.startsWith('http')) {
-                    console.warn('Se detectó URL init_point en lugar de ID de preferencia. Extrayendo ID...');
-                    const urlParts = prefId.split('pref_id=');
-                    if (urlParts.length > 1) {
-                        prefId = urlParts[1].split('&')[0];
-                    }
-                }
-
-                console.log('preference_id final asignado al Payment Brick:', prefId);
 
                 if (isMounted) {
-                    if (prefId) {
-                        setPreferenceId(prefId);
+                    if (link) {
+                        setInitPoint(link);
                     } else {
-                        throw new Error('No se recibió preference_id');
+                        throw new Error('No se pudo generar el enlace de pago de Mercado Pago.');
                     }
                 }
             } catch (err: any) {
@@ -164,6 +140,11 @@ export default function PaymentModal({
         };
     }, [isOpen, profile?.id, refreshProfile, onPaymentSuccess]);
 
+    const handleOpenCheckout = () => {
+        if (!initPoint) return;
+        window.open(initPoint, '_blank', 'noopener,noreferrer');
+    };
+
     if (!isOpen || !product) return null;
 
     return (
@@ -211,7 +192,7 @@ export default function PaymentModal({
                     ) : loadingPreference ? (
                         <div className="flex flex-col items-center justify-center py-12 space-y-4">
                             <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
-                            <p className="text-sm font-semibold text-gray-300">Cargando pasarela de pago segura...</p>
+                            <p className="text-sm font-semibold text-gray-300">Generando preferencia de pago segura...</p>
                         </div>
                     ) : errorMsg ? (
                         <div className="p-6 text-center space-y-4">
@@ -226,34 +207,83 @@ export default function PaymentModal({
                                 Cerrar
                             </button>
                         </div>
-                    ) : preferenceId ? (
-                        <div className="w-full">
-                            <Payment
-                                initialization={{
-                                    amount: product.price,
-                                    preferenceId: preferenceId,
-                                }}
-                                customization={{
-                                    paymentMethods: {
-                                        mercadoPago: 'all',
-                                        creditCard: 'all',
-                                        debitCard: 'all',
-                                    },
-                                    visual: {
-                                        style: {
-                                            theme: 'dark',
-                                        },
-                                    },
-                                }}
-                                onSubmit={async ({ selectedPaymentMethod, formData }) => {
-                                    console.log('[Payment Brick] Submit event triggered:', selectedPaymentMethod);
-                                }}
-                                onReady={() => console.log('[Payment Brick] Brick listo')}
-                                onError={(error) => {
-                                    console.error('[Payment Brick] Error:', error);
-                                    onPaymentError(error);
-                                }}
-                            />
+                    ) : initPoint ? (
+                        <div className="space-y-6 py-2">
+                            {/* Card Resumen de compra */}
+                            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                                <div className="flex justify-between items-center pb-3 border-b border-white/10">
+                                    <span className="text-xs text-gray-400 font-medium">Producto</span>
+                                    <span className="text-sm font-bold text-white">{product.name}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-400 font-medium">Monto a Pagar</span>
+                                    <span className="text-xl font-extrabold text-emerald-400 font-mono">S/ {product.price.toFixed(2)}</span>
+                                </div>
+                            </div>
+
+                            {/* Métodos de Pago Aceptados en Mercado Pago Perú */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between text-xs font-bold text-gray-300 uppercase tracking-wider">
+                                    <span>Métodos de Pago Disponibles</span>
+                                    <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-normal">
+                                        <ShieldCheck size={13} /> Checkout Oficial MP
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2.5 text-xs text-gray-300">
+                                    <div className="flex items-center gap-2.5 p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200">
+                                        <div className="w-6 h-6 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
+                                            <img src="/yape-logo.png.png" alt="Yape" className="w-4 h-4 object-contain" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-white">Yape</p>
+                                            <p className="text-[10px] text-purple-300/80">Código QR / Directo</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-950/40 border border-blue-500/30 text-blue-200">
+                                        <div className="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0 text-blue-400">
+                                            <CreditCard size={14} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-white">Tarjetas</p>
+                                            <p className="text-[10px] text-blue-300/80">Crédito y Débito</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2.5 p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-200">
+                                        <div className="w-6 h-6 rounded-lg bg-cyan-500/20 flex items-center justify-center shrink-0 text-cyan-400">
+                                            <Wallet size={14} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-white">MP Wallet</p>
+                                            <p className="text-[10px] text-cyan-300/80">Saldo Mercado Pago</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-200">
+                                        <div className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-400">
+                                            <Landmark size={14} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-white">PagoEfectivo</p>
+                                            <p className="text-[10px] text-emerald-300/80">BCP, BBVA, Interbank</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Botón Principal para ir al Checkout de Mercado Pago */}
+                            <button
+                                onClick={handleOpenCheckout}
+                                className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-base rounded-2xl transition-all shadow-xl shadow-blue-900/40 flex items-center justify-center gap-3 transform active:scale-98"
+                            >
+                                <span>Pagar con Mercado Pago</span>
+                                <ExternalLink size={18} />
+                            </button>
+
+                            <p className="text-[11px] text-center text-gray-400 leading-normal">
+                                Al hacer clic, se abrirá la pasarela oficial de <strong>Mercado Pago Perú</strong> en una nueva pestaña donde podrás elegir <strong>Yape</strong>, Tarjeta o PagoEfectivo. Tu compra se activará automáticamente al pagar.
+                            </p>
                         </div>
                     ) : null}
                 </div>
