@@ -197,14 +197,37 @@ export default function PaymentModal({
         setYapeError(null);
 
         try {
-            console.log('[Yape] Invocando create-yape-payment con cel y OTP...');
+            const mpPublicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-c89b2d7b-b44e-4926-ba40-3d456209235d';
+            console.log('[Yape] Generando token en frontend con Public Key:', mpPublicKey);
+
+            if (typeof window === 'undefined' || !(window as any).MercadoPago) {
+                throw new Error('SDK de Mercado Pago no cargado en el navegador.');
+            }
+
+            const mp = new (window as any).MercadoPago(mpPublicKey, { locale: 'es-PE' });
+            
+            if (typeof mp.yape !== 'function') {
+                throw new Error('Método Yape no soportado por el SDK actual de Mercado Pago.');
+            }
+
+            const yapeTokenRes = await mp.yape({
+                otp: cleanOtp,
+                phoneNumber: cleanPhone,
+            });
+
+            console.log('[Yape] Token de Yape generado:', yapeTokenRes);
+
+            if (!yapeTokenRes?.id) {
+                throw new Error('No se pudo generar el token de Yape. Verifica el código OTP o tu teléfono.');
+            }
+
+            console.log('[Yape] Invocando create-yape-payment con token.id:', yapeTokenRes.id);
 
             const { data: yapeData, error: yapeErr } = await supabase.functions.invoke(
                 'create-yape-payment',
                 {
                     body: {
-                        phone_number: cleanPhone,
-                        otp: cleanOtp,
+                        token: yapeTokenRes.id,
                         amount: product.price,
                         product_id: product.id,
                         user_id: profile?.id,
