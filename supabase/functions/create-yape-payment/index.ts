@@ -13,17 +13,26 @@ serve(async (req) => {
 
   try {
     console.log('[create-yape-payment] Invocado');
-    const MP_ACCESS_TOKEN = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN') || 'APP_USR-4922371222532387-011017-25a8fdc92b392d510fa3ddcc55aec975-2624882322';
+    
+    const body = await req.json();
+    console.log('[create-yape-payment] Payload recibido:', JSON.stringify(body));
+
+    const { token, amount, product_id, user_id, description, userEmail, email, isTest } = body;
+    
+    // Seleccionar token según entorno test/prod o flag enviado
+    let MP_ACCESS_TOKEN = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN') || 'APP_USR-8919084992296803-080917-7445864cf7f14745456c6bc4f76ec2fb-2915256654';
+
+    if (isTest || Deno.env.get('MP_ENV') === 'test') {
+      const testToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN_TEST');
+      if (testToken) MP_ACCESS_TOKEN = testToken;
+    }
+
     console.log('[create-yape-payment] Token prefix:', MP_ACCESS_TOKEN?.substring(0, 8));
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const body = await req.json();
-    console.log('[create-yape-payment] Payload recibido:', JSON.stringify(body));
-
-    const { token, amount, product_id, user_id, description, userEmail, email } = body;
     const payerEmail = userEmail || email || 'cliente@campuslink.pe';
 
     if (!token || !product_id || !user_id) {
@@ -48,6 +57,27 @@ serve(async (req) => {
     console.log('[create-yape-payment] Creando pago Yape en MP API con token:', token);
 
     // Crear el pago con el token de Yape que se generó en el frontend
+    const paymentPayload = {
+      token: token,
+      transaction_amount: finalAmount,
+      installments: 1, // OBLIGATORIO para Yape
+      payment_method_id: 'yape', // OBLIGATORIO
+      description: description || `CampusLink: ${producto.name}`,
+      payer: {
+        email: payerEmail,
+      },
+      external_reference: `user_id:${user_id}|product_id:${producto.id}|timestamp:${Date.now()}`,
+      metadata: {
+        user_id: user_id,
+        product_id: producto.id,
+        type: producto.type,
+        amount: producto.amount,
+      },
+      notification_url: WEBHOOK_URL,
+    };
+
+    console.log('[create-yape-payment] Request payload to MP:', JSON.stringify(paymentPayload));
+
     const paymentResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
@@ -55,23 +85,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'X-Idempotency-Key': crypto.randomUUID(),
       },
-      body: JSON.stringify({
-        transaction_amount: finalAmount,
-        description: description || `CampusLink: ${producto.name}`,
-        payment_method_id: 'yape',
-        token: token,
-        payer: {
-          email: payerEmail,
-        },
-        external_reference: `user_id:${user_id}|product_id:${producto.id}|timestamp:${Date.now()}`,
-        metadata: {
-          user_id: user_id,
-          product_id: producto.id,
-          type: producto.type,
-          amount: producto.amount,
-        },
-        notification_url: WEBHOOK_URL,
-      })
+      body: JSON.stringify(paymentPayload)
     });
 
     const paymentData = await paymentResponse.json();
