@@ -175,6 +175,38 @@ export default function PaymentModal({
         };
     }, [isOpen, profile?.id, refreshProfile, onPaymentSuccess]);
 
+    // Helper para asegurar la carga del SDK oficial de Mercado Pago
+    const getMercadoPagoSDK = async (publicKey: string) => {
+        if (typeof window === 'undefined') return null;
+
+        if (!(window as any).MercadoPago) {
+            console.log('[Yape] Cargando SDK oficial de MP desde la CDN...');
+            await new Promise<void>((resolve, reject) => {
+                const existingScript = document.getElementById('mercadopago-js-sdk');
+                if (existingScript) {
+                    if ((window as any).MercadoPago) return resolve();
+                    existingScript.addEventListener('load', () => resolve());
+                    existingScript.addEventListener('error', (e) => reject(e));
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.id = 'mercadopago-js-sdk';
+                script.src = 'https://sdk.mercadopago.com/js/v2';
+                script.async = true;
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error('No se pudo cargar el SDK de Mercado Pago desde la CDN.'));
+                document.head.appendChild(script);
+            });
+        }
+
+        if (!(window as any).MercadoPago) {
+            throw new Error('No se pudo inicializar la clase MercadoPago en el navegador.');
+        }
+
+        return new (window as any).MercadoPago(publicKey, { locale: 'es-PE' });
+    };
+
     // Handle Yape Payment submission
     const handleYapePay = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -198,18 +230,15 @@ export default function PaymentModal({
 
         try {
             const mpPublicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-c89b2d7b-b44e-4926-ba40-3d456209235d';
-            console.log('[Yape] Generando token en frontend con Public Key:', mpPublicKey);
+            console.log('[Yape] Obteniendo SDK con Public Key:', mpPublicKey);
 
-            if (typeof window === 'undefined' || !(window as any).MercadoPago) {
-                throw new Error('SDK de Mercado Pago no cargado en el navegador.');
+            const mp = await getMercadoPagoSDK(mpPublicKey);
+
+            if (!mp || typeof mp.yape !== 'function') {
+                throw new Error('Tu navegador no soporta el método de pago Yape.');
             }
 
-            const mp = new (window as any).MercadoPago(mpPublicKey, { locale: 'es-PE' });
-            
-            if (typeof mp.yape !== 'function') {
-                throw new Error('Método Yape no soportado por el SDK actual de Mercado Pago.');
-            }
-
+            console.log('[Yape] Generando token con mp.yape()...');
             const yapeTokenRes = await mp.yape({
                 otp: cleanOtp,
                 phoneNumber: cleanPhone,
@@ -218,7 +247,7 @@ export default function PaymentModal({
             console.log('[Yape] Token de Yape generado:', yapeTokenRes);
 
             if (!yapeTokenRes?.id) {
-                throw new Error('No se pudo generar el token de Yape. Verifica el código OTP o tu teléfono.');
+                throw new Error('No se pudo generar el token de Yape. Verifica tu código OTP de 6 dígitos.');
             }
 
             console.log('[Yape] Invocando create-yape-payment con token.id:', yapeTokenRes.id);
