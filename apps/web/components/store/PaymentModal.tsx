@@ -243,6 +243,7 @@ export default function PaymentModal({
                         user_id: profile?.id,
                         description: product.name,
                         email: profile?.email || 'cliente@campuslink.pe',
+                        userEmail: profile?.email || 'cliente@campuslink.pe',
                     },
                 }
             );

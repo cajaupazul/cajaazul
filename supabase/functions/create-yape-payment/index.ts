@@ -20,15 +20,17 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.json();
-    console.log('[create-yape-payment] Payload recibido:', body);
+    console.log('[create-yape-payment] Payload recibido:', JSON.stringify(body));
 
-    const { token, amount, product_id, user_id, description, email } = body;
+    // Acepta tanto 'email' como 'userEmail' del frontend
+    const { token, amount, product_id, user_id, description, email, userEmail } = body;
+    const payerEmail = userEmail || email || 'cliente@campuslink.pe';
 
     if (!token || !product_id || !user_id) {
       throw new Error('Faltan campos requeridos: token, product_id o user_id');
     }
 
-    // Buscar producto en DB para verificar precio seguro
+    // Buscar producto en DB para verificar precio seguro (no confiar en el amount del frontend)
     const { data: producto, error: dbError } = await supabase
       .from('store_products')
       .select('*')
@@ -41,23 +43,23 @@ serve(async (req) => {
     }
 
     const finalAmount = Number(producto.price);
-    const WEBHOOK_URL = `${supabaseUrl}/functions/v1/mercadopago-webhook`;
-    const payerEmail = email || 'cliente@campuslink.pe';
+    const WEBHOOK_URL = 'https://mevfhlhwrrkbhppgeyaj.supabase.co/functions/v1/mercadopago-webhook';
 
-    console.log('[create-yape-payment] Procesando pago Yape en Mercado Pago API...');
+    console.log('[create-yape-payment] Procesando Yape | monto:', finalAmount, '| email:', payerEmail);
 
+    // Llamada directa a la API de MP con payment_method_id: 'yape'
     const mpRes = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': `yape_${user_id}_${Date.now()}`
+        'X-Idempotency-Key': crypto.randomUUID(),
       },
       body: JSON.stringify({
         transaction_amount: finalAmount,
-        token: token,
         description: description || `CampusLink: ${producto.name}`,
         payment_method_id: 'yape',
+        token: token,
         payer: {
           email: payerEmail,
         },
@@ -73,34 +75,47 @@ serve(async (req) => {
     });
 
     const payment = await mpRes.json();
-    console.log('[create-yape-payment] Respuesta MP API:', payment);
+    console.log('[create-yape-payment] Respuesta MP Yape:', JSON.stringify(payment));
 
-    if (!mpRes.ok || payment.status !== 'approved') {
-      const msg = payment.status_detail || payment.message || 'Pago con Yape fue rechazado o no fue aprobado';
+    if (payment.status !== 'approved') {
+      const msg = payment.status_detail || payment.message || 'Pago con Yape no fue aprobado';
+      console.warn('[create-yape-payment] Pago no aprobado:', payment.status, msg);
       return new Response(
-        JSON.stringify({ success: false, status: payment.status, message: msg, details: payment }),
+        JSON.stringify({ success: false, status: payment.status, message: msg }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Si el pago está aprobado, también actualizamos el perfil de forma inmediata para mejor UX
+    // Pago aprobado → actualizar perfil inmediatamente (no esperar webhook)
     try {
       if (producto.type === 'coins') {
         const { data: userProf } = await supabase.from('profiles').select('monedas').eq('id', user_id).single();
-        await supabase.from('profiles').update({ monedas: (userProf?.monedas || 0) + producto.amount }).eq('id', user_id);
+        await supabase.from('profiles')
+          .update({ monedas: (userProf?.monedas || 0) + Number(producto.amount) })
+          .eq('id', user_id);
+        console.log('[create-yape-payment] Monedas actualizadas para user:', user_id);
       } else if (producto.type === 'vip') {
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + (producto.amount || 30));
-        await supabase.from('profiles').update({ es_vip: true, vip_hasta: expiresAt.toISOString(), active_frame_key: 'vip_exclusive', subscription_tier: 'premium' }).eq('id', user_id);
+        expiresAt.setDate(expiresAt.getDate() + (Number(producto.amount) || 30));
+        await supabase.from('profiles')
+          .update({
+            es_vip: true,
+            vip_hasta: expiresAt.toISOString(),
+            active_frame_key: 'vip_exclusive',
+            subscription_tier: 'premium',
+          })
+          .eq('id', user_id);
+        console.log('[create-yape-payment] VIP activado hasta:', expiresAt.toISOString());
       }
     } catch (profErr) {
-      console.warn('[create-yape-payment] Error al actualizar perfil directamente:', profErr);
+      console.warn('[create-yape-payment] Error al actualizar perfil:', profErr);
     }
 
     return new Response(
       JSON.stringify({ success: true, payment_id: payment.id, status: payment.status }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (err: any) {
     console.error('[create-yape-payment] Error:', err.message || err);
     return new Response(
