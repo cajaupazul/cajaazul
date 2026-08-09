@@ -14,6 +14,7 @@ serve(async (req) => {
   try {
     console.log('[create-yape-payment] Invocado');
     const MP_ACCESS_TOKEN = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN') || 'APP_USR-4922371222532387-011017-25a8fdc92b392d510fa3ddcc55aec975-2624882322';
+    console.log('[create-yape-payment] Token prefix:', MP_ACCESS_TOKEN?.substring(0, 8));
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -22,15 +23,14 @@ serve(async (req) => {
     const body = await req.json();
     console.log('[create-yape-payment] Payload recibido:', JSON.stringify(body));
 
-    // Acepta tanto 'email' como 'userEmail' del frontend
-    const { token, amount, product_id, user_id, description, email, userEmail } = body;
+    const { phone_number, otp, amount, product_id, user_id, description, userEmail, email } = body;
     const payerEmail = userEmail || email || 'cliente@campuslink.pe';
 
-    if (!token || !product_id || !user_id) {
-      throw new Error('Faltan campos requeridos: token, product_id o user_id');
+    if (!phone_number || !otp || !product_id || !user_id) {
+      throw new Error('Faltan campos requeridos: phone_number, otp, product_id o user_id');
     }
 
-    // Buscar producto en DB para verificar precio seguro (no confiar en el amount del frontend)
+    // Buscar producto en DB para verificar precio real
     const { data: producto, error: dbError } = await supabase
       .from('store_products')
       .select('*')
@@ -45,10 +45,38 @@ serve(async (req) => {
     const finalAmount = Number(producto.price);
     const WEBHOOK_URL = 'https://mevfhlhwrrkbhppgeyaj.supabase.co/functions/v1/mercadopago-webhook';
 
-    console.log('[create-yape-payment] Procesando Yape | monto:', finalAmount, '| email:', payerEmail);
+    // Paso 1: Obtener token de Yape directo desde la API de MP usando el Access Token del backend
+    console.log('[create-yape-payment] Paso 1: Generando token Yape en MP API...');
+    const tokenResponse = await fetch('https://api.mercadopago.com/v1/yape', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        phone_number: phone_number.toString().trim(),
+        otp: otp.toString().trim(),
+      })
+    });
 
-    // Llamada directa a la API de MP con payment_method_id: 'yape'
-    const mpRes = await fetch('https://api.mercadopago.com/v1/payments', {
+    const tokenData = await tokenResponse.json();
+    console.log('[create-yape-payment] Token Yape response:', JSON.stringify(tokenData));
+
+    if (!tokenResponse.ok || !tokenData.id) {
+      const errMsg = tokenData.message || tokenData.cause?.[0]?.description || 'Error generando token de Yape';
+      console.warn('[create-yape-payment] Error en token Yape:', errMsg);
+      return new Response(
+        JSON.stringify({ success: false, message: errMsg, details: tokenData }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const yapeTokenId = tokenData.id;
+    console.log('[create-yape-payment] Paso 2: Creando pago con Yape token:', yapeTokenId);
+
+    // Paso 2: Crear el pago con el token de Yape obtenido
+    const paymentResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
@@ -59,7 +87,7 @@ serve(async (req) => {
         transaction_amount: finalAmount,
         description: description || `CampusLink: ${producto.name}`,
         payment_method_id: 'yape',
-        token: token,
+        token: yapeTokenId,
         payer: {
           email: payerEmail,
         },
@@ -71,22 +99,22 @@ serve(async (req) => {
           amount: producto.amount,
         },
         notification_url: WEBHOOK_URL,
-      }),
+      })
     });
 
-    const payment = await mpRes.json();
-    console.log('[create-yape-payment] Respuesta MP Yape:', JSON.stringify(payment));
+    const paymentData = await paymentResponse.json();
+    console.log('[create-yape-payment] Payment response:', JSON.stringify(paymentData));
 
-    if (payment.status !== 'approved') {
-      const msg = payment.status_detail || payment.message || 'Pago con Yape no fue aprobado';
-      console.warn('[create-yape-payment] Pago no aprobado:', payment.status, msg);
+    if (paymentData.status !== 'approved') {
+      const msg = paymentData.status_detail || paymentData.message || 'Pago con Yape no fue aprobado';
+      console.warn('[create-yape-payment] Pago no aprobado:', paymentData.status, msg);
       return new Response(
-        JSON.stringify({ success: false, status: payment.status, message: msg }),
+        JSON.stringify({ success: false, status: paymentData.status, message: msg }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Pago aprobado → actualizar perfil inmediatamente (no esperar webhook)
+    // Pago aprobado → actualizar perfil inmediatamente
     try {
       if (producto.type === 'coins') {
         const { data: userProf } = await supabase.from('profiles').select('monedas').eq('id', user_id).single();
@@ -112,7 +140,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, payment_id: payment.id, status: payment.status }),
+      JSON.stringify({ success: true, payment_id: paymentData.id, status: paymentData.status }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

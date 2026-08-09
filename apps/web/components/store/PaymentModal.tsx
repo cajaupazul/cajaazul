@@ -180,12 +180,15 @@ export default function PaymentModal({
         e.preventDefault();
         if (!product) return;
 
-        if (!yapePhone || yapePhone.trim().length !== 9) {
+        const cleanPhone = yapePhone.trim().replace(/\D/g, '');
+        const cleanOtp = yapeOtp.trim().replace(/\D/g, '');
+
+        if (!cleanPhone || cleanPhone.length !== 9) {
             setYapeError('Ingresa un número de celular válido de 9 dígitos (Perú).');
             return;
         }
 
-        if (!yapeOtp || yapeOtp.trim().length !== 6) {
+        if (!cleanOtp || cleanOtp.length !== 6) {
             setYapeError('Ingresa el código de aprobación OTP de 6 dígitos de tu app de Yape.');
             return;
         }
@@ -194,55 +197,18 @@ export default function PaymentModal({
         setYapeError(null);
 
         try {
-            const mpPublicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-c89b2d7b-b44e-4926-ba40-3d456209235d';
-            let token: string | null = null;
+            console.log('[Yape] Invocando create-yape-payment con cel y OTP...');
 
-            // 1. Intentar tokenizar Yape mediante SDK de Mercado Pago
-            if (typeof window !== 'undefined' && (window as any).MercadoPago) {
-                try {
-                    const mp = new (window as any).MercadoPago(mpPublicKey, { locale: 'es-PE' });
-                    if (typeof mp.yape === 'function') {
-                        const yapeRes = await mp.yape({
-                            otp: yapeOtp.trim(),
-                            phoneNumber: yapePhone.trim(),
-                        });
-                        token = yapeRes?.id;
-                    }
-                } catch (sdkErr: any) {
-                    console.warn('[Yape] SDK method warn:', sdkErr);
-                }
-            }
-
-            // 2. Fallback tokenización directa vía MP API si el wrapper del SDK no está disponible
-            if (!token) {
-                const res = await fetch(`https://api.mercadopago.com/v1/card_tokens?public_key=${mpPublicKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        otp: yapeOtp.trim(),
-                        phone_number: yapePhone.trim(),
-                    }),
-                });
-                const tokenData = await res.json();
-                if (!res.ok || !tokenData.id) {
-                    throw new Error(tokenData.message || tokenData.cause?.[0]?.description || 'Código OTP o teléfono inválido en Yape.');
-                }
-                token = tokenData.id;
-            }
-
-            console.log('[Yape] Token generado correctamente:', token);
-
-            // 3. Enviar token a la Edge Function 'create-yape-payment'
             const { data: yapeData, error: yapeErr } = await supabase.functions.invoke(
                 'create-yape-payment',
                 {
                     body: {
-                        token: token,
+                        phone_number: cleanPhone,
+                        otp: cleanOtp,
                         amount: product.price,
                         product_id: product.id,
                         user_id: profile?.id,
                         description: product.name,
-                        email: profile?.email || 'cliente@campuslink.pe',
                         userEmail: profile?.email || 'cliente@campuslink.pe',
                     },
                 }
