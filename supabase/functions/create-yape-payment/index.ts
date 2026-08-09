@@ -91,7 +91,7 @@ serve(async (req) => {
       } else if (producto.type === 'vip') {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + (producto.amount || 30));
-        await supabase.from('profiles').update({ es_vip: true, vip_hasta: expiresAt.toISOString(), active_frame_key: 'vip_exclusive' }).eq('id', user_id);
+        await supabase.from('profiles').update({ es_vip: true, vip_hasta: expiresAt.toISOString(), active_frame_key: 'vip_exclusive', subscription_tier: 'premium' }).eq('id', user_id);
       }
     } catch (profErr) {
       console.warn('[create-yape-payment] Error al actualizar perfil directamente:', profErr);

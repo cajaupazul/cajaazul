@@ -134,7 +134,7 @@ serve(async (req) => {
           .update({
             es_vip:            true,
             vip_hasta:         vipUntil.toISOString(),
-            subscription_tier: 'vip',
+            subscription_tier: 'premium',
             active_frame_key:  'vip_exclusive',
           })
           .eq('id', user_id);
