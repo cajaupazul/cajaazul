@@ -10,7 +10,8 @@ import { supabase } from '@/lib/supabase';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 
 // ─── Credenciales según entorno ───────────────────────────────────────────────
-const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-d1beec08-a1c0-46cb-88b7-651a857c9dbb';
+const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-c89b2d7b-b44e-4926-ba40-3d456209235d';
+
 
 
 
@@ -176,8 +177,10 @@ export default function PaymentModal({
             }
 
             // 2. Generar token de Yape con el método correcto de la documentación oficial
+            console.log('[Yape] Public Key usada:', MP_PUBLIC_KEY?.substring(0, 20));
             const mp = new (window as any).MercadoPago(MP_PUBLIC_KEY, { locale: 'es-PE' });
             console.log('[Yape] Generando token con mp.yape().create()...');
+
 
             const yapeInstance = mp.yape({ otp: cleanOtp, phoneNumber: cleanPhone });
             const yapeToken = await yapeInstance.create();
