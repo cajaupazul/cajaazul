@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { useProfile } from '@/lib/profile-context';
+import styles from './GoogleButton.module.css';
 
 export function GoogleButton({ text = 'Continuar con Google' }: { text?: string }) {
     const [loading, setLoading] = useState(false);
@@ -82,15 +83,16 @@ export function GoogleButton({ text = 'Continuar con Google' }: { text?: string 
     return (
         <Button
             type="button"
-            variant="outline"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full h-12 rounded-none flex items-center justify-center gap-3 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold transition-all hover:scale-[1.01] active:scale-[0.98] shadow-sm"
+            className={styles.button}
+            aria-busy={loading}
         >
-            {loading ? (
-                <div className="w-5 h-5 border-2 border-slate-300 border-t-blue-600 rounded-full animate-spin"></div>
-            ) : (
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <span className={styles.buttonContent}>
+                {loading ? (
+                    <span className={styles.spinner} aria-hidden="true" />
+                ) : (
+                <svg className={styles.googleIcon} viewBox="0 0 24 24" aria-hidden="true">
                     <path
                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                         fill="#4285F4"
@@ -108,8 +110,9 @@ export function GoogleButton({ text = 'Continuar con Google' }: { text?: string 
                         fill="#EA4335"
                     />
                 </svg>
-            )}
-            <span>{text}</span>
+                )}
+                <span>{loading ? 'Abriendo Google…' : text}</span>
+            </span>
         </Button>
     );
 }

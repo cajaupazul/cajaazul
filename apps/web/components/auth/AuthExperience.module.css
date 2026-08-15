@@ -1,0 +1,723 @@
+.page {
+  --paper: #f7f3e9;
+  --ink: #102821;
+  min-height: 100dvh;
+  padding: 18px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--ink);
+  background: #e8e5dc;
+}
+
+.stage {
+  position: relative;
+  width: min(100%, 1520px);
+  height: calc(100dvh - 36px);
+  min-height: 620px;
+  max-height: 920px;
+  overflow: hidden;
+  border: 1px solid rgba(16, 40, 33, 0.08);
+  border-radius: 32px;
+  background: var(--paper);
+  box-shadow: 0 28px 90px rgba(25, 38, 33, 0.13);
+  isolation: isolate;
+}
+
+.formPanel {
+  position: absolute;
+  inset: 0 0 0 50%;
+  width: 50%;
+  height: 100%;
+  padding: clamp(28px, 4vw, 62px);
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  will-change: transform;
+  transition:
+    transform 720ms cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 150ms ease;
+}
+
+.loginForm {
+  z-index: 3;
+  opacity: 1;
+  transition-delay: 0ms, 340ms;
+}
+
+.registerForm {
+  z-index: 1;
+  opacity: 0;
+  transition-delay: 0ms, 0ms;
+}
+
+.registerActive .loginForm {
+  z-index: 1;
+  opacity: 0;
+  transform: translateX(-100%);
+  transition-delay: 0ms, 0ms;
+}
+
+.registerActive .registerForm {
+  z-index: 3;
+  opacity: 1;
+  transform: translateX(-100%);
+  transition-delay: 0ms, 340ms;
+}
+
+.storyViewport {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 10;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0 30% 30% 0;
+  transform: translateX(0);
+  will-change: transform, border-radius;
+  transition:
+    transform 720ms cubic-bezier(0.65, 0, 0.35, 1),
+    border-radius 720ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.registerActive .storyViewport {
+  border-radius: 30% 0 0 30%;
+  transform: translateX(100%);
+}
+
+.storyTrack {
+  position: relative;
+  width: 200%;
+  height: 100%;
+  display: flex;
+  transform: translateX(0);
+  will-change: transform;
+  transition: transform 720ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.registerActive .storyTrack {
+  transform: translateX(-50%);
+}
+
+.storyPanel {
+  position: relative;
+  flex: 0 0 50%;
+  width: 50%;
+  height: 100%;
+  padding: clamp(28px, 4vw, 62px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.loginStory {
+  color: #f9fbff;
+  background: #1559c7;
+}
+
+.registerStory {
+  color: #142922;
+  background: #f17154;
+}
+
+.storyGrid {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.storyGrid {
+  inset: 0;
+  opacity: 0.11;
+  background-image:
+    linear-gradient(currentColor 1px, transparent 1px),
+    linear-gradient(90deg, currentColor 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom right, black, transparent 68%);
+}
+
+.storyCircle {
+  position: absolute;
+  z-index: 1;
+  width: clamp(330px, 35vw, 560px);
+  aspect-ratio: 1;
+  right: -8%;
+  bottom: -10%;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #efb458;
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  box-shadow:
+    0 30px 80px rgba(11, 31, 27, 0.22),
+    inset 0 0 0 10px rgba(255, 255, 255, 0.13);
+}
+
+.registerStory .storyCircle {
+  left: -8%;
+  right: auto;
+  background: #2860bf;
+}
+
+.storyCircle > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  transform: scale(1.02);
+}
+
+.brand {
+  position: relative;
+  z-index: 2;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  color: inherit;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.brandMark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 28px rgba(16, 36, 33, 0.13);
+}
+
+.brandMark img {
+  width: 84%;
+  height: 84%;
+  object-fit: contain;
+}
+
+.registerStory .brand {
+  margin-left: clamp(44px, 6vw, 92px);
+}
+
+.registerStory .eyebrow {
+  margin-left: clamp(35px, 4.5vw, 70px);
+}
+
+.storyContent {
+  position: relative;
+  z-index: 2;
+  width: min(72%, 540px);
+  margin-top: clamp(58px, 8vh, 100px);
+}
+
+.registerStory .storyContent {
+  margin-left: auto;
+  text-align: right;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 19px;
+  font-size: 0.72rem;
+  font-weight: 820;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.eyebrow::before {
+  content: '';
+  width: 29px;
+  height: 2px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.78;
+}
+
+.storyContent h2 {
+  max-width: 540px;
+  margin: 0;
+  font-size: clamp(3rem, 4.5vw, 5.2rem);
+  font-weight: 760;
+  line-height: 0.94;
+  letter-spacing: -0.062em;
+  text-wrap: balance;
+}
+
+.visualFallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: #faf7ef;
+}
+
+.visualFallback img {
+  width: 32%;
+  max-height: 140px;
+  object-fit: contain;
+}
+
+.storyAction {
+  position: absolute;
+  z-index: 3;
+  left: clamp(28px, 4vw, 62px);
+  bottom: clamp(28px, 4vw, 62px);
+  max-width: 190px;
+  text-align: left;
+}
+
+.registerStory .storyAction {
+  right: clamp(28px, 4vw, 62px);
+  left: auto;
+  text-align: right;
+}
+
+.storyAction p {
+  margin: 0 0 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  opacity: 0.78;
+}
+
+.storyAction button {
+  min-width: 170px;
+  min-height: 52px;
+  padding: 0 26px;
+  border: 1px solid rgba(16, 40, 33, 0.86);
+  border-radius: 999px;
+  color: #102821;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(13, 35, 29, 0.13);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.storyAction button:hover {
+  background: #fffdf8;
+  box-shadow: 0 14px 32px rgba(13, 35, 29, 0.2);
+  transform: translateY(-2px);
+}
+
+.storyAction button:active {
+  box-shadow: 0 7px 18px rgba(13, 35, 29, 0.14);
+  transform: translateY(0);
+}
+
+.storyAction button:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.48);
+  outline-offset: 4px;
+}
+
+.backLink {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #596962;
+  font-size: 0.84rem;
+  font-weight: 720;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.backLink:hover {
+  color: var(--ink);
+  transform: translateX(-3px);
+}
+
+.formContent {
+  width: min(100%, 470px);
+  margin: auto;
+  padding: 42px 0;
+}
+
+.formLabel {
+  margin: 0 0 18px;
+  color: #1b63cd;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.registerForm .formLabel {
+  color: #c65038;
+}
+
+.formContent h1 {
+  max-width: 450px;
+  margin: 0;
+  font-size: clamp(2.7rem, 4vw, 4.4rem);
+  font-weight: 760;
+  line-height: 0.98;
+  letter-spacing: -0.056em;
+  text-wrap: balance;
+}
+
+.formContent h1:focus {
+  outline: none;
+}
+
+.description {
+  max-width: 440px;
+  margin: 20px 0 0;
+  color: #66736e;
+  font-size: 0.98rem;
+  line-height: 1.62;
+}
+
+.error {
+  margin-top: 22px;
+  padding: 13px 15px;
+  border-left: 3px solid #c63f34;
+  color: #7d2c25;
+  background: #f9e4de;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.action {
+  margin-top: 34px;
+}
+
+.securityNote {
+  margin-top: 17px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #6d7773;
+}
+
+.securityNote svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #1b63cd;
+}
+
+.registerForm .securityNote svg {
+  color: #c65038;
+}
+
+.securityNote p {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.securityNote strong {
+  color: #3d4c46;
+}
+
+.switchAccount {
+  margin-top: 36px;
+  padding-top: 22px;
+  border-top: 1px solid #dcd8ce;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  color: #66736e;
+  font-size: 0.86rem;
+}
+
+.switchAccount button {
+  padding: 0 0 4px;
+  border: 0;
+  border-bottom: 2px solid #8fb5e7;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.registerForm .switchAccount button {
+  border-bottom-color: #eca28f;
+}
+
+.legal {
+  max-width: 470px;
+  margin: 0 auto;
+  color: #87908c;
+  font-size: 0.64rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (min-width: 1181px) {
+  .switchAccount {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .storyContent h2 {
+    font-size: clamp(2.75rem, 4.6vw, 4.2rem);
+  }
+
+  .storyAction {
+    display: none;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 760px) {
+  .stage {
+    min-height: 560px;
+  }
+
+  .formPanel,
+  .storyPanel {
+    padding: 27px 42px;
+  }
+
+  .storyContent {
+    margin-top: 42px;
+  }
+
+  .storyContent h2 {
+    font-size: clamp(2.6rem, 4.1vw, 3.9rem);
+  }
+
+  .storyCircle {
+    width: clamp(290px, 32vw, 420px);
+  }
+
+  .formContent {
+    padding: 26px 0;
+  }
+
+  .formContent h1 {
+    font-size: clamp(2.55rem, 3.7vw, 3.55rem);
+  }
+
+  .description {
+    margin-top: 15px;
+  }
+
+  .action {
+    margin-top: 25px;
+  }
+
+  .switchAccount {
+    margin-top: 26px;
+    padding-top: 18px;
+  }
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 0;
+    display: block;
+    background: var(--paper);
+  }
+
+  .stage {
+    width: 100%;
+    height: 100dvh;
+    min-height: 680px;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .storyViewport {
+    inset: 0 0 auto;
+    width: 100%;
+    height: 38%;
+    min-height: 250px;
+    border-radius: 0 0 30px 30px;
+    transform: none;
+  }
+
+  .registerActive .storyViewport {
+    border-radius: 0 0 30px 30px;
+    transform: none;
+  }
+
+  .storyPanel {
+    padding: 22px;
+  }
+
+  .registerStory .brand {
+    margin-left: 0;
+  }
+
+  .registerStory .eyebrow {
+    margin-left: 0;
+  }
+
+  .storyContent {
+    width: min(58%, 430px);
+    margin-top: 28px;
+  }
+
+  .eyebrow {
+    margin-bottom: 12px;
+    font-size: 0.62rem;
+  }
+
+  .storyContent h2 {
+    max-width: 430px;
+    font-size: clamp(2rem, 6.2vw, 3.35rem);
+    line-height: 0.96;
+  }
+
+  .storyCircle {
+    width: clamp(205px, 42vw, 330px);
+    right: -5%;
+    bottom: -23%;
+  }
+
+  .registerStory .storyCircle {
+    left: -5%;
+  }
+
+  .storyAction {
+    display: none;
+  }
+
+  .formPanel {
+    inset: 38% 0 0;
+    width: 100%;
+    height: 62%;
+    min-height: 430px;
+    padding: 22px;
+    overflow-y: auto;
+    transform: translateX(0);
+  }
+
+  .loginForm {
+    opacity: 1;
+  }
+
+  .registerForm {
+    opacity: 0;
+    transform: translateX(12%);
+  }
+
+  .registerActive .loginForm {
+    opacity: 0;
+    transform: translateX(-12%);
+  }
+
+  .registerActive .registerForm {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .backLink {
+    font-size: 0.78rem;
+  }
+
+  .formContent {
+    width: 100%;
+    max-width: 560px;
+    padding: 36px 0 32px;
+  }
+
+  .formContent h1 {
+    font-size: clamp(2.35rem, 8vw, 3.6rem);
+  }
+
+  .legal {
+    width: 100%;
+    max-width: 560px;
+  }
+}
+
+@media (max-width: 520px) {
+  .stage {
+    min-height: 640px;
+  }
+
+  .storyViewport {
+    height: 34%;
+    min-height: 218px;
+  }
+
+  .storyPanel {
+    padding: 19px 20px;
+  }
+
+  .brandMark {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .brand {
+    font-size: 0.94rem;
+  }
+
+  .storyContent {
+    width: 52%;
+    margin-top: 24px;
+  }
+
+  .storyContent h2 {
+    font-size: clamp(1.65rem, 8.3vw, 2.35rem);
+  }
+
+  .eyebrow {
+    display: none;
+  }
+
+  .storyCircle {
+    width: clamp(190px, 51vw, 260px);
+    bottom: -29%;
+  }
+
+  .formPanel {
+    inset: 34% 0 0;
+    height: 66%;
+    padding: 20px;
+  }
+
+  .formContent {
+    padding: 31px 0 28px;
+  }
+
+  .formContent h1 {
+    font-size: clamp(2.25rem, 11vw, 3rem);
+  }
+
+  .description {
+    margin-top: 16px;
+    font-size: 0.9rem;
+  }
+
+  .action {
+    margin-top: 28px;
+  }
+
+  .switchAccount {
+    margin-top: 29px;
+    padding-top: 19px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .legal {
+    padding-bottom: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .formPanel,
+  .storyViewport,
+  .storyTrack,
+  .backLink,
+  .storyAction button {
+    transition: none !important;
+  }
+}

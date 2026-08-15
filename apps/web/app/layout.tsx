@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CampusLink - Plataforma Premium",
-  description: "Plataforma educativa premium para gestión de cursos",
+  title: "CampusLink | Comunidad académica",
+  description: "Materiales, profesores, grupos y herramientas para tomar mejores decisiones académicas.",
   icons: {
     icon: "/favicon.png",
   },

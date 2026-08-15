@@ -1,0 +1,92 @@
+.button {
+  width: 100%;
+  min-height: 58px;
+  padding: 0 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #17312c;
+  border-radius: 999px;
+  background: #102421;
+  color: #ffffff;
+  box-shadow: 0 12px 28px rgba(16, 36, 33, 0.12);
+  font-size: 0.92rem;
+  font-weight: 780;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.button::after {
+  content: '\2192';
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+.button:hover:not(:disabled) {
+  background: #17332e;
+  box-shadow: 0 15px 34px rgba(16, 36, 33, 0.18);
+  transform: translateY(-2px);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.button:focus-visible {
+  outline: 3px solid rgba(27, 99, 205, 0.28);
+  outline-offset: 3px;
+}
+
+.button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.buttonContent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.googleIcon {
+  width: 24px;
+  height: 24px;
+  padding: 3px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border: 2px solid rgba(255, 255, 255, 0.36);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .button {
+    min-height: 56px;
+    padding-inline: 19px;
+    font-size: 0.87rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+
+  .spinner {
+    animation-duration: 1.4s;
+  }
+}

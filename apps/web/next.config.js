@@ -3,6 +3,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  devIndicators: {
+    appIsrStatus: false,
+  },
 
   // IMPORTANTE: NO usar output: 'export' - OpenNext maneja SSR automáticamente
   // output: 'export' elimina todas las capacidades de servidor
