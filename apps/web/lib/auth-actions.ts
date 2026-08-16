@@ -4,14 +4,14 @@ import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
-import { supabase as browserSupabase } from '@/lib/supabase' // Use browser client for initial OAuth redirect if called from client
+import { isProfileComplete } from '@/lib/profile-completion'
 
 export async function login(formData: FormData) {
     const email = formData.get('email') as string
     const password = formData.get('password') as string
     const supabase = await createClient()
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
     })
@@ -21,7 +21,14 @@ export async function login(formData: FormData) {
     }
 
     revalidatePath('/', 'layout')
-    redirect('/auth/complete-profile')
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('nombre, carrera')
+        .eq('id', data.user.id)
+        .maybeSingle()
+
+    redirect(isProfileComplete(profile) ? '/dashboard' : '/auth/complete-profile')
 }
 
 export async function register(formData: FormData) {

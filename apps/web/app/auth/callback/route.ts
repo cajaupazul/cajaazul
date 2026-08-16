@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { isProfileComplete } from '@/lib/profile-completion'
+
+function getSafeDestination(value: string | null) {
+    if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/auth')) {
+        return '/dashboard'
+    }
+
+    return value
+}
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
-    const next = searchParams.get('next') ?? '/dashboard'
+    const next = getSafeDestination(searchParams.get('next'))
     const errorMsg = searchParams.get('error_description') || searchParams.get('error')
 
     if (errorMsg) {
@@ -27,21 +36,19 @@ export async function GET(request: Request) {
             }
 
             // AUTO-REDIRECT FOR REGISTERED USERS
-            const { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('nombre, carrera')
                 .eq('id', user.id)
-                .single()
+                .maybeSingle()
 
-            if (profile) {
-                const isComplete = profile.nombre &&
-                    profile.nombre.trim().length > 0 &&
-                    profile.carrera &&
-                    !['Estudiante', 'General', 'Carrera', ''].includes(profile.carrera)
+            if (profileError) {
+                console.error('[AUTH_CALLBACK_PROFILE_CHECK]', profileError.code, profileError.message)
+                return NextResponse.redirect(`${origin}/auth/complete-profile?check=retry`)
+            }
 
-                if (isComplete) {
-                    return NextResponse.redirect(`${origin}${next}`)
-                }
+            if (isProfileComplete(profile)) {
+                return NextResponse.redirect(new URL(next, origin))
             }
 
             // If not complete, go to onboarding

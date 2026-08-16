@@ -75,9 +75,20 @@
 
 @media (max-width: 480px) {
   .button {
-    min-height: 56px;
-    padding-inline: 19px;
-    font-size: 0.87rem;
+    min-height: 54px;
+    gap: 10px;
+    padding-inline: 17px;
+    font-size: 0.83rem;
+  }
+
+  .buttonContent {
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .googleIcon {
+    width: 22px;
+    height: 22px;
   }
 }
 

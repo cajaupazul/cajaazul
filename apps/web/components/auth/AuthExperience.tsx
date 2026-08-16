@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, LockKeyhole } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
+import { isProfileComplete } from '@/lib/profile-completion';
 import { GoogleButton } from './GoogleButton';
 import styles from './AuthExperience.module.css';
 
@@ -65,15 +66,17 @@ export function AuthExperience() {
   useEffect(() => {
     if (!session || profileLoading) return;
 
-    if (mode === 'register') {
-      router.replace('/auth/complete-profile');
+    if (session.user?.is_anonymous) {
       return;
     }
 
-    if (!session.user?.is_anonymous && profile) {
+    if (isProfileComplete(profile)) {
       router.replace('/dashboard');
+      return;
     }
-  }, [mode, profile, profileLoading, router, session]);
+
+    router.replace('/auth/complete-profile');
+  }, [profile, profileLoading, router, session]);
 
   useEffect(() => {
     const hash = window.location.hash;

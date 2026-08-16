@@ -3,17 +3,12 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { useProfile } from '@/lib/profile-context';
 import styles from './GoogleButton.module.css';
 
 export function GoogleButton({ text = 'Continuar con Google' }: { text?: string }) {
     const [loading, setLoading] = useState(false);
-    const { clearProfile } = useProfile();
 
     const handleGoogleLogin = async () => {
-        // NUCLEAR OPTION: Clear old state before OAuth
-        clearProfile();
-
         setLoading(true);
 
         // SAFE OAUTH LOGIC:
@@ -22,19 +17,6 @@ export function GoogleButton({ text = 'Continuar con Google' }: { text?: string 
         // to this page (e.g., via the "Back" button or closing the Google tab).
 
         const resetLoading = () => setLoading(false);
-
-        // CLEANUP: Remove stale profile/session data, but PRESERVE Supabase PKCE keys (sb-*)
-        if (typeof window !== 'undefined') {
-            const keysToRemove: string[] = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && !key.startsWith('sb-')) {
-                    keysToRemove.push(key);
-                }
-            }
-            keysToRemove.forEach(k => localStorage.removeItem(k));
-            console.log('[AUTH_CLEANUP] Cleared non-Supabase keys, preserved PKCE verifier');
-        }
 
         // 1. Focus listener: If the user returns to the window, they likely cancelled.
         // We use a slight delay to allow the auth session to potentially hydrate first
@@ -52,7 +34,7 @@ export function GoogleButton({ text = 'Continuar con Google' }: { text?: string 
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(window.location.pathname.startsWith('/auth') ? '/auth/complete-profile' : window.location.pathname)}`,
+                    redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/dashboard')}`,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'select_account',

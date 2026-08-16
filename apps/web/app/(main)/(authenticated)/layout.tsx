@@ -59,7 +59,7 @@ export default function AuthenticatedLayout({
 
   const pathname = usePathname();
   const { colors, loading: themeLoading } = useTheme();
-  const { profile, session, loading: profileLoading, isGuest } = useProfile();
+  const { profile, session, loading: profileLoading, isGuest, clearProfile } = useProfile();
   const { refreshAll } = useDashboardData();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [equippedFrame, setEquippedFrame] = useState<ShopItem | null>(null);
@@ -180,7 +180,9 @@ export default function AuthenticatedLayout({
     if (isGuest) {
       // Clear any session (anonymous or stale) to prevent login redirect loops
       await supabase.auth.signOut();
-      router.push('/auth/login');
+      clearProfile();
+      router.replace('/auth/login');
+      router.refresh();
       return;
     }
     setShowLogoutConfirm(true);
@@ -189,7 +191,9 @@ export default function AuthenticatedLayout({
   const handleLogoutConfirm = async () => {
     setShowLogoutConfirm(false);
     await supabase.auth.signOut();
-    router.push('/auth/login');
+    clearProfile();
+    router.replace('/auth/login');
+    router.refresh();
   };
 
   const isActive = (href: string) => {

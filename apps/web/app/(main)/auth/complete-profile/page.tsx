@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,10 +12,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Instagram, User, School, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Instagram, User, School, Sparkles, CheckCircle2, LoaderCircle, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useProfile } from '@/lib/profile-context';
 import { supabase } from '@/lib/supabase';
+import { isProfileComplete } from '@/lib/profile-completion';
+
+type ProfileGateState = 'checking' | 'ready' | 'error';
 
 const FACULTADES = [
     'Facultad de Ciencias Empresariales',
@@ -43,17 +46,22 @@ export default function CompleteProfilePage() {
     const { refreshProfile } = useProfile();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [gateState, setGateState] = useState<ProfileGateState>('checking');
+    const [gateMessage, setGateMessage] = useState('');
     const [formData, setFormData] = useState({
         nombre: '',
         carrera: '',
         instagram: '',
     });
 
-    const [userProfile, setUserProfile] = useState<any>(null);
+    const verifyProfile = useCallback(async () => {
+        setGateState('checking');
+        setGateMessage('');
 
-    useEffect(() => {
-        async function fetchProfile() {
-            const { data: { user } } = await supabase.auth.getUser();
+        try {
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+            if (userError) throw userError;
             if (!user) {
                 router.replace('/auth/login');
                 return;
@@ -76,47 +84,47 @@ export default function CompleteProfilePage() {
                     if (insertError) throw insertError;
 
                     await refreshProfile();
-                    router.push('/dashboard');
+                    router.replace('/dashboard');
                     return;
                 } catch (err) {
                     console.error('[COMPLETE_PROFILE] Guest auto-creation failed:', err);
+                    throw err;
                 }
             }
 
-            const { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', user.id)
-                .single();
+                .maybeSingle();
 
-            if (profile) {
-                // FAIL-SAFE: If profile is already complete, redirect to dashboard
-                const isProfileComplete = profile.nombre &&
-                    profile.carrera &&
-                    !['Estudiante', 'General', 'Carrera', ''].includes(profile.carrera);
+            if (profileError) throw profileError;
 
-                if (isProfileComplete) {
-                    router.replace('/dashboard');
-                    return;
-                }
-
-                setUserProfile(profile);
-                // Si el nombre es el de gmail (contiene @ o es igual al email), mostrar vacío.
-                // O si es igual al google_full_name, mostrar vacío para forzar personalización.
-                const shouldClearNombre = !profile.nombre ||
-                    profile.nombre === profile.google_full_name ||
-                    profile.nombre === profile.email?.split('@')[0];
-
-                setFormData(prev => ({
-                    ...prev,
-                    nombre: shouldClearNombre ? '' : profile.nombre,
-                    carrera: ['Estudiante', 'General', 'Carrera'].includes(profile.carrera) ? '' : (profile.carrera || ''),
-                    instagram: profile.link_instagram || '',
-                }));
+            if (isProfileComplete(profile)) {
+                router.replace('/dashboard');
+                return;
             }
+
+            const shouldClearNombre = !profile?.nombre ||
+                profile.nombre === profile.google_full_name ||
+                profile.nombre === profile.email?.split('@')[0];
+
+            setFormData({
+                nombre: shouldClearNombre ? '' : profile?.nombre ?? '',
+                carrera: ['Estudiante', 'General', 'Carrera'].includes(profile?.carrera ?? '') ? '' : (profile?.carrera ?? ''),
+                instagram: profile?.link_instagram ?? '',
+            });
+            setGateState('ready');
+        } catch (verificationError) {
+            console.error('[COMPLETE_PROFILE] Profile verification failed:', verificationError);
+            setGateMessage('No pudimos comprobar tu perfil en este momento. Tus datos están seguros; vuelve a intentarlo.');
+            setGateState('error');
         }
-        fetchProfile();
     }, [router, refreshProfile]);
+
+    useEffect(() => {
+        void verifyProfile();
+    }, [verifyProfile]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -168,6 +176,44 @@ export default function CompleteProfilePage() {
     };
 
     const facultyGradient = FACULTY_COLORS[formData.carrera] || 'from-slate-400 to-slate-500';
+
+    if (gateState === 'checking') {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6" role="status" aria-live="polite">
+                <div className="flex flex-col items-center gap-4 text-center">
+                    <LoaderCircle className="h-8 w-8 animate-spin text-blue-600" aria-hidden="true" />
+                    <div>
+                        <p className="font-bold text-slate-900">Preparando tu espacio</p>
+                        <p className="mt-1 text-sm text-slate-500">Estamos verificando tu perfil de CampusLink.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (gateState === 'error') {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6">
+                <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-200/60 sm:p-10">
+                    <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-blue-50 text-blue-600">
+                        <RefreshCw className="h-5 w-5" aria-hidden="true" />
+                    </div>
+                    <h1 className="mt-5 text-2xl font-black tracking-tight text-slate-900">No pudimos verificar tu perfil</h1>
+                    <p className="mt-3 text-sm leading-6 text-slate-500">{gateMessage}</p>
+                    <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                        <Button type="button" variant="outline" onClick={() => router.replace('/auth/login')} className="h-12 flex-1 rounded-xl">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Volver
+                        </Button>
+                        <Button type="button" onClick={() => void verifyProfile()} className="h-12 flex-1 rounded-xl bg-slate-900 text-white hover:bg-slate-800">
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Reintentar
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row items-center justify-center p-4 sm:p-8 gap-8">
