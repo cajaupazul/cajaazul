@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/lib/theme-context';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase, ShopItem, getStorageUrl } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
-import { useDashboardData } from '@/lib/dashboard-data-context';
 import { AvatarWithFrame } from '@/components/ui/AvatarWithFrame';
 import {
   BookOpen,
@@ -15,28 +14,18 @@ import {
   Home,
   Users,
   Calendar,
-  MessageSquare,
-  Settings,
   Bell,
   Info,
   Layers,
-  Sun,
-  Moon,
   ShoppingBag,
   Package,
   ShieldCheck,
-  ChevronDown,
-  LayoutDashboard,
   Wrench,
   Eye,
   EyeOff,
   Library,
-  Calculator,
-  Bot
 } from 'lucide-react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CoinCounter } from '@/components/ui/coin-counter';
 import {
   Dialog,
@@ -48,6 +37,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import AnnouncementPopup from '@/components/announcements/AnnouncementPopup';
+import styles from './AuthenticatedLayout.module.css';
 
 export default function AuthenticatedLayout({
   children,
@@ -55,28 +45,17 @@ export default function AuthenticatedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
- // ... (rest unchanged to the line just before the return)
 
   const pathname = usePathname();
-  const { colors, loading: themeLoading } = useTheme();
+  const { colors } = useTheme();
   const { profile, session, loading: profileLoading, isGuest, clearProfile } = useProfile();
-  const { refreshAll } = useDashboardData();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [equippedFrame, setEquippedFrame] = useState<ShopItem | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
-
-  // State for collapsible menus
-  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
-    'Administración Tienda': true
-  });
-
-  const dataFetched = useRef(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Visibility settings for sidebar sections
   const [visibilitySettings, setVisibilitySettings] = useState<Record<string, boolean>>({});
-  const [isVisibilityLoading, setIsVisibilityLoading] = useState(true);
 
   // Fetch visibility settings
   useEffect(() => {
@@ -98,8 +77,6 @@ export default function AuthenticatedLayout({
         setVisibilitySettings(settings);
       } catch (err) {
         console.error('[SIDEBAR_VISIBILITY] Error:', err);
-      } finally {
-        setIsVisibilityLoading(false);
       }
     };
 
@@ -149,14 +126,14 @@ export default function AuthenticatedLayout({
 
   // 3. Mobile handling
   useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) setSidebarOpen(false);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const mobileQuery = window.matchMedia('(max-width: 767px)');
+    const syncSidebar = (mobile: boolean) => setSidebarOpen(!mobile);
+
+    syncSidebar(mobileQuery.matches);
+    const handleBreakpointChange = (event: MediaQueryListEvent) => syncSidebar(event.matches);
+    mobileQuery.addEventListener('change', handleBreakpointChange);
+
+    return () => mobileQuery.removeEventListener('change', handleBreakpointChange);
   }, []);
 
   // 4. Fetch equipped frame - Only when Auth is Ready
@@ -247,357 +224,166 @@ export default function AuthenticatedLayout({
     );
   }
 
-  const isInitialLoading = false;
+  const currentSection = pathname === '/profile'
+    ? 'Perfil'
+    : navItems.find((item) => isActive(item.href))?.label || 'CampusLink';
 
   return (
-    <div className="relative flex h-screen bg-bb-dark transition-colors duration-300">
+    <div
+      className={styles.layout}
+      style={{ '--nav-accent': colors?.primary || '#1677ff' } as React.CSSProperties}
+    >
       <AnnouncementPopup />
-      {/* Overlay de Carga Global */}
-      {/* Overlay de Carga Global */}
-      {isInitialLoading && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-bb-dark">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-faculty-primary" style={{ borderColor: colors?.primary }}></div>
-            <p className="text-bb-text-secondary animate-pulse">Sincronizando perfil...</p>
-          </div>
-        </div>
+
+      {sidebarOpen && (
+        <button
+          type="button"
+          className={styles.mobileOverlay}
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Cerrar menú de navegación"
+        />
       )}
 
-      {/* El contenido se mantiene montado siempre */}
-      <div className={`flex w-full h-full ${isInitialLoading ? 'invisible' : 'visible'}`}>
-
-        {/* MOBILE OVERLAY BACKDROP */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/50 z-[90] md:hidden backdrop-blur-sm cursor-pointer"
-            onClick={() => {
-              console.log('Cerrando sidebar desde overlay');
-              setSidebarOpen(false);
-            }}
-            role="button"
-            aria-label="Cerrar menú"
-            tabIndex={0}
-          />
-        )}
-
-        {/* SIDEBAR */}
-        <div
-          className={`
-              fixed md:relative z-[100] h-full
-              w-72 flex flex-col bg-bb-sidebar border-r border-bb-border text-bb-text overflow-hidden flex-shrink-0 transition-all duration-300 ease-in-out
-              ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0 md:w-0 md:border-none'}
-            `}
-          style={{
-            borderRightColor: colors?.primary + '40',
-            // FORCE HIDE ON MOBILE: Si es móvil (<768px) y sidebarOpen es false, forzar translate negativo
-            // Usamos una media query inline-like check o simplemente confiamos en el CSS,
-            // pero para asegurar, agregamos esto:
-            transform: !sidebarOpen && isMobile ? 'translateX(-100%)' : undefined
-          }}
-        >
-          {/* Logo */}
-          <div
-            className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0 relative"
-            style={{ borderColor: colors?.primary + '40' }}
-          >
-            <Link href="/dashboard" className="flex items-center space-x-3 group relative z-10">
-              <div
-                className="w-full h-20 flex items-center justify-center overflow-hidden"
-              >
-                <img
-                  src="/logo/logo-gemini.png"
-                  alt="CampusLink"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            </Link>
-            <button
-              onClick={() => {
-                console.log('Cerrando sidebar desde botón X');
-                setSidebarOpen(false);
-              }}
-              className="p-2 text-bb-text-secondary hover:text-white cursor-pointer relative z-[110] active:scale-95 touch-manipulation transition-all"
-              aria-label="Cerrar panel lateral"
-              type="button"
-              style={{ pointerEvents: 'auto' }}
-            >
-              <X className="h-5 w-5 pointer-events-none" />
-            </button>
-          </div>
-
-          {/* User Card */}
-          <Link
-            href="/profile"
-            className="mx-4 mt-4 mb-2 rounded-xl p-4 hover:bg-bb-hover border cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'transparent',
-              borderColor: colors?.primary + '40',
-            }}
-          >
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <AvatarWithFrame
-                  size={56}
-                  avatarUrl={getStorageUrl(profile?.avatar_url)}
-                  frameUrl={equippedFrame?.image_url}
-                  frameScale={equippedFrame?.frame_settings?.card?.scale}
-                  offsetX={equippedFrame?.frame_settings?.card?.x}
-                  offsetY={equippedFrame?.frame_settings?.card?.y}
-                  name={profile?.nombre}
-                />
-              </div>
-              <div className="text-left min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-sm font-semibold text-bb-text truncate">{profile?.nombre || 'Usuario'}</p>
-                  {isGuest && (
-                    <span className="px-1.5 py-0.5 rounded-md bg-white/10 text-[9px] font-black text-gray-400 border border-white/10 tracking-widest uppercase">
-                      Invitado
-                    </span>
-                  )}
-                  {profile?.es_vip && (
-                    <img src="/vip-icon.png" alt="VIP" className="w-4 h-4 object-contain shadow-sm" />
-                  )}
-                  {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
-                    <ShieldCheck className="w-3.5 h-3.5 text-blue-400 fill-blue-400/10" />
-                  )}
-                </div>
-                <p className="text-xs text-bb-text-secondary truncate">{profile?.role === 'admin' || profile?.role === 'superadmin' ? 'Administrador' : (profile?.carrera || 'Estudiante')}</p>
-              </div>
-            </div>
+      <aside
+        className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : styles.sidebarClosed}`}
+        aria-hidden={!sidebarOpen}
+        inert={!sidebarOpen}
+      >
+        <div className={styles.brandBar}>
+          <Link href="/dashboard" className={styles.brand} aria-label="Ir al inicio de CampusLink">
+            <span className={styles.brandMark}>
+              <img src="/logo/logo-campuslink-v2.png" alt="" />
+            </span>
+            <span className={styles.brandCopy}>
+              <strong>CampusLink</strong>
+              <small>Tu espacio académico</small>
+            </span>
           </Link>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className={styles.closeButton}
+            aria-label="Cerrar panel lateral"
+          >
+            <X aria-hidden="true" />
+          </button>
+        </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-0 py-6 overflow-y-auto">
-            {navItems.map((item: any) => {
-              // 1. Render Normal Item
-              if (!item.children) {
-                const Icon = item.icon;
-                const active = isActive(item.href);
-                return (
+        <Link href="/profile" className={styles.profileCard}>
+          <AvatarWithFrame
+            size={48}
+            avatarUrl={getStorageUrl(profile?.avatar_url)}
+            frameUrl={equippedFrame?.image_url}
+            frameScale={equippedFrame?.frame_settings?.card?.scale}
+            offsetX={equippedFrame?.frame_settings?.card?.x}
+            offsetY={equippedFrame?.frame_settings?.card?.y}
+            name={profile?.nombre}
+          />
+          <span className={styles.profileCopy}>
+            <span className={styles.profileName}>
+              <strong>{profile?.nombre || 'Usuario'}</strong>
+              {profile?.es_vip && <img src="/vip-icon.png" alt="Cuenta VIP" />}
+              {isAdmin && <ShieldCheck aria-label="Administrador" />}
+            </span>
+            <small>{isGuest ? 'Invitado' : isAdmin ? 'Administrador' : (profile?.carrera || 'Estudiante')}</small>
+          </span>
+        </Link>
+
+        <nav className={styles.navigation} aria-label="Navegación principal">
+          <p className={styles.navigationLabel}>Explorar</p>
+          <div className={styles.navigationList}>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.href);
+              const isHidden = Boolean(visibilitySettings[item.label]);
+
+              return (
+                <div className={styles.navRow} key={item.href}>
                   <Link
-                    key={item.href}
                     href={item.href}
                     onClick={() => {
                       if (window.innerWidth < 768) setSidebarOpen(false);
                     }}
-                    className="block w-full group relative transition-all duration-200"
-                    style={{
-                      backgroundColor: active ? colors?.primary + '08' : 'transparent',
-                      paddingLeft: '1.5rem',
-                      paddingRight: '1.5rem',
-                      paddingTop: '1rem',
-                      paddingBottom: '1rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      color: active ? colors?.primary : 'var(--bb-text-secondary)',
-                      textDecoration: 'none',
-                      fontSize: '0.875rem',
-                      borderRadius: '0.75rem',
-                      margin: '0 0.5rem',
-                    }}
+                    className={`${styles.navLink} ${active ? styles.navLinkActive : ''}`}
+                    aria-current={active ? 'page' : undefined}
                   >
-                    <div
-                      className="absolute left-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                      style={{ backgroundColor: colors?.primary }}
-                    />
-                    <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                      <Icon style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
-                      <span className="truncate" style={{ fontWeight: active ? '600' : '500' }}>{item.label}</span>
-                    </div>
-
-                    {/* EYE ICON FOR ADMINS */}
-                    {isAdmin && (
-                      <button
-                        onClick={(e) => toggleVisibility(item.label, e)}
-                        className={`p-1.5 rounded-lg transition-all hover:bg-white/10 shrink-0 ${visibilitySettings[item.label] ? 'text-red-500 bg-red-500/10' : 'text-bb-text-secondary/60 hover:text-bb-text'}`}
-                      >
-                        {visibilitySettings[item.label] ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </button>
-                    )}
+                    <Icon className={styles.navIcon} aria-hidden="true" />
+                    <span>{item.label}</span>
                   </Link>
-                );
-              }
 
-              // 2. Render Collapsible Group
-              const children = (item as any).children;
-              if (!children) return null;
-
-              const isOpen = expandedMenus[item.label] !== false; // Default Open or Controlled
-              const Icon = item.icon;
-              const hasActiveChild = children.some((child: any) => isActive(child.href));
-
-              return (
-                <div key={item.label} className="mb-2">
-                  <button
-                    onClick={() => setExpandedMenus(prev => ({ ...prev, [item.label]: !isOpen }))}
-                    className="w-full flex items-center justify-between px-6 py-3 text-bb-text-secondary hover:text-bb-text transition-colors group relative"
-                    style={{ margin: '0 0.5rem', width: 'auto', borderRadius: '0.75rem' }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0, color: hasActiveChild ? colors?.primary : undefined }} />
-                      <span className={`font-semibold text-sm ${hasActiveChild ? 'text-white' : ''}`}>{item.label}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 pr-2">
-                      {/* EYE ICON FOR ADMINS */}
-                      {isAdmin && (
-                        <button
-                          onClick={(e) => toggleVisibility(item.label, e)}
-                          className={`p-1 rounded-lg transition-all hover:bg-white/10 shrink-0 ${visibilitySettings[item.label] ? 'text-red-500 bg-red-500/10' : 'text-bb-text-secondary/60 hover:text-bb-text'}`}
-                        >
-                          {visibilitySettings[item.label] ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                        </button>
-                      )}
-                      <ChevronDown
-                        className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                        style={{ color: hasActiveChild ? colors?.primary : undefined }}
-                      />
-                    </div>
-                  </button>
-
-                  <AnimatePresence initial={false}>
-                    {isOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="flex flex-col gap-1 pb-2">
-                          {item.children.map((child: any) => {
-                            const ChildIcon = child.icon;
-                            const active = isActive(child.href);
-                            return (
-                              <Link
-                                key={child.href}
-                                href={child.href}
-                                onClick={() => {
-                                  if (window.innerWidth < 768) setSidebarOpen(false);
-                                }}
-                                className="flex items-center gap-3 pl-12 pr-6 py-2.5 text-sm transition-all relative"
-                                style={{
-                                  color: active ? colors?.primary : 'var(--bb-text-secondary)',
-                                  backgroundColor: active ? colors?.primary + '10' : 'transparent',
-                                  borderRight: active ? `3px solid ${colors?.primary}` : '3px solid transparent'
-                                }}
-                              >
-                                <ChildIcon className="w-4 h-4" />
-                                <span className={active ? 'font-bold' : 'font-medium'}>{child.label}</span>
-                              </Link>
-                            )
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={(event) => toggleVisibility(item.label, event)}
+                      className={`${styles.visibilityButton} ${isHidden ? styles.visibilityButtonHidden : ''}`}
+                      aria-label={`${isHidden ? 'Mostrar' : 'Ocultar'} ${item.label} para usuarios`}
+                      title={`${isHidden ? 'Mostrar' : 'Ocultar'} sección`}
+                    >
+                      {isHidden ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                    </button>
+                  )}
                 </div>
               );
             })}
-          </nav>
-
-          {/* Footer */}
-          <div
-            className="border-t px-0 py-3 flex-shrink-0"
-            style={{ borderColor: colors?.primary + '40' }}
-          >
-            <button
-              onClick={handleLogoutClick}
-              className="w-full flex items-center gap-3 px-6 py-3 text-bb-text-secondary hover:text-red-400 group relative transition-all duration-200"
-              style={{ textDecoration: 'none', fontSize: '0.875rem', background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              <LogOut style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
-              <span>{isGuest ? 'Salir' : 'Cerrar Sesión'}</span>
-              <div
-                className="absolute left-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                style={{ backgroundColor: '#ef4444' }}
-              />
-            </button>
           </div>
+        </nav>
+
+        <div className={styles.sidebarFooter}>
+          <button type="button" onClick={handleLogoutClick} className={styles.logoutButton}>
+            <LogOut aria-hidden="true" />
+            <span>{isGuest ? 'Salir' : 'Cerrar sesión'}</span>
+          </button>
         </div>
+      </aside>
 
-        {/* MAIN CONTENT */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-bb-dark transition-colors duration-300 w-full">
-          {/* HEADER */}
-          <header
-            className="border-b shadow-lg bg-bb-card sticky top-0 z-30 flex-shrink-0 transition-colors duration-300"
-            style={{
-              borderBottomColor: colors?.primary + '40',
-            }}
-          >
-            <div
-              className="h-1"
-              style={{ backgroundColor: colors?.primary }}
-            />
-
-            <div className="flex items-center justify-between h-20 px-4 sm:px-8">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className={`p-2 rounded-lg transition-all hover:bg-white/5 ${sidebarOpen ? 'hidden' : 'block'}`}
-                  style={{ color: colors?.primary }}
-                >
-                  <Menu className="h-6 w-6" />
-                </button>
-                <h1 className="text-xl sm:text-2xl font-bold text-bb-text truncate transition-colors">
-                  {(() => {
-                    if (pathname === '/profile') return 'Perfil';
-                    // Helper to find active label recursively
-                    for (const item of navItems as any[]) {
-                      if (item.href && isActive(item.href)) return item.label;
-                      if (item.children) {
-                        const child = item.children.find((c: any) => isActive(c.href));
-                        if (child) return child.label;
-                      }
-                    }
-                    return 'Dashboard';
-                  })()}
-                </h1>
-              </div>
-
-              <div className="flex items-center space-x-4 sm:space-x-6">
-                {/* Coin Counter */}
-                <div className="flex items-center gap-2 bg-bb-card border border-bb-border px-3 py-1.5 rounded-xl shadow-sm">
-                  <img src="/icons/moneda.png" alt="Coin" className="w-5 h-5 object-contain" />
-                  <CoinCounter value={profile?.monedas || 0} className="font-bold text-bb-text text-sm" />
-                </div>
-
-                <button className="relative p-2 text-bb-text-secondary hover:text-bb-text transition-colors">
-                  <Bell className="h-6 w-6" />
-                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ backgroundColor: colors?.primary }}></span>
-                </button>
-                <div className="relative">
-                  <div className={`relative ${sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100 block'} transition-opacity duration-300`}>
-                    <AvatarWithFrame
-                      size={40}
-                      avatarUrl={getStorageUrl(profile?.avatar_url)}
-                      frameUrl={equippedFrame?.image_url}
-                      frameScale={equippedFrame?.frame_settings?.navbar?.scale}
-                      offsetX={equippedFrame?.frame_settings?.navbar?.x}
-                      offsetY={equippedFrame?.frame_settings?.navbar?.y}
-                      name={profile?.nombre}
-                      className="cursor-pointer"
-                    />
-                  </div>
-                </div>
+      <div className={styles.mainColumn}>
+        <header className={styles.topbar}>
+          <div className={styles.accentBar} />
+          <div className={styles.topbarInner}>
+            <div className={styles.topbarLeading}>
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className={`${styles.menuButton} ${sidebarOpen ? styles.menuButtonHidden : ''}`}
+                aria-label="Abrir menú de navegación"
+              >
+                <Menu aria-hidden="true" />
+              </button>
+              <div className={styles.pageIdentity}>
+                <span>Área personal</span>
+                <h1>{currentSection}</h1>
               </div>
             </div>
-          </header>
 
-          {/* CONTENT */}
-          <main className="flex-1 overflow-auto bg-bb-dark w-full transition-colors duration-300 relative">
-            {children}
-          </main>
-        </div>
+            <div className={styles.topbarActions}>
+              <Link href="/dashboard/store" className={styles.coinCounter} aria-label={`${profile?.monedas || 0} monedas`}>
+                <img src="/icons/moneda.png" alt="" />
+                <CoinCounter value={profile?.monedas || 0} />
+              </Link>
+
+              <button type="button" className={styles.notificationButton} aria-label="Ver notificaciones">
+                <Bell aria-hidden="true" />
+                <span className={styles.notificationDot} />
+              </button>
+
+              <Link href="/profile" className={styles.topbarProfile} aria-label="Abrir mi perfil">
+                <AvatarWithFrame
+                  size={38}
+                  avatarUrl={getStorageUrl(profile?.avatar_url)}
+                  frameUrl={equippedFrame?.image_url}
+                  frameScale={equippedFrame?.frame_settings?.navbar?.scale}
+                  offsetX={equippedFrame?.frame_settings?.navbar?.x}
+                  offsetY={equippedFrame?.frame_settings?.navbar?.y}
+                  name={profile?.nombre}
+                />
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        <main className={styles.content}>
+          {children}
+        </main>
       </div>
 
       {/* LOGOUT CONFIRMATION DIALOG */}
