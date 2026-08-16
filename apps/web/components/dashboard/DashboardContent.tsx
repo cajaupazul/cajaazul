@@ -1,39 +1,25 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import {
-    BookOpen,
-    Users,
-    TrendingUp,
-    Award,
-    Calendar,
-    Zap,
-    ArrowRight,
-    Sparkles,
-    Megaphone,
-    PlusCircle
-} from 'lucide-react';
-import { motion, Variants, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
-import BouncingBalls from '@/components/BouncingBalls';
+import { Megaphone, Plus, School } from 'lucide-react';
+import { motion, Variants } from 'framer-motion';
 import { useTheme } from '@/lib/theme-context';
-import { Profile, Course, getStorageUrl } from '@/lib/supabase';
+import { Profile, getStorageUrl } from '@/lib/supabase';
 import OptionsSelector from '@/components/OptionsSelector';
 import AnnouncementPopup from '@/components/announcements/AnnouncementPopup';
 import AnnouncementsManager from '@/components/admin/AnnouncementsManager';
-import { 
-    Dialog, 
-    DialogContent, 
-    DialogHeader, 
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
     DialogTitle,
-    DialogDescription 
+    DialogDescription
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import styles from './DashboardContent.module.css';
 
 interface DashboardContentProps {
     profile: Profile | null;
-    courses: Course[];
 }
 
 const getGreeting = () => {
@@ -47,100 +33,104 @@ const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
         opacity: 1,
-        transition: {
-            staggerChildren: 0.1
-        }
+        transition: { staggerChildren: 0.08 }
     }
 };
 
 const itemVariants: Variants = {
-    hidden: { y: 20, opacity: 0 },
+    hidden: { y: 14, opacity: 0 },
     visible: {
         y: 0,
         opacity: 1,
-        transition: { type: 'spring', stiffness: 100 }
+        transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] }
     }
 };
 
-export default function DashboardContent({
-    profile,
-    courses
-}: DashboardContentProps) {
-    const router = useRouter();
+export default function DashboardContent({ profile }: DashboardContentProps) {
     const { colors } = useTheme();
     const [greeting] = useState(getGreeting());
     const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
     const isAdmin = profile?.role === 'admin';
+    const firstName = profile?.nombre?.trim().split(/\s+/)[0] || 'Estudiante';
+    const facultyLogo = profile?.avatar_url?.includes('/logo/')
+        ? getStorageUrl(profile.avatar_url)
+        : null;
+    const themeVariables = {
+        '--dashboard-accent': colors.primary,
+        '--dashboard-accent-dark': colors.dark,
+        '--dashboard-accent-soft': colors.secondary,
+    } as React.CSSProperties;
 
     return (
-        <div className="min-h-screen bg-bb-dark p-4 md:p-8 relative overflow-hidden transition-colors duration-300">
-            <BouncingBalls />
+        <main className={styles.page} style={themeVariables}>
             <AnnouncementPopup />
 
             <motion.div
-                className="max-w-7xl mx-auto relative z-10"
+                className={styles.container}
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
             >
-                <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-4">
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="h-6 md:h-8 w-1 bg-blue-500 rounded-full" />
-                            <h1 className="text-2xl md:text-4xl font-black text-bb-text tracking-tight leading-tight">
-                                {greeting}, <span className="text-blue-400">{profile?.nombre.split(' ')[0] || 'Estudiante'}</span>.
-                            </h1>
+                <motion.header variants={itemVariants} className={styles.header}>
+                    <div className={styles.identity}>
+                        <div className={styles.kicker}>
+                            <span className={styles.kickerMark} aria-hidden="true" />
+                            Tu espacio académico
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 text-bb-text-secondary px-3 md:px-4">
-                            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-bb-card border border-bb-border">
-                                {profile?.avatar_url && (profile.avatar_url.includes('/logo/') || profile.avatar_url.includes('fce.png')) && (
-                                    <img src={getStorageUrl(profile.avatar_url)} alt="Faculty" className="w-4 h-4 object-contain" loading="lazy" decoding="async" />
-                                )}
-                                <span className="text-[10px] md:text-xs font-semibold">
-                                    {profile?.carrera || 'Facultad'}
+
+                        <h1>
+                            {greeting}, <span>{firstName}</span>
+                        </h1>
+
+                        <div className={styles.profileMeta}>
+                            <div className={styles.facultyBadge}>
+                                <span className={styles.facultyLogo} aria-hidden="true">
+                                    {facultyLogo ? (
+                                        <img src={facultyLogo} alt="" loading="lazy" decoding="async" />
+                                    ) : (
+                                        <School size={15} strokeWidth={2} />
+                                    )}
                                 </span>
+                                <span>{profile?.carrera || 'Facultad por seleccionar'}</span>
                             </div>
-                            <span className="hidden md:inline text-xs">•</span>
-                            <span className="text-[10px] md:text-xs">{profile?.universidad || 'Universidad Privada'}</span>
+                            <span className={styles.metaDivider} aria-hidden="true" />
+                            <span className={styles.university}>{profile?.universidad || 'Universidad del Pacífico'}</span>
                         </div>
                     </div>
-                    <div className="flex gap-3">
-                        {isAdmin && (
-                            <Button 
-                                onClick={() => setIsAdminModalOpen(true)}
-                                className="bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center gap-2 px-4 py-2 rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-95"
-                            >
-                                <PlusCircle className="w-5 h-5" />
-                                <span className="hidden sm:inline">Subir Banner</span>
-                            </Button>
-                        )}
-                        {/* El bloque 'Nivel Estudiante' fue removido para un diseño más limpio */}
-                    </div>
-                </motion.div>
 
-                <motion.div variants={itemVariants} className="mb-0 relative z-20">
-                    <OptionsSelector />
-                </motion.div>
+                    {isAdmin && (
+                        <Button
+                            onClick={() => setIsAdminModalOpen(true)}
+                            className={styles.adminButton}
+                        >
+                            <Plus size={17} strokeWidth={2.4} />
+                            Gestionar portada
+                        </Button>
+                    )}
+                </motion.header>
 
-                {/* Admin Modal for Announcements */}
+                <motion.section variants={itemVariants} aria-label="Destacados del campus">
+                    <OptionsSelector accentColor={colors.primary} />
+                </motion.section>
+
                 <Dialog open={isAdminModalOpen} onOpenChange={setIsAdminModalOpen}>
                     <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-bb-dark border-bb-border text-bb-text p-0">
                         <div className="p-6">
                             <DialogHeader className="mb-6">
                                 <DialogTitle className="text-2xl font-black flex items-center gap-2">
-                                    <Megaphone className="text-blue-500" />
-                                    Gestión de Anuncios y Carrusel
+                                    <Megaphone style={{ color: colors.primary }} />
+                                    Gestión de anuncios y portada
                                 </DialogTitle>
-                                <DialogDescription className="text-bb-text-secondary italic">
-                                    Las imágenes subidas aquí aparecerán en el Popup y en las tarjetas del carrusel dinámico.
+                                <DialogDescription className="text-bb-text-secondary">
+                                    Administra las imágenes y mensajes destacados que verá la comunidad.
                                 </DialogDescription>
                             </DialogHeader>
-                            <AnnouncementsManager isAdminView={true} />
+                            <AnnouncementsManager isAdminView />
                         </div>
                     </DialogContent>
                 </Dialog>
             </motion.div>
-        </div>
+        </main>
     );
 }

@@ -1,0 +1,209 @@
+.page {
+  position: relative;
+  min-height: 100%;
+  padding: clamp(24px, 3.5vw, 54px);
+  overflow: hidden;
+  color: var(--bb-text);
+  background:
+    radial-gradient(circle at 92% 4%, color-mix(in srgb, var(--dashboard-accent) 11%, transparent), transparent 29rem),
+    var(--bb-dark);
+}
+
+.page::before {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  opacity: 0.16;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--bb-border) 42%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--bb-border) 42%, transparent) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, black, transparent 58%);
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 1440px);
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: clamp(28px, 4vw, 46px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.identity {
+  min-width: 0;
+}
+
+.kicker {
+  margin-bottom: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--bb-text-secondary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.kickerMark {
+  width: 24px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--dashboard-accent);
+}
+
+.header h1 {
+  max-width: 950px;
+  margin: 0;
+  color: var(--bb-text);
+  font-size: clamp(2.1rem, 4.2vw, 4.75rem);
+  font-weight: 760;
+  line-height: 0.96;
+  letter-spacing: -0.058em;
+  text-wrap: balance;
+}
+
+.header h1 span {
+  color: var(--dashboard-accent);
+}
+
+.profileMeta {
+  margin-top: 19px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 11px;
+  color: var(--bb-text-secondary);
+  font-size: 0.78rem;
+}
+
+.facultyBadge {
+  min-height: 35px;
+  padding: 4px 13px 4px 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--dashboard-accent) 24%, var(--bb-border));
+  border-radius: 999px;
+  color: var(--bb-text);
+  background: color-mix(in srgb, var(--dashboard-accent) 8%, var(--bb-card));
+  font-weight: 680;
+}
+
+.facultyLogo {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  color: var(--dashboard-accent);
+  background: color-mix(in srgb, var(--dashboard-accent-soft) 82%, white);
+}
+
+.facultyLogo img {
+  width: 76%;
+  height: 76%;
+  object-fit: contain;
+}
+
+.metaDivider {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--bb-text-secondary);
+  opacity: 0.6;
+}
+
+.university {
+  line-height: 1.4;
+}
+
+.adminButton {
+  min-height: 46px !important;
+  padding: 0 19px !important;
+  flex: 0 0 auto;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--dashboard-accent) 82%, white) !important;
+  border-radius: 999px !important;
+  color: white !important;
+  background: var(--dashboard-accent) !important;
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--dashboard-accent) 22%, transparent);
+  font-size: 0.8rem;
+  font-weight: 780;
+  transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease !important;
+}
+
+.adminButton:hover {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px color-mix(in srgb, var(--dashboard-accent) 29%, transparent);
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 24px 18px 34px;
+  }
+
+  .header {
+    margin-bottom: 25px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .header h1 {
+    font-size: clamp(2.25rem, 11vw, 3.5rem);
+  }
+
+  .profileMeta {
+    margin-top: 16px;
+    align-items: flex-start;
+  }
+
+  .university {
+    max-width: 52vw;
+  }
+
+  .adminButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .page {
+    padding-inline: 14px;
+  }
+
+  .header h1 {
+    font-size: clamp(2rem, 10.5vw, 2.65rem);
+  }
+
+  .profileMeta {
+    gap: 8px;
+  }
+
+  .metaDivider {
+    display: none;
+  }
+
+  .university {
+    width: 100%;
+    max-width: none;
+    padding-left: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adminButton {
+    transition: none !important;
+  }
+}
