@@ -20,16 +20,15 @@ import {
   Instagram,
   ShieldCheck,
   Trash2,
-  Crown,
   MapPin,
   Coins,
-  Sparkles,
   ExternalLink,
   Pencil,
   Save,
   CheckCircle2,
 } from 'lucide-react';
 import { DeleteAccountModal } from '@/components/profile/DeleteAccountModal';
+import styles from './ProfilePage.module.css';
 
 const FREE_AVATARS = [
   '253c9a8cd0487a5122f258a1460cca0a.webp',
@@ -304,491 +303,248 @@ export default function ProfilePage() {
   const memberYear = new Date(profile.created_at).getFullYear();
   const achievements = Math.floor(profile.puntos / 50);
   const instagramUsername = profile.link_instagram?.replace(/.*\//, '').replace('@', '') || '';
+  const canUseCustomBackground = isAdmin || inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND);
+  const canUseCustomAvatar = isAdmin || inventory.includes(PERMISSIONS.CUSTOM_AVATAR);
+  const storeIsAvailable = !sidebarVisibility['Tienda'];
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 selection:bg-blue-500/30 ${themeMode === 'light' ? 'bg-[#F8FAFC] text-[#0F172A]' : 'bg-[#060709] text-[#E1E7EF]'}`}>
-      <style dangerouslySetInnerHTML={{ __html: `
-        .dn-toggle-wrap {
-          display: block;
-          user-select: none;
-        }
-        .dn-toggle-checkbox {
-          display: none;
-        }
-        .dn-toggle-btn {
-          display: block;
-          position: relative;
-          height: 38px;
-          width: 70px;
-          border-radius: 38px;
-          border: 3px solid #1c1c1c;
-          background-color: #3c4145;
-          transition: all 350ms ease-in;
-          cursor: pointer;
-        }
-        .dn-toggle-btn::before {
-          content: '';
-          display: block;
-          position: absolute;
-          top: 2px;
-          left: 2px;
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          background-color: #fff;
-          border: 3px solid #e3e3c7;
-          transition: all 250ms ease-in;
-        }
-        .dn-toggle-btn::after {
-          content: '';
-          display: block;
-          position: absolute;
-          top: 55%;
-          left: 32px;
-          z-index: 10;
-          width: 6px;
-          height: 6px;
-          opacity: 0;
-          background-color: #fff;
-          border-radius: 50%;
-          box-shadow: 
-            #fff 0 0,
-            #fff 2px 0,
-            #fff 4px 0,
-            #fff 6px 0,
-            #fff 7px 0,
-            #fff 9px 0,
-            #fff 10px 0,
-            #fff 13px -1px 0 1px,
-            #fff 10px -4px 0 -1px,
-            #fff 4px -4px 0 1px,
-            #d3d3d3 0 0 0 2px,
-            #d3d3d3 4px 0 0 2px,
-            #d3d3d3 7px 0 0 2px,
-            #d3d3d3 10px 0 0 2px,
-            #d3d3d3 13px -1px 0 3px,
-            #d3d3d3 10px -4px 0 1px,
-            #d3d3d3 4px -4px 0 3px;
-          transition: all 250ms ease-in, opacity 100ms ease-in;
-        }
-        .dn-toggle-feature {
-          display: block;
-          position: absolute;
-          top: 6px;
-          left: 52%;
-          z-index: 20;
-          width: 3px;
-          height: 3px;
-          border-radius: 50%;
-          background-color: #fff;
-          box-shadow: 
-            rgba(255,255,255,0.1) 18px -2px 0 0,
-            rgba(255,255,255,0.1) 7px 6px 0 -1px,
-            #fff 23px 11px 0 0.5px,
-            rgba(255,255,255,0.1) 19px 20px 0 0,
-            #fff 12px 14px 0 -1px,
-            rgba(255,255,255,0.1) 3px 22px 0 0.5px;
-          animation: starry_star 5s ease-in-out infinite;
-          transition: all 250ms ease-in;
-        }
-        .dn-toggle-feature::before {
-          content: '';
-          display: block;
-          position: absolute;
-          top: -1px;
-          left: -15px;
-          width: 10px;
-          height: 10px;
-          background-color: #fff;
-          border-radius: 50%;
-          border: 3px solid #e3e3c7;
-          box-shadow: 
-            #e3e3c7 -16px 0 0 -2px,
-            #e3e3c7 -5px 14px 0 -1.5px;
-          transform-origin: -3px 130%;
-          transition: all 250ms ease-in;
-        }
+    <div
+      className={styles.page}
+      style={{ '--profile-accent': colors?.primary || '#1677ff' } as React.CSSProperties}
+    >
+      <div className={styles.container}>
+        <section className={styles.profileHero} aria-labelledby="profile-name">
+          <div className={styles.cover}>
+            <img
+              key={backgroundImage}
+              src={getStorageUrl(backgroundImage, 'profile-avatars', PLACEHOLDERS.BACKGROUND)}
+              alt="Portada del perfil"
+              className={styles.coverImage}
+            />
+            <div className={styles.coverAccent} />
 
-        @keyframes starry_star {
-          50% {
-            background-color: rgba(255,255,255,0.1);
-            box-shadow: 
-              #fff 18px -2px 0 0,
-              #fff 7px 6px 0 -1px,
-              rgba(255,255,255,0.1) 23px 11px 0 0.5px,
-              #fff 19px 20px 0 0,
-              rgba(255,255,255,0.1) 12px 14px 0 -1px,
-              #fff 3px 22px 0 0.5px;
-          }
-        }
-        @keyframes bounceIn {
-          0% {
-            opacity: 0;
-            transform: scale(.3);
-          }
-          50% {
-            opacity: 100;
-            transform: scale(1.1);
-          }
-          55% {
-            transform: scale(1.1);
-          }
-          75% {
-            transform: scale(.9);
-          }
-          100% {
-            opacity: 100;
-            transform: scale(1);
-          }
-        }
+            <div className={styles.coverActions}>
+              {instagramUsername && !editing && (
+                <a
+                  href={profile.link_instagram?.startsWith('http') ? profile.link_instagram : `https://instagram.com/${instagramUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.coverButton}
+                >
+                  <Instagram aria-hidden="true" />
+                  <span>@{instagramUsername}</span>
+                </a>
+              )}
 
-        .dn-toggle-checkbox:checked + .dn-toggle-btn {
-          background-color: #9ee3fb;
-          border: 3px solid #86c3d7;
-        }
-        .dn-toggle-checkbox:checked + .dn-toggle-btn::before {
-          left: 33px;
-          background-color: #ffdf6d;
-          border: 3px solid #e1c348;
-        }
-        .dn-toggle-checkbox:checked + .dn-toggle-btn::after {
-          opacity: 100;
-          animation-name: bounceIn;
-          animation-duration: 0.60s;
-          animation-delay: 0.10s;
-          animation-fill-mode: backwards;
-          animation-timing-function: ease-in-out;
-        }
-        .dn-toggle-checkbox:checked + .dn-toggle-btn .dn-toggle-feature {
-          opacity: 0;
-          box-shadow: 
-            rgba(255,255,255,0.1) 18px -2px 0 -2px,
-            rgba(255,255,255,0.1) 7px 6px 0 -3px,
-            #fff 23px 11px 0 -2px,
-            rgba(255,255,255,0.1) 19px 20px 0 -2px,
-            #fff 12px 14px 0 -3px,
-            rgba(255,255,255,0.1) 3px 22px 0 -2px;
-          animation: none;
-        }
-        .dn-toggle-checkbox:checked + .dn-toggle-btn .dn-toggle-feature::before {
-          left: 15px;
-          transform: rotate(70deg);
-        }
-      ` }} />
-
-      {/* ============================================ */}
-      {/* 1. EDGE-TO-EDGE BANNER                      */}
-      {/* ============================================ */}
-      <div className={`relative h-48 sm:h-64 md:h-80 w-full overflow-hidden border-b ${themeMode === 'light' ? 'border-slate-200' : 'border-white/10'}`}>
-        <img
-          key={backgroundImage}
-          src={getStorageUrl(backgroundImage, 'profile-avatars', PLACEHOLDERS.BACKGROUND)}
-          alt="Banner"
-          className="w-full h-full object-cover"
-        />
-
-        {instagramUsername && !editing && (
-          <a
-            href={profile.link_instagram?.startsWith('http') ? profile.link_instagram : `https://instagram.com/${instagramUsername}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute bottom-4 right-4 p-2 sm:p-2.5 rounded-xl bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 shadow-xl shadow-black/40 hover:scale-110 transition-all active:scale-95 z-20 border border-white/20"
-            title="Instagram"
-          >
-            <Instagram className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-          </a>
-        )}
-
-        {editing && !uploadingBackground && (isAdmin || inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND) || !sidebarVisibility['Tienda']) && (
-          <button
-            onClick={() => {
-              if (inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND) || isAdmin) {
-                bgInputRef.current?.click();
-              } else if (!sidebarVisibility['Tienda']) {
-                router.push('/dashboard/store');
-              }
-            }}
-            className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2.5 sm:p-3 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 transition-all cursor-pointer z-30"
-          >
-            <div className="flex items-center gap-2">
-              <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
-              {(!inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND) && !isAdmin) && !sidebarVisibility['Tienda'] && (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/20 text-amber-500 text-[8px] font-black uppercase">
-                  Tienda
-                </div>
+              {editing && !uploadingBackground && (canUseCustomBackground || storeIsAvailable) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (canUseCustomBackground) {
+                      bgInputRef.current?.click();
+                    } else if (storeIsAvailable) {
+                      router.push('/dashboard/store');
+                    }
+                  }}
+                  className={styles.coverButton}
+                >
+                  <Camera aria-hidden="true" />
+                  <span>{canUseCustomBackground ? 'Cambiar portada' : 'Obtener en tienda'}</span>
+                  <input ref={bgInputRef} type="file" accept="image/*" onChange={handleBackgroundUpload} hidden />
+                </button>
               )}
             </div>
-            <input ref={bgInputRef} type="file" accept="image/*" onChange={handleBackgroundUpload} className="hidden" />
-          </button>
-        )}
-      </div>
-
-      {/* ============================================ */}
-      {/* 2. MAIN CONTENT AREA                       */}
-      {/* ============================================ */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 -mt-16 sm:-mt-24 relative z-10">
-
-        {/* Header Section: Avatar + Name + Core Info */}
-        <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-10 sm:mb-12 text-center md:text-left">
-
-          {/* Large Avatar Overlay */}
-          <div className="relative shrink-0 group">
-            <div className={`rounded-full ring-[6px] sm:ring-[8px] shadow-2xl transition-colors duration-500 ${themeMode === 'light' ? 'ring-[#F8FAFC] bg-white' : 'ring-[#060709] bg-[#060709]'}`}>
-              <AvatarWithFrame
-                size={160}
-                avatarUrl={getStorageUrl(formData.avatar_url || profile.avatar_url, 'profile-avatars', PLACEHOLDERS.AVATAR)}
-                frameUrl={equippedFrame?.image_url}
-                frameScale={equippedFrame?.frame_settings?.profile?.scale}
-                offsetX={equippedFrame?.frame_settings?.profile?.x}
-                offsetY={equippedFrame?.frame_settings?.profile?.y}
-                name={profile.nombre}
-                className="hidden sm:block"
-              />
-              <AvatarWithFrame
-                size={120}
-                avatarUrl={getStorageUrl(formData.avatar_url || profile.avatar_url, 'profile-avatars', PLACEHOLDERS.AVATAR)}
-                frameUrl={equippedFrame?.image_url}
-                frameScale={equippedFrame?.frame_settings?.profile?.scale}
-                offsetX={equippedFrame?.frame_settings?.profile?.x}
-                offsetY={equippedFrame?.frame_settings?.profile?.y}
-                name={profile.nombre}
-                className="sm:hidden"
-              />
-            </div>
-
-            {editing && !uploadingAvatar && (
-              <button
-                onClick={() => setIsAvatarSelectorOpen(true)}
-                className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 cursor-pointer z-30"
-              >
-                <div className={`p-2 sm:p-2.5 rounded-full bg-blue-600 shadow-xl hover:bg-blue-500 transition-all border-4 flex items-center justify-center ${themeMode === 'light' ? 'border-[#F8FAFC]' : 'border-[#060709]'}`}>
-                  <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
-                  <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                </div>
-              </button>
-            )}
           </div>
 
-          {/* Name, Description & Quick Links */}
-          <div className="flex-1 pb-1 sm:pb-2 w-full">
-            <div className="flex flex-col gap-2 sm:gap-3">
-              <div className="flex flex-col md:flex-row items-center md:items-baseline gap-3 md:gap-4">
+          <div className={styles.identityPanel}>
+            <div className={styles.avatarArea}>
+              <div className={styles.avatarFrame}>
+                <AvatarWithFrame
+                  size={132}
+                  avatarUrl={getStorageUrl(formData.avatar_url || profile.avatar_url, 'profile-avatars', PLACEHOLDERS.AVATAR)}
+                  frameUrl={equippedFrame?.image_url}
+                  frameScale={equippedFrame?.frame_settings?.profile?.scale}
+                  offsetX={equippedFrame?.frame_settings?.profile?.x}
+                  offsetY={equippedFrame?.frame_settings?.profile?.y}
+                  name={profile.nombre}
+                />
+              </div>
+
+              {editing && !uploadingAvatar && (
+                <button
+                  type="button"
+                  onClick={() => setIsAvatarSelectorOpen(true)}
+                  className={styles.avatarEditButton}
+                  aria-label="Cambiar avatar"
+                >
+                  <Camera aria-hidden="true" />
+                  <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleFileUpload} hidden />
+                </button>
+              )}
+            </div>
+
+            <div className={styles.identityCopy}>
+              <div className={styles.nameRow}>
                 {editing ? (
                   <input
                     type="text"
                     name="nombre"
                     value={formData.nombre || ''}
                     onChange={handleInputChange}
-                    className={`bg-transparent border-b-2 px-0 py-1 text-2xl sm:text-4xl md:text-5xl font-black focus:border-blue-500 outline-none w-full max-w-lg transition-all ${themeMode === 'light' ? 'border-slate-200 text-slate-900' : 'border-white/10 text-white'}`}
+                    className={styles.nameInput}
+                    aria-label="Nombre visible"
                   />
                 ) : (
-                  <h1
-                    className={`text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter transition-colors duration-500 ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}
-                    style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4), 0 0 2px rgba(0,0,0,1)' }}
-                  >
-                    {profile.nombre}
-                  </h1>
+                  <h1 id="profile-name">{profile.nombre}</h1>
                 )}
 
-                <div className="flex items-center gap-2">
+                <div className={styles.accountBadges}>
                   {isAdmin && (
-                    <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 fill-blue-500/10" />
+                    <span className={styles.accountBadge}>
+                      <ShieldCheck aria-hidden="true" /> Administrador
+                    </span>
                   )}
                   {isVip && (
-                    <img src="/vip-icon.png" alt="VIP" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-lg" />
+                    <span className={styles.accountBadge}>
+                      <img src="/vip-icon.png" alt="" /> VIP
+                    </span>
                   )}
                 </div>
               </div>
 
-              {/* DESCRIPTION (Moved under name) */}
-              <div className="max-w-xl mx-auto md:mx-0">
-                {editing ? (
-                  <textarea
-                    name="bio"
-                    value={formData.bio || ''}
-                    onChange={handleInputChange}
-                    placeholder="Escribe algo sobre ti..."
-                    className={`w-full bg-white/5 border rounded-xl px-4 py-2 placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/20 resize-none min-h-[60px] sm:min-h-[80px] leading-relaxed transition-all text-xs sm:text-sm italic ${themeMode === 'light' ? 'border-slate-200 text-slate-600' : 'border-white/10 text-white/60'}`}
-                  />
-                ) : (
-                  <p
-                    className={`text-base sm:text-lg md:text-xl font-medium leading-relaxed italic font-serif transition-colors duration-500 ${themeMode === 'light' ? 'text-slate-600' : 'text-white/70'}`}
-                    style={{ textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}
-                  >
-                    {profile.bio || 'Sin descripción aún...'}
-                  </p>
-                )}
-              </div>
+              {editing ? (
+                <textarea
+                  name="bio"
+                  value={formData.bio || ''}
+                  onChange={handleInputChange}
+                  placeholder="Cuéntale algo a la comunidad..."
+                  className={styles.bioInput}
+                />
+              ) : (
+                <p className={styles.bio}>{profile.bio || 'Aún no has agregado una descripción.'}</p>
+              )}
 
-              {/* Minimal Info Strips */}
-              <div className="flex flex-wrap justify-center md:justify-start gap-4 sm:gap-6 text-[10px] sm:text-xs md:text-sm font-semibold pt-1 sm:pt-2">
-                <div className="flex items-center gap-2 opacity-60">
-                  <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span>{userEmail}</span>
-                </div>
-
-                {profile.monedas > 0 && (
-                  <div className="flex items-center gap-2 text-amber-500/80">
-                    <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="font-bold">{profile.monedas} monedas</span>
-                  </div>
-                )}
+              <div className={styles.contactList}>
+                <span><Mail aria-hidden="true" /> {userEmail}</span>
+                <span><Coins aria-hidden="true" /> {profile.monedas} monedas</span>
               </div>
             </div>
-          </div>
 
-          {/* Action Area: Buttons */}
-          <div className="flex flex-col items-center md:items-end gap-3 sm:gap-4 mb-1 sm:mb-2 shrink-0 w-full md:w-auto">
-
-            <div className="flex gap-2 sm:gap-3">
+            <div className={styles.profileActions}>
               {editing ? (
                 <>
-                  <button
-                    onClick={handleSave}
-                    className="px-4 sm:px-6 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-full transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
-                  >
-                    <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    Guardar
+                  <button type="button" onClick={handleSave} className={styles.primaryButton}>
+                    <Save aria-hidden="true" /> Guardar cambios
                   </button>
-                  <button
-                    onClick={handleCancel}
-                    type="button"
-                    className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-full border transition-all active:scale-95 ${themeMode === 'light' ? 'bg-slate-100 border-slate-200 text-slate-400 hover:text-slate-600' : 'bg-white/5 border-white/10 text-white/50'}`}
-                  >
-                    <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <button type="button" onClick={handleCancel} className={styles.secondaryButton}>
+                    <X aria-hidden="true" /> Cancelar
                   </button>
                 </>
               ) : (
-                <button
-                  onClick={() => setEditing(true)}
-                  className={`px-5 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-full border transition-all active:scale-95 flex items-center gap-2 ${themeMode === 'light' ? 'bg-slate-900 border-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/10' : 'bg-[#1B1F24] border-white/5 text-white hover:bg-[#252A30]'}`}
-                >
-                  <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  Personalizar
+                <button type="button" onClick={() => setEditing(true)} className={styles.primaryButton}>
+                  <Pencil aria-hidden="true" /> Editar perfil
                 </button>
               )}
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* ============================================ */}
-        {/* 3. GRID CONTENT: STATS & DETAILS           */}
-        {/* ============================================ */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 md:gap-12 mb-16 sm:mb-20">
+        <div className={styles.contentGrid}>
+          <div className={styles.mainContent}>
+            <section className={styles.statsGrid} aria-label="Resumen de actividad">
+              <article className={styles.statCard}>
+                <span className={styles.statIcon}><Zap aria-hidden="true" /></span>
+                <div><strong>{profile.puntos}</strong><span>Puntos de actividad</span></div>
+              </article>
+              <article className={styles.statCard}>
+                <span className={styles.statIcon}><Calendar aria-hidden="true" /></span>
+                <div><strong>{memberYear}</strong><span>Año de ingreso</span></div>
+              </article>
+              <article className={styles.statCard}>
+                <span className={styles.statIcon}><Award aria-hidden="true" /></span>
+                <div><strong>{achievements}</strong><span>Logros obtenidos</span></div>
+              </article>
+            </section>
 
-          {/* Main Column */}
-          <div className="lg:col-span-3 space-y-12 sm:space-y-16">
+            <section className={styles.sectionCard}>
+              <header className={styles.sectionHeader}>
+                <div>
+                  <span>Información académica</span>
+                  <h2>Tu identidad dentro del campus</h2>
+                </div>
+              </header>
 
-            {/* Stats Strip */}
-            <div className={`grid grid-cols-1 sm:grid-cols-3 gap-0 border-y transition-colors duration-500 ${themeMode === 'light' ? 'border-slate-200' : 'border-white/[0.05]'}`}>
-              <div className={`py-6 sm:py-8 sm:pr-8 border-b sm:border-b-0 sm:border-r ${themeMode === 'light' ? 'border-slate-200' : 'border-white/[0.05]'}`}>
-                <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] block mb-3 sm:mb-4 ${themeMode === 'light' ? 'text-blue-600/60' : 'text-blue-500/60'}`}>Puntos de Actividad</span>
-                <div className="flex items-end gap-3 justify-between sm:justify-start">
-                  <span className={`text-4xl sm:text-5xl font-black ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>{profile.puntos}</span>
-                  <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 mb-1.5 sm:mb-2" />
+              <div className={styles.academicGrid}>
+                <div className={styles.academicItem}>
+                  <span className={styles.academicIcon}><MapPin aria-hidden="true" /></span>
+                  <div><small>Universidad</small><strong>{profile.universidad || 'Pendiente'}</strong></div>
                 </div>
-              </div>
-              <div className={`py-6 sm:py-8 sm:px-8 border-b sm:border-b-0 sm:border-r ${themeMode === 'light' ? 'border-slate-200' : 'border-white/[0.05]'}`}>
-                <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] block mb-3 sm:mb-4 ${themeMode === 'light' ? 'text-teal-600/60' : 'text-teal-500/60'}`}>Año de Ingreso</span>
-                <div className="flex items-end gap-3 justify-between sm:justify-start">
-                  <span className={`text-4xl sm:text-5xl font-black ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>{memberYear}</span>
-                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-teal-500 mb-1.5 sm:mb-2" />
-                </div>
-              </div>
-              <div className="py-6 sm:py-8 sm:pl-8">
-                <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] block mb-3 sm:mb-4 ${themeMode === 'light' ? 'text-pink-600/60' : 'text-pink-500/60'}`}>Logros Obtenidos</span>
-                <div className="flex items-end gap-3 justify-between sm:justify-start">
-                  <span className={`text-4xl sm:text-5xl font-black ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>{achievements}</span>
-                  <Award className="w-5 h-5 sm:w-6 sm:h-6 text-pink-500 mb-1.5 sm:mb-2" />
-                </div>
-              </div>
-            </div>
-
-            {/* ACADEMIC INFO */}
-            <section>
-              <h2 className={`text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] mb-6 sm:mb-8 ${themeMode === 'light' ? 'text-slate-400' : 'text-white/20'}`}>ESPECIFICACIONES ACADÉMICAS</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12">
-                <div className="space-y-2">
-                  <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${themeMode === 'light' ? 'text-slate-400' : 'text-[#52525B]'}`}>UNIVERSIDAD</span>
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-teal-500/50" />
-                    <p className={`text-base sm:text-lg font-bold transition-colors ${themeMode === 'light' ? 'text-slate-800' : 'text-white'}`}>{profile.universidad || 'Pendiente'}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${themeMode === 'light' ? 'text-slate-400' : 'text-[#52525B]'}`}>FACULTAD / CARRERA</span>
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-teal-500/50" />
-                    <p className={`text-base sm:text-lg font-bold transition-colors ${themeMode === 'light' ? 'text-slate-800' : 'text-white'}`}>{profile.carrera || 'No especificado'}</p>
-                  </div>
+                <div className={styles.academicItem}>
+                  <span className={styles.academicIcon}><BookOpen aria-hidden="true" /></span>
+                  <div><small>Facultad o carrera</small><strong>{profile.carrera || 'No especificado'}</strong></div>
                 </div>
               </div>
 
               {editing && (
-                <div className="mt-6 sm:mt-8">
-                  <div className={`flex items-center gap-3 sm:gap-4 border-b py-2 focus-within:border-pink-500 transition-all ${themeMode === 'light' ? 'border-slate-200' : 'border-white/10'}`}>
-                    <Instagram className="w-4 h-4 sm:w-5 sm:h-5 text-pink-500/50" />
+                <label className={styles.field}>
+                  <span>Usuario de Instagram</span>
+                  <div className={styles.fieldControl}>
+                    <Instagram aria-hidden="true" />
                     <input
                       type="text"
                       value={formData.link_instagram?.replace('https://instagram.com/', '') || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, link_instagram: e.target.value }))}
-                      className={`bg-transparent outline-none flex-1 text-sm sm:text-base font-medium placeholder-slate-400 ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}
-                      placeholder="Usuario de Instagram"
+                      onChange={(event) => setFormData((previous) => ({ ...previous, link_instagram: event.target.value }))}
+                      placeholder="tu_usuario"
                     />
                   </div>
-                </div>
+                </label>
               )}
             </section>
           </div>
 
-          {/* Sidebar Area - Settings & Appearance */}
-          <aside className={`space-y-10 sm:space-y-12 pl-0 lg:pl-8 border-t lg:border-t-0 lg:border-l pt-10 lg:pt-0 transition-colors duration-500 ${themeMode === 'light' ? 'border-slate-200' : 'border-white/[0.05]'}`}>
-
-            {/* Theme Toggle */}
-            <div className="space-y-4">
-              <h3 className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${themeMode === 'light' ? 'text-slate-400' : 'text-white/20'}`}>APARIENCIA</h3>
-              
-              <div className="dn-toggle-wrap">
-                <input
-                  type="checkbox"
-                  id="dn-toggle"
-                  className="dn-toggle-checkbox"
-                  checked={themeMode === 'light'}
-                  onChange={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')}
-                />
-                <label className="dn-toggle-btn" htmlFor="dn-toggle">
-                  <span className="dn-toggle-feature"></span>
-                </label>
+          <aside className={styles.settingsColumn} aria-label="Configuración del perfil">
+            <section className={styles.settingsCard}>
+              <div className={styles.settingsHeading}>
+                <span>Apariencia</span>
+                <h2>Modo de visualización</h2>
+                <p>Elige el contraste que prefieras para toda la plataforma.</p>
               </div>
-            </div>
+              <div className={styles.themeSelector} role="group" aria-label="Tema de la plataforma">
+                <button
+                  type="button"
+                  onClick={() => setThemeMode('light')}
+                  className={themeMode === 'light' ? styles.themeActive : ''}
+                  aria-pressed={themeMode === 'light'}
+                >
+                  <Sun aria-hidden="true" /> Claro
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setThemeMode('dark')}
+                  className={themeMode === 'dark' ? styles.themeActive : ''}
+                  aria-pressed={themeMode === 'dark'}
+                >
+                  <Moon aria-hidden="true" /> Oscuro
+                </button>
+              </div>
+            </section>
 
-            {/* Security/Danger */}
-            <div className="space-y-4">
-              <h3 className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${themeMode === 'light' ? 'text-red-600/40' : 'text-red-500/40'}`}>ZONA CRÍTICA</h3>
-              <button
-                onClick={() => setIsDeleteModalOpen(true)}
-                className={`group flex items-center gap-3 text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-colors ${themeMode === 'light' ? 'text-slate-400 hover:text-red-600' : 'text-white/20 hover:text-red-500'}`}
-              >
-                <Trash2 className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100" />
-                Eliminar Cuenta
+            <section className={styles.settingsCard}>
+              <div className={styles.settingsHeading}>
+                <span>Cuenta</span>
+                <h2>Estado del perfil</h2>
+              </div>
+              <dl className={styles.accountDetails}>
+                <div><dt>Actualizado</dt><dd>{new Date(profile.updated_at).toLocaleDateString()}</dd></div>
+                <div><dt>Identificador</dt><dd>{profile.id.substring(0, 12).toUpperCase()}</dd></div>
+              </dl>
+              <button type="button" onClick={() => setIsDeleteModalOpen(true)} className={styles.dangerButton}>
+                <Trash2 aria-hidden="true" /> Eliminar cuenta
               </button>
-            </div>
-
-            {/* ID Sync */}
-            <div className="pt-6 sm:pt-12">
-              <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.4em] opacity-30 ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>
-                SYNC: {new Date(profile.updated_at).toLocaleDateString()}
-              </p>
-              <p className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.4em] mt-2 opacity-15 ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>
-                ID: {profile.id.substring(0, 16).toUpperCase()}...
-              </p>
-            </div>
+            </section>
           </aside>
         </div>
       </div>
-
-      {/* Footer Decoration */}
-      <div className={`w-full h-px opacity-10 ${themeMode === 'light' ? 'bg-slate-900' : 'bg-white'}`} />
 
       <DeleteAccountModal
         isOpen={isDeleteModalOpen}
@@ -797,16 +553,19 @@ export default function ProfilePage() {
 
       {/* Free Avatar Selector Modal */}
       {isAvatarSelectorOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className={`w-full max-w-lg rounded-3xl border p-6 shadow-2xl transition-colors duration-500 ${themeMode === 'light' ? 'bg-white border-slate-200' : 'bg-[#0F172A] border-white/10'}`}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className={`text-xl font-black tracking-tight ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>Selecciona un Avatar</h2>
-              <button onClick={() => setIsAvatarSelectorOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-                <X className="w-5 h-5 opacity-40" />
+        <div className={styles.modalBackdrop} role="presentation">
+          <section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="avatar-dialog-title">
+            <div className={styles.modalHeader}>
+              <div>
+                <span>Personalización</span>
+                <h2 id="avatar-dialog-title">Selecciona un avatar</h2>
+              </div>
+              <button type="button" onClick={() => setIsAvatarSelectorOpen(false)} aria-label="Cerrar selector">
+                <X aria-hidden="true" />
               </button>
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 overflow-y-auto max-h-[60vh] pr-2 custom-scrollbar">
+            <div className={styles.avatarGrid}>
               {FREE_AVATARS.map((avatar) => {
                 const url = `/avatars/${avatar}`;
                 const isSelected = formData.avatar_url === url;
@@ -817,21 +576,17 @@ export default function ProfilePage() {
                       setFormData(prev => ({ ...prev, avatar_url: url }));
                       setIsAvatarSelectorOpen(false);
                     }}
-                    className={`relative aspect-square rounded-2xl overflow-hidden border-4 transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                    className={`${styles.avatarOption} ${isSelected ? styles.avatarOptionSelected : ''}`}
                   >
-                    <img src={url} alt="Avatar" className="w-full h-full object-cover" />
+                    <img src={url} alt="Avatar disponible" />
                     {isSelected && (
-                      <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center">
-                        <Zap className="w-5 h-5 text-blue-500 fill-blue-500/20" />
-                      </div>
+                      <span className={styles.selectedMark}><CheckCircle2 aria-hidden="true" /></span>
                     )}
                   </button>
                 );
               })}
 
-              <div className="col-span-full mt-6 mb-2">
-                <p className="text-[10px] font-bold text-bb-text-secondary uppercase tracking-widest opacity-60">Logo de tu Facultad</p>
-              </div>
+              <p className={styles.avatarGroupLabel}>Logo de tu facultad</p>
 
               {Object.entries(FACULTY_LOGOS_MAP)
                 .filter(([facName]) => isAdmin || facName === profile.carrera)
@@ -844,49 +599,43 @@ export default function ProfilePage() {
                         setFormData(prev => ({ ...prev, avatar_url: url }));
                         setIsAvatarSelectorOpen(false);
                       }}
-                      className={`relative aspect-square rounded-2xl overflow-hidden border-4 bg-white transition-all hover:scale-105 active:scale-95 ${isSelected ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                      className={`${styles.avatarOption} ${styles.facultyOption} ${isSelected ? styles.avatarOptionSelected : ''}`}
                       title={facName}
                     >
-                      <img src={url} alt={facName} className="w-full h-full object-contain p-2" />
+                      <img src={url} alt={facName} />
                       {isSelected && (
-                        <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center">
-                          <CheckCircle2 className="w-5 h-5 text-blue-500" />
-                        </div>
+                        <span className={styles.selectedMark}><CheckCircle2 aria-hidden="true" /></span>
                       )}
                     </button>
                   );
                 })}
 
               {/* Only show custom upload if user has permission, is admin, or if store is not hidden for users */}
-              {(isAdmin || inventory.includes(PERMISSIONS.CUSTOM_AVATAR) || !sidebarVisibility['Tienda']) && (
-                <div className="col-span-full mt-4 pt-4 border-t border-white/5">
-                  <p className="text-[10px] font-bold text-bb-text-secondary uppercase tracking-widest mb-3 opacity-60">Personalización Pro</p>
-                  <div
+              {(canUseCustomAvatar || storeIsAvailable) && (
+                <div className={styles.customAvatarArea}>
+                  <p>Avatar personalizado</p>
+                  <button
+                    type="button"
                     onClick={() => {
-                      if (inventory.includes(PERMISSIONS.CUSTOM_AVATAR) || isAdmin) {
+                      if (canUseCustomAvatar) {
                         avatarInputRef.current?.click();
                         setIsAvatarSelectorOpen(false);
-                      } else if (!sidebarVisibility['Tienda']) {
+                      } else if (storeIsAvailable) {
                         router.push('/dashboard/store');
                       }
                     }}
-                    className={`flex items-center gap-4 p-4 rounded-2xl border border-dashed transition-all cursor-pointer ${themeMode === 'light' ? 'bg-slate-50 border-slate-300 hover:bg-slate-100' : 'bg-white/5 border-white/20 hover:bg-white/10'}`}
+                    className={styles.customAvatarButton}
                   >
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-                      <Camera className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className={`text-sm font-black ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>Subir desde PC</p>
-                      <p className="text-[10px] font-bold text-bb-text-secondary">Necesitas permiso de tienda</p>
-                    </div>
-                    {(!inventory.includes(PERMISSIONS.CUSTOM_AVATAR) && !isAdmin) && (
-                      <ExternalLink className="w-4 h-4 opacity-30" />
+                    <span className={styles.customAvatarIcon}><Camera aria-hidden="true" /></span>
+                    <span><strong>Subir desde tu equipo</strong><small>{canUseCustomAvatar ? 'PNG, JPG o WEBP' : 'Disponible en la tienda'}</small></span>
+                    {!canUseCustomAvatar && (
+                      <ExternalLink aria-hidden="true" />
                     )}
-                  </div>
+                  </button>
                 </div>
               )}
             </div>
-          </div>
+          </section>
         </div>
       )}
     </div>
