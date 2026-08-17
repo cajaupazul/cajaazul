@@ -20,7 +20,6 @@ import { Autocomplete } from '@/components/ui/Autocomplete';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import StudentGradeCalculator from './StudentGradeCalculator';
 import AdminGradingFormulaEditor from './AdminGradingFormulaEditor';
-import styles from './CourseWorkspace.module.css';
 
 const PREDEFINED_SUBFOLDERS = [
     '📖 Sílabo y Cronograma',
@@ -571,12 +570,22 @@ export default function CourseDetailContent({
     const FolderCard = ({ name, count, onClick }: { name: string; count: number; onClick?: () => void }) => (
         <button
             onClick={onClick}
-            className={styles.folderCard}
+            className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-bb-darker/55 border border-bb-border/30 rounded-2xl hover:border-blue-500/50 hover:bg-bb-card/90 transition-all active:scale-95 text-center group w-full shadow-md"
         >
-            <span className={styles.folderIcon}><FolderRoot aria-hidden="true" /></span>
-            <span className={styles.folderCopy}>
-                <strong>{name}</strong>
-                <small>{count} {count === 1 ? 'material' : 'materiales'}</small>
+            <div className="relative">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" className="w-full h-full text-yellow-500 group-hover:text-yellow-400 transition-colors drop-shadow-sm" fill="currentColor">
+                        <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+                    </svg>
+                </div>
+                {count > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none border border-bb-dark">
+                        {count > 99 ? '99+' : count}
+                    </span>
+                )}
+            </div>
+            <span className="text-[11px] sm:text-xs font-bold text-bb-text/90 leading-tight line-clamp-2 w-full uppercase tracking-tighter">
+                {name}
             </span>
         </button>
     );
@@ -694,13 +703,13 @@ export default function CourseDetailContent({
                 {course.imagen_url ? (
                     <img src={course.imagen_url} alt={course.nombre} className="w-full h-full object-cover" />
                 ) : (
-                    <div className="w-full h-full bg-bb-card" />
+                    <div className="w-full h-full bg-gradient-to-br from-blue-600/20 via-bb-darker to-teal-600/20" />
                 )}
-                <div className="absolute inset-0 bg-black/30" />
+                <div className="absolute inset-0 bg-gradient-to-t from-bb-dark/80 via-bb-dark/20 to-transparent" />
                 <Button
                     variant="outline"
                     size="icon"
-                    className="absolute top-4 left-4 bg-bb-dark border-bb-border hover:bg-bb-card text-white"
+                    className="absolute top-4 left-4 bg-bb-dark/50 border-bb-border hover:bg-bb-card text-white backdrop-blur-md"
                     onClick={() => router.back()}
                 >
                     <ArrowLeft className="h-4 w-4" />
@@ -710,7 +719,7 @@ export default function CourseDetailContent({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute top-4 right-4 bg-bb-dark border border-bb-border hover:bg-bb-card text-white z-20"
+                        className="absolute top-4 right-4 bg-bb-dark/50 border border-bb-border hover:bg-bb-card text-white backdrop-blur-md z-20"
                         onClick={handleEditCourse}
                         title="Editar curso completo"
                     >
@@ -731,7 +740,7 @@ export default function CourseDetailContent({
                                     <h1 className="text-3xl md:text-5xl font-bold text-bb-text leading-tight uppercase">{course.nombre}</h1>
                                 </div>
                                 <div className="flex flex-col items-end gap-5 shrink-0 pt-2">
-                                    <Badge className="bg-green-700 text-white border-0 font-black px-4 py-1.5 uppercase tracking-widest text-[10px]">Abierto</Badge>
+                                    <Badge className="bg-green-500/10 text-green-400 border border-green-500/20 font-black px-4 py-1.5 uppercase tracking-widest text-[10px]">Abierto</Badge>
                                 </div>
                             </div>
 
@@ -743,54 +752,7 @@ export default function CourseDetailContent({
                             {course.descripcion && <p className="text-bb-text-secondary leading-relaxed text-sm md:text-base mb-10">{course.descripcion}</p>}
                         </div>
 
-                        <section className={styles.quickPanel} aria-labelledby="quick-actions-title">
-                            <div className={styles.quickHeader}>
-                                <span>Accesos rápidos</span>
-                                <h2 id="quick-actions-title">¿Qué necesitas encontrar?</h2>
-                            </div>
-                            <div className={styles.quickGrid}>
-                                <a href="#course-structure" className={styles.quickAction}>
-                                    <span className={styles.quickIcon}><FolderRoot aria-hidden="true" /></span>
-                                    <span className={styles.quickCopy}>
-                                        <strong>Explorar por ciclo</strong>
-                                        <small>Revisa PPT, exámenes y apuntes.</small>
-                                    </span>
-                                </a>
-                                <a href="#professor-filter" className={styles.quickAction}>
-                                    <span className={styles.quickIcon}><Users aria-hidden="true" /></span>
-                                    <span className={styles.quickCopy}>
-                                        <strong>Buscar profesor</strong>
-                                        <small>Filtra el material de una sección.</small>
-                                    </span>
-                                </a>
-                                <button type="button" onClick={() => setShowCalculatorModal(true)} className={styles.quickAction}>
-                                    <span className={styles.quickIcon}><Calculator aria-hidden="true" /></span>
-                                    <span className={styles.quickCopy}>
-                                        <strong>Calcular mi nota</strong>
-                                        <small>Proyecta prácticas y evaluaciones.</small>
-                                    </span>
-                                </button>
-                                {!isGuest ? (
-                                    <Link href={`/dashboard/courses/upload?courseId=${course.id}`} className={`${styles.quickAction} ${styles.quickActionPrimary}`}>
-                                        <span className={styles.quickIcon}><Upload aria-hidden="true" /></span>
-                                        <span className={styles.quickCopy}>
-                                            <strong>Subir material</strong>
-                                            <small>Comparte archivos, enlaces o carpetas.</small>
-                                        </span>
-                                    </Link>
-                                ) : (
-                                    <a href="#course-structure" className={`${styles.quickAction} ${styles.quickActionPrimary}`}>
-                                        <span className={styles.quickIcon}><FileText aria-hidden="true" /></span>
-                                        <span className={styles.quickCopy}>
-                                            <strong>Ver materiales</strong>
-                                            <small>Inicia sesión para colaborar.</small>
-                                        </span>
-                                    </a>
-                                )}
-                            </div>
-                        </section>
-
-                        <div id="professor-filter" className="mb-8 scroll-mt-24">
+                        <div className="mb-6">
                             <div className="flex items-center gap-2 mb-3 px-1">
                                 <div className="p-1.5 bg-blue-500/10 rounded-lg">
                                     <Filter className="w-4 h-4 text-blue-400" />
@@ -813,6 +775,14 @@ export default function CourseDetailContent({
                                         placeholder="Buscar por profesor..."
                                         className="flex-1 sm:w-80"
                                     />
+                                    {/* V7.0: Calculadora integrada junto al buscador */}
+                                    <button
+                                        onClick={() => setShowCalculatorModal(true)}
+                                        className="p-3 bg-bb-darker/50 border border-bb-border rounded-xl text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 h-11 transition-all active:scale-95 flex items-center justify-center"
+                                        title="Calculadora de Notas"
+                                    >
+                                        <Calculator className="w-5 h-5 flex-shrink-0" />
+                                    </button>
                                     {/* Admin: Editar fórmula de calificación */}
                                     {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
                                         <button
@@ -837,7 +807,7 @@ export default function CourseDetailContent({
                             </div>
                         </div>
 
-                        <div id="course-structure" className="w-full scroll-mt-24">
+                        <div className="w-full">
                             <div className="flex flex-col sm:flex-row items-stretch justify-between gap-4 mb-4">
                                 <div className="flex-1 flex flex-col justify-center">
                                     <h3 className="text-xl md:text-2xl font-black text-bb-text tracking-tight uppercase flex items-center gap-3">
@@ -850,14 +820,14 @@ export default function CourseDetailContent({
                                     <div className="flex items-center gap-1 sm:gap-2 bg-bb-darker/50 p-1 rounded-xl border border-bb-border flex-shrink-0">
                                         <button
                                             onClick={() => setViewMode('grid')}
-                                            className={`p-1.5 sm:p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                            className={`p-1.5 sm:p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
                                             title="Vista Cuadrícula"
                                         >
                                             <LayoutPanelLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                         </button>
                                         <button
                                             onClick={() => setViewMode('list')}
-                                            className={`p-1.5 sm:p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                            className={`p-1.5 sm:p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
                                             title="Vista Lista"
                                         >
                                             <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
@@ -870,7 +840,7 @@ export default function CourseDetailContent({
                                                 setIsSelectionMode(!isSelectionMode);
                                                 setSelectedMaterialIds([]);
                                             }}
-                                            className={`inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all h-10 sm:h-11 px-3 sm:px-4 active:scale-95 whitespace-nowrap flex-shrink-0 ${isSelectionMode ? 'bg-blue-600 text-white' : 'bg-bb-card text-bb-text-secondary hover:text-white border border-bb-border'}`}
+                                            className={`inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all h-10 sm:h-11 px-3 sm:px-4 active:scale-95 whitespace-nowrap flex-shrink-0 ${isSelectionMode ? 'bg-blue-600 text-white shadow-blue-500/20 shadow-lg' : 'bg-bb-border/50 text-bb-text-secondary hover:text-white hover:bg-bb-card border border-transparent hover:border-bb-border'}`}
                                         >
                                             <div className="flex items-center gap-1.5 sm:gap-2">
                                                 <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -891,6 +861,17 @@ export default function CourseDetailContent({
                                             </div>
                                         </button>
                                     )}
+                                    {!isGuest && (
+                                        <Link
+                                            href={`/dashboard/courses/upload?courseId=${course.id}`}
+                                            className="inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 h-10 sm:h-11 px-3 sm:px-5 shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap flex-shrink-0"
+                                        >
+                                            <div className="flex items-center gap-1.5 sm:gap-2">
+                                                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
+                                                Subir
+                                            </div>
+                                        </Link>
+                                    )}
                                 </div>
                             </div>
 
@@ -901,8 +882,8 @@ export default function CourseDetailContent({
                                         onClick={() => setTypeFilter(null)}
                                         className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap active:scale-95 ${
                                             typeFilter === null
-                                                ? 'bg-blue-600 text-white border border-blue-600'
-                                                : 'bg-bb-card hover:bg-bb-hover border border-bb-border text-bb-text-secondary hover:text-white'
+                                                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10'
+                                                : 'bg-bb-darker/50 hover:bg-bb-card border border-bb-border/30 text-bb-text-secondary hover:text-white'
                                         }`}
                                     >
                                         Todos
@@ -913,8 +894,8 @@ export default function CourseDetailContent({
                                             onClick={() => setTypeFilter(type)}
                                             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap active:scale-95 ${
                                                 typeFilter === type
-                                                    ? 'bg-blue-600 text-white border border-blue-600'
-                                                    : 'bg-bb-card hover:bg-bb-hover border border-bb-border text-bb-text-secondary hover:text-white'
+                                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10'
+                                                    : 'bg-bb-darker/50 hover:bg-bb-card border border-bb-border/30 text-bb-text-secondary hover:text-white'
                                             }`}
                                         >
                                             {type}
