@@ -64,3 +64,14 @@ export const getDiversifiedProfessorBackground = (name: string, specialty?: stri
     const randomId = PROFESSOR_NATURE_BGS[hash % PROFESSOR_NATURE_BGS.length];
     return `https://images.unsplash.com/${randomId}?auto=format&fit=crop&q=80&w=1600&h=900`;
 };
+
+/**
+ * Biblioteca visual exclusiva para las tarjetas públicas de profesores.
+ * Es determinística, no usa imágenes personalizadas y solicita una versión
+ * reducida en WebP adecuada para el tamaño real del banner.
+ */
+export const getProfessorLibraryBackground = (name: string, specialty?: string | null): string => {
+    const hash = getStringHash(`campuslink-professor-${name}-${specialty || ''}`);
+    const imageId = PROFESSOR_NATURE_BGS[hash % PROFESSOR_NATURE_BGS.length];
+    return `https://images.unsplash.com/${imageId}?auto=format&fit=crop&crop=entropy&fm=webp&q=72&w=720&h=280`;
+};

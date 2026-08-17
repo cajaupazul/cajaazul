@@ -11,12 +11,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { BookOpen, ChevronDown, ChevronRight, ChevronUp, Star, Search, Plus, GraduationCap, Trash2 } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronRight, ChevronUp, Star, Search, Plus, Trash2 } from 'lucide-react';
 import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import { useProfile } from '@/lib/profile-context';
-import { PLACEHOLDERS, getDiversifiedProfessorBackground } from '@/lib/constants';
+import { PLACEHOLDERS, getProfessorLibraryBackground } from '@/lib/constants';
 // Removed SyncProfessorsModal import
 import DeleteProfessorModal from './DeleteProfessorModal';
 import { Autocomplete } from '@/components/ui/Autocomplete';
@@ -29,8 +29,8 @@ interface ProfessorsContentProps {
 }
 
 
-const ProfessorBackground = memo(function ProfessorBackground({ url, name, specialty }: { url: string | null; name: string; specialty?: string | null }) {
-    const [currentUrl, setCurrentUrl] = useState(() => getDiversifiedProfessorBackground(name, specialty, url));
+const ProfessorBackground = memo(function ProfessorBackground({ name, specialty }: { name: string; specialty?: string | null }) {
+    const [currentUrl, setCurrentUrl] = useState(() => getProfessorLibraryBackground(name, specialty));
 
     const handleError = () => {
         setCurrentUrl(PLACEHOLDERS.BACKGROUND);
@@ -231,20 +231,21 @@ export default function ProfessorsContent({
     }, [searchQuery, selectedCourse, sortBy]);
 
     return (
-        <div className="min-h-screen bg-bb-dark p-4 md:p-8 relative transition-colors duration-300">
-            <div className="max-w-7xl mx-auto relative z-10">
-                <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 md:p-3 bg-blue-600 rounded-xl">
-                                <GraduationCap className="h-6 w-6 md:h-8 md:w-8 text-white" />
-                            </div>
-                            <h1 className="text-2xl md:text-4xl font-black text-bb-text tracking-tight">Profesores</h1>
+        <div className={styles.page}>
+            <div className={styles.pageInner}>
+                <header className={styles.pageHeader}>
+                    <div className={styles.headingCopy}>
+                        <span>Comunidad académica</span>
+                        <div className={styles.titleRow}>
+                            <h1>Profesores</h1>
+                            <small>{professors.length} perfiles</small>
                         </div>
-                        <p className="text-sm md:text-base text-bb-text-secondary font-medium ml-1">Descubre a los mejores mentores de tu facultad</p>
+                        <p>Encuentra experiencias por docente y curso.</p>
                     </div>
+                </header>
 
-                    <div className="relative group w-full lg:flex-1">
+                <section className={styles.toolbar} aria-label="Buscar y ordenar profesores">
+                    <div className={styles.searchField}>
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Search className="h-5 w-5 text-gray-500" />
                         </div>
@@ -252,40 +253,38 @@ export default function ProfessorsContent({
                             placeholder="Buscar profesor..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-11 bg-bb-card border-bb-border text-bb-text placeholder:text-gray-500 rounded-xl"
+                            className={styles.searchInput}
                         />
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto flex-wrap">
-                        <Autocomplete
-                            items={uniqueCourses}
-                            value={selectedCourse === 'all' ? '' : selectedCourse}
-                            onChange={(val) => setSelectedCourse(val || 'all')}
-                            placeholder="Buscar curso..."
-                            className="w-full sm:w-64"
-                        />
+                    <Autocomplete
+                        items={uniqueCourses}
+                        value={selectedCourse === 'all' ? '' : selectedCourse}
+                        onChange={(val) => setSelectedCourse(val || 'all')}
+                        placeholder="Buscar curso..."
+                        className={styles.courseFilter}
+                    />
 
-                        <Select value={sortBy} onValueChange={setSortBy}>
-                            <SelectTrigger className="h-11 bg-bb-card border-bb-border text-bb-text rounded-xl w-full sm:w-48">
-                                <SelectValue placeholder="Ordenar por" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-bb-card border-bb-border text-bb-text">
-                                <SelectItem value="best">Mejor Calificados</SelectItem>
-                                <SelectItem value="worst">Menor Calificados</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        
-                        {!isGuest && (
-                            <Button
-                                onClick={() => router.push('/dashboard/professors/nuevo')}
-                                className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl w-full sm:w-auto"
-                            >
-                                <Plus className="h-5 w-5 mr-1" />
-                                Agregar
-                            </Button>
-                        )}
-                    </div>
-                </div>
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className={styles.sortTrigger}>
+                            <SelectValue placeholder="Ordenar por" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-bb-card border-bb-border text-bb-text">
+                            <SelectItem value="best">Mejor calificados</SelectItem>
+                            <SelectItem value="worst">Menor calificados</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    {!isGuest && (
+                        <Button
+                            onClick={() => router.push('/dashboard/professors/nuevo')}
+                            className={styles.addButton}
+                        >
+                            <Plus aria-hidden="true" />
+                            Agregar
+                        </Button>
+                    )}
+                </section>
 
                 {filteredAndSortedProfessors.length > 0 ? (
                     <>
@@ -309,7 +308,7 @@ export default function ProfessorsContent({
                                 return (
                                     <article key={professor.id} className={styles.professorCard}>
                                             <div className={styles.cardBanner}>
-                                                <ProfessorBackground url={professor.background_image_url} name={professor.nombre} specialty={professor.especialidad} />
+                                                <ProfessorBackground name={professor.nombre} specialty={professor.especialidad} />
                                                 {profile?.role === 'admin' && (
                                                     <button
                                                         type="button"
@@ -367,7 +366,6 @@ export default function ProfessorsContent({
                                                 <div className={styles.courseSection}>
                                                     <div className={styles.courseSectionHeader}>
                                                         <span>Cursos que enseña</span>
-                                                        <small>Selecciona uno para ver su perfil</small>
                                                     </div>
 
                                                     <div className={styles.courseList}>

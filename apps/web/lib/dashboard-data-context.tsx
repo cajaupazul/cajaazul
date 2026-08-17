@@ -82,7 +82,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
             // - total_ratings, total_comments
             const { data, error } = await supabase
                 .from('professor_with_courses')
-                .select('id,nombre,universidad,facultad,avatar_url,background_image_url,email,created_at,courses,avg_puntuacion,total_ratings')
+                .select('id,nombre,universidad,facultad,avatar_url,email,created_at,courses,avg_puntuacion,total_ratings')
                 .order('nombre', { ascending: true });
 
             if (!error && data) {
