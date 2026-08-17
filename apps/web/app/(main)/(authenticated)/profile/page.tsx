@@ -320,7 +320,6 @@ export default function ProfilePage() {
               alt="Portada del perfil"
               className={styles.coverImage}
             />
-            <div className={styles.coverAccent} />
 
             <div className={styles.coverActions}>
               {instagramUsername && !editing && (
