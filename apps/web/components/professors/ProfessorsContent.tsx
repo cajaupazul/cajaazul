@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { memo, useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -13,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Star, Search, Plus, GraduationCap, Trophy, Trash2, RefreshCw } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronRight, ChevronUp, Star, Search, Plus, GraduationCap, Trash2 } from 'lucide-react';
 import { supabase, Professor, Profile, getStorageUrl } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useDashboardData } from '@/lib/dashboard-data-context';
@@ -22,6 +20,7 @@ import { PLACEHOLDERS, getDiversifiedProfessorBackground } from '@/lib/constants
 // Removed SyncProfessorsModal import
 import DeleteProfessorModal from './DeleteProfessorModal';
 import { Autocomplete } from '@/components/ui/Autocomplete';
+import styles from './ProfessorCards.module.css';
 
 interface ProfessorsContentProps {
     initialProfessors: any[];
@@ -30,51 +29,25 @@ interface ProfessorsContentProps {
 }
 
 
-const getColorFromName = (nombre: string) => {
-    const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
-    let hash = 0;
-    for (let i = 0; i < nombre.length; i++) {
-        hash = nombre.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
-};
-
-const ProfessorBackground = ({ url, name, specialty }: { url: string | null; name: string; specialty?: string | null }) => {
+const ProfessorBackground = memo(function ProfessorBackground({ url, name, specialty }: { url: string | null; name: string; specialty?: string | null }) {
     const [currentUrl, setCurrentUrl] = useState(() => getDiversifiedProfessorBackground(name, specialty, url));
-    const [isLoaded, setIsLoaded] = useState(false);
 
     const handleError = () => {
-        // Fallback to LoremFlickr for guaranteed uniqueness on error
-        const seed = `${name}-${specialty || ''}-fallback`;
-        setCurrentUrl(`https://loremflickr.com/1600/900/nature,landscape,forest,mountain/all?lock=${Math.abs(hashString(seed))}`);
+        setCurrentUrl(PLACEHOLDERS.BACKGROUND);
     };
 
-    // Helper for secondary fallback hash if needed
-    function hashString(str: string): number {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) - hash) + str.charCodeAt(i);
-            hash |= 0;
-        }
-        return hash;
-    }
-
     return (
-        <>
-            <img
-                src={currentUrl}
-                alt=""
-                className="hidden"
-                onLoad={() => setIsLoaded(true)}
-                onError={handleError}
-            />
-            <div
-                className={`absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-all duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0 scale-110'}`}
-                style={{ backgroundImage: `url("${currentUrl}")` }}
-            />
-        </>
+        <img
+            src={currentUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
+            className={styles.backgroundImage}
+            onError={handleError}
+        />
     );
-};
+});
 
 export default function ProfessorsContent({
     initialProfessors,
@@ -96,6 +69,16 @@ export default function ProfessorsContent({
     // Pagination state
     const [itemsPerPage] = useState(24);
     const [currentPage, setCurrentPage] = useState(1);
+    const [expandedCourseLists, setExpandedCourseLists] = useState<Set<string>>(new Set());
+
+    const toggleCourseList = (professorId: string) => {
+        setExpandedCourseLists((current) => {
+            const next = new Set(current);
+            if (next.has(professorId)) next.delete(professorId);
+            else next.add(professorId);
+            return next;
+        });
+    };
 
     // Helper to normalize strings (remove accents, lowercase, trim)
     const normalizeString = (str: string) => {
@@ -306,143 +289,125 @@ export default function ProfessorsContent({
 
                 {filteredAndSortedProfessors.length > 0 ? (
                     <>
-                        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 mb-8">
+                        <div className={styles.professorGrid}>
                             {filteredAndSortedProfessors.slice(0, currentPage * itemsPerPage).map((professor) => {
-                                const isTopRated = (professor.averageRating || 0) >= 4.5;
+                                const catalogCourses = Array.isArray(professor.catalogCourses)
+                                    ? professor.catalogCourses.filter((course: any) => course?.id && course?.nombre)
+                                    : [];
+                                const orderedCourses = [...catalogCourses].sort((courseA: any, courseB: any) => {
+                                    if (selectedCourse === 'all') return courseA.nombre.localeCompare(courseB.nombre);
+                                    const courseASelected = normalizeString(courseA.nombre) === normalizeString(selectedCourse);
+                                    const courseBSelected = normalizeString(courseB.nombre) === normalizeString(selectedCourse);
+                                    if (courseASelected === courseBSelected) return courseA.nombre.localeCompare(courseB.nombre);
+                                    return courseASelected ? -1 : 1;
+                                });
+                                const isExpanded = expandedCourseLists.has(professor.id);
+                                const visibleCourses = isExpanded ? orderedCourses : orderedCourses.slice(0, 3);
+                                const remainingCourses = Math.max(0, orderedCourses.length - 3);
+                                const hasRatings = (professor.ratingCount || 0) > 0;
 
                                 return (
-                                    <div
-                                        key={professor.id}
-                                        className="group relative"
-                                    >
-                                        <Card className="h-full overflow-hidden transition-all duration-300 bg-bb-card border border-bb-border flex flex-col rounded-xl hover:border-blue-500/30">
-                                            <div className="relative h-20 md:h-24 overflow-hidden flex-shrink-0 bg-gradient-to-br from-bb-sidebar to-bb-dark">
+                                    <article key={professor.id} className={styles.professorCard}>
+                                            <div className={styles.cardBanner}>
                                                 <ProfessorBackground url={professor.background_image_url} name={professor.nombre} specialty={professor.especialidad} />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
-                                                {isTopRated && (
-                                                    <div className="absolute top-2 right-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                                                        <Trophy className="w-3 h-3" /> TOP
-                                                    </div>
-                                                )}
                                                 {profile?.role === 'admin' && (
                                                     <button
+                                                        type="button"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             handleDeleteClick(professor);
                                                         }}
-                                                        className="absolute top-2 left-2 bg-red-500/20 border border-red-500/30 text-red-400 p-1.5 rounded-lg hover:bg-red-500/40 transition-colors z-20"
+                                                        className={styles.deleteProfessorButton}
                                                         title="Eliminar profesor"
                                                     >
-                                                        <Trash2 className="w-4 h-4" />
+                                                        <Trash2 aria-hidden="true" />
                                                     </button>
                                                 )}
                                             </div>
 
-                                            <CardContent className="p-0 relative flex-1 flex flex-col">
-                                                <div className="px-3 md:px-5 pt-8 md:pt-12 pb-3 md:pb-4 relative flex-1">
-                                                    <div className="absolute -top-8 md:-top-10 left-3 md:left-5">
-                                                        <div
-                                                            className="h-14 w-14 md:h-20 md:w-20 rounded-xl md:rounded-2xl flex items-center justify-center bg-bb-sidebar border-2 border-bb-card shadow-xl overflow-hidden"
-                                                        >
+                                            <div className={styles.cardContent}>
+                                                <div className={styles.avatar}>
                                                             <img
                                                                 src={getStorageUrl(professor.avatar_url || '/profes/tl.webp', 'profile-avatars', PLACEHOLDERS.AVATAR)}
                                                                 alt={professor.nombre}
-                                                                className="w-full h-full object-cover"
+                                                                width={80}
+                                                                height={80}
+                                                                loading="lazy"
+                                                                decoding="async"
                                                                 onError={(e) => {
                                                                     (e.target as HTMLImageElement).src = '/profes/tl.webp';
                                                                 }}
                                                             />
-                                                        </div>
-                                                    </div>
+                                                </div>
 
-                                                    <div className="flex justify-end mb-2">
-                                                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${isTopRated ? 'bg-yellow-500/10 text-yellow-400' : 'bg-bb-darker border border-bb-border text-bb-text-secondary'}`}>
-                                                            <Star className={`w-3.5 h-3.5 ${isTopRated ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-400 text-gray-400'}`} />
-                                                            <span className="text-xs font-bold">{((professor.averageRating || 0)).toFixed(1)}</span>
-                                                        </div>
-                                                    </div>
+                                                <div
+                                                    className={hasRatings ? styles.ratingAvailable : styles.ratingEmpty}
+                                                    title={hasRatings
+                                                        ? `Calificación general basada en ${professor.ratingCount} ${professor.ratingCount === 1 ? 'reseña' : 'reseñas'}`
+                                                        : 'Este profesor todavía no tiene reseñas'}
+                                                >
+                                                    <Star aria-hidden="true" />
+                                                    {hasRatings ? (
+                                                        <>
+                                                            <strong>{Number(professor.averageRating).toFixed(1)}</strong>
+                                                            <span>· {professor.ratingCount}</span>
+                                                        </>
+                                                    ) : (
+                                                        <span>Sin reseñas</span>
+                                                    )}
+                                                </div>
 
-                                                    <div className="mt-1 md:mt-2">
-                                                        <h3 className="text-sm md:text-lg font-bold text-bb-text mb-1 truncate group-hover:text-blue-400 transition-colors">
+                                                <div className={styles.professorIdentity}>
+                                                        <h3 title={professor.nombre}>
                                                             {professor.nombre}
                                                         </h3>
-                                                        <div className="flex flex-col gap-1 mb-2 md:mb-3 overflow-hidden min-h-[32px]">
-                                                            {(() => {
-                                                                const courses = new Set<string>();
-                                                                if (professor.especialidad && professor.especialidad !== 'General') {
-                                                                    courses.add(professor.especialidad.trim());
-                                                                }
-                                                                if (professor.otros_cursos) {
-                                                                    professor.otros_cursos.split(',').forEach((c: string) => {
-                                                                        const trimmed = c.trim();
-                                                                        if (trimmed && trimmed.toLowerCase() !== 'general') {
-                                                                            courses.add(trimmed);
-                                                                        }
-                                                                    });
-                                                                }
-                                                                if (Array.isArray(professor.courses)) {
-                                                                    professor.courses.forEach((c: string) => {
-                                                                        const trimmed = c.trim();
-                                                                        if (trimmed && trimmed.toLowerCase() !== 'general') {
-                                                                            courses.add(trimmed);
-                                                                        }
-                                                                    });
-                                                                }
-                                                                const courseList = Array.from(courses);
-                                                                if (courseList.length === 0) {
-                                                                    return (
-                                                                        <p className="text-[10px] md:text-xs text-bb-text-secondary/50 italic truncate leading-tight">
-                                                                            Sin cursos asignados
-                                                                        </p>
-                                                                    );
-                                                                }
-                                                                return courseList.slice(0, 2).map((course, idx) => (
-                                                                    <p key={idx} className="text-[10px] md:text-xs text-blue-400/90 font-medium truncate leading-tight flex items-center gap-1">
-                                                                        <span className="w-1 h-1 rounded-full bg-blue-400 flex-shrink-0" />
-                                                                        <span className="truncate">{course}</span>
-                                                                    </p>
-                                                                ));
-                                                            })()}
-                                                        </div>
+                                                        <p>{orderedCourses.length} {orderedCourses.length === 1 ? 'curso asignado' : 'cursos asignados'}</p>
+                                                </div>
+
+                                                <div className={styles.courseSection}>
+                                                    <div className={styles.courseSectionHeader}>
+                                                        <span>Cursos que enseña</span>
+                                                        <small>Selecciona uno para ver su perfil</small>
+                                                    </div>
+
+                                                    <div className={styles.courseList}>
+                                                        {visibleCourses.length > 0 ? visibleCourses.map((course: any) => {
+                                                            const isSelectedCourse = selectedCourse !== 'all'
+                                                                && normalizeString(course.nombre) === normalizeString(selectedCourse);
+                                                            return (
+                                                                <button
+                                                                    type="button"
+                                                                    key={course.id}
+                                                                    className={`${styles.courseButton} ${isSelectedCourse ? styles.courseButtonSelected : ''}`}
+                                                                    onClick={() => router.push(`/dashboard/professors/${professor.id}/${course.id}`)}
+                                                                    title={`Ver a ${professor.nombre} en ${course.nombre}`}
+                                                                >
+                                                                    <BookOpen aria-hidden="true" />
+                                                                    <span>{course.nombre}</span>
+                                                                    <ChevronRight aria-hidden="true" />
+                                                                </button>
+                                                            );
+                                                        }) : (
+                                                            <div className={styles.noCourses}>Sin cursos asignados</div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className={styles.moreCoursesSlot}>
+                                                        {remainingCourses > 0 && (
+                                                            <button
+                                                                type="button"
+                                                                className={styles.moreCoursesButton}
+                                                                onClick={() => toggleCourseList(professor.id)}
+                                                                aria-expanded={isExpanded}
+                                                            >
+                                                                {isExpanded ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
+                                                                <span>{isExpanded ? 'Mostrar solo 3 cursos' : `Ver ${remainingCourses} ${remainingCourses === 1 ? 'curso más' : 'cursos más'}`}</span>
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
-
-                                                <div className="h-px w-full bg-bb-border" />
-
-                                                <div className="grid grid-cols-2 p-2 md:p-4 gap-2 md:gap-3 mt-auto">
-                                                    {(() => {
-                                                        const firstCourseId = professor.catalogCourses?.[0]?.id || professor.firstCourseId || null;
-                                                        const profLink = firstCourseId
-                                                            ? `/dashboard/professors/${professor.id}/${firstCourseId}`
-                                                            : `/dashboard/professors/${professor.id}`;
-                                                        return (
-                                                            <>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    className="w-full border-bb-border bg-bb-darker hover:bg-bb-hover text-bb-text-secondary hover:text-bb-text text-[10px] md:text-xs h-8 md:h-10 transition-all px-1"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        router.push(profLink);
-                                                                    }}
-                                                                >
-                                                                    Calificar
-                                                                </Button>
-                                                                <Button
-                                                                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] md:text-xs h-8 md:h-10 px-1"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        router.push(profLink);
-                                                                    }}
-                                                                >
-                                                                    Ver Perfil
-                                                                </Button>
-                                                            </>
-                                                        );
-                                                    })()}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
+                                            </div>
+                                    </article>
                                 );
                             })}
                         </div>

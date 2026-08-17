@@ -82,7 +82,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
             // - total_ratings, total_comments
             const { data, error } = await supabase
                 .from('professor_with_courses')
-                .select('*')
+                .select('id,nombre,universidad,facultad,avatar_url,background_image_url,email,created_at,courses,avg_puntuacion,total_ratings')
                 .order('nombre', { ascending: true });
 
             if (!error && data) {
@@ -109,7 +109,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         } finally {
             setLoading(prev => ({ ...prev, professors: false }));
         }
-    }, [session]);
+    }, []);
 
 
     const fetchGrupos = useCallback(async () => {

@@ -12,10 +12,10 @@ export default function ProfessorsPage() {
   const { professors, fetchProfessors } = useDashboardData();
 
   React.useEffect(() => {
-    if (professors.length === 0) {
-      fetchProfessors();
-    }
-  }, [professors.length, fetchProfessors]);
+    // Revalidar en segundo plano al volver desde una calificación para evitar
+    // mostrar promedios antiguos conservados en el contexto del dashboard.
+    void fetchProfessors();
+  }, [fetchProfessors]);
 
   const formattedProfessors = useMemo(() => {
     const groupedProfessorsMap = new Map();

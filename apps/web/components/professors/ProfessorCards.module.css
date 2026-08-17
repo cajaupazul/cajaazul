@@ -1,0 +1,368 @@
+.professorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
+  align-items: stretch;
+  gap: 22px;
+  margin-bottom: 32px;
+}
+
+.professorCard {
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--bb-border);
+  border-radius: 14px;
+  background: var(--bb-card);
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.professorCard:hover {
+  border-color: #3d6fb7;
+  transform: translateY(-2px);
+}
+
+.cardBanner {
+  position: relative;
+  height: 112px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  background: #17202c;
+}
+
+.cardBanner::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: rgba(4, 9, 16, 0.18);
+  pointer-events: none;
+}
+
+.backgroundImage {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 260ms ease;
+}
+
+.professorCard:hover .backgroundImage {
+  transform: scale(1.025);
+}
+
+.deleteProfessorButton {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #783540;
+  border-radius: 8px;
+  color: #ff8b98;
+  background: #26171c;
+  cursor: pointer;
+}
+
+.deleteProfessorButton:hover {
+  color: #fff;
+  background: #a92f3d;
+}
+
+.deleteProfessorButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cardContent {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+  padding: 50px 18px 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.avatar {
+  position: absolute;
+  top: -38px;
+  left: 18px;
+  z-index: 2;
+  width: 76px;
+  height: 76px;
+  overflow: hidden;
+  border: 3px solid var(--bb-card);
+  border-radius: 50%;
+  background: var(--bb-sidebar);
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.ratingAvailable,
+.ratingEmpty {
+  position: absolute;
+  top: 13px;
+  right: 18px;
+  max-width: calc(100% - 116px);
+  min-height: 29px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.ratingAvailable {
+  border-color: #6f5418;
+  color: #f8c84b;
+  background: #28200f;
+}
+
+.ratingEmpty {
+  border-color: var(--bb-border);
+  color: var(--bb-text-secondary);
+  background: var(--bb-darker);
+}
+
+.ratingAvailable svg,
+.ratingEmpty svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.ratingAvailable svg {
+  fill: currentColor;
+}
+
+.ratingAvailable strong {
+  font-size: 0.76rem;
+}
+
+.ratingAvailable span {
+  color: #d2b565;
+}
+
+.ratingEmpty span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.professorIdentity {
+  min-width: 0;
+  min-height: 73px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--bb-border);
+}
+
+.professorIdentity h3 {
+  min-height: 42px;
+  margin: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--bb-text);
+  font-size: 1rem;
+  font-weight: 780;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  text-transform: none;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.professorIdentity p {
+  margin: 5px 0 0;
+  color: var(--bb-text-secondary);
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.courseSection {
+  min-width: 0;
+  padding-top: 16px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.courseSectionHeader {
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.courseSectionHeader > span {
+  color: #a8b5c5;
+  font-size: 0.63rem;
+  font-weight: 800;
+  letter-spacing: 0.095em;
+  text-transform: uppercase;
+}
+
+.courseSectionHeader small {
+  color: #718095;
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.courseList {
+  min-height: 126px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.courseButton {
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 9px;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 15px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--bb-border);
+  border-radius: 8px;
+  color: #bdc9d8;
+  background: var(--bb-darker);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 140ms ease, color 140ms ease, background-color 140ms ease;
+}
+
+.courseButton:hover,
+.courseButton:focus-visible {
+  border-color: #3b82f6;
+  color: #fff;
+  background: #17243a;
+  outline: none;
+}
+
+.courseButtonSelected {
+  border-color: #3b82f6;
+  color: #dbeafe;
+  background: #172554;
+}
+
+.courseButton svg {
+  width: 15px;
+  height: 15px;
+  color: #6ea8ff;
+}
+
+.courseButton svg:last-child {
+  color: #748297;
+  transition: transform 140ms ease, color 140ms ease;
+}
+
+.courseButton:hover svg:last-child,
+.courseButton:focus-visible svg:last-child {
+  color: #93b9f4;
+  transform: translateX(2px);
+}
+
+.courseButton span {
+  min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.72rem;
+  font-weight: 680;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.noCourses {
+  min-height: 126px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--bb-border);
+  border-radius: 8px;
+  color: var(--bb-text-secondary);
+  font-size: 0.72rem;
+}
+
+.moreCoursesSlot {
+  min-height: 32px;
+  margin-top: 8px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.moreCoursesButton {
+  min-height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  color: #7fb0fa;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.moreCoursesButton:hover {
+  color: #b2d0ff;
+}
+
+.moreCoursesButton svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 640px) {
+  .professorGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .cardBanner {
+    height: 126px;
+  }
+
+  .cardContent {
+    padding-inline: 16px;
+  }
+
+  .avatar {
+    left: 16px;
+  }
+
+  .ratingAvailable,
+  .ratingEmpty {
+    right: 16px;
+  }
+
+  .professorIdentity h3 {
+    font-size: 1.04rem;
+  }
+
+  .courseButton span {
+    font-size: 0.76rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .professorCard,
+  .backgroundImage,
+  .courseButton,
+  .courseButton svg:last-child {
+    transition: none;
+  }
+}
