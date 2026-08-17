@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase, Professor } from '@/lib/supabase';
 import { generateThumbnailFromFile } from '@/lib/thumbnail-generator';
-import { Upload, X, UserPlus, ArrowLeft, FileText, CheckCircle } from 'lucide-react';
+import { Upload, X, UserPlus, ArrowLeft, FileText, CheckCircle, Files, Link2, FolderUp } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -16,6 +16,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import Link from 'next/link';
+import styles from './CourseWorkspace.module.css';
 
 interface FullPageUploadFormProps {
     courseId: string;
@@ -427,14 +428,15 @@ export default function FullPageUploadForm({
     const totalSelectedFiles = Object.values(filesMap).reduce((acc, arr) => acc + arr.length, 0);
     const hasAnyFilesSelected = totalSelectedFiles > 0;
     const hasAnyLinksEntered = Object.values(linksMap).some(arr => arr.some(l => l.url));
-    const isReadyForFiles = uploadMethod === 'link' ? hasAnyLinksEntered : hasAnyFilesSelected;
+    const hasDestination = Boolean(selectedSubfolder);
+    const isReadyForFiles = hasDestination && (uploadMethod === 'link' ? hasAnyLinksEntered : hasAnyFilesSelected);
 
     const isReadyForBbFolder = uploadMethod === 'bb-folder' && bbFiles.length > 0 && professorId !== 'none';
     const isReadyToSubmit = uploadMethod === 'bb-folder' ? isReadyForBbFolder : isReadyForFiles;
 
     return (
-        <div className="max-w-5xl mx-auto py-8 px-4 min-h-screen bg-bb-dark">
-            <div className="mb-8">
+        <div className={styles.uploadPage}>
+            <div className={styles.uploadHeader}>
                 <Button
                     variant="ghost"
                     className="pl-0 text-bb-text-secondary hover:bg-transparent hover:text-blue-400 mb-2 transition-colors"
@@ -449,7 +451,7 @@ export default function FullPageUploadForm({
                 </p>
             </div>
 
-            <form onSubmit={handleUpload} className="space-y-8 bg-bb-card p-6 md:p-8 rounded-xl shadow-2xl border border-bb-border shadow-black/10 dark:shadow-black/40 flex flex-col">
+            <form onSubmit={handleUpload} className={styles.uploadForm}>
 
                 {/* BB UPLOAD PROGRESS OVERLAY */}
                 {uploading && uploadMethod === 'bb-folder' && (
@@ -480,15 +482,11 @@ export default function FullPageUploadForm({
                             </div>
                             <div className="w-full bg-bb-sidebar rounded-full h-3 overflow-hidden border border-bb-border">
                                 <div
-                                    className="h-3 rounded-full transition-all duration-500 ease-out relative overflow-hidden"
+                                    className="h-3 rounded-full bg-violet-600 transition-all duration-500 ease-out"
                                     style={{
                                         width: `${bbProgress}%`,
-                                        background: 'linear-gradient(90deg, #7c3aed, #a855f7, #c084fc)',
                                     }}
-                                >
-                                    {/* Shimmer effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_1.5s_infinite]" style={{transform: 'skewX(-20deg)'}} />
-                                </div>
+                                />
                             </div>
                             <p className="text-[10px] text-bb-text-secondary/60 text-center">
                                 {bbProgress < 10 ? 'Preparando estructura de carpetas...' : `${Math.round(bbProgress / 100 * bbFiles.length)} de ${bbFiles.length} archivos subidos`}
@@ -502,20 +500,68 @@ export default function FullPageUploadForm({
                 )}
 
                 {/* NORMAL FORM CONTENT — hidden while bb-folder uploading */}
-                <div className={uploading && uploadMethod === 'bb-folder' ? 'hidden' : ''}>
+                <div className={`${styles.formContent} ${uploading && uploadMethod === 'bb-folder' ? 'hidden' : ''}`}>
+
+                <section className={styles.methodSection} aria-labelledby="upload-method-title">
+                    <div className={styles.methodHeader}>
+                        <span>Paso 1</span>
+                        <h2 id="upload-method-title">¿Qué quieres compartir?</h2>
+                    </div>
+                    <div className={styles.methodGrid}>
+                        <button
+                            type="button"
+                            onClick={() => setUploadMethod('file')}
+                            className={`${styles.methodOption} ${uploadMethod === 'file' ? styles.methodOptionActive : ''}`}
+                            aria-pressed={uploadMethod === 'file'}
+                        >
+                            <span className={styles.methodOptionIcon}><Files aria-hidden="true" /></span>
+                            <span className={styles.methodOptionCopy}>
+                                <strong>Archivos</strong>
+                                <small>PDF, PPT, Word, imágenes o ZIP.</small>
+                            </span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setUploadMethod('link');
+                                if (!linksMap.General) setLinksMap((previous) => ({ ...previous, General: [{ titulo: '', url: '' }] }));
+                            }}
+                            className={`${styles.methodOption} ${uploadMethod === 'link' ? styles.methodOptionActive : ''}`}
+                            aria-pressed={uploadMethod === 'link'}
+                        >
+                            <span className={styles.methodOptionIcon}><Link2 aria-hidden="true" /></span>
+                            <span className={styles.methodOptionCopy}>
+                                <strong>Enlaces</strong>
+                                <small>Videos, documentos o recursos externos.</small>
+                            </span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setUploadMethod('bb-folder')}
+                            className={`${styles.methodOption} ${uploadMethod === 'bb-folder' ? styles.methodOptionActive : ''}`}
+                            aria-pressed={uploadMethod === 'bb-folder'}
+                        >
+                            <span className={styles.methodOptionIcon}><FolderUp aria-hidden="true" /></span>
+                            <span className={styles.methodOptionCopy}>
+                                <strong>Carpeta de Blackboard</strong>
+                                <small>Conserva la estructura creada por la extensión.</small>
+                            </span>
+                        </button>
+                    </div>
+                </section>
 
                 {/* 1. DESTINO Y ASOCIACIÓN (Top Row) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className={styles.formGrid}>
                     {/* Destino */}
-                    <div className="space-y-4">
-                        <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
-                            <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${(selectedSubfolder || uploadMethod === 'bb-folder') ? 'bg-green-500/20 text-green-500 border-green-500/50' : 'bg-bb-sidebar text-blue-400 border border-bb-border'}`}>
-                                {(selectedSubfolder || uploadMethod === 'bb-folder') ? <CheckCircle className="w-4 h-4" /> : '1'}
+                    <div className={styles.formSection}>
+                        <Label className={styles.stepTitle}>
+                            <span className={`${styles.stepNumber} ${(selectedSubfolder || uploadMethod === 'bb-folder') ? 'text-green-500 border-green-600' : ''}`}>
+                                {(selectedSubfolder || uploadMethod === 'bb-folder') ? <CheckCircle className="w-4 h-4" /> : '2'}
                             </span>
-                            {uploadMethod === 'bb-folder' ? 'Ciclo y Profesor' : 'Destino del Archivo'}
+                            Destino del material
                         </Label>
 
-                        <div className="space-y-4 bg-bb-sidebar/50 p-5 rounded-xl border border-bb-border">
+                        <div className="space-y-4">
                             <div>
                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">¿A qué Ciclo pertenece?</Label>
                                 <Select value={selectedCycleId} onValueChange={(val) => {
@@ -559,13 +605,13 @@ export default function FullPageUploadForm({
                     </div>
 
                     {/* Asociación */}
-                    <div className="space-y-4">
-                        <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
-                            <span className="w-7 h-7 rounded-lg bg-bb-sidebar text-blue-400 border border-bb-border flex items-center justify-center text-xs font-black">2</span>
-                            Asociación
+                    <div className={styles.formSection}>
+                        <Label className={styles.stepTitle}>
+                            <span className={styles.stepNumber}>3</span>
+                            Asociación con profesor
                         </Label>
 
-                        <div className="p-5 bg-bb-sidebar/50 rounded-xl border border-bb-border">
+                        <div>
                             <div className="flex items-center justify-between mb-3">
                                 <Label htmlFor="professor" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 px-1">Profesor del curso</Label>
                                 <Link
@@ -607,56 +653,29 @@ export default function FullPageUploadForm({
                 </div>
 
                 {/* 2. ARCHIVOS / LINKS / CARPETA BB (Bottom Section) */}
-                <div className="space-y-4 pt-4 border-t border-bb-border/50">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
-                            <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${isReadyToSubmit ? 'bg-green-500/20 text-green-500 border-green-500/50' : 'bg-bb-sidebar text-blue-400 border border-bb-border'}`}>
-                                {isReadyToSubmit ? <CheckCircle className="w-4 h-4" /> : '3'}
+                <div className="space-y-4 pt-2">
+                    <div>
+                        <Label className={styles.stepTitle}>
+                            <span className={`${styles.stepNumber} ${isReadyToSubmit ? 'text-green-500 border-green-600' : ''}`}>
+                                {isReadyToSubmit ? <CheckCircle className="w-4 h-4" /> : '4'}
                             </span>
                             {uploadMethod === 'bb-folder' ? 'Carpeta Blackboard' : 'Selecciona los archivos'}
                         </Label>
-
-                        <div className="flex bg-bb-darker rounded-xl p-1 w-max border border-bb-border">
-                            <button
-                                type="button"
-                                onClick={() => setUploadMethod('file')}
-                                className={`px-4 py-2 text-xs uppercase tracking-widest font-bold rounded-lg transition-all ${uploadMethod === 'file' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
-                            >
-                                Archivos
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setUploadMethod('link');
-                                    if (!linksMap['General']) setLinksMap(prev => ({ ...prev, 'General': [{ titulo: '', url: '' }]}));
-                                }}
-                                className={`px-4 py-2 text-xs uppercase tracking-widest font-bold rounded-lg transition-all ${uploadMethod === 'link' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
-                            >
-                                Enlaces
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setUploadMethod('bb-folder')}
-                                className={`px-4 py-2 text-xs uppercase tracking-widest font-bold rounded-lg transition-all ${uploadMethod === 'bb-folder' ? 'bg-violet-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
-                            >
-                                📁 Carpeta BB
-                            </button>
-                        </div>
                     </div>
 
                     {/* BLACKBOARD FOLDER UPLOAD UI */}
                     {uploadMethod === 'bb-folder' && (
                         <div className="space-y-4">
-                            <div className="bg-violet-500/10 border border-violet-500/30 rounded-xl p-4 text-sm text-bb-text-secondary leading-relaxed">
-                                <p className="font-bold text-violet-400 mb-1">📁 Subida de Carpeta Blackboard</p>
+                            <div className="bg-bb-card border border-bb-border border-l-4 border-l-violet-600 rounded-xl p-4 text-sm text-bb-text-secondary leading-relaxed">
+                                <p className="font-bold text-violet-400 mb-1 flex items-center gap-2"><FolderUp className="w-4 h-4" /> Subida de carpeta Blackboard</p>
                                 <p>Selecciona la carpeta descargada con la extensión de Blackboard. La estructura de subcarpetas (Semana 1, Unidad 2, etc.) se replicará automáticamente y quedará asociada al profesor y ciclo que elegiste arriba.</p>
                             </div>
 
                             <div
                                 className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer
                                     ${bbFiles.length > 0
-                                        ? 'border-violet-500 bg-violet-500/10'
-                                        : 'border-bb-border hover:border-violet-500 hover:bg-bb-darker/50'}`}
+                                        ? 'border-violet-500 bg-bb-card'
+                                        : 'border-bb-border bg-bb-card hover:border-violet-500'}`}
                                 onClick={() => document.getElementById('bb-folder-input')?.click()}
                             >
                                 <input
@@ -670,9 +689,9 @@ export default function FullPageUploadForm({
                                     onChange={handleFolderSelect}
                                 />
                                 <div className="flex flex-col items-center gap-3">
-                                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all
-                                        ${bbFiles.length > 0 ? 'bg-violet-600 shadow-lg' : 'bg-bb-darker border border-bb-border'}`}>
-                                        📁
+                                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all
+                                        ${bbFiles.length > 0 ? 'bg-violet-600 text-white' : 'bg-bb-dark text-violet-400 border border-bb-border'}`}>
+                                        <FolderUp className="w-6 h-6" />
                                     </div>
                                     {bbFiles.length > 0 ? (
                                         <div className="space-y-1">
@@ -690,7 +709,7 @@ export default function FullPageUploadForm({
                             </div>
 
                             {bbFiles.length > 0 && (
-                                <div className="bg-bb-sidebar/50 rounded-xl border border-bb-border p-4 space-y-2">
+                                <div className="bg-bb-card rounded-xl border border-bb-border p-4 space-y-2">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-bb-text-secondary">Vista previa de estructura</p>
                                     <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1">
                                         {Array.from(new Set(bbFiles.map(f => f.relativePath.split('/').slice(0, -1).join('/')))).filter(Boolean).slice(0, 20).map((folder, i) => (
@@ -795,10 +814,10 @@ export default function FullPageUploadForm({
                             // File Upload UI
                             const currentFiles = filesMap[key] || [];
                             return (
-                                <div key={`file-${key}`} className={`space-y-4 bg-bb-sidebar/30 p-5 rounded-xl border transition-all duration-300 ${currentFiles.length > 0 ? 'border-blue-500/40 bg-blue-500/5 shadow-lg shadow-blue-500/5' : 'border-bb-border'}`}>
+                                <div key={`file-${key}`} className={`space-y-4 bg-bb-card p-5 rounded-xl border transition-all duration-300 ${currentFiles.length > 0 ? 'border-blue-500' : 'border-bb-border'}`}>
                                     <Label className="text-sm font-black text-blue-400 uppercase tracking-widest px-1">{label}</Label>
                                     
-                                    <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${currentFiles.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-bb-border hover:border-blue-500 hover:bg-bb-darker/50'}`}>
+                                    <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${currentFiles.length > 0 ? 'border-blue-500 bg-bb-dark' : 'border-bb-border bg-bb-dark hover:border-blue-500'}`}>
                                         <input
                                             id={`file-${key}`}
                                             type="file"
@@ -808,7 +827,7 @@ export default function FullPageUploadForm({
                                             accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
                                         />
                                         <label htmlFor={`file-${key}`} className="cursor-pointer flex flex-col items-center justify-center w-full h-full gap-3">
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform active:scale-90 ${currentFiles.length > 0 ? 'bg-blue-600 text-white shadow-lg' : 'bg-bb-darker text-blue-400 border border-bb-border'}`}>
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform active:scale-90 ${currentFiles.length > 0 ? 'bg-blue-600 text-white' : 'bg-bb-card text-blue-400 border border-bb-border'}`}>
                                                 <Upload className="h-5 w-5" />
                                             </div>
                                             <div className="space-y-1">
@@ -860,10 +879,10 @@ export default function FullPageUploadForm({
                     <Button
                         type="submit"
                         disabled={uploading || !isReadyToSubmit}
-                        className={`w-full sm:w-64 shadow-lg transition-all text-white font-black uppercase tracking-widest text-xs h-12 rounded-xl active:scale-95 disabled:opacity-50
+                        className={`w-full sm:w-64 transition-all text-white font-black uppercase tracking-widest text-xs h-12 rounded-xl active:scale-95 disabled:opacity-50
                             ${uploadMethod === 'bb-folder'
-                                ? 'bg-violet-600 hover:bg-violet-700 shadow-violet-600/20'
-                                : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'}`}
+                                ? 'bg-violet-600 hover:bg-violet-700'
+                                : 'bg-blue-600 hover:bg-blue-700'}`}
                     >
                         {uploading
                             ? (uploadMethod === 'bb-folder' ? bbProgressMsg || 'Procesando...' : 'Subiendo...')
