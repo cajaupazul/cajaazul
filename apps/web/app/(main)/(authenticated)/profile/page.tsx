@@ -21,7 +21,6 @@ import {
   ShieldCheck,
   Trash2,
   MapPin,
-  Coins,
   ExternalLink,
   Pencil,
   Save,
@@ -426,7 +425,10 @@ export default function ProfilePage() {
 
               <div className={styles.contactList}>
                 <span><Mail aria-hidden="true" /> {userEmail}</span>
-                <span><Coins aria-hidden="true" /> {profile.monedas} monedas</span>
+                <span>
+                  <img src="/icons/moneda.png" alt="" className={styles.coinIcon} />
+                  {profile.monedas} monedas
+                </span>
               </div>
             </div>
 
