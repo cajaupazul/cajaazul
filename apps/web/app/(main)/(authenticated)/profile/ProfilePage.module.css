@@ -93,7 +93,7 @@
   height: 144px;
   display: grid;
   place-items: center;
-  overflow: hidden;
+  overflow: visible;
   border: 6px solid var(--bb-dark);
   border-radius: 50%;
   background: var(--bb-card);
