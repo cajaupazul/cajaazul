@@ -1,456 +1,217 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTheme } from '@/lib/theme-context';
-import { useProfile } from '@/lib/profile-context';
-import { supabase, ShopCategory } from '@/lib/supabase';
-import { getPublicFileUrl } from '@/lib/r2-storage';
-import { resizeImage } from '@/lib/image-utils';
-import {
-    Plus,
-    Trash2,
-    Save,
-    Image as ImageIcon,
-    ShieldCheck,
-    RefreshCw,
-    X,
-    ChevronLeft,
-    Sparkles,
-    AlertCircle
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { FrameEditor } from '@/components/admin/FrameEditor';
-import { PLACEHOLDERS } from '@/lib/constants';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  AlertCircle,
+  ArrowLeft,
+  Check,
+  Image as ImageIcon,
+  PackagePlus,
+  RefreshCw,
+  Save,
+  ShieldCheck,
+  Sparkles,
+  X,
+} from 'lucide-react';
+import { supabase, ShopCategory } from '@/lib/supabase';
+import { useProfile } from '@/lib/profile-context';
+import { resizeImage } from '@/lib/image-utils';
+import { FrameEditor } from '@/components/admin/FrameEditor';
+
+type ItemType = 'profile_frame' | 'background' | 'badge' | 'sticker' | 'other';
+type Notice = { type: 'error' | 'success'; text: string } | null;
+
+const fieldClass = 'h-12 w-full rounded-xl border border-white/10 bg-[#0d0f12] px-4 text-sm font-semibold text-white outline-none transition-colors placeholder:text-zinc-700 focus:border-blue-500';
+const itemTypes: { value: ItemType; label: string; help: string }[] = [
+  { value: 'profile_frame', label: 'Marco de perfil', help: 'Se ajusta alrededor del avatar.' },
+  { value: 'background', label: 'Fondo', help: 'Personaliza la cabecera del perfil.' },
+  { value: 'badge', label: 'Insignia', help: 'Reconocimiento visual permanente.' },
+  { value: 'sticker', label: 'Sticker', help: 'Decoración con usos opcionales.' },
+  { value: 'other', label: 'Pack', help: 'Agrupa varios artículos existentes.' },
+];
 
 export default function NewShopItemPage() {
-    const { colors } = useTheme();
-    const { profile } = useProfile();
-    const router = useRouter();
-    const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter();
+  const { profile } = useProfile();
+  const [categories, setCategories] = useState<ShopCategory[]>([]);
+  const [allItems, setAllItems] = useState<{ id: string; name: string; type: string }[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [preserveAnimation, setPreserveAnimation] = useState(false);
+  const [frameSettings, setFrameSettings] = useState<unknown>(null);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<Notice>(null);
+  const [form, setForm] = useState({
+    name: '', description: '', type: 'profile_frame' as ItemType, category_id: '',
+    price_coins: 0, frame_key: '', is_active: true, max_uses: null as number | null,
+    bundle_items: [] as string[],
+  });
 
-    // Form state
-    const [form, setForm] = useState({
-        name: '',
-        description: '',
-        type: 'profile_frame' as any,
-        category_id: '',
-        price_coins: 0,
-        frame_key: '',
-        is_active: true,
-        max_uses: null as number | null,
-        bundle_items: [] as string[]
+  const canManage = profile?.role === 'admin' || profile?.role === 'superadmin';
+  const selectedType = itemTypes.find((item) => item.value === form.type)!;
+
+  useEffect(() => {
+    if (profile && !canManage) router.replace('/dashboard');
+  }, [profile, canManage, router]);
+
+  useEffect(() => {
+    if (!canManage) return;
+    void Promise.all([
+      supabase.from('shop_categories').select('*').order('display_order'),
+      supabase.from('shop_items').select('id, name, type').eq('is_active', true).order('name'),
+    ]).then(([categoryResult, itemResult]) => {
+      if (categoryResult.data) setCategories(categoryResult.data as ShopCategory[]);
+      if (itemResult.data) setAllItems(itemResult.data);
     });
-    const [categories, setCategories] = useState<ShopCategory[]>([]);
-    const [allShopItems, setAllShopItems] = useState<any[]>([]);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [skipResize, setSkipResize] = useState(false);
-    const [frameSettings, setFrameSettings] = useState<any>(null);
+  }, [canManage]);
 
-    // Proteccion de ruta
-    useEffect(() => {
-        if (profile && profile.role !== 'admin' && profile.role !== 'superadmin') {
-            router.push('/dashboard');
-        }
-        fetchCategories();
-    }, [profile, router]);
+  useEffect(() => () => {
+    if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
 
-    const fetchCategories = async () => {
-        const { data: catData } = await supabase
-            .from('shop_categories')
-            .select('*')
-            .order('display_order', { ascending: true });
-        if (catData) setCategories(catData);
+  const completion = useMemo(() => {
+    const checks = [form.name.trim().length >= 2, form.frame_key.trim().length >= 3, form.price_coins >= 0, !!selectedFile];
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  }, [form.name, form.frame_key, form.price_coins, selectedFile]);
 
-        const { data: itemData } = await supabase
-            .from('shop_items')
-            .select('id, name, type, is_active')
-            .order('created_at', { ascending: false });
-        if (itemData) setAllShopItems(itemData);
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setSelectedFile(file);
-            setPreviewUrl(URL.createObjectURL(file));
-
-            // Auto detect if it's animated to suggest skipping resize
-            if (file.type === 'image/gif' || file.name.endsWith('.gif') || file.type === 'image/webp') {
-                // We can't be 100% sure if WebP is animated without parsing, 
-                // but if the user says WebP is not animating, they will likely check this.
-                // For now, let's just make the option visible.
-            }
-        }
-    };
-
-    const handleSave = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-
-        if (!selectedFile || !form.frame_key) {
-            alert('Por favor selecciona una imagen y define un frame_key único');
-            return;
-        }
-
-        setIsSaving(true);
-        try {
-            // 1. Procesar imagen
-            const imageBlob = await resizeImage(selectedFile, 512, skipResize);
-            const extension = skipResize ? selectedFile.name.split('.').pop() : 'webp';
-            const fileName = `${Date.now()}_${form.frame_key}.${extension}`;
-
-            // 2. Subir a Storage
-            const { error: uploadError } = await supabase.storage
-                .from('profile-frames')
-                .upload(fileName, imageBlob, {
-                    contentType: skipResize ? selectedFile.type : 'image/webp',
-                    upsert: true
-                });
-
-            if (uploadError) throw uploadError;
-
-            // 3. Obtener URL pública
-            const { data: { publicUrl } } = supabase.storage
-                .from('profile-frames')
-                .getPublicUrl(fileName);
-
-            // 4. Insertar en base de datos
-            const { error: dbError } = await supabase
-                .from('shop_items')
-                .insert([{
-                    ...form,
-                    category_id: form.category_id || null,
-                    image_url: publicUrl,
-                    frame_settings: frameSettings
-                }]);
-
-            if (dbError) throw dbError;
-
-            // Éxito
-            router.push('/admin/shop');
-            router.refresh();
-        } catch (error: any) {
-            console.error('Error al crear item:', error);
-            alert(`Error: ${error.message}`);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'superadmin')) {
-        return null;
+  const handleFile = (file?: File) => {
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
+      setNotice({ type: 'error', text: 'Usa una imagen PNG, JPG, WebP o GIF.' });
+      return;
     }
+    if (file.size > 12 * 1024 * 1024) {
+      setNotice({ type: 'error', text: 'La imagen no puede superar 12 MB.' });
+      return;
+    }
+    if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setPreserveAnimation(file.type === 'image/gif');
+    setNotice(null);
+  };
 
-    return (
-        <div className="min-h-screen bg-bb-darker p-4 sm:p-8">
-            <div className="max-w-6xl mx-auto space-y-8">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Link href="/admin/shop">
-                            <Button variant="ghost" size="icon" className="rounded-full bg-bb-sidebar/50 hover:bg-bb-sidebar">
-                                <ChevronLeft className="w-6 h-6" />
-                            </Button>
-                        </Link>
-                        <div>
-                            <h1 className="text-3xl font-extrabold text-bb-text tracking-tight flex items-center gap-3">
-                                <Plus className="text-blue-400" /> Nuevo Marco
-                            </h1>
-                            <p className="text-bb-text-secondary">Configuración detallada del artículo</p>
-                        </div>
-                    </div>
-                    <Button
-                        onClick={() => handleSave()}
-                        className="font-bold h-12 px-8 rounded-xl shadow-lg hidden md:flex"
-                        style={{ backgroundColor: colors?.primary }}
-                        disabled={isSaving}
-                    >
-                        {isSaving ? 'Guardando...' : 'Crear Artículo'}
-                    </Button>
-                </div>
+  const normalizeKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9_-]/g, '_').replace(/_+/g, '_').slice(0, 80);
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Form Side */}
-                    <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-bb-card border border-bb-border rounded-3xl p-6 shadow-xl space-y-6">
-                            <h2 className="font-bold text-lg flex items-center gap-2 border-b border-bb-border pb-4">
-                                <AlertCircle className="w-5 h-5 text-blue-400" /> Información Básica
-                            </h2>
+  const save = async () => {
+    setNotice(null);
+    const cleanName = form.name.trim();
+    const cleanKey = normalizeKey(form.frame_key.trim());
+    if (cleanName.length < 2) return setNotice({ type: 'error', text: 'Escribe un nombre de al menos 2 caracteres.' });
+    if (cleanKey.length < 3) return setNotice({ type: 'error', text: 'El identificador necesita al menos 3 caracteres.' });
+    if (!Number.isInteger(form.price_coins) || form.price_coins < 0 || form.price_coins > 10000000) return setNotice({ type: 'error', text: 'El precio en monedas no es válido.' });
+    if (!selectedFile) return setNotice({ type: 'error', text: 'Selecciona la imagen del artículo.' });
+    if (form.description.length > 1600) return setNotice({ type: 'error', text: 'La descripción no puede superar 1600 caracteres.' });
 
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label>Nombre del Item</Label>
-                                    <Input
-                                        required
-                                        value={form.name}
-                                        onChange={e => setForm({ ...form, name: e.target.value })}
-                                        className="bg-bb-sidebar/30 border-bb-border h-11"
-                                        placeholder="Ej: Marco de Fuego"
-                                    />
-                                </div>
-                                <div className="space-y-4 pt-2 border-t border-bb-border">
-                                    <div className="space-y-2">
-                                        <Label>Tipo de Artículo</Label>
-                                        <select
-                                            value={form.type}
-                                            onChange={e => setForm({ ...form, type: e.target.value })}
-                                            className="w-full bg-bb-sidebar/30 border-bb-border h-11 rounded-md px-3 text-sm focus:bg-bb-sidebar"
-                                        >
-                                            <option className="bg-bb-darker text-white" value="profile_frame">Marco de Perfil</option>
-                                            <option className="bg-bb-darker text-white" value="background">Fondo</option>
-                                            <option className="bg-bb-darker text-white" value="badge">Insignia</option>
-                                            <option className="bg-bb-darker text-white" value="sticker">Sticker (Decoración)</option>
-                                            <option className="bg-bb-darker text-white" value="other">Otro / Pack Especial</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Sección / Categoría</Label>
-                                        <select
-                                            value={form.category_id}
-                                            onChange={e => setForm({ ...form, category_id: e.target.value })}
-                                            className="w-full bg-bb-sidebar/30 border-bb-border h-11 rounded-md px-3 text-sm focus:bg-bb-sidebar"
-                                        >
-                                            <option className="bg-bb-darker text-white" value="">Sin categoría</option>
-                                            {categories.map(cat => (
-                                                <option className="bg-bb-darker text-white" key={cat.id} value={cat.id}>{cat.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
+    setSaving(true);
+    let uploadedPath: string | null = null;
+    try {
+      const blob = await resizeImage(selectedFile, 512, preserveAnimation);
+      const extension = preserveAnimation ? selectedFile.name.split('.').pop()?.toLowerCase() || 'webp' : 'webp';
+      uploadedPath = `catalog/${crypto.randomUUID()}-${cleanKey}.${extension}`;
+      const { error: uploadError } = await supabase.storage.from('profile-frames').upload(uploadedPath, blob, {
+        contentType: preserveAnimation ? selectedFile.type : 'image/webp',
+        cacheControl: '31536000',
+        upsert: false,
+      });
+      if (uploadError) throw uploadError;
 
-                                {/* Seleccionador de Bundle Items (Solo para Packs) */}
-                                {form.type === 'other' && allShopItems.length > 0 && (
-                                    <div className="space-y-3 pt-4 border-t border-bb-border bg-blue-500/5 p-4 rounded-xl">
-                                        <h3 className="font-bold text-sm text-blue-400 flex items-center gap-2">
-                                            📦 Configuración de Pack
-                                        </h3>
-                                        <p className="text-[10px] text-bb-text-secondary">
-                                            Selecciona los artículos que el usuario recibirá automáticamente al comprar este pack.
-                                        </p>
-                                        <div className="max-h-40 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                                            {allShopItems.map((item: any) => (
-                                                <label key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer border border-transparent hover:border-white/10 transition-colors">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="w-4 h-4 rounded bg-bb-darker border-bb-border accent-blue-500"
-                                                        checked={form.bundle_items.includes(item.id)}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                                setForm(prev => ({ ...prev, bundle_items: [...prev.bundle_items, item.id] }));
-                                                            } else {
-                                                                setForm(prev => ({ ...prev, bundle_items: prev.bundle_items.filter(id => id !== item.id) }));
-                                                            }
-                                                        }}
-                                                    />
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="text-xs font-bold text-white truncate">{item.name}</div>
-                                                        <div className="text-[9px] text-zinc-500 uppercase tracking-wider">{item.type.replace('_', ' ')} • ID: {item.id.slice(0, 8)}</div>
-                                                    </div>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+      const { data: publicFile } = supabase.storage.from('profile-frames').getPublicUrl(uploadedPath);
+      const { error: insertError } = await supabase.from('shop_items').insert({
+        name: cleanName,
+        description: form.description.trim() || null,
+        type: form.type,
+        category_id: form.category_id || null,
+        price_coins: form.price_coins,
+        frame_key: cleanKey,
+        image_url: publicFile.publicUrl,
+        is_active: form.is_active,
+        max_uses: form.max_uses,
+        bundle_items: form.type === 'other' ? form.bundle_items : [],
+        frame_settings: form.type === 'profile_frame' ? frameSettings : null,
+      });
+      if (insertError) throw insertError;
 
-                                <div className="space-y-2 pt-2 border-t border-bb-border">
-                                    <Label>Frame Key (Identificador único)</Label>
-                                    <Input
-                                        required
-                                        value={form.frame_key}
-                                        onChange={e => setForm({ ...form, frame_key: e.target.value })}
-                                        className="bg-bb-sidebar/30 border-bb-border h-11"
-                                        placeholder="ej: bundle_oferta_01"
-                                    />
-                                    <p className="text-[10px] text-bb-text-secondary italic">Si es un marco, asegura que coincida con el CSS. Si es un pack u otro, ponle un ID único (ej. pack_verano_1).</p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>Precio (Monedas)</Label>
-                                        <Input
-                                            required
-                                            type="number"
-                                            min="0"
-                                            step="1"
-                                            value={form.price_coins}
-                                            onChange={e => {
-                                                const val = parseInt(e.target.value);
-                                                setForm({ ...form, price_coins: isNaN(val) ? 0 : val });
-                                            }}
-                                            className="bg-bb-sidebar/30 border-bb-border h-11"
-                                        />
-                                    </div>
-                                    <div className="flex items-center space-x-2 pt-8">
-                                        <input
-                                            type="checkbox"
-                                            id="is_active"
-                                            checked={form.is_active}
-                                            onChange={e => setForm({ ...form, is_active: e.target.checked })}
-                                            className="w-5 h-5 rounded-lg border-bb-border bg-bb-sidebar/30 accent-blue-500"
-                                        />
-                                        <Label htmlFor="is_active" className="cursor-pointer">Activo</Label>
-                                    </div>
-                                </div>
-                                <div className="space-y-4 pt-2 border-t border-bb-border">
-                                    <div className="space-y-2">
-                                        <Label>Cantidad de Usos</Label>
-                                        <select
-                                            value={form.max_uses === null ? 'forever' : form.max_uses.toString()}
-                                            onChange={e => setForm({ ...form, max_uses: e.target.value === 'forever' ? null : parseInt(e.target.value) })}
-                                            className="w-full bg-bb-sidebar/30 border-bb-border h-11 rounded-md px-3 text-sm focus:bg-bb-sidebar"
-                                        >
-                                            <option className="bg-bb-darker text-white" value="forever">Para siempre (Infinito)</option>
-                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                                                <option className="bg-bb-darker text-white" key={n} value={n.toString()}>{n} {n === 1 ? 'uso' : 'usos'}</option>
-                                            ))}
-                                        </select>
-                                        <p className="text-[10px] text-bb-text-secondary italic">Ideal para stickers que se consumen al usarlos. Dejar infinito para packs y marcos.</p>
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Descripción</Label>
-                                    <Textarea
-                                        value={form.description}
-                                        onChange={e => setForm({ ...form, description: e.target.value })}
-                                        className="bg-bb-sidebar/30 border-bb-border min-h-[100px]"
-                                        placeholder="Describe el marco..."
-                                    />
-                                </div>
-                            </div>
-                        </div>
+      setNotice({ type: 'success', text: 'Artículo creado correctamente.' });
+      router.push('/admin/shop');
+      router.refresh();
+    } catch (error) {
+      if (uploadedPath) await supabase.storage.from('profile-frames').remove([uploadedPath]);
+      setNotice({ type: 'error', text: error instanceof Error ? error.message : 'No se pudo crear el artículo.' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
-                        {/* Image Upload Area */}
-                        <div className="bg-bb-card border border-bb-border rounded-3xl p-6 shadow-xl space-y-4">
-                            <h2 className="font-bold text-lg border-b border-bb-border pb-4">Imagen del Marco</h2>
-                            <div className="flex flex-col items-center justify-center border-2 border-dashed border-bb-border rounded-2xl p-8 bg-bb-sidebar/20 hover:bg-bb-sidebar/30 transition-all cursor-pointer relative">
-                                {previewUrl ? (
-                                    <div className="relative group">
-                                        <img src={previewUrl || PLACEHOLDERS.ITEM} className="w-48 h-48 object-contain rounded-xl shadow-2xl" alt="Preview" />
-                                        <button
-                                            type="button"
-                                            onClick={() => { setSelectedFile(null); setPreviewUrl(null); }}
-                                            className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 shadow-lg hover:scale-110 transition-transform"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <label className="flex flex-col items-center gap-3 cursor-pointer w-full">
-                                        <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400">
-                                            <ImageIcon className="w-8 h-8" />
-                                        </div>
-                                        <div className="text-center">
-                                            <p className="font-bold text-bb-text">Haz clic para subir</p>
-                                            <p className="text-xs text-bb-text-secondary mt-1">Soporta PNG, GIF, WebP</p>
-                                        </div>
-                                        <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                                    </label>
-                                )}
-                            </div>
+  if (!canManage) return null;
 
-                            {/* Optimization Option */}
-                            <div className="bg-blue-500/5 border border-blue-500/10 p-4 rounded-2xl space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="checkbox"
-                                        id="skip_resize"
-                                        checked={skipResize}
-                                        onChange={(e) => setSkipResize(e.target.checked)}
-                                        className="w-5 h-5 accent-blue-500"
-                                    />
-                                    <Label htmlFor="skip_resize" className="text-sm font-bold flex flex-col cursor-pointer">
-                                        Preservar Animación (Saltar Opitimizador)
-                                        <span className="text-[10px] font-normal text-bb-text-secondary">Usa esto si subes un GIF o WebP animado.</span>
-                                    </Label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+  return (
+    <main className="min-h-screen bg-[#0d0f12] px-4 py-6 text-white sm:px-6 lg:px-10 lg:py-10">
+      <div className="mx-auto max-w-[1380px]">
+        <header className="flex flex-col gap-5 border-b border-white/10 pb-7 md:flex-row md:items-end md:justify-between">
+          <div>
+            <Link href="/admin/shop" className="inline-flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-white"><ArrowLeft className="h-4 w-4" /> Volver al catálogo</Link>
+            <p className="mt-7 text-xs font-black uppercase tracking-[0.2em] text-blue-500">Publicación</p>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] sm:text-4xl">Crear un artículo</h1>
+            <p className="mt-3 text-sm text-zinc-400">Completa la información, revisa la vista previa y publícalo cuando esté listo.</p>
+          </div>
+          <button onClick={() => void save()} disabled={saving} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-sm font-black hover:bg-blue-500 disabled:opacity-50">
+            {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? 'Publicando' : 'Publicar artículo'}
+          </button>
+        </header>
 
-                    {/* Preview / Adjust Side */}
-                    <div className="lg:col-span-2">
-                        {previewUrl ? (
-                            <div className="bg-bb-card border border-bb-border rounded-3xl p-6 sm:p-8 shadow-xl space-y-8 h-full">
-                                {form.type === 'profile_frame' ? (
-                                    <>
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-bb-border pb-6">
-                                            <h2 className="font-bold text-2xl flex items-center gap-3">
-                                                <Sparkles className="text-yellow-400 w-6 h-6" /> Ajuste Visual Real-Time
-                                            </h2>
-                                            <p className="text-xs bg-bb-darker px-3 py-1.5 rounded-full text-bb-text-secondary">
-                                                Los cambios se aplicarán al crear el item
-                                            </p>
-                                        </div>
-
-                                        <FrameEditor
-                                            frameImageUrl={previewUrl}
-                                            onSave={(settings) => setFrameSettings(settings)}
-                                        // Removemos el botón de guardar interno del editor si queremos que el principal mande
-                                        // De hecho FrameEditor tiene su propio botòn, lo dejaremos pero FrameEditor nos dará los settings
-                                        />
-
-                                        <div className="bg-yellow-500/5 border border-yellow-500/10 p-5 rounded-2xl flex gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center shrink-0">
-                                                <RefreshCw className="text-yellow-500 w-5 h-5" />
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-yellow-500 text-sm">¿Cómo ajustar?</p>
-                                                <p className="text-xs text-bb-text-secondary mt-1 leading-relaxed">
-                                                    Mueve los deslizadores para alinear el marco con el avatar.
-                                                    No olvides pulsar <strong>"Guardar Ajustes"</strong> en el editor verde arriba antes de crear el artículo para confirmar las dimensiones.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                                        <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
-                                            <ShieldCheck className="w-10 h-10" />
-                                        </div>
-                                        <div className="max-w-sm">
-                                            <h3 className="font-bold text-xl text-bb-text">Sin Ajuste Visual</h3>
-                                            <p className="text-bb-text-secondary mt-2">
-                                                Los artículos de tipo <strong>{form.type === 'badge' ? 'Insignia' : form.type === 'sticker' ? 'Sticker' : 'Otro'}</strong> no requieren alineación con el avatar.
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="bg-bb-card border border-bb-border rounded-3xl p-8 shadow-xl h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
-                                <div className="w-20 h-20 rounded-full bg-bb-sidebar/50 flex items-center justify-center">
-                                    <ImageIcon className="w-10 h-10 text-bb-text-secondary" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-xl text-bb-text">Esperando Imagen</h3>
-                                    <p className="text-bb-text-secondary max-w-xs mx-auto mt-2">
-                                        Sube un archivo para poder realizar los ajustes visuales y ver el resultado en tiempo real.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Mobile Save Button */}
-                <div className="md:hidden pt-4">
-                    <Button
-                        onClick={() => handleSave()}
-                        className="font-bold w-full h-14 rounded-2xl shadow-xl flex items-center justify-center gap-3"
-                        style={{ backgroundColor: colors?.primary }}
-                        disabled={isSaving}
-                    >
-                        <Save className="w-5 h-5" />
-                        {isSaving ? 'Guardando...' : 'Crear Artículo'}
-                    </Button>
-                </div>
-            </div>
+        <div className="mt-6 flex items-center gap-4 rounded-xl border border-white/10 bg-[#14161a] p-4">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#25282e]"><div className="h-full bg-blue-600 transition-all" style={{ width: `${completion}%` }} /></div>
+          <span className="text-xs font-black tabular-nums text-zinc-400">{completion}% listo</span>
         </div>
-    );
+
+        {notice && <div className={`mt-5 flex gap-3 rounded-xl border p-4 text-sm font-semibold ${notice.type === 'error' ? 'border-red-500/40 bg-red-500/10 text-red-300' : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'}`}>{notice.type === 'error' ? <AlertCircle className="h-4 w-4 shrink-0" /> : <Check className="h-4 w-4 shrink-0" />}{notice.text}</div>}
+
+        <div className="mt-7 grid gap-5 xl:grid-cols-[460px_1fr]">
+          <section className="space-y-5">
+            <div className="rounded-2xl border border-white/10 bg-[#17191d] p-5 sm:p-6">
+              <div className="flex items-center gap-3"><div className="grid h-9 w-9 place-items-center rounded-lg bg-blue-600"><PackagePlus className="h-4 w-4" /></div><div><h2 className="font-black">Información comercial</h2><p className="text-xs text-zinc-500">Lo que verá el estudiante.</p></div></div>
+              <div className="mt-6 space-y-5">
+                <label className="block"><span className="mb-2 block text-xs font-black uppercase tracking-wider text-zinc-500">Nombre</span><input value={form.name} maxLength={120} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Ej. Marco Clásico Azul" className={fieldClass} /></label>
+                <label className="block"><span className="mb-2 block text-xs font-black uppercase tracking-wider text-zinc-500">Tipo</span><select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as ItemType })} className={fieldClass}>{itemTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><span className="mt-2 block text-xs text-zinc-600">{selectedType.help}</span></label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label><span className="mb-2 block text-xs font-black uppercase tracking-wider text-zinc-500">Categoría</span><select value={form.category_id} onChange={(event) => setForm({ ...form, category_id: event.target.value })} className={fieldClass}><option value="">Sin categoría</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+                  <label><span className="mb-2 block text-xs font-black uppercase tracking-wider text-zinc-500">Precio</span><div className="relative"><img src="/icons/moneda.png" alt="" className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2" /><input type="number" min="0" step="1" value={form.price_coins} onChange={(event) => setForm({ ...form, price_coins: Math.max(0, Number(event.target.value)) })} className={`${fieldClass} pl-11`} /></div></label>
+                </div>
+                <label className="block"><span className="mb-2 block text-xs font-black uppercase tracking-wider text-zinc-500">Identificador único</span><input value={form.frame_key} maxLength={80} onChange={(event) => setForm({ ...form, frame_key: normalizeKey(event.target.value) })} placeholder="marco_clasico_azul" className={`${fieldClass} font-mono`} /><span className="mt-2 block text-xs text-zinc-600">Solo letras minúsculas, números, guiones y guiones bajos.</span></label>
+                <label className="block"><span className="mb-2 block text-xs font-black uppercase tracking-wider text-zinc-500">Descripción</span><textarea value={form.description} maxLength={1600} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={4} placeholder="Explica qué incluye y cómo se utiliza." className={`${fieldClass} h-auto min-h-28 resize-y py-3`} /><span className="mt-2 block text-right text-[10px] text-zinc-700">{form.description.length}/1600</span></label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label><span className="mb-2 block text-xs font-black uppercase tracking-wider text-zinc-500">Usos</span><select value={form.max_uses ?? 'unlimited'} onChange={(event) => setForm({ ...form, max_uses: event.target.value === 'unlimited' ? null : Number(event.target.value) })} className={fieldClass}><option value="unlimited">Ilimitado</option>{[1, 2, 3, 5, 10].map((uses) => <option key={uses} value={uses}>{uses} uso{uses === 1 ? '' : 's'}</option>)}</select></label>
+                  <label className="flex items-end"><span className="flex h-12 w-full cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-[#0d0f12] px-4 text-sm font-bold"><span>Visible al publicar</span><input type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })} className="h-4 w-4 accent-blue-600" /></span></label>
+                </div>
+              </div>
+            </div>
+
+            {form.type === 'other' && (
+              <div className="rounded-2xl border border-white/10 bg-[#17191d] p-5 sm:p-6"><h2 className="font-black">Contenido del pack</h2><p className="mt-1 text-xs text-zinc-500">Selecciona los artículos que se entregarán juntos.</p><div className="mt-4 max-h-56 space-y-2 overflow-y-auto pr-1">{allItems.map((item) => <label key={item.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-[#0d0f12] p-3"><input type="checkbox" checked={form.bundle_items.includes(item.id)} onChange={(event) => setForm({ ...form, bundle_items: event.target.checked ? [...form.bundle_items, item.id] : form.bundle_items.filter((id) => id !== item.id) })} className="h-4 w-4 accent-blue-600" /><span className="min-w-0 flex-1 truncate text-sm font-bold">{item.name}</span><span className="text-[10px] uppercase text-zinc-600">{item.type.replace('_', ' ')}</span></label>)}</div></div>
+            )}
+          </section>
+
+          <section className="space-y-5">
+            <div className="rounded-2xl border border-white/10 bg-[#17191d] p-5 sm:p-6">
+              <div className="flex items-center justify-between"><div><h2 className="font-black">Archivo y vista previa</h2><p className="mt-1 text-xs text-zinc-500">PNG, JPG, WebP o GIF · máximo 12 MB.</p></div>{previewUrl && <button onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-zinc-500 hover:text-white"><X className="h-4 w-4" /></button>}</div>
+              <label className="mt-5 grid min-h-80 cursor-pointer place-items-center overflow-hidden rounded-2xl border border-dashed border-white/15 bg-[#0d0f12] p-6 transition-colors hover:border-blue-500/70">
+                {previewUrl ? <img src={previewUrl} alt="Vista previa" className="max-h-[420px] w-full object-contain" /> : <div className="text-center"><div className="mx-auto grid h-14 w-14 place-items-center rounded-xl bg-blue-600"><ImageIcon className="h-6 w-6" /></div><p className="mt-5 font-black">Seleccionar imagen</p><p className="mt-1 text-xs text-zinc-600">PNG, JPG, WebP o GIF de hasta 12 MB.</p></div>}
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => handleFile(event.target.files?.[0])} className="sr-only" />
+              </label>
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-[#0d0f12] p-4"><input type="checkbox" checked={preserveAnimation} onChange={(event) => setPreserveAnimation(event.target.checked)} className="mt-0.5 h-4 w-4 accent-blue-600" /><span><span className="block text-sm font-bold">Conservar animación original</span><span className="mt-1 block text-xs leading-5 text-zinc-600">Actívalo para GIF o WebP animado. Las imágenes estáticas se optimizan automáticamente.</span></span></label>
+            </div>
+
+            {previewUrl && form.type === 'profile_frame' ? (
+              <div className="rounded-2xl border border-white/10 bg-[#17191d] p-5 sm:p-6"><div className="flex items-center gap-3 border-b border-white/10 pb-5"><Sparkles className="h-5 w-5 text-blue-500" /><div><h2 className="font-black">Ajuste del marco</h2><p className="text-xs text-zinc-500">Alinea el recurso en los tres contextos de uso.</p></div></div><div className="mt-5"><FrameEditor frameImageUrl={previewUrl} onSave={setFrameSettings} /></div></div>
+            ) : (
+              <div className="flex min-h-32 items-center gap-4 rounded-2xl border border-white/10 bg-[#14161a] p-5"><div className="grid h-10 w-10 place-items-center rounded-xl bg-[#24272d] text-zinc-400"><ShieldCheck className="h-5 w-5" /></div><div><p className="font-bold">Validación automática</p><p className="mt-1 text-xs leading-5 text-zinc-500">El backend confirmará rol, formato, precio y consistencia antes de publicar.</p></div></div>
+            )}
+          </section>
+        </div>
+      </div>
+    </main>
+  );
 }
-
-

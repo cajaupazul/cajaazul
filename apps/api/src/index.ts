@@ -4,6 +4,7 @@ import storageRouter from './storage'
 import { checkout } from './checkout'
 import shop from './shop'
 import extensionRouter from './extension'
+import adminRouter from './admin'
 
 type Bindings = {
     ALLOWED_ORIGIN: string
@@ -62,6 +63,7 @@ app.get('/health', (c) => {
 app.route('/storage', storageRouter)
 app.route('/checkout', checkout)
 app.route('/shop', shop)
+app.route('/admin', adminRouter)
 app.route('/', extensionRouter)
 
 export default app

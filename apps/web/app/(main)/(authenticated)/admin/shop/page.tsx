@@ -1,357 +1,189 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useTheme } from '@/lib/theme-context';
-import { useProfile } from '@/lib/profile-context';
-import { supabase, ShopItem } from '@/lib/supabase';
-import {
-    Plus,
-    Trash2,
-    Image as ImageIcon,
-    ShieldCheck,
-    Search,
-    RefreshCw,
-    Pencil,
-    ChevronRight,
-    ExternalLink,
-    LayoutGrid
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription
-} from '@/components/ui/dialog';
-import { PLACEHOLDERS } from '@/lib/constants';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import {
+  AlertCircle,
+  ArrowLeft,
+  Boxes,
+  CheckCircle2,
+  Edit3,
+  Image as ImageIcon,
+  LayoutGrid,
+  PackagePlus,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Trash2,
+} from 'lucide-react';
+import { supabase, ShopItem } from '@/lib/supabase';
+import { apiFetch } from '@/lib/api';
+import { useProfile } from '@/lib/profile-context';
+import { PLACEHOLDERS } from '@/lib/constants';
+
+type Notice = { type: 'success' | 'error'; text: string } | null;
+
+const typeLabels: Record<string, string> = {
+  profile_frame: 'Marco',
+  background: 'Fondo',
+  badge: 'Insignia',
+  sticker: 'Sticker',
+  other: 'Pack',
+};
 
 export default function AdminShopPage() {
-    const { colors } = useTheme();
-    const { profile } = useProfile();
-    const [items, setItems] = useState<ShopItem[]>([]);
-    const [categories, setCategories] = useState<Record<string, string>>({});
-    const [loading, setLoading] = useState(true);
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [deletingItem, setDeletingItem] = useState<ShopItem | null>(null);
+  const { profile } = useProfile();
+  const [items, setItems] = useState<ShopItem[]>([]);
+  const [categories, setCategories] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState<'all' | 'active' | 'paused'>('all');
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ShopItem | null>(null);
+  const [notice, setNotice] = useState<Notice>(null);
 
-    useEffect(() => {
-        fetchItems();
-    }, []);
+  const canManage = profile?.role === 'admin' || profile?.role === 'superadmin';
 
-    const fetchItems = async () => {
-        setLoading(true);
-        // Fetch categories first
-        const { data: catData } = await supabase.from('shop_categories').select('id, name');
-        if (catData) {
-            const catMap = catData.reduce((acc: any, cat: any) => ({ ...acc, [cat.id]: cat.name }), {});
-            setCategories(catMap);
-        }
+  const loadItems = async () => {
+    setLoading(true);
+    const [categoryResult, itemResult] = await Promise.all([
+      supabase.from('shop_categories').select('id, name').order('display_order'),
+      supabase.from('shop_items').select('*').order('updated_at', { ascending: false }).order('created_at', { ascending: false }),
+    ]);
 
-        const { data, error } = await supabase
-            .from('shop_items')
-            .select('*')
-            .order('created_at', { ascending: false });
+    if (categoryResult.data) setCategories(Object.fromEntries(categoryResult.data.map((category) => [category.id, category.name])));
+    if (itemResult.error) setNotice({ type: 'error', text: 'No pudimos cargar el catálogo.' });
+    else setItems((itemResult.data ?? []) as ShopItem[]);
+    setLoading(false);
+  };
 
-        if (!error && data) setItems(data);
-        setLoading(false);
-    };
+  useEffect(() => {
+    if (canManage) void loadItems();
+  }, [canManage]);
 
-    const toggleStatus = async (item: ShopItem) => {
-        const { error } = await supabase
-            .from('shop_items')
-            .update({ is_active: !item.is_active })
-            .eq('id', item.id);
+  const filteredItems = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase('es');
+    return items.filter((item) => {
+      const matchesText = !normalized || `${item.name} ${item.description ?? ''} ${item.frame_key ?? ''}`.toLocaleLowerCase('es').includes(normalized);
+      const matchesStatus = status === 'all' || (status === 'active' ? item.is_active : !item.is_active);
+      return matchesText && matchesStatus;
+    });
+  }, [items, query, status]);
 
-        if (!error) fetchItems();
-    };
+  const toggleStatus = async (item: ShopItem) => {
+    setBusyId(item.id);
+    setNotice(null);
+    const { data, error } = await supabase
+      .from('shop_items')
+      .update({ is_active: !item.is_active })
+      .eq('id', item.id)
+      .select('*')
+      .single();
 
-    const deleteItem = async (id: string) => {
-        setIsDeleting(true);
-        try {
-            // 1. Get detailed item info first to check for frame_key
-            const { data: itemToDelete, error: fetchError } = await supabase
-                .from('shop_items')
-                .select('*')
-                .eq('id', id)
-                .single();
-
-            if (fetchError || !itemToDelete) throw new Error('Item no encontrado');
-
-            console.log('[DELETE] Iniciando borrado nuclear de:', itemToDelete.name);
-
-            // 2. Si es un MARCO (tiene frame_key), desequiparlo de TODOS los usuarios
-            if (itemToDelete.frame_key) {
-                console.log('[DELETE] Desequipando marco:', itemToDelete.frame_key);
-                const { error: profileError } = await supabase
-                    .from('profiles')
-                    .update({ active_frame_key: null })
-                    .eq('active_frame_key', itemToDelete.frame_key);
-
-                if (profileError) console.error('Error desequipando marcos:', profileError);
-            }
-
-            // 3. Eliminar inventarios de usuarios (Cascade manual por seguridad)
-            console.log('[DELETE] Eliminando inventarios...');
-            const { error: invError } = await supabase
-                .from('user_inventory')
-                .delete()
-                .eq('item_id', id);
-
-            if (invError) console.error('Error limpiando inventarios:', invError);
-
-            // 4. Eliminar el item de la tienda
-            console.log('[DELETE] Eliminando item de tienda...');
-            const { error } = await supabase
-                .from('shop_items')
-                .delete()
-                .eq('id', id);
-
-            if (error) throw error;
-
-            setDeletingItem(null);
-            fetchItems();
-            alert('Elemento eliminado correctamente y retirado de todos los usuarios.');
-        } catch (error: any) {
-            console.error('Error eliminando:', error);
-            alert(`Error crítico al eliminar: ${error.message}`);
-        } finally {
-            setIsDeleting(false);
-        }
-    };
-
-    if (profile?.role !== 'admin' && profile?.role !== 'superadmin') {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 text-center p-4">
-                <ShieldCheck className="w-16 h-16 text-red-500 opacity-50" />
-                <h1 className="text-2xl font-bold text-bb-text">Acceso Restringido</h1>
-                <p className="text-bb-text-secondary">No tienes permisos para acceder a esta sección.</p>
-            </div>
-        );
+    if (error || !data) setNotice({ type: 'error', text: error?.message || 'No se pudo cambiar el estado.' });
+    else {
+      setItems((current) => current.map((currentItem) => currentItem.id === item.id ? data as ShopItem : currentItem));
+      setNotice({ type: 'success', text: `${item.name} ahora está ${data.is_active ? 'visible' : 'pausado'}.` });
     }
+    setBusyId(null);
+  };
 
-    return (
-        <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="text-center md:text-left">
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-bb-text tracking-tight">
-                        Administrar Tienda
-                    </h1>
-                    <p className="text-bb-text-secondary mt-1">Gestión de marcos y artículos de la tienda</p>
-                </div>
+  const deleteItem = async () => {
+    if (!deleteTarget) return;
+    setBusyId(deleteTarget.id);
+    setNotice(null);
+    try {
+      await apiFetch(`/admin/catalog/items/${deleteTarget.id}`, { method: 'DELETE' });
+      setItems((current) => current.filter((item) => item.id !== deleteTarget.id));
+      setNotice({ type: 'success', text: `${deleteTarget.name} se retiró del catálogo y de los inventarios asociados.` });
+      setDeleteTarget(null);
+    } catch (error) {
+      setNotice({ type: 'error', text: error instanceof Error ? error.message : 'No se pudo eliminar el artículo.' });
+    } finally {
+      setBusyId(null);
+    }
+  };
 
-                <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-                    <Link href="/admin/shop/categories" className="w-full sm:w-auto">
-                        <Button variant="outline" className="font-bold rounded-xl border-bb-border bg-bb-sidebar/30 h-12 w-full px-6">
-                            <LayoutGrid className="mr-2 h-5 w-5" /> Categorías
-                        </Button>
-                    </Link>
-                    <Link href="/admin/shop/new" className="w-full sm:w-auto">
-                        <Button className="font-bold rounded-xl shadow-lg w-full px-8 h-12" style={{ backgroundColor: colors?.primary }}>
-                            <Plus className="mr-2 h-5 w-5" /> Nuevo Item
-                        </Button>
-                    </Link>
-                </div>
+  if (!canManage) {
+    return <main className="grid min-h-[70vh] place-items-center bg-[#0d0f12] text-center text-white"><div><ShieldCheck className="mx-auto h-10 w-10 text-red-400" /><h1 className="mt-4 text-2xl font-black">Acceso restringido</h1></div></main>;
+  }
+
+  return (
+    <main className="min-h-screen bg-[#0d0f12] px-4 py-6 text-white sm:px-6 lg:px-10 lg:py-10">
+      <div className="mx-auto max-w-[1480px]">
+        <header className="flex flex-col gap-6 border-b border-white/10 pb-7 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-white"><ArrowLeft className="h-4 w-4" /> Volver al panel</Link>
+            <p className="mt-7 text-xs font-black uppercase tracking-[0.2em] text-blue-500">Catálogo digital</p>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] sm:text-4xl">Artículos de la tienda</h1>
+            <p className="mt-3 text-sm text-zinc-400">{items.length} artículos registrados · {items.filter((item) => item.is_active).length} visibles</p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link href="/admin/shop/categories" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-[#17191d] px-5 text-sm font-bold hover:bg-[#202329]"><LayoutGrid className="h-4 w-4" /> Categorías</Link>
+            <Link href="/admin/shop/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-black hover:bg-blue-500"><PackagePlus className="h-4 w-4" /> Nuevo artículo</Link>
+          </div>
+        </header>
+
+        {notice && (
+          <div className={`mt-5 flex items-start gap-3 rounded-xl border p-4 text-sm font-semibold ${notice.type === 'error' ? 'border-red-500/40 bg-red-500/10 text-red-300' : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'}`}>
+            {notice.type === 'error' ? <AlertCircle className="h-4 w-4 shrink-0" /> : <CheckCircle2 className="h-4 w-4 shrink-0" />}{notice.text}
+          </div>
+        )}
+
+        <section className="mt-7 rounded-2xl border border-white/10 bg-[#14161a]">
+          <div className="flex flex-col gap-3 border-b border-white/10 p-4 md:flex-row md:items-center">
+            <label className="relative flex-1"><Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nombre, clave o descripción" className="h-12 w-full rounded-xl border border-white/10 bg-[#0d0f12] pl-11 pr-4 text-sm font-semibold outline-none focus:border-blue-500" /></label>
+            <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)} className="h-12 rounded-xl border border-white/10 bg-[#0d0f12] px-4 text-sm font-bold outline-none focus:border-blue-500">
+              <option value="all">Todos los estados</option><option value="active">Visibles</option><option value="paused">Pausados</option>
+            </select>
+            <button onClick={() => void loadItems()} disabled={loading} aria-label="Actualizar catálogo" className="grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-[#0d0f12] hover:bg-[#202329]"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
+          </div>
+
+          <div className="hidden grid-cols-[minmax(280px,2fr)_1fr_120px_120px_120px] border-b border-white/10 px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600 lg:grid">
+            <span>Artículo</span><span>Categoría</span><span>Precio</span><span>Estado</span><span className="text-right">Acciones</span>
+          </div>
+
+          {loading ? (
+            <div className="grid min-h-72 place-items-center text-zinc-500"><RefreshCw className="h-6 w-6 animate-spin" /></div>
+          ) : filteredItems.length === 0 ? (
+            <div className="grid min-h-72 place-items-center px-6 text-center"><div><Boxes className="mx-auto h-9 w-9 text-zinc-700" /><p className="mt-4 font-bold text-zinc-300">No encontramos artículos</p><p className="mt-1 text-sm text-zinc-600">Prueba otro filtro o crea un artículo nuevo.</p></div></div>
+          ) : (
+            <div className="divide-y divide-white/10">
+              {filteredItems.map((item) => (
+                <article key={item.id} className="grid gap-4 p-4 transition-colors hover:bg-white/[0.02] lg:grid-cols-[minmax(280px,2fr)_1fr_120px_120px_120px] lg:items-center lg:px-5">
+                  <div className="flex min-w-0 items-center gap-4">
+                    <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#0d0f12]">
+                      {item.image_url ? <img src={item.image_url || PLACEHOLDERS.ITEM} alt="" className="h-full w-full object-cover" loading="lazy" /> : <ImageIcon className="h-5 w-5 text-zinc-700" />}
+                    </div>
+                    <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="truncate font-black text-white">{item.name}</h2><span className="rounded-md bg-[#25282e] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-zinc-400">{typeLabels[item.type] ?? item.type}</span></div><p className="mt-1 line-clamp-1 text-xs text-zinc-500">{item.description || 'Sin descripción'}</p><p className="mt-1 truncate font-mono text-[10px] text-zinc-700">{item.frame_key || item.id}</p></div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 lg:block"><span className="text-[10px] font-black uppercase text-zinc-600 lg:hidden">Categoría</span><span className="text-sm font-semibold text-zinc-300">{item.category_id ? categories[item.category_id] || 'Sin categoría' : 'Sin categoría'}</span></div>
+                  <div className="flex items-center justify-between lg:justify-start"><span className="text-[10px] font-black uppercase text-zinc-600 lg:hidden">Precio</span><span className="inline-flex items-center gap-2 text-sm font-black"><img src="/icons/moneda.png" alt="Moneda" className="h-4 w-4" /> {item.price_coins}</span></div>
+                  <button onClick={() => void toggleStatus(item)} disabled={busyId === item.id} className={`h-9 rounded-lg border px-3 text-xs font-black ${item.is_active ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-white/10 bg-[#202329] text-zinc-500'}`}>{busyId === item.id ? 'Guardando' : item.is_active ? 'Visible' : 'Pausado'}</button>
+                  <div className="flex justify-end gap-2">
+                    <Link href={`/admin/shop/edit?id=${item.id}`} aria-label={`Editar ${item.name}`} className="grid h-10 w-10 place-items-center rounded-lg border border-white/10 bg-[#0d0f12] text-zinc-400 hover:border-blue-500 hover:text-blue-400"><Edit3 className="h-4 w-4" /></Link>
+                    <button onClick={() => setDeleteTarget(item)} aria-label={`Eliminar ${item.name}`} className="grid h-10 w-10 place-items-center rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                </article>
+              ))}
             </div>
+          )}
+        </section>
+      </div>
 
-            {/* List Container */}
-            <div className="bg-bb-card border border-bb-border rounded-3xl overflow-hidden shadow-xl">
-                <div className="p-4 sm:p-6 border-b border-bb-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-bb-sidebar/20">
-                    <h2 className="font-bold text-xl flex items-center gap-2">
-                        Lista de Artículos <span className="text-xs bg-bb-darker px-2 py-1 rounded-full text-bb-text-secondary font-mono">{items.length}</span>
-                    </h2>
-                    <div className="relative w-full sm:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-bb-text-secondary w-4 h-4" />
-                        <Input className="bg-bb-sidebar/30 border-bb-border pl-10 h-10 rounded-xl text-sm" placeholder="Buscar por nombre..." />
-                    </div>
-                </div>
-
-                {/* Items View */}
-                <div className="overflow-hidden">
-                    {/* Desktop View */}
-                    <div className="hidden md:block">
-                        <table className="w-full text-left">
-                            <thead className="text-[10px] font-bold text-bb-text-secondary border-b border-bb-border bg-bb-sidebar/50 uppercase tracking-widest">
-                                <tr>
-                                    <th className="px-6 py-4">Preview</th>
-                                    <th className="px-6 py-4">Nombre / Key</th>
-                                    <th className="px-6 py-4">Categoría</th>
-                                    <th className="px-6 py-4">Precio</th>
-                                    <th className="px-6 py-4">Estado</th>
-                                    <th className="px-6 py-4 text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-bb-border/50">
-                                {loading ? (
-                                    Array(3).fill(0).map((_, i) => (
-                                        <tr key={i} className="animate-pulse">
-                                            <td colSpan={5} className="px-6 py-8 bg-bb-darker/5 text-center">Cargando...</td>
-                                        </tr>
-                                    ))
-                                ) : items.map((item) => (
-                                    <tr key={item.id} className="hover:bg-bb-sidebar/10 transition-colors group">
-                                        <td className="px-6 py-4">
-                                            <div className="w-12 h-12 rounded-lg bg-bb-darker flex items-center justify-center overflow-hidden border border-bb-border shadow-inner">
-                                                {item.image_url ? (
-                                                    <img src={item.image_url || PLACEHOLDERS.ITEM} alt={item.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <ImageIcon className="text-bb-text-secondary w-5 h-5" />
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-bb-text leading-tight">{item.name}</div>
-                                            <div className="text-[10px] text-bb-text-secondary font-mono mt-0.5 truncate max-w-[150px]">{item.frame_key || 'N/A'}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-xs font-medium text-bb-text-secondary">
-                                                {item.category_id ? categories[item.category_id] : (
-                                                    <span className="opacity-40 italic">Sin categoría</span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-1.5 font-bold text-bb-text">
-                                                <img src="/icons/moneda.png" className="w-4 h-4" alt="coins" />
-                                                {item.price_coins}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <button
-                                                onClick={() => toggleStatus(item)}
-                                                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all active:scale-95 ${item.is_active
-                                                    ? 'bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.1)]'
-                                                    : 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20'
-                                                    }`}
-                                            >
-                                                {item.is_active ? 'Activo' : 'Inactivo'}
-                                            </button>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Link href={`/admin/shop/edit?id=${item.id}`}>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-9 px-3 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 rounded-lg gap-2"
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                        Editar
-                                                    </Button>
-                                                </Link>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-9 w-9 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg"
-                                                    onClick={() => setDeletingItem(item)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Mobile View */}
-                    <div className="md:hidden grid grid-cols-1 gap-4 p-4">
-                        {loading ? (
-                            Array(3).fill(0).map((_, i) => (
-                                <div key={i} className="h-24 bg-bb-darker/10 animate-pulse rounded-2xl" />
-                            ))
-                        ) : items.map((item) => (
-                            <div key={item.id} className="bg-bb-sidebar/10 rounded-2xl p-4 border border-bb-border/50 space-y-4 shadow-sm hover:border-bb-border transition-colors">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 rounded-xl bg-bb-darker flex items-center justify-center overflow-hidden border border-bb-border shrink-0 shadow-inner">
-                                        {item.image_url ? (
-                                            <img src={item.image_url || PLACEHOLDERS.ITEM} alt={item.name} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <ImageIcon className="text-bb-text-secondary w-6 h-6" />
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-bb-text truncate text-base">{item.name}</h3>
-                                        <p className="text-[10px] text-bb-text-secondary font-mono truncate">{item.frame_key}</p>
-                                        <div className="flex items-center gap-1.5 font-bold text-bb-text mt-1 text-sm bg-bb-darker/50 w-fit px-2 py-0.5 rounded-lg border border-bb-border/30">
-                                            <img src="/icons/moneda.png" className="w-3.5 h-3.5" alt="coins" />
-                                            {item.price_coins}
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => toggleStatus(item)}
-                                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase ${item.is_active
-                                            ? 'bg-green-500/10 text-green-500 border border-green-500/20'
-                                            : 'bg-red-500/10 text-red-500 border border-red-500/20'
-                                            }`}
-                                    >
-                                        {item.is_active ? 'ON' : 'OFF'}
-                                    </button>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Link href={`/admin/shop/edit?id=${item.id}`} className="flex-1">
-                                        <Button
-                                            variant="outline"
-                                            className="w-full h-11 text-xs border-bb-border bg-bb-card rounded-xl gap-2 font-bold"
-                                        >
-                                            <Pencil className="w-3.5 h-3.5" /> Editar
-                                        </Button>
-                                    </Link>
-                                    <Button
-                                        variant="outline"
-                                        className="w-full sm:w-auto h-11 text-xs border-bb-border bg-bb-card text-red-400 rounded-xl font-bold gap-2 px-4"
-                                        onClick={() => setDeletingItem(item)}
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {!loading && items.length === 0 && (
-                    <div className="p-12 text-center text-bb-text-secondary flex flex-col items-center gap-3">
-                        <ImageIcon className="w-12 h-12 opacity-20" />
-                        <p>No hay artículos en la tienda.</p>
-                        <Link href="/admin/shop/new">
-                            <Button variant="link" className="text-blue-400 font-bold">Crear el primero ahora</Button>
-                        </Link>
-                    </div>
-                )}
+      {deleteTarget && (
+        <div role="dialog" aria-modal="true" aria-labelledby="delete-title" className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#17191d] p-6">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-red-500/15 text-red-400"><Trash2 className="h-5 w-5" /></div>
+            <h2 id="delete-title" className="mt-5 text-xl font-black">Retirar “{deleteTarget.name}”</h2>
+            <p className="mt-3 text-sm leading-6 text-zinc-400">Esta acción elimina el artículo, lo desequipa de los perfiles y retira las asociaciones de inventario. No se puede deshacer.</p>
+            <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button onClick={() => setDeleteTarget(null)} className="h-11 rounded-xl border border-white/10 px-5 text-sm font-bold hover:bg-white/5">Cancelar</button>
+              <button onClick={() => void deleteItem()} disabled={busyId === deleteTarget.id} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black hover:bg-red-500 disabled:opacity-50">{busyId === deleteTarget.id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Eliminar definitivamente</button>
             </div>
-
-            {/* Deletion Confirm Modal */}
-            <Dialog open={!!deletingItem} onOpenChange={(open) => !open && setDeletingItem(null)}>
-                <DialogContent className="bg-bb-card border-bb-border text-bb-text w-[90vw] max-w-md p-6 rounded-3xl">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-3 text-red-400 text-xl font-bold">
-                            <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
-                                <Trash2 className="w-5 h-5" />
-                            </div>
-                            ¿Eliminar Artículo?
-                        </DialogTitle>
-                        <DialogDescription className="text-bb-text-secondary pt-4 text-sm leading-relaxed">
-                            Estás a punto de borrar definitivamente <strong>{deletingItem?.name}</strong>.
-                            <br /><br />
-                            <span className="text-[11px] text-bb-text-secondary/70">Nota: Los usuarios que ya compraron este artículo mantendrán su propiedad a menos que limpies sus inventarios manualmente.</span>
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col sm:flex-row justify-end gap-3 mt-8">
-                        <Button variant="ghost" onClick={() => setDeletingItem(null)} className="rounded-xl font-bold h-12 sm:h-10 order-2 sm:order-1">Cancelar</Button>
-                        <Button
-                            className="bg-red-500 hover:bg-red-600 text-white border-0 rounded-xl font-bold h-12 sm:h-10 order-1 sm:order-2"
-                            onClick={() => deletingItem && deleteItem(deletingItem.id)}
-                            disabled={isDeleting}
-                        >
-                            {isDeleting ? 'Eliminando...' : 'Eliminar Definitivamente'}
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+          </div>
         </div>
-    );
+      )}
+    </main>
+  );
 }
