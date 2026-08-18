@@ -1,135 +1,168 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
+import {
+  amountToCents,
+  createAdminClient,
+  getAccessToken,
+  getCorsHeaders,
+  getMercadoPagoEnvironment,
+  getWebhookUrl,
+  jsonResponse,
+  requireUser,
+  safePaymentSummary,
+} from '../_shared/mercadopago.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const REQUEST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  const corsHeaders = getCorsHeaders(req)
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method !== 'POST') return jsonResponse({ success: false, message: 'Método no permitido.' }, 405, corsHeaders)
 
   try {
-    console.log('[create-yape-payment] Invocado');
-    
-    const body = await req.json();
-    console.log('[create-yape-payment] Payload recibido:', JSON.stringify(body));
+    const admin = createAdminClient()
+    const user = await requireUser(req, admin)
+    const { token, product_id: productId, request_id: requestId } = await req.json()
 
-    const { token, amount, product_id, user_id, description, userEmail, email } = body;
-    
-    const MP_ACCESS_TOKEN = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN') || 'APP_USR-8919084992296803-080917-7445864cf7f14745456c6bc4f76ec2fb-2915256654';
-
-    console.log('[create-yape-payment] Token prefix:', MP_ACCESS_TOKEN?.substring(0, 8));
-
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const payerEmail = userEmail || email || 'cliente@campuslink.pe';
-
-    if (!token || !product_id || !user_id) {
-      throw new Error('Faltan campos requeridos: token, product_id o user_id');
+    if (!token || !productId || !REQUEST_ID_PATTERN.test(String(requestId ?? ''))) {
+      return jsonResponse({ success: false, message: 'La solicitud de Yape no es válida.' }, 400, corsHeaders)
     }
 
-    // Buscar producto en DB para verificar precio seguro
-    const { data: producto, error: dbError } = await supabase
+    const { data: product, error: productError } = await admin
       .from('store_products')
-      .select('*')
-      .eq('id', product_id)
-      .single();
+      .select('id, name, type, amount, price, active')
+      .eq('id', productId)
+      .eq('active', true)
+      .single()
 
-    if (dbError || !producto) {
-      console.error('[create-yape-payment] Producto no encontrado:', dbError);
-      throw new Error(`Producto no encontrado: ${product_id}`);
+    if (productError || !product || !['coins', 'vip'].includes(product.type)) {
+      return jsonResponse({ success: false, message: 'El producto ya no está disponible.' }, 404, corsHeaders)
     }
 
-    const finalAmount = Number(producto.price);
-    const WEBHOOK_URL = 'https://mevfhlhwrrkbhppgeyaj.supabase.co/functions/v1/mercadopago-webhook';
+    const amountCents = amountToCents(product.price)
+    const environment = getMercadoPagoEnvironment()
+    const orderId = String(requestId)
 
-    console.log('[create-yape-payment] Creando pago Yape en MP API con token:', token);
+    const { data: existingOrder } = await admin
+      .from('payment_orders')
+      .select('id, user_id, product_id, amount_cents, status, provider_payment_id')
+      .eq('provider', 'mercadopago')
+      .eq('provider_order_id', orderId)
+      .maybeSingle()
 
-    // Crear el pago con el token de Yape que se generó en el frontend
-    const paymentPayload = {
-      token: token,
-      transaction_amount: finalAmount,
-      installments: 1, // OBLIGATORIO para Yape
-      payment_method_id: 'yape', // OBLIGATORIO
-      description: description || `CampusLink: ${producto.name}`,
-      payer: {
-        email: payerEmail,
-      },
-      external_reference: `user_id:${user_id}|product_id:${producto.id}|timestamp:${Date.now()}`,
-      metadata: {
-        user_id: user_id,
-        product_id: producto.id,
-        type: producto.type,
-        amount: producto.amount,
-      },
-      notification_url: WEBHOOK_URL,
-    };
+    if (existingOrder && (
+      existingOrder.user_id !== user.id
+      || existingOrder.product_id !== product.id
+      || existingOrder.amount_cents !== amountCents
+    )) {
+      return jsonResponse({ success: false, message: 'El intento de pago no coincide con la compra.' }, 409, corsHeaders)
+    }
 
-    console.log('[create-yape-payment] Request payload to MP:', JSON.stringify(paymentPayload));
+    if (existingOrder?.status === 'paid') {
+      return jsonResponse({ success: true, status: 'approved', payment_id: existingOrder.provider_payment_id }, 200, corsHeaders)
+    }
+
+    if (!existingOrder) {
+      const { error: insertError } = await admin.from('payment_orders').insert({
+        user_id: user.id,
+        product_id: product.id,
+        provider: 'mercadopago',
+        provider_order_id: orderId,
+        status: 'created',
+        currency: 'PEN',
+        amount_cents: amountCents,
+        product_type: product.type,
+        product_amount: Number(product.amount),
+        environment,
+      })
+      if (insertError && insertError.code !== '23505') throw insertError
+    }
 
     const paymentResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
+        'Authorization': `Bearer ${getAccessToken()}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': crypto.randomUUID(),
+        'X-Idempotency-Key': orderId,
       },
-      body: JSON.stringify(paymentPayload)
-    });
+      body: JSON.stringify({
+        token,
+        transaction_amount: amountCents / 100,
+        installments: 1,
+        payment_method_id: 'yape',
+        description: `CampusLink: ${product.name}`,
+        payer: { email: user.email },
+        external_reference: orderId,
+        metadata: { order_id: orderId },
+        notification_url: getWebhookUrl(),
+      }),
+    })
+    const payment = await paymentResponse.json()
 
-    const paymentData = await paymentResponse.json();
-    console.log('[create-yape-payment] Payment response:', JSON.stringify(paymentData));
+    if (!paymentResponse.ok || !payment.id) {
+      await admin.from('payment_orders').update({
+        status: 'failed',
+        provider_summary: {
+          status: payment.status ?? null,
+          status_detail: payment.status_detail ?? payment.error ?? null,
+        },
+        updated_at: new Date().toISOString(),
+      }).eq('provider', 'mercadopago').eq('provider_order_id', orderId).neq('status', 'paid')
 
-    if (paymentData.status !== 'approved') {
-      const msg = paymentData.status_detail || paymentData.message || 'Pago con Yape no fue aprobado';
-      console.warn('[create-yape-payment] Pago no aprobado:', paymentData.status, msg);
-      return new Response(
-        JSON.stringify({ success: false, status: paymentData.status, message: msg, details: paymentData }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({
+        success: false,
+        status: payment.status ?? 'rejected',
+        message: payment.message ?? payment.status_detail ?? 'Yape no pudo procesar el cobro.',
+      }, 200, corsHeaders)
     }
 
-    // Pago aprobado → actualizar perfil inmediatamente
-    try {
-      if (producto.type === 'coins') {
-        const { data: userProf } = await supabase.from('profiles').select('monedas').eq('id', user_id).single();
-        await supabase.from('profiles')
-          .update({ monedas: (userProf?.monedas || 0) + Number(producto.amount) })
-          .eq('id', user_id);
-        console.log('[create-yape-payment] Monedas actualizadas para user:', user_id);
-      } else if (producto.type === 'vip') {
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + (Number(producto.amount) || 30));
-        await supabase.from('profiles')
-          .update({
-            es_vip: true,
-            vip_hasta: expiresAt.toISOString(),
-            active_frame_key: 'vip_exclusive',
-            subscription_tier: 'premium',
-          })
-          .eq('id', user_id);
-        console.log('[create-yape-payment] VIP activado hasta:', expiresAt.toISOString());
+    const summary = safePaymentSummary(payment)
+    if (payment.status === 'approved') {
+      const { error: fulfillmentError } = await admin.rpc('fulfill_payment_order', {
+        p_provider: 'mercadopago',
+        p_provider_order_id: orderId,
+        p_provider_payment_id: String(payment.id),
+        p_amount_cents: amountToCents(payment.transaction_amount),
+        p_currency: payment.currency_id,
+        p_environment: environment,
+        p_payment_method: 'yape',
+        p_provider_summary: summary,
+      })
+      if (fulfillmentError) {
+        console.error('[create-yape-payment] fulfillment_failed', fulfillmentError.message)
+        return jsonResponse({
+          success: false,
+          status: 'pending',
+          payment_id: payment.id,
+          message: 'El pago fue recibido y estamos terminando de acreditarlo.',
+        }, 200, corsHeaders)
       }
-    } catch (profErr) {
-      console.warn('[create-yape-payment] Error al actualizar perfil:', profErr);
+      return jsonResponse({ success: true, status: 'approved', payment_id: payment.id }, 200, corsHeaders)
     }
 
-    return new Response(
-      JSON.stringify({ success: true, payment_id: paymentData.id, status: paymentData.status }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const nextStatus = ['pending', 'in_process', 'authorized'].includes(payment.status) ? 'pending' : 'failed'
+    await admin.from('payment_orders').update({
+      provider_payment_id: String(payment.id),
+      payment_method: 'yape',
+      status: nextStatus,
+      provider_summary: summary,
+      updated_at: new Date().toISOString(),
+    }).eq('provider', 'mercadopago').eq('provider_order_id', orderId).neq('status', 'paid')
 
-  } catch (err: any) {
-    console.error('[create-yape-payment] Error:', err.message || err);
-    return new Response(
-      JSON.stringify({ success: false, message: err.message || 'Error interno al procesar pago Yape' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return jsonResponse({
+      success: false,
+      status: nextStatus,
+      payment_id: payment.id,
+      message: nextStatus === 'pending'
+        ? 'Mercado Pago está confirmando el pago con Yape.'
+        : payment.status_detail ?? 'Yape rechazó el pago. Verifica el código e intenta nuevamente.',
+    }, 200, corsHeaders)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown_error'
+    const status = message === 'unauthorized' ? 401 : 500
+    console.error('[create-yape-payment]', message)
+    return jsonResponse({
+      success: false,
+      message: status === 401 ? 'Tu sesión venció. Inicia sesión nuevamente.' : 'No pudimos procesar el pago con Yape.',
+    }, status, corsHeaders)
   }
-});
+})

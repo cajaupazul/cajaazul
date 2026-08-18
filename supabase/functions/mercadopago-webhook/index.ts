@@ -1,180 +1,122 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import {
+  amountToCents,
+  createAdminClient,
+  getAccessToken,
+  getMercadoPagoEnvironment,
+  jsonResponse,
+  safePaymentSummary,
+  verifyWebhookSignature,
+} from '../_shared/mercadopago.ts'
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  if (req.method !== 'POST') return jsonResponse({ received: false }, 405)
 
   try {
-    const { searchParams } = new URL(req.url);
-    const type = searchParams.get('type') || searchParams.get('topic');
-    const id = searchParams.get('data.id') || searchParams.get('id');
+    const url = new URL(req.url)
+    const body = await req.json().catch(() => ({}))
+    const type = url.searchParams.get('type') ?? url.searchParams.get('topic') ?? body.type
+    const dataId = String(
+      url.searchParams.get('data.id')
+      ?? url.searchParams.get('data_id')
+      ?? url.searchParams.get('id')
+      ?? body.data?.id
+      ?? '',
+    )
 
-    console.log('[mercadopago-webhook] type:', type, '| id:', id);
-
-    if (type !== 'payment' || !id) {
-      return new Response(JSON.stringify({ received: true, skipped: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    if (type !== 'payment' || !dataId) {
+      return jsonResponse({ received: true, skipped: true }, 200)
     }
 
-    const MP_ACCESS_TOKEN = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN')
-      || 'APP_USR-4922371222532387-011017-25a8fdc92b392d510fa3ddcc55aec975-2624882322';
-
-    // 1. Fetch pago desde Mercado Pago
-    const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${id}`, {
-      headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` },
-    });
-
-    if (!mpResponse.ok) {
-      console.error('[webhook] MP fetch failed:', mpResponse.status);
-      throw new Error(`MP fetch failed: ${mpResponse.status}`);
+    if (!(await verifyWebhookSignature(req, dataId))) {
+      console.warn('[mercadopago-webhook] invalid_signature')
+      return jsonResponse({ received: false }, 401)
     }
 
-    const paymentData = await mpResponse.json();
-    console.log('[webhook] payment status:', paymentData.status, '| method:', paymentData.payment_type_id);
-    console.log('[webhook] metadata:', JSON.stringify(paymentData.metadata));
-    console.log('[webhook] external_reference:', paymentData.external_reference);
+    const paymentResponse = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(dataId)}`, {
+      headers: { 'Authorization': `Bearer ${getAccessToken()}` },
+    })
+    if (!paymentResponse.ok) {
+      console.error('[mercadopago-webhook] payment_fetch_failed', paymentResponse.status)
 
-    // 2. Extraer metadata — soporta tanto metadata.* como external_reference
-    let user_id: string | null = paymentData.metadata?.user_id ?? null;
-    let product_id: string | null = paymentData.metadata?.product_id ?? null;
-    let productType: string | null = paymentData.metadata?.type ?? null;
-    let coinsAmount: number = Number(paymentData.metadata?.amount ?? 0);
-
-    // Fallback: parsear external_reference si metadata viene vacío
-    if (!user_id && paymentData.external_reference) {
-      const ref = paymentData.external_reference as string;
-      const pairs: Record<string, string> = {};
-      ref.split('|').forEach((part: string) => {
-        const [k, v] = part.split(':');
-        if (k && v) pairs[k.trim()] = v.trim();
-      });
-      user_id = pairs['user_id'] ?? null;
-      product_id = pairs['product_id'] ?? null;
-    }
-
-    // Si falta user_id no podemos procesar
-    if (!user_id) {
-      console.warn('[webhook] No user_id encontrado en metadata ni external_reference — abortando');
-      return new Response(JSON.stringify({ received: true, error: 'no user_id' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Si falta product_type, buscarlo en store_products usando product_id
-    if (!productType && product_id) {
-      const { data: prod } = await supabase
-        .from('store_products')
-        .select('type, amount')
-        .eq('id', product_id)
-        .single();
-      if (prod) {
-        productType = prod.type;
-        if (!coinsAmount) coinsAmount = Number(prod.amount);
+      // El simulador oficial firma una notificación con un ID ficticio. Mercado Pago
+      // responde 404 al consultar ese recurso; confirmamos la recepción porque no hay
+      // una operación real que acreditar. Los fallos transitorios sí deben reintentarse.
+      if (paymentResponse.status === 400 || paymentResponse.status === 404) {
+        return jsonResponse({ received: true, skipped: true }, 200)
       }
+
+      return jsonResponse({ received: false }, 502)
     }
 
-    const paymentStatus = paymentData.status as string;
-    const paymentMethod = (paymentData.payment_type_id ?? paymentData.payment_method_id ?? 'unknown') as string;
+    const payment = await paymentResponse.json()
+    const orderId = String(payment.external_reference ?? payment.metadata?.order_id ?? '')
+    if (!orderId) return jsonResponse({ received: true, skipped: true }, 200)
 
-    // 3. Registrar transacción (ON CONFLICT payment_id → ignorar duplicados)
-    const { error: insertError } = await supabase
-      .from('transacciones_tienda')
-      .insert({
-        user_id,
-        payment_id:         id.toString(),
-        preference_id:      paymentData.order?.id?.toString() ?? null,
-        status:             paymentStatus,
-        monto:              paymentData.transaction_amount ?? 0,
-        monedas_compradas:  productType === 'coins' ? coinsAmount : 0,
-        es_vip_compra:      productType === 'vip',
-        product_id:         product_id ?? null,
-        payment_method:     paymentMethod,
-        product_type:       productType ?? null,
-        currency:           'PEN',
+    const admin = createAdminClient()
+    const { data: order, error: orderError } = await admin
+      .from('payment_orders')
+      .select('id, amount_cents, currency, environment, status')
+      .eq('provider', 'mercadopago')
+      .eq('provider_order_id', orderId)
+      .maybeSingle()
+
+    if (orderError) throw orderError
+    if (!order) return jsonResponse({ received: true, skipped: true }, 200)
+
+    const environment = getMercadoPagoEnvironment()
+    const paymentAmountCents = amountToCents(payment.transaction_amount)
+    if (
+      paymentAmountCents !== order.amount_cents
+      || payment.currency_id !== order.currency
+      || environment !== order.environment
+      || String(payment.external_reference ?? '') !== orderId
+    ) {
+      console.error('[mercadopago-webhook] payment_context_mismatch', orderId)
+      return jsonResponse({ received: false }, 409)
+    }
+
+    const summary = safePaymentSummary(payment)
+    const paymentMethod = payment.payment_type_id ?? payment.payment_method_id ?? 'unknown'
+
+    if (payment.status === 'approved') {
+      const { error: fulfillmentError } = await admin.rpc('fulfill_payment_order', {
+        p_provider: 'mercadopago',
+        p_provider_order_id: orderId,
+        p_provider_payment_id: String(payment.id),
+        p_amount_cents: paymentAmountCents,
+        p_currency: payment.currency_id,
+        p_environment: environment,
+        p_payment_method: paymentMethod,
+        p_provider_summary: summary,
       })
-      .select()
-      // Deduplicación: si payment_id ya existe, no volvemos a procesar
-      .single();
-
-    if (insertError) {
-      // Código 23505 = unique_violation (ya procesado)
-      if (insertError.code === '23505') {
-        console.log('[webhook] Pago ya procesado anteriormente:', id);
-        return new Response(JSON.stringify({ received: true, duplicate: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-      console.warn('[webhook] Error al insertar transacción:', insertError.message);
+      if (fulfillmentError) throw fulfillmentError
+      return jsonResponse({ received: true, status: 'paid' }, 200)
     }
 
-    // 4. Si el pago fue aprobado → actualizar perfil
-    if (paymentStatus === 'approved') {
-      console.log('[webhook] Pago aprobado → actualizando perfil user_id:', user_id);
+    const status = ['pending', 'in_process', 'authorized'].includes(payment.status)
+      ? 'pending'
+      : ['refunded', 'charged_back'].includes(payment.status)
+        ? 'refunded'
+        : payment.status === 'cancelled'
+          ? 'cancelled'
+          : 'failed'
 
-      if (productType === 'vip') {
-        // Calcular días de VIP (usa amount del producto o 30 por defecto)
-        const days = coinsAmount > 0 ? coinsAmount : 30;
-        const vipUntil = new Date();
-        vipUntil.setDate(vipUntil.getDate() + days);
+    let updateQuery = admin.from('payment_orders').update({
+      provider_payment_id: String(payment.id),
+      payment_method: paymentMethod,
+      status,
+      provider_summary: summary,
+      updated_at: new Date().toISOString(),
+    }).eq('id', order.id)
 
-        const { error: vipErr } = await supabase
-          .from('profiles')
-          .update({
-            es_vip:            true,
-            vip_hasta:         vipUntil.toISOString(),
-            subscription_tier: 'premium',
-            active_frame_key:  'vip_exclusive',
-          })
-          .eq('id', user_id);
+    if (status !== 'refunded') updateQuery = updateQuery.neq('status', 'paid')
+    const { error: updateError } = await updateQuery
+    if (updateError) throw updateError
 
-        if (vipErr) console.error('[webhook] Error actualizando VIP:', vipErr.message);
-        else console.log('[webhook] VIP activado hasta:', vipUntil.toISOString());
-
-      } else if (productType === 'coins' && coinsAmount > 0) {
-        const { data: profile, error: profileErr } = await supabase
-          .from('profiles')
-          .select('monedas')
-          .eq('id', user_id)
-          .single();
-
-        if (profileErr) {
-          console.error('[webhook] Error leyendo monedas:', profileErr.message);
-        } else {
-          const newTotal = (profile?.monedas ?? 0) + coinsAmount;
-          const { error: coinsErr } = await supabase
-            .from('profiles')
-            .update({ monedas: newTotal })
-            .eq('id', user_id);
-
-          if (coinsErr) console.error('[webhook] Error actualizando monedas:', coinsErr.message);
-          else console.log('[webhook] Monedas actualizadas:', newTotal, 'para user:', user_id);
-        }
-      }
-    } else {
-      console.log('[webhook] Pago NO aprobado (status:', paymentStatus, ') — sin cambios en perfil');
-    }
-
-    return new Response(JSON.stringify({ received: true, status: paymentStatus }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
-  } catch (err: any) {
-    console.error('[mercadopago-webhook] Error:', err.message || err);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ received: true, status }, 200)
+  } catch (error) {
+    console.error('[mercadopago-webhook]', error instanceof Error ? error.message : 'unknown_error')
+    return jsonResponse({ received: false }, 500)
   }
 })
