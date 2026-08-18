@@ -8,6 +8,7 @@ import {
 import { useProfile } from '@/lib/profile-context';
 import { supabase } from '@/lib/supabase';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
+import IzipayCheckout from './IzipayCheckout';
 
 // ─── Credenciales según entorno ───────────────────────────────────────────────
 const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-c89b2d7b-b44e-4926-ba40-3d456209235d';
@@ -35,7 +36,7 @@ interface PaymentModalProps {
     onPaymentError: (error: any) => void;
 }
 
-type Tab = 'brick' | 'yape';
+type Tab = 'izipay' | 'brick' | 'yape';
 
 // ─── Helper: cargar SDK v2 de MP desde CDN ────────────────────────────────────
 async function loadMercadoPagoSDK(): Promise<void> {
@@ -70,7 +71,7 @@ export default function PaymentModal({
 }: PaymentModalProps) {
     const { profile, refreshProfile } = useProfile();
 
-    const [activeTab, setActiveTab] = useState<Tab>('brick');
+    const [activeTab, setActiveTab] = useState<Tab>('izipay');
     const [isSuccess, setIsSuccess] = useState(false);
     const [brickKey, setBrickKey] = useState(0);
 
@@ -91,31 +92,15 @@ export default function PaymentModal({
             setYapePhone('');
             setYapeOtp('');
             setYapeError(null);
-            setActiveTab('brick');
+            setActiveTab('izipay');
         } else {
             setBrickKey((k) => k + 1);
         }
     }, [isOpen]);
 
-    // Realtime listener: detecta cuando el pago se aprueba y el perfil se actualiza
-    useEffect(() => {
-        if (!isOpen || !profile?.id) return;
-        const channel = supabase
-            .channel(`profile-payment-${profile.id}`)
-            .on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'profiles',
-                filter: `id=eq.${profile.id}`,
-            }, (payload) => {
-                console.log('[PaymentModal] Perfil actualizado:', payload.new);
-                setIsSuccess(true);
-                refreshProfile();
-                onPaymentSuccess(payload.new);
-            })
-            .subscribe();
-        return () => { supabase.removeChannel(channel); };
-    }, [isOpen, profile?.id, refreshProfile, onPaymentSuccess]);
+    const handleIzipayError = useCallback((paymentError: Error) => {
+        onPaymentError(paymentError);
+    }, [onPaymentError]);
 
     // ── Brick onSubmit ─────────────────────────────────────────────────────────
     const handleBrickSubmit = useCallback(
@@ -258,23 +243,34 @@ export default function PaymentModal({
 
                 {/* Tabs */}
                 {!isSuccess && (
-                    <div className="flex p-2 gap-2 bg-[#141416] border-b border-white/10 shrink-0">
+                    <div className="grid grid-cols-3 p-2 gap-1.5 bg-[#141416] border-b border-white/10 shrink-0">
+                        <button
+                            onClick={() => setActiveTab('izipay')}
+                            className={`min-w-0 py-2.5 px-2 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-colors ${
+                                activeTab === 'izipay'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                            <ShieldCheck size={15} />
+                            Izipay
+                        </button>
                         <button
                             onClick={() => setActiveTab('brick')}
-                            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                            className={`min-w-0 py-2.5 px-2 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-colors ${
                                 activeTab === 'brick'
-                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
+                                    ? 'bg-blue-600 text-white'
                                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
                         >
                             <CreditCard size={15} />
-                            Tarjeta / MP
+                            Mercado Pago
                         </button>
                         <button
                             onClick={() => setActiveTab('yape')}
-                            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                            className={`min-w-0 py-2.5 px-2 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-colors ${
                                 activeTab === 'yape'
-                                    ? 'bg-[#6C3DD3] text-white shadow-lg shadow-purple-950/60'
+                                    ? 'bg-[#6C3DD3] text-white'
                                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
                         >
@@ -306,6 +302,11 @@ export default function PaymentModal({
                             </button>
                         </div>
 
+                    ) : activeTab === 'izipay' ? (
+                        <IzipayCheckout
+                            productId={product.id}
+                            onError={handleIzipayError}
+                        />
                     ) : activeTab === 'brick' ? (
                         /* Tab 1: Payment Brick (Tarjeta, MP Wallet, PagoEfectivo) */
                         <div className="p-4">

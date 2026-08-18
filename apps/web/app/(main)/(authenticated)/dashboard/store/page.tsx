@@ -73,7 +73,7 @@ export default function StorePage() {
 
 function StoreContent() {
     const { colors } = useTheme();
-    const { profile, refreshProfile, updateProfile, isGuest } = useProfile();
+    const { profile, refreshProfile, isGuest } = useProfile();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [itemsLoading, setItemsLoading] = useState<Record<string, boolean>>({});
@@ -320,41 +320,10 @@ function StoreContent() {
     };
 
     const handlePaymentSuccess = async (result: any) => {
-        // The modal now handles the "Success View" and will be closed by the user.
         console.log('[StorePage] Payment successful. Product:', selectedProduct);
-
-        // OPTIMISTIC UPDATE: Update profile immediately
-        if (profile && selectedProduct) {
-
-            if (selectedProduct.type === 'coins' && selectedProduct.amount) {
-                // Force number type just in case
-                const amountToAdd = Number(selectedProduct.amount);
-                console.log(`[StorePage] Optimistically adding ${amountToAdd} coins to current: ${profile.monedas}`);
-
-                const newCoins = (profile.monedas || 0) + amountToAdd;
-
-                // Update local context immediately for instant feedback
-                updateProfile({ ...profile, monedas: newCoins });
-            } else if (selectedProduct.type === 'vip') {
-                console.log('[StorePage] Optimistically setting VIP status and frame');
-                // For VIP we mark it true immediately and automatically equip the VIP frame
-                updateProfile({
-                    ...profile,
-                    es_vip: true,
-                    active_frame_key: 'vip_exclusive'
-                });
-            }
-        }
-
-        // TRIGGER BACKGROUND REFRESH
-        // 1. Immediate (in case webhook was super fast or simple revalidation)
-        refreshProfile();
-
-        // 2. Delayed check (wait for webhook) to ensure DB consistency
-        setTimeout(() => {
-            console.log('[StorePage] Delayed DB refresh to sync final state');
-            refreshProfile();
-        }, 3000);
+        // The database is the source of truth. Never add coins or VIP optimistically:
+        // providers can retry callbacks and payment confirmation may still be pending.
+        await refreshProfile();
     };
 
     const handlePaymentError = (error: any) => {
