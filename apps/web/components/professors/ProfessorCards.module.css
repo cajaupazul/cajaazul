@@ -441,6 +441,14 @@
   height: 14px;
 }
 
+.professorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  align-items: stretch;
+  gap: 18px;
+  margin-bottom: 32px;
+}
+
 @media (max-width: 640px) {
   .page {
     padding: 18px 14px 30px;
@@ -463,23 +471,49 @@
     width: 100%;
   }
 
+  /* ── 2 columnas en móvil ─────────────────────── */
   .professorGrid {
-    grid-template-columns: 1fr;
-    gap: 16px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
 
   .cardBanner {
-    height: 100px;
+    height: 72px;
+  }
+
+  /* Avatar y nombre más compactos */
+  .cardContent {
+    padding: 32px 10px 12px;
+  }
+
+  .avatar {
+    width: 52px;
+    height: 52px;
+    top: -26px;
+    left: 10px;
   }
 
   .professorIdentity h3 {
-    font-size: 0.98rem;
+    font-size: 0.78rem;
+    min-height: 30px;
+  }
+
+  .professorIdentity p {
+    font-size: 0.63rem;
   }
 
   .courseButton span {
-    font-size: 0.73rem;
+    font-size: 0.65rem;
+  }
+
+  .ratingAvailable,
+  .ratingEmpty {
+    font-size: 0.62rem;
+    right: 8px;
+    padding: 0 5px;
   }
 }
+
 
 @media (min-width: 641px) and (max-width: 1040px) {
   .toolbar {

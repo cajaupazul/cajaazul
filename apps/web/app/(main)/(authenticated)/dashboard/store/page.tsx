@@ -512,77 +512,94 @@ function StoreContent() {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
                                             {categoryItems.map((item) => {
                                                 const isOwned = userInventory.includes(item.id);
                                                 return (
                                                     <div
                                                         key={item.id}
-                                                        className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-[#17191d] p-5 transition-colors hover:border-blue-500/60 hover:bg-[#1b1e23] ${isOwned ? 'opacity-70' : ''}`}
+                                                        className={`group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#17191d] transition-all duration-200 hover:border-blue-500/60 hover:bg-[#1b1e23] hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/40 ${isOwned ? 'opacity-70' : ''}`}
                                                     >
-                                                        <div className="relative z-10 flex h-full flex-col space-y-5">
-                                                            <div className="relative aspect-square flex items-center justify-center cursor-pointer overflow-hidden" onClick={() => setPreviewItem(item)}>
-                                                                
-                                                                {item.type === 'profile_frame' ? (
-                                                                    <div className="relative flex items-center justify-center w-16 h-16 sm:w-24 sm:h-24">
-                                                                        {/* Dummy Avatar */}
-                                                                        <div className="relative z-0 flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-white/10 bg-[#0d0f12] opacity-60">
-                                                                            <ImageIcon className="h-5 w-5 text-zinc-700" />
-                                                                        </div>
-
-                                                                        {/* Frame */}
-                                                                        {item.image_url && (
-                                                                            <img 
-                                                                                src={item.image_url} 
-                                                                                alt={item.name} 
-                                                                                className="absolute z-10 max-w-none object-contain"
-                                                                                style={{ 
-                                                                                    top: '50%', 
-                                                                                    left: '50%', 
-                                                                                    width: `${(item.frame_settings?.preview?.scale || 1.3) * 100}%`,
-                                                                                    height: `${(item.frame_settings?.preview?.scale || 1.3) * 100}%`,
-                                                                                    transform: `translate(calc(-50% + ${item.frame_settings?.preview?.x || 0}px), calc(-50% + ${item.frame_settings?.preview?.y || 0}px))`
-                                                                                }}
-                                                                            />
-                                                                        )}
+                                                        {/* ── Preview Area ── */}
+                                                        <div
+                                                            className="relative flex items-center justify-center cursor-pointer overflow-hidden bg-[#0d0f12]"
+                                                            style={{ aspectRatio: '1/1', minHeight: 0 }}
+                                                            onClick={() => setPreviewItem(item)}
+                                                        >
+                                                            {item.type === 'profile_frame' ? (
+                                                                <div className="relative flex items-center justify-center w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40">
+                                                                    {/* Dummy Avatar */}
+                                                                    <div className="relative z-0 flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-white/10 bg-[#1a1c22] opacity-50">
+                                                                        <ImageIcon className="h-8 w-8 text-zinc-700" />
                                                                     </div>
-                                                                ) : (
-                                                                    <img src={item.image_url || ''} alt={item.name} className="relative z-10 h-full w-full object-contain" loading="lazy" />
-                                                                )}
-
-                                                                {item.max_uses !== null && (
-                                                                    <div className="absolute right-0 top-0 z-20 rounded-bl-xl rounded-tr-lg bg-blue-600 px-2 py-1 text-[9px] font-black text-white">
-                                                                        {item.max_uses} USOS
-                                                                    </div>
-                                                                )}
-                                                            </div>
-
-                                                            <div className="space-y-1 sm:space-y-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600">{item.type.replace('_', ' ')}</div>
-                                                                    {item.bundle_items && item.bundle_items.length > 0 && (
-                                                                        <div className="text-[8px] font-black bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded uppercase tracking-widest border border-indigo-500/30">PACK</div>
+                                                                    {/* Frame */}
+                                                                    {item.image_url && (
+                                                                        <img
+                                                                            src={item.image_url}
+                                                                            alt={item.name}
+                                                                            className="absolute z-10 max-w-none object-contain"
+                                                                            style={{
+                                                                                top: '50%',
+                                                                                left: '50%',
+                                                                                width: `${(item.frame_settings?.preview?.scale || 1.4) * 100}%`,
+                                                                                height: `${(item.frame_settings?.preview?.scale || 1.4) * 100}%`,
+                                                                                transform: `translate(calc(-50% + ${item.frame_settings?.preview?.x || 0}px), calc(-50% + ${item.frame_settings?.preview?.y || 0}px))`
+                                                                            }}
+                                                                        />
                                                                     )}
                                                                 </div>
-                                                                <h3 className="truncate text-base font-black leading-tight text-white sm:text-lg">{item.name}</h3>
-                                                                <p className="line-clamp-2 min-h-10 text-xs font-medium leading-5 text-zinc-500">{item.description}</p>
+                                                            ) : (
+                                                                <img
+                                                                    src={item.image_url || ''}
+                                                                    alt={item.name}
+                                                                    className="h-28 w-28 sm:h-36 sm:w-36 object-contain"
+                                                                    loading="lazy"
+                                                                />
+                                                            )}
+
+                                                            {/* Badges */}
+                                                            {item.max_uses !== null && (
+                                                                <div className="absolute right-0 top-0 z-20 rounded-bl-xl rounded-tr-lg bg-blue-600 px-2 py-1 text-[9px] font-black text-white">
+                                                                    {item.max_uses} USOS
+                                                                </div>
+                                                            )}
+                                                            {/* Hover zoom hint */}
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
+                                                                <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-black text-white bg-black/60 px-2 py-1 rounded-full">
+                                                                    Ver preview
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* ── Card Body ── */}
+                                                        <div className="flex flex-1 flex-col gap-3 p-3 sm:p-4">
+                                                            <div className="space-y-0.5">
+                                                                <div className="text-[9px] font-black uppercase tracking-[0.16em] text-zinc-600">
+                                                                    {item.type.replace('_', ' ')}
+                                                                    {item.bundle_items && item.bundle_items.length > 0 && (
+                                                                        <span className="ml-1.5 bg-indigo-500/20 text-indigo-400 px-1 py-0.5 rounded uppercase tracking-widest border border-indigo-500/30">PACK</span>
+                                                                    )}
+                                                                </div>
+                                                                <h3 className="text-sm font-black leading-tight text-white sm:text-base line-clamp-2">{item.name}</h3>
+                                                                <p className="line-clamp-2 text-[10px] sm:text-xs font-medium leading-4 text-zinc-500 mt-1">{item.description}</p>
                                                             </div>
 
-                                                            <div className="pt-3 sm:pt-4 border-t border-white/5 flex items-center justify-between gap-1 sm:gap-4">
+                                                            {/* ── Action Row ── */}
+                                                            <div className="mt-auto flex items-center gap-1.5 border-t border-white/5 pt-3">
                                                                 {item.frame_key === 'vip_exclusive' ? (
                                                                     <>
                                                                         {!profile?.es_vip && (
-                                                                            <div className="flex flex-shrink-0 items-center gap-1 rounded-xl bg-amber-500 px-2 py-1 sm:gap-2 sm:px-4 sm:py-2">
-                                                                                <Star className="h-3.5 w-3.5 text-black sm:h-5 sm:w-5" />
-                                                                                <span className="text-xs font-black text-black sm:text-base">VIP</span>
+                                                                            <div className="flex flex-shrink-0 items-center gap-1 rounded-lg bg-amber-500 px-2 py-1">
+                                                                                <Star className="h-3 w-3 text-black" />
+                                                                                <span className="text-[10px] font-black text-black">VIP</span>
                                                                             </div>
                                                                         )}
                                                                         {profile?.es_vip ? (
-                                                                            <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-9 sm:h-11 text-[9px] sm:text-sm px-1" disabled>ADQUIRIDO</Button>
+                                                                            <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-8 sm:h-9 text-[10px] sm:text-xs px-1" disabled>ADQUIRIDO</Button>
                                                                         ) : (
                                                                             <Button
                                                                                 onClick={() => setActiveView('recharge')}
-                                                                                className="h-9 flex-1 rounded-xl bg-amber-500 px-1 text-[9px] font-black text-black hover:bg-amber-400 sm:h-11 sm:text-sm"
+                                                                                className="h-8 sm:h-9 flex-1 rounded-xl bg-amber-500 px-1 text-[10px] font-black text-black hover:bg-amber-400 sm:text-xs"
                                                                             >
                                                                                 OBTENER VIP
                                                                             </Button>
@@ -591,15 +608,17 @@ function StoreContent() {
                                                                 ) : (
                                                                     <>
                                                                         {!isOwned && (
-                                                                            <div className="flex-shrink-0 flex items-center gap-1 sm:gap-2 bg-black px-1.5 py-1 sm:px-3 sm:py-2 rounded-xl">
-                                                                                <img src="/icons/moneda.png" alt="Coin" className="w-3.5 h-3.5 sm:w-5 sm:h-5 flex-shrink-0" />
-                                                                                <span className="text-white font-black text-[10px] sm:text-base tracking-tighter">{item.price_coins}</span>
+                                                                            <div className="flex-shrink-0 flex items-center gap-1 bg-black px-2 py-1 rounded-lg">
+                                                                                <img src="/icons/moneda.png" alt="Coin" className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                                                                                <span className="text-white font-black text-[10px] sm:text-xs tracking-tighter">{item.price_coins}</span>
                                                                             </div>
                                                                         )}
                                                                         {isOwned ? (
-                                                                            <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-9 sm:h-11 text-[9px] sm:text-sm px-1" disabled>ADQUIRIDO</Button>
+                                                                            <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-8 sm:h-9 text-[10px] sm:text-xs px-1" disabled>ADQUIRIDO</Button>
                                                                         ) : (
-                                                                            <Button onClick={() => setPreviewItem(item)} className="h-9 flex-1 rounded-xl bg-white px-1 text-[9px] font-black text-black hover:bg-zinc-200 sm:h-11 sm:text-sm">Vista previa</Button>
+                                                                            <Button onClick={() => setPreviewItem(item)} className="h-8 sm:h-9 flex-1 rounded-xl bg-white px-1 text-[10px] font-black text-black hover:bg-zinc-200 sm:text-xs">
+                                                                                Ver preview
+                                                                            </Button>
                                                                         )}
                                                                     </>
                                                                 )}
