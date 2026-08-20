@@ -24,6 +24,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase, ShopItem, ShopCategory } from '@/lib/supabase';
 import PaymentModal from '@/components/store/PaymentModal';
 import PreviewModal from '@/components/store/PreviewModal';
+import EndfieldLoadingScreen from '@/components/store/EndfieldLoadingScreen';
 
 interface StoreProduct {
     id: string;
@@ -33,8 +34,6 @@ interface StoreProduct {
     amount: number;
     active: boolean;
 }
-
-// MercadoPago now handled via Cloudflare Worker API
 
 interface StoreLayoutConfig {
     id: string;
@@ -59,11 +58,12 @@ interface VipExclusiveFrame {
 
 export default function StorePage() {
     return (
-        <Suspense fallback={<div className="p-8 text-center text-bb-text-secondary animate-pulse">Cargando tienda...</div>}>
+        <Suspense fallback={<EndfieldLoadingScreen isReady={false} />}>
             <StoreContent />
         </Suspense>
     );
 }
+
 
 function StoreContent() {
     const { profile, refreshProfile, isGuest } = useProfile();
@@ -77,13 +77,16 @@ function StoreContent() {
     const [activeView, setActiveView] = useState<'items' | 'recharge'>('items');
     const [showDebugInfo, setShowDebugInfo] = useState(false);
 
+    // Endfield Loading Screen States
+    const [isPageReady, setIsPageReady] = useState(false);
+    const [showLoadingScreen, setShowLoadingScreen] = useState(true);
+
     const status = searchParams.get('status');
     const paymentStatus = searchParams.get('payment');
     const statusDetail = searchParams.get('status_detail');
     const merchantOrderId = searchParams.get('merchant_order_id');
     const collectionId = searchParams.get('collection_id') || searchParams.get('payment_id');
     const effectiveStatus = paymentStatus || status;
-
 
     React.useEffect(() => {
         if (effectiveStatus === 'success' || effectiveStatus === 'approved') {
@@ -92,80 +95,105 @@ function StoreContent() {
     }, [effectiveStatus, refreshProfile]);
 
     const [shopCategories, setShopCategories] = useState<ShopCategory[]>([]);
-
     const [coinPackages, setCoinPackages] = useState<StoreProduct[]>([]);
     const [vipProduct, setVipProduct] = useState<StoreProduct | null>(null);
-
-    // VIP Frame State
     const [activeFrame, setActiveFrame] = useState<VipExclusiveFrame | null>(null);
+
+    // Helper para precarga de imágenes
+    const preloadImages = (urls: (string | null | undefined)[]) => {
+        if (typeof window === 'undefined') return Promise.resolve();
+        const validUrls = urls.filter((url): url is string => typeof url === 'string' && url.length > 0);
+        if (validUrls.length === 0) return Promise.resolve();
+
+        return Promise.all(
+            validUrls.map(
+                (url) =>
+                    new Promise<void>((resolve) => {
+                        const img = new Image();
+                        img.src = url;
+                        img.onload = () => resolve();
+                        img.onerror = () => resolve(); // No bloquear
+                    })
+            )
+        );
+    };
 
     // Fetch shop items, categories, and recharge products (VIP/Coins)
     useEffect(() => {
         const fetchData = async () => {
-            // 1. Fetch Categories
-            const { data: catData, error: catError } = await supabase
-                .from('shop_categories')
-                .select('*')
-                .eq('is_active', true)
-                .order('display_order', { ascending: true });
+            try {
+                // 1. Fetch Categories
+                const { data: catData, error: catError } = await supabase
+                    .from('shop_categories')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('display_order', { ascending: true });
 
-            if (!catError && catData) {
-                setShopCategories(catData);
+                if (!catError && catData) {
+                    setShopCategories(catData);
+                }
+
+                // 2. Fetch Items
+                const { data: itemData, error: itemError } = await supabase
+                    .from('shop_items')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('price_coins', { ascending: true });
+
+                if (!itemError && itemData) {
+                    setShopItems(itemData);
+                }
+
+                // 3. Fetch Store Products (Dynamic Pricing)
+                const { data: prodData, error: prodError } = await supabase
+                    .from('store_products')
+                    .select('*')
+                    .eq('active', true);
+
+                if (!prodError && prodData) {
+                    const products = prodData as unknown as StoreProduct[];
+                    setCoinPackages(products.filter(p => p.type === 'coins').sort((a, b) => a.price - b.price));
+                    setVipProduct(products.find(p => p.type === 'vip') || null);
+                }
+
+                // 4. Fetch Active VIP Frame
+                const { data: frameData } = await supabase
+                    .from('vip_exclusive_frames')
+                    .select('*')
+                    .eq('is_active', true)
+                    .single();
+                if (frameData) setActiveFrame(frameData);
+
+                // 5. Fetch Inventory
+                if (profile?.id) {
+                    const { data: invData } = await supabase
+                        .from('user_inventory')
+                        .select('item_id')
+                        .eq('user_id', profile.id);
+
+                    if (invData) {
+                        setUserInventory(invData.map(item => item.item_id));
+                    }
+                }
+
+                // 6. Precargar imágenes críticas
+                const imagesToPreload: (string | null | undefined)[] = [
+                    '/icons/moneda.png',
+                    '/tienda/orivipp.png',
+                    frameData?.image_url,
+                    ...(itemData || []).map((i: any) => i.image_url)
+                ];
+
+                await preloadImages(imagesToPreload);
+            } catch (err) {
+                console.error('[Store] Error cargando datos:', err);
+            } finally {
+                setIsPageReady(true);
             }
-
-            // 2. Fetch Items
-            const { data: itemData, error: itemError } = await supabase
-                .from('shop_items')
-                .select('*')
-                .eq('is_active', true)
-                .order('price_coins', { ascending: true });
-
-            if (!itemError && itemData) {
-                setShopItems(itemData);
-            }
-
-            // 3. Fetch Store Products (Dynamic Pricing)
-            const { data: prodData, error: prodError } = await supabase
-                .from('store_products')
-                .select('*')
-                .eq('active', true);
-
-            if (!prodError && prodData) {
-                // Cast to StoreProduct[] to ensure types
-                const products = prodData as unknown as StoreProduct[];
-                setCoinPackages(products.filter(p => p.type === 'coins').sort((a, b) => a.price - b.price));
-                setVipProduct(products.find(p => p.type === 'vip') || null);
-            }
-
-            // 4. Fetch Active VIP Frame
-            const { data: frameData } = await supabase
-                .from('vip_exclusive_frames')
-                .select('*')
-                .eq('is_active', true)
-                .single();
-            if (frameData) setActiveFrame(frameData);
         };
 
         fetchData();
-    }, [supabase]);
-
-    // Fetch user inventory
-    useEffect(() => {
-        const fetchInventory = async () => {
-            if (!profile?.id) return;
-
-            const { data, error } = await supabase
-                .from('user_inventory')
-                .select('item_id')
-                .eq('user_id', profile.id);
-
-            if (!error && data) {
-                setUserInventory(data.map(item => item.item_id));
-            }
-        };
-
-        fetchInventory();
-    }, [profile?.id]);
+    }, [supabase, profile?.id]);
 
     const handleBuyItem = async (item: ShopItem) => {
         if (isGuest) {
@@ -181,7 +209,7 @@ function StoreContent() {
         try {
             setItemsLoading(prev => ({ ...prev, [item.id]: true }));
 
-            // Use the new Worker API endpoint instead of Supabase Edge Function to avoid CORS
+            // Use the Worker API endpoint instead of Supabase Edge Function to avoid CORS
             await apiFetch('/shop/buy', {
                 method: 'POST',
                 body: JSON.stringify({ item_id: item.id }),
@@ -243,83 +271,61 @@ function StoreContent() {
 
     const handlePaymentSuccess = async (result: any) => {
         console.log('[StorePage] Payment successful. Product:', selectedProduct);
-        // The database is the source of truth. Never add coins or VIP optimistically:
-        // providers can retry callbacks and payment confirmation may still be pending.
         await refreshProfile();
     };
 
     const handlePaymentError = (error: any) => {
         console.error('Payment Error:', error);
-        // Do not close modal automatically on error, let user try again or see error in Brick
-        // But for generic API errors we might want to show a toast
         setPurchaseMessage({ type: 'error', text: 'Error al procesar el pago. Intenta nuevamente.' });
     };
 
     return (
-        <main className="min-h-screen bg-[#0d0f12] px-4 py-6 text-white sm:px-6 lg:px-10 lg:py-10">
-            <div className="mx-auto max-w-[1380px] space-y-10">
-                {/* Alert Messages */}
-                {effectiveStatus && (
-                    <div className={`flex items-start gap-4 rounded-2xl border p-5 ${(effectiveStatus === 'success' || effectiveStatus === 'approved')
-                        ? 'bg-green-500/10 border-green-500/20'
-                        : (effectiveStatus === 'failure' || effectiveStatus === 'rejected')
-                            ? 'bg-red-500/10 border-red-500/20'
-                            : 'bg-yellow-500/10 border-yellow-500/20'
-                        }`}>
-                        {(effectiveStatus === 'success' || effectiveStatus === 'approved') ? (
-                            <CheckCircle2 className="text-green-500 shrink-0" size={32} />
-                        ) : (effectiveStatus === 'failure' || effectiveStatus === 'rejected') ? (
-                            <XCircle className="text-red-500 shrink-0" size={32} />
-                        ) : (
-                            <AlertCircle className="text-yellow-500 shrink-0" size={32} />
-                        )}
-                        <div>
-                            <h3 className="text-xl font-bold text-white">
-                                {(effectiveStatus === 'success' || effectiveStatus === 'approved') ? '¡Pago Exitoso!' : (effectiveStatus === 'failure' || effectiveStatus === 'rejected') ? 'Hubo un error' : 'Pago Pendiente'}
-                            </h3>
-                            <p className="text-bb-text-secondary text-sm">
-                                {(effectiveStatus === 'success' || effectiveStatus === 'approved') ? (
-                                    'Tu compra se ha procesado correctamente y tus beneficios han sido activados.'
-                                ) : (effectiveStatus === 'failure' || effectiveStatus === 'rejected') ? (
-                                    statusDetail === 'cc_rejected_insufficient_amount' ? 'Tu tarjeta no tiene saldo suficiente.' :
-                                        statusDetail === 'cc_rejected_call_for_authorize' ? 'Debes autorizar el pago ante tu banco.' :
-                                            statusDetail === 'cc_rejected_duplicated_payment' ? 'Se detectó un pago duplicado.' :
-                                                statusDetail === 'cc_rejected_bad_filled_security_code' ? 'El código de seguridad es incorrecto.' :
-                                                    statusDetail === 'cc_rejected_card_disabled' ? 'Tu tarjeta se encuentra inactiva.' :
-                                                        'No pudimos procesar tu pago. Por favor, intenta con otro método de pago.'
-                                ) : (
-                                    'Estamos procesando tu pago. Te avisaremos cuando se complete.'
-                                )}
-                            </p>
-
-                            {(statusDetail || collectionId) && (effectiveStatus === 'failure' || effectiveStatus === 'rejected') && (
-                                <div className="mt-4">
-                                    <button
-                                        onClick={() => setShowDebugInfo(!showDebugInfo)}
-                                        className="text-[10px] uppercase tracking-widest font-bold text-red-500/60 hover:text-red-500 flex items-center gap-1 transition-colors"
-                                    >
-                                        <Settings size={10} />
-                                        {showDebugInfo ? 'Ocultar detalles técnicos' : 'Ver detalles técnicos'}
-                                    </button>
-
-                                    {showDebugInfo && (
-                                        <div className="mt-2 p-3 bg-black/20 rounded-xl border border-white/5 font-mono text-[10px] text-red-400/80 space-y-1 overflow-x-auto">
-                                            {statusDetail && <div>CODE: {statusDetail}</div>}
-                                            {collectionId && <div>PAYMENT_ID: {collectionId}</div>}
-                                            {merchantOrderId && <div>ORDER_ID: {merchantOrderId}</div>}
-                                            {status && <div>STATUS_PARAM: {status}</div>}
-                                            {paymentStatus && <div>PAYMENT_PARAM: {paymentStatus}</div>}
-                                            <div className="mt-2 opacity-60 italic border-t border-white/5 pt-2">
-                                                Causa probable: Filtro anti-fraude de Mercado Pago o límite de cuenta individual.
-                                                Si tienes saldo, intenta usar la opción "Tarjeta de Débito" dentro de Mercado Pago usando los datos de tu tarjeta asociada a Yape.
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+        <>
+            {showLoadingScreen && (
+                <EndfieldLoadingScreen
+                    isReady={isPageReady}
+                    onFinished={() => setShowLoadingScreen(false)}
+                />
+            )}
+            <main className="min-h-screen bg-[#0d0f12] px-4 py-6 text-white sm:px-6 lg:px-10 lg:py-10">
+                <div className="mx-auto max-w-[1380px] space-y-10">
+                    {/* Alert Messages */}
+                    {effectiveStatus && (
+                        <div className={`flex items-start gap-4 rounded-2xl border p-5 ${(effectiveStatus === 'success' || effectiveStatus === 'approved')
+                            ? 'bg-green-500/10 border-green-500/20'
+                            : (effectiveStatus === 'failure' || effectiveStatus === 'rejected')
+                                ? 'bg-red-500/10 border-red-500/20'
+                                : 'bg-yellow-500/10 border-yellow-500/20'
+                            }`}>
+                            {(effectiveStatus === 'success' || effectiveStatus === 'approved') ? (
+                                <CheckCircle2 className="text-green-500 shrink-0" size={32} />
+                            ) : (effectiveStatus === 'failure' || effectiveStatus === 'rejected') ? (
+                                <XCircle className="text-red-500 shrink-0" size={32} />
+                            ) : (
+                                <AlertCircle className="text-yellow-500 shrink-0" size={32} />
                             )}
+                            <div>
+                                <h3 className="text-xl font-bold text-white">
+                                    {(effectiveStatus === 'success' || effectiveStatus === 'approved') ? '¡Pago Exitoso!' : (effectiveStatus === 'failure' || effectiveStatus === 'rejected') ? 'Hubo un error' : 'Pago Pendiente'}
+                                </h3>
+                                <p className="text-bb-text-secondary text-sm">
+                                    {(effectiveStatus === 'success' || effectiveStatus === 'approved') ? (
+                                        'Tu compra se ha procesado correctamente y tus beneficios han sido activados.'
+                                    ) : (effectiveStatus === 'failure' || effectiveStatus === 'rejected') ? (
+                                        statusDetail === 'cc_rejected_insufficient_amount' ? 'Tu tarjeta no tiene saldo suficiente.' :
+                                            statusDetail === 'cc_rejected_call_for_authorize' ? 'Debes autorizar el pago ante tu banco.' :
+                                                statusDetail === 'cc_rejected_duplicated_payment' ? 'Se detectó un pago duplicado.' :
+                                                    statusDetail === 'cc_rejected_bad_filled_security_code' ? 'El código de seguridad es incorrecto.' :
+                                                        statusDetail === 'cc_rejected_card_disabled' ? 'Tu tarjeta se encuentra inactiva.' :
+                                                            'No pudimos procesar tu pago. Por favor, intenta con otro método de pago.'
+                                    ) : (
+                                        'Estamos procesando tu pago. Te avisaremos cuando se complete.'
+                                    )}
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+
 
                 {/* Header Section */}
                 <header className="flex flex-col gap-6 border-b border-white/10 pb-8 lg:flex-row lg:items-end lg:justify-between">
@@ -674,5 +680,7 @@ function StoreContent() {
                 onPaymentError={handlePaymentError}
             />
         </main>
+        </>
     );
 }
+
