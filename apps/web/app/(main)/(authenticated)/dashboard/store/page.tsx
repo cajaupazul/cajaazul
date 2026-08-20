@@ -58,11 +58,16 @@ interface VipExclusiveFrame {
 
 export default function StorePage() {
     return (
-        <Suspense fallback={<EndfieldLoadingScreen isReady={false} />}>
+        <Suspense fallback={
+            <main className="relative min-h-[calc(100vh-80px)] bg-[#0d0f12] overflow-hidden">
+                <EndfieldLoadingScreen isReady={false} />
+            </main>
+        }>
             <StoreContent />
         </Suspense>
     );
 }
+
 
 
 function StoreContent() {
@@ -280,15 +285,15 @@ function StoreContent() {
     };
 
     return (
-        <>
+        <main className="relative min-h-[calc(100vh-80px)] bg-[#0d0f12] px-4 py-6 text-white sm:px-6 lg:px-10 lg:py-10 overflow-hidden">
             {showLoadingScreen && (
                 <EndfieldLoadingScreen
                     isReady={isPageReady}
                     onFinished={() => setShowLoadingScreen(false)}
                 />
             )}
-            <main className="min-h-screen bg-[#0d0f12] px-4 py-6 text-white sm:px-6 lg:px-10 lg:py-10">
-                <div className="mx-auto max-w-[1380px] space-y-10">
+            <div className="mx-auto max-w-[1380px] space-y-10">
+
                     {/* Alert Messages */}
                     {effectiveStatus && (
                         <div className={`flex items-start gap-4 rounded-2xl border p-5 ${(effectiveStatus === 'success' || effectiveStatus === 'approved')
@@ -680,7 +685,7 @@ function StoreContent() {
                 onPaymentError={handlePaymentError}
             />
         </main>
-        </>
     );
 }
+
 

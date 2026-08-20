@@ -13,9 +13,9 @@ export default function EndfieldLoadingScreen({
 }: EndfieldLoadingScreenProps) {
     const [progress, setProgress] = useState(0);
     const [phase, setPhase] = useState<'loading' | 'transition' | 'done'>('loading');
-    const [isMobile, setIsMobile] = useState(false);
-    const [pctTopPx, setPctTopPx] = useState(0);
+    const [pctTopPx, setPctTopPx] = useState(20);
 
+    const containerRef = useRef<HTMLDivElement>(null);
     const progressRef = useRef(0);
     const isReadyRef = useRef(isReady);
     const hasTransitionedRef = useRef(false);
@@ -25,22 +25,19 @@ export default function EndfieldLoadingScreen({
         isReadyRef.current = isReady;
     }, [isReady]);
 
-    // Manejar resize para saber si es móvil y reposicionar el indicador
+    // Manejar resize del contenedor para reposicionar el indicador
     useEffect(() => {
-        const handleResize = () => {
-            const mobile = window.innerWidth <= 640;
-            setIsMobile(mobile);
-            if (!mobile) {
-                const vh = window.innerHeight;
-                const barBottom = (progressRef.current / 100) * vh;
-                const pctHeight = 90;
-                setPctTopPx(Math.min(barBottom, Math.max(20, vh - pctHeight - 20)));
-            }
+        const updatePosition = () => {
+            if (!containerRef.current) return;
+            const h = containerRef.current.clientHeight || window.innerHeight;
+            const barBottom = (progressRef.current / 100) * h;
+            const pctHeight = 90;
+            setPctTopPx(Math.min(barBottom, Math.max(20, h - pctHeight - 30)));
         };
 
-        handleResize();
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        return () => window.removeEventListener('resize', updatePosition);
     }, []);
 
     // Bucle de incremento fluido de progreso
@@ -59,7 +56,7 @@ export default function EndfieldLoadingScreen({
 
             if (ready) {
                 // Si todo está listo, avanzar rápidamente a 100
-                const speed = 120; // % por segundo
+                const speed = 130; // % por segundo
                 next = Math.min(100, current + speed * delta);
             } else {
                 // Si aún no está listo, avanzar hasta máximo 88% con desaceleración natural
@@ -75,12 +72,12 @@ export default function EndfieldLoadingScreen({
             progressRef.current = next;
             setProgress(next);
 
-            // Calcular posición vertical para desktop
-            if (typeof window !== 'undefined' && window.innerWidth > 640) {
-                const vh = window.innerHeight;
-                const barBottom = (next / 100) * vh;
+            // Calcular posición vertical dentro del contenedor
+            if (containerRef.current) {
+                const h = containerRef.current.clientHeight || window.innerHeight;
+                const barBottom = (next / 100) * h;
                 const pctHeight = 90;
-                setPctTopPx(Math.min(barBottom, Math.max(20, vh - pctHeight - 20)));
+                setPctTopPx(Math.min(barBottom, Math.max(20, h - pctHeight - 30)));
             }
 
             if (next >= 100 && !hasTransitionedRef.current) {
@@ -118,10 +115,14 @@ export default function EndfieldLoadingScreen({
     const floorPct = Math.floor(progress);
 
     return (
-        <div className="fixed inset-0 z-[9999] overflow-hidden select-none bg-[#141414]">
-            {/* ── OVERLAY AMARILLO (CORTINA EXPANSIVA) ── */}
+        <div
+            ref={containerRef}
+            className="absolute inset-0 z-40 overflow-hidden select-none bg-[#141414]"
+            style={{ minHeight: '100%' }}
+        >
+            {/* ── OVERLAY AMARILLO (CORTINA EXPANSIVA DENTRO DEL CONTENEDOR) ── */}
             <div
-                className={`fixed inset-0 z-[10001] bg-[#fffa00] pointer-events-none transition-all ${
+                className={`absolute inset-0 z-50 bg-[#fffa00] pointer-events-none transition-all ${
                     phase === 'transition' ? 'opacity-100' : 'opacity-0'
                 }`}
                 style={{
@@ -131,7 +132,7 @@ export default function EndfieldLoadingScreen({
                 }}
             />
 
-            {/* ── PANTALLA PRINCIPAL DE CARGA ── */}
+            {/* ── PANTALLA PRINCIPAL DE CARGA (CONFINADA AL ÁREA DE TIENDA) ── */}
             <div className={`relative w-full h-full text-white transition-opacity duration-150 ${phase === 'transition' ? 'opacity-0' : 'opacity-100'}`}>
 
                 {/* ─────────────────── DESKTOP ( >= 641px ) ─────────────────── */}
@@ -191,7 +192,7 @@ export default function EndfieldLoadingScreen({
                 </div>
 
                 {/* ─────────────────── MÓVIL ( <= 640px ) ─────────────────── */}
-                <div className="block sm:hidden relative w-full h-full">
+                <div className="block sm:hidden relative w-full h-full min-h-[480px]">
                     {/* Logo móvil centrado */}
                     <div className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 w-[190px] text-white z-20">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 74.14 36.99" className="w-full fill-current">
