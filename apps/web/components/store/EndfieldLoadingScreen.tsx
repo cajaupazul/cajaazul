@@ -12,20 +12,20 @@ export default function EndfieldLoadingScreen({
     onFinished
 }: EndfieldLoadingScreenProps) {
     const [progress, setProgress] = useState(0);
-    const [phase, setPhase] = useState<'loading' | 'transition' | 'done'>('loading');
+    const [phase, setPhase] = useState<'loading' | 'completed' | 'transition' | 'done'>('loading');
     const [pctTopPx, setPctTopPx] = useState(20);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const progressRef = useRef(0);
     const isReadyRef = useRef(isReady);
-    const hasTransitionedRef = useRef(false);
+    const hasReached100Ref = useRef(false);
 
     // Actualizar referencia de isReady
     useEffect(() => {
         isReadyRef.current = isReady;
     }, [isReady]);
 
-    // Manejar resize del contenedor para reposicionar el indicador
+    // Manejar resize del contenedor para reposicionar el porcentaje en Desktop
     useEffect(() => {
         const updatePosition = () => {
             if (!containerRef.current) return;
@@ -40,13 +40,13 @@ export default function EndfieldLoadingScreen({
         return () => window.removeEventListener('resize', updatePosition);
     }, []);
 
-    // Bucle de incremento fluido de progreso
+    // Bucle de incremento fluido de progreso sin saltos bruscos
     useEffect(() => {
         let animationFrameId: number;
         let lastTime = performance.now();
 
         const updateProgress = (now: number) => {
-            const delta = (now - lastTime) / 1000;
+            const delta = Math.min((now - lastTime) / 1000, 0.1); // Proteger contra pausas de pestaña
             lastTime = now;
 
             const current = progressRef.current;
@@ -55,24 +55,28 @@ export default function EndfieldLoadingScreen({
             let next = current;
 
             if (ready) {
-                // Si todo está listo, avanzar rápidamente a 100
-                const speed = 130; // % por segundo
+                // Cuando está listo, subir hacia 100% de forma progresiva y elegante (sin saltos instantáneos)
+                const remaining = 100 - current;
+                // Velocidad suave: tarda al menos 400-600ms en recorrer el tramo final hacia 100
+                const speed = Math.max(35, remaining * 3.5);
                 next = Math.min(100, current + speed * delta);
             } else {
-                // Si aún no está listo, avanzar hasta máximo 88% con desaceleración natural
-                if (current < 40) {
-                    next = current + 45 * delta;
-                } else if (current < 70) {
-                    next = current + 25 * delta;
-                } else if (current < 88) {
-                    next = current + 8 * delta;
+                // Mientras espera a que los recursos carguen:
+                if (current < 35) {
+                    next = current + 42 * delta; // Primeros números suben a buen ritmo
+                } else if (current < 65) {
+                    next = current + 26 * delta;
+                } else if (current < 85) {
+                    next = current + 12 * delta;
+                } else if (current < 94) {
+                    next = current + 3.5 * delta; // Avance sutil para no congelarse
                 }
             }
 
             progressRef.current = next;
             setProgress(next);
 
-            // Calcular posición vertical dentro del contenedor
+            // Calcular posición vertical dentro del contenedor (Desktop)
             if (containerRef.current) {
                 const h = containerRef.current.clientHeight || window.innerHeight;
                 const barBottom = (next / 100) * h;
@@ -80,9 +84,15 @@ export default function EndfieldLoadingScreen({
                 setPctTopPx(Math.min(barBottom, Math.max(20, h - pctHeight - 30)));
             }
 
-            if (next >= 100 && !hasTransitionedRef.current) {
-                hasTransitionedRef.current = true;
-                setPhase('transition');
+            // Al tocar el 100% exacto:
+            if (next >= 100 && !hasReached100Ref.current) {
+                hasReached100Ref.current = true;
+                setPhase('completed');
+
+                // Pausa deliberada de 280ms para que el usuario aprecie el "100% System Ready"
+                setTimeout(() => {
+                    setPhase('transition');
+                }, 280);
             } else if (next < 100) {
                 animationFrameId = requestAnimationFrame(updateProgress);
             }
@@ -95,7 +105,7 @@ export default function EndfieldLoadingScreen({
         };
     }, []);
 
-    // Manejar las etapas de la transición amarilla
+    // Manejar la animación de salida de la cortina amarilla
     useEffect(() => {
         if (phase === 'transition') {
             const timer = setTimeout(() => {
@@ -103,7 +113,7 @@ export default function EndfieldLoadingScreen({
                 if (onFinished) {
                     onFinished();
                 }
-            }, 1050); // Tiempo total de apertura y salida de la cortina amarilla
+            }, 1050); // Duración de la cortina amarilla
             return () => clearTimeout(timer);
         }
     }, [phase, onFinished]);
@@ -112,7 +122,8 @@ export default function EndfieldLoadingScreen({
         return null;
     }
 
-    const floorPct = Math.floor(progress);
+    const floorPct = Math.min(100, Math.floor(progress));
+    const isCompleted = floorPct >= 100;
 
     return (
         <div
@@ -139,27 +150,25 @@ export default function EndfieldLoadingScreen({
                 <div className="hidden sm:block">
                     {/* Barra vertical izquierda que crece hacia abajo */}
                     <div
-                        className="absolute left-0 top-0 w-[6px] bg-[#fffa00] z-20"
+                        className="absolute left-0 top-0 w-[6px] bg-[#fffa00] z-20 transition-[height] duration-75 ease-out"
                         style={{
-                            height: `${progress}%`,
-                            transition: 'height 0.05s linear'
+                            height: `${progress}%`
                         }}
                     />
 
                     {/* Porcentaje que sigue la punta de la barra */}
                     <div
-                        className="absolute left-[26px] z-20 flex flex-col"
+                        className="absolute left-[26px] z-20 flex flex-col transition-[top] duration-75 ease-out"
                         style={{
-                            top: `${pctTopPx}px`,
-                            transition: 'top 0.05s linear'
+                            top: `${pctTopPx}px`
                         }}
                     >
                         <div className="text-[54px] font-semibold text-[#fffa00] leading-none tracking-[-1px] flex items-baseline">
                             <span>{floorPct}</span>
                             <span className="text-[26px] font-normal ml-0.5">%</span>
                         </div>
-                        <div className="text-[11px] text-white/35 tracking-[1.5px] mt-1 uppercase font-mono">
-                            {progress >= 100 ? 'System Ready' : 'Updating...'}
+                        <div className={`text-[11px] tracking-[1.5px] mt-1 uppercase font-mono transition-colors ${isCompleted ? 'text-[#fffa00] font-bold' : 'text-white/35'}`}>
+                            {isCompleted ? 'SYSTEM READY' : 'UPDATING...'}
                         </div>
                     </div>
 
@@ -222,17 +231,16 @@ export default function EndfieldLoadingScreen({
                             <span>{floorPct}</span>
                             <span className="text-[22px] font-normal ml-0.5">%</span>
                         </div>
-                        <div className="text-[10px] text-white/35 tracking-[1.5px] mt-1 uppercase font-mono">
-                            {progress >= 100 ? 'System Ready' : 'Updating...'}
+                        <div className={`text-[10px] tracking-[1.5px] mt-1 uppercase font-mono transition-colors ${isCompleted ? 'text-[#fffa00] font-bold' : 'text-white/35'}`}>
+                            {isCompleted ? 'SYSTEM READY' : 'UPDATING...'}
                         </div>
                     </div>
 
                     {/* Barra horizontal móvil que crece hacia la derecha */}
                     <div
-                        className="absolute left-0 bottom-[26%] h-[4px] bg-[#fffa00] z-20"
+                        className="absolute left-0 bottom-[26%] h-[4px] bg-[#fffa00] z-20 transition-[width] duration-75 ease-out"
                         style={{
-                            width: `${progress}%`,
-                            transition: 'width 0.05s linear'
+                            width: `${progress}%`
                         }}
                     />
 
