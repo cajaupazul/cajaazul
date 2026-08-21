@@ -44,9 +44,9 @@ export default function PreviewModal({
           w-[92vw] max-w-[420px] md:max-w-4xl
           max-h-[85vh]
           p-0
-          bg-[#1a1b1e]
-          border-[#2c2e33]
-          text-white
+          bg-[var(--bb-card)]
+          border-[var(--bb-border)]
+          text-[var(--bb-text)]
           rounded-3xl
           shadow-2xl
           flex flex-col
@@ -72,13 +72,13 @@ export default function PreviewModal({
             flex flex-col
             items-center
             justify-center
-            bg-gradient-to-br from-[#141517] to-[#101113]
+            bg-[var(--bb-darker)]
             relative
             border-b md:border-b-0 md:border-r
-            border-[#2c2e33]
+            border-[var(--bb-border)]
             min-h-[280px] md:min-h-[400px]
           ">
-                        <div className="absolute top-4 left-6 text-[10px] md:text-xs font-bold tracking-wider text-gray-500 uppercase">
+                        <div className="absolute left-6 top-4 text-[10px] font-bold uppercase tracking-wider text-[var(--bb-text-secondary)] md:text-xs">
                             {item.type === 'profile_frame' ? 'Avatar Decoration' : 'Item'}
                         </div>
 
@@ -95,13 +95,13 @@ export default function PreviewModal({
                             {item.name}
                         </h2>
 
-                        <p className="mt-1 text-gray-400 text-center text-[11px] md:text-base max-w-xs px-4">
+                        <p className="mt-1 max-w-xs px-4 text-center text-[11px] text-[var(--bb-text-secondary)] md:text-base">
                             {item.description}
                         </p>
                     </div>
 
                     {/* DERECHA – PREVIEW + ACCIONES */}
-                    <div className="w-full md:w-[400px] bg-[#1a1b1e] p-6 md:p-8 flex flex-col">
+                    <div className="flex w-full flex-col bg-[var(--bb-card)] p-6 md:w-[400px] md:p-8">
                         <h3 className="text-xs md:text-lg font-bold uppercase tracking-wider mb-4 md:mb-8 text-center md:text-left">
                             Vista previa
                         </h3>
@@ -112,9 +112,9 @@ export default function PreviewModal({
               items-center
               justify-center
               min-h-[140px] md:min-h-[200px]
-              bg-[#141517]
+              bg-[var(--bb-darker)]
               rounded-2xl
-              border border-[#2c2e33]
+              border border-[var(--bb-border)]
               p-4 md:p-6
               mb-6 md:mb-8
               relative
@@ -125,11 +125,11 @@ export default function PreviewModal({
                             <div className="
                 w-full
                 max-w-[180px] md:max-w-[280px]
-                bg-[#25262b]
+                bg-[var(--bb-card)]
                 rounded-xl
                 p-3 md:p-4
                 shadow-xl
-                border border-[#2c2e33]
+                border border-[var(--bb-border)]
                 relative
                 overflow-hidden
               ">
@@ -144,7 +144,7 @@ export default function PreviewModal({
                                         frameScale={item.frame_settings?.preview?.scale ?? 1}
                                         offsetX={item.frame_settings?.preview?.x ?? 0}
                                         offsetY={item.frame_settings?.preview?.y ?? 0}
-                                        className="ring-2 md:ring-4 ring-[#25262b] rounded-full bg-[#25262b]"
+                                        className="rounded-full bg-[var(--bb-card)] ring-2 ring-[var(--bb-card)] md:ring-4"
                                     />
 
                                     <div className="mb-1 md:mb-2">
@@ -154,7 +154,7 @@ export default function PreviewModal({
                                 </div>
                             </div>
 
-                            <p className="mt-3 md:mt-6 text-[9px] md:text-xs text-gray-400 font-medium">
+                            <p className="mt-3 text-[9px] font-medium text-[var(--bb-text-secondary)] md:mt-6 md:text-xs">
                                 Previsualización de perfil
                             </p>
                         </div>
@@ -174,7 +174,7 @@ export default function PreviewModal({
                                     )}
 
                                     <div className="flex justify-between items-center">
-                                        <span className="text-gray-400 text-[10px] md:text-sm uppercase font-bold tracking-widest">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--bb-text-secondary)] md:text-sm">
                                             Costo Total
                                         </span>
                                         <div className="flex items-center gap-2">

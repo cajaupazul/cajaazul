@@ -59,7 +59,7 @@ interface VipExclusiveFrame {
 export default function StorePage() {
     return (
         <Suspense fallback={
-            <main className="relative min-h-[calc(100vh-80px)] bg-[#0d0f12] overflow-hidden">
+            <main className="relative h-full min-h-0 overflow-hidden bg-[var(--bb-dark)] text-[var(--bb-text)]">
                 <EndfieldLoadingScreen isReady={false} />
             </main>
         }>
@@ -107,7 +107,7 @@ function StoreContent() {
     // Helper para precarga de imágenes
     const preloadImages = (urls: (string | null | undefined)[]) => {
         if (typeof window === 'undefined') return Promise.resolve();
-        const validUrls = urls.filter((url): url is string => typeof url === 'string' && url.length > 0);
+        const validUrls = [...new Set(urls.filter((url): url is string => typeof url === 'string' && url.length > 0))];
         if (validUrls.length === 0) return Promise.resolve();
 
         return Promise.all(
@@ -115,12 +115,28 @@ function StoreContent() {
                 (url) =>
                     new Promise<void>((resolve) => {
                         const img = new Image();
+                        let settled = false;
+                        const finish = () => {
+                            if (settled) return;
+                            settled = true;
+                            window.clearTimeout(timeoutId);
+                            resolve();
+                        };
+                        const decodeAndFinish = () => {
+                            if (typeof img.decode === 'function') {
+                                void img.decode().catch(() => undefined).finally(finish);
+                            } else {
+                                finish();
+                            }
+                        };
+                        const timeoutId = window.setTimeout(finish, 12000);
+                        img.onload = decodeAndFinish;
+                        img.onerror = finish;
                         img.src = url;
-                        img.onload = () => resolve();
-                        img.onerror = () => resolve(); // No bloquear
+                        if (img.complete) decodeAndFinish();
                     })
             )
-        );
+        ).then(() => undefined);
     };
 
     // Fetch shop items, categories, and recharge products (VIP/Coins)
@@ -284,14 +300,19 @@ function StoreContent() {
         setPurchaseMessage({ type: 'error', text: 'Error al procesar el pago. Intenta nuevamente.' });
     };
 
-    return (
-        <main className="relative min-h-[calc(100vh-80px)] bg-[#0d0f12] px-4 py-6 text-white sm:px-6 lg:px-10 lg:py-10 overflow-hidden">
-            {showLoadingScreen && (
+    if (showLoadingScreen) {
+        return (
+            <main className="relative h-full min-h-0 overflow-hidden bg-[var(--bb-dark)] text-[var(--bb-text)]">
                 <EndfieldLoadingScreen
                     isReady={isPageReady}
                     onFinished={() => setShowLoadingScreen(false)}
                 />
-            )}
+            </main>
+        );
+    }
+
+    return (
+        <main className="relative min-h-full bg-[var(--bb-dark)] px-4 py-6 text-[var(--bb-text)] transition-colors duration-200 sm:px-6 lg:px-10 lg:py-10">
             <div className="mx-auto max-w-[1380px] space-y-10">
 
                     {/* Alert Messages */}
@@ -310,7 +331,7 @@ function StoreContent() {
                                 <AlertCircle className="text-yellow-500 shrink-0" size={32} />
                             )}
                             <div>
-                                <h3 className="text-xl font-bold text-white">
+                                <h3 className="text-xl font-bold text-[var(--bb-text)]">
                                     {(effectiveStatus === 'success' || effectiveStatus === 'approved') ? '¡Pago Exitoso!' : (effectiveStatus === 'failure' || effectiveStatus === 'rejected') ? 'Hubo un error' : 'Pago Pendiente'}
                                 </h3>
                                 <p className="text-bb-text-secondary text-sm">
@@ -333,37 +354,37 @@ function StoreContent() {
 
 
                 {/* Header Section */}
-                <header className="flex flex-col gap-6 border-b border-white/10 pb-8 lg:flex-row lg:items-end lg:justify-between">
+                <header className="flex flex-col gap-6 border-b border-[var(--bb-border)] pb-8 lg:flex-row lg:items-end lg:justify-between">
                     <div>
                         <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-blue-500">
                             <ShieldCheck className="h-4 w-4" /> Tienda oficial CampusLink
                         </div>
-                        <h1 className="mt-4 text-4xl font-black tracking-[-0.05em] text-white sm:text-5xl lg:text-6xl">Personaliza tu experiencia.</h1>
-                        <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">Compra artículos con monedas o recarga de forma segura. Los precios y beneficios se validan siempre en nuestros servidores.</p>
+                        <h1 className="mt-4 text-4xl font-black tracking-[-0.05em] text-[var(--bb-text)] sm:text-5xl lg:text-6xl">Personaliza tu experiencia.</h1>
+                        <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--bb-text-secondary)] sm:text-base">Compra artículos con monedas o recarga de forma segura. Los precios y beneficios se validan siempre en nuestros servidores.</p>
                     </div>
-                    <div className="flex w-fit items-center gap-3 rounded-xl border border-white/10 bg-[#17191d] px-4 py-3">
+                    <div className="flex w-fit items-center gap-3 rounded-xl border border-[var(--bb-border)] bg-[var(--bb-card)] px-4 py-3">
                         <img src="/icons/moneda.png" alt="Monedas" className="h-7 w-7" />
-                        <div><p className="text-[10px] font-black uppercase tracking-wider text-zinc-600">Tu saldo</p><p className="text-lg font-black tabular-nums">{profile?.monedas ?? 0}</p></div>
+                        <div><p className="text-[10px] font-black uppercase tracking-wider text-[var(--bb-text-secondary)]">Tu saldo</p><p className="text-lg font-black tabular-nums">{profile?.monedas ?? 0}</p></div>
                     </div>
                 </header>
 
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex w-full rounded-xl border border-white/10 bg-[#14161a] p-1 sm:w-auto">
+                    <div className="flex w-full rounded-xl border border-[var(--bb-border)] bg-[var(--bb-card)] p-1 sm:w-auto">
                         <button
                             onClick={() => setActiveView('items')}
-                            className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-lg px-5 text-sm font-black transition-colors sm:flex-none ${activeView === 'items' ? 'bg-blue-600 text-white' : 'text-zinc-500 hover:text-white'}`}
+                            className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-lg px-5 text-sm font-black transition-colors sm:flex-none ${activeView === 'items' ? 'bg-blue-600 text-white' : 'text-[var(--bb-text-secondary)] hover:bg-[var(--bb-hover)] hover:text-[var(--bb-text)]'}`}
                         >
                             <Package size={18} /> Artículos
                         </button>
                         <button
                             onClick={() => setActiveView('recharge')}
-                            className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-lg px-5 text-sm font-black transition-colors sm:flex-none ${activeView === 'recharge' ? 'bg-blue-600 text-white' : 'text-zinc-500 hover:text-white'}`}
+                            className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-lg px-5 text-sm font-black transition-colors sm:flex-none ${activeView === 'recharge' ? 'bg-blue-600 text-white' : 'text-[var(--bb-text-secondary)] hover:bg-[var(--bb-hover)] hover:text-[var(--bb-text)]'}`}
                         >
                             <Zap size={18} /> Monedas y VIP
                         </button>
                     </div>
                     {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
-                        <Link href="/admin/shop" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-[#17191d] px-5 text-sm font-bold text-white hover:bg-[#202329]">
+                        <Link href="/admin/shop" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[var(--bb-border)] bg-[var(--bb-card)] px-5 text-sm font-bold text-[var(--bb-text)] hover:bg-[var(--bb-hover)]">
                             <Settings size={17} /> Administrar tienda
                         </Link>
                     )}
@@ -375,7 +396,7 @@ function StoreContent() {
                             {/* VIP membership */}
                             {vipProduct && (
                                 <div className="lg:col-span-12">
-                                    <div className="flex flex-col items-center gap-8 rounded-2xl border border-white/10 bg-[#17191d] p-5 sm:p-10 lg:flex-row lg:gap-12">
+                                    <div className="flex flex-col items-center gap-8 rounded-2xl border border-[var(--bb-border)] bg-[var(--bb-card)] p-5 sm:p-10 lg:flex-row lg:gap-12">
                                         {/* Mascot Origi + Frame Component */}
                                         <div className="w-full lg:w-1/2 flex flex-col justify-center items-center relative order-first z-10 gap-8">
                                             <img
@@ -386,11 +407,11 @@ function StoreContent() {
 
                                             {/* VIP Exclusive Frame Showcase */}
                                             {activeFrame && new Date(activeFrame.expires_at) > new Date() && (
-                                                <div className="relative w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/10 bg-[#0d0f12] p-5">
+                                                <div className="relative w-full max-w-[320px] overflow-hidden rounded-2xl border border-[var(--bb-border)] bg-[var(--bb-darker)] p-5">
                                                     {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                                                         <Link
                                                             href="/admin/shop/vip-frame"
-                                                            className="absolute top-3 right-3 z-20 p-2 bg-black/50 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"
+                                                            className="absolute right-3 top-3 z-20 rounded-full bg-[var(--bb-card)] p-2 text-[var(--bb-text-secondary)] transition-colors hover:bg-[var(--bb-hover)] hover:text-[var(--bb-text)]"
                                                             title="Editar marco"
                                                         >
                                                             <Settings size={14} />
@@ -403,7 +424,7 @@ function StoreContent() {
                                                         </div>
                                                         <div className="relative w-28 h-28 my-2">
                                                             <div className="absolute inset-0 bg-zinc-800 rounded-full flex items-center justify-center animate-pulse border-2 border-zinc-700">
-                                                                <ImageIcon size={24} className="text-zinc-600" />
+                                                                <ImageIcon size={24} className="text-[var(--bb-text-secondary)]" />
                                                             </div>
                                                             <div className="absolute inset-0 z-10">
                                                                 <img
@@ -418,8 +439,8 @@ function StoreContent() {
                                                             </div>
                                                         </div>
                                                         <div>
-                                                            <h4 className="text-white font-black italic uppercase text-lg leading-tight">{activeFrame.label}</h4>
-                                                            {activeFrame.description && <p className="text-zinc-400 text-xs mt-1">{activeFrame.description}</p>}
+                                                            <h4 className="text-lg font-black italic uppercase leading-tight text-[var(--bb-text)]">{activeFrame.label}</h4>
+                                                            {activeFrame.description && <p className="mt-1 text-xs text-[var(--bb-text-secondary)]">{activeFrame.description}</p>}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -428,7 +449,7 @@ function StoreContent() {
                                                 <Link href="/admin/shop/vip-frame">
                                                     <Button
                                                         variant="ghost"
-                                                        className="border border-white/10 bg-black/30 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full text-xs font-bold gap-2"
+                                                        className="gap-2 rounded-full border border-[var(--bb-border)] bg-[var(--bb-darker)] text-xs font-bold text-[var(--bb-text-secondary)] hover:bg-[var(--bb-hover)] hover:text-[var(--bb-text)]"
                                                     >
                                                         <Plus size={14} /> Activar Marco Exclusivo
                                                     </Button>
@@ -440,10 +461,10 @@ function StoreContent() {
                                             <div className="space-y-6">
                                                 <div className="space-y-3">
                                                     <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-500">Membresía CampusLink</p>
-                                                    <h2 className="text-3xl font-black tracking-[-0.04em] text-white sm:text-5xl">
+                                                    <h2 className="text-3xl font-black tracking-[-0.04em] text-[var(--bb-text)] sm:text-5xl">
                                                         Hazte VIP y apoya la comunidad.
                                                     </h2>
-                                                    <p className="mx-auto max-w-xl text-sm font-medium leading-6 text-zinc-400 sm:text-base lg:mx-0">
+                                                    <p className="mx-auto max-w-xl text-sm font-medium leading-6 text-[var(--bb-text-secondary)] sm:text-base lg:mx-0">
                                                         Apoya a los administradores de la plataforma y obtén beneficios cosméticos exclusivos para destacar tu perfil en CampusLink.
                                                     </p>
                                                 </div>
@@ -455,16 +476,16 @@ function StoreContent() {
                                                         { text: 'Marcos de perfil únicos', icon: Check },
                                                         { text: 'Apoyo a la plataforma', icon: Check }
                                                     ].map((f, i) => (
-                                                        <div key={i} className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#0d0f12] p-3 lg:p-4">
+                                                        <div key={i} className="flex items-center gap-3 rounded-xl border border-[var(--bb-border)] bg-[var(--bb-darker)] p-3 lg:p-4">
                                                             <div className="grid h-6 w-6 place-items-center rounded-full bg-emerald-500"><Check className="h-3.5 w-3.5 text-black" /></div>
-                                                            <span className="text-xs font-bold text-white sm:text-sm">{f.text}</span>
+                                                            <span className="text-xs font-bold text-[var(--bb-text)] sm:text-sm">{f.text}</span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-col items-center gap-4 border-t border-white/10 pt-6 sm:flex-row lg:justify-between">
-                                                <div className="text-3xl font-black tabular-nums text-white">S/ {vipProduct.price} <span className="mt-1 block text-xs font-bold uppercase tracking-wider text-zinc-500 sm:inline">/ {vipProduct.amount} días</span></div>
+                                            <div className="flex flex-col items-center gap-4 border-t border-[var(--bb-border)] pt-6 sm:flex-row lg:justify-between">
+                                                <div className="text-3xl font-black tabular-nums text-[var(--bb-text)]">S/ {vipProduct.price} <span className="mt-1 block text-xs font-bold uppercase tracking-wider text-[var(--bb-text-secondary)] sm:inline">/ {vipProduct.amount} días</span></div>
                                                 <Button
                                                     onClick={() => handlePurchase(vipProduct.id)}
                                                     className="h-12 w-full rounded-xl bg-blue-600 px-8 text-sm font-black text-white hover:bg-blue-500 sm:w-auto"
@@ -483,21 +504,21 @@ function StoreContent() {
                                     <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-600">
                                         <Zap className="h-5 w-5 text-white" />
                                     </div>
-                                    <div><p className="text-xs font-black uppercase tracking-[0.18em] text-blue-500">Saldo CampusLink</p><h2 className="mt-1 text-2xl font-black tracking-tight text-white">Paquetes de monedas</h2></div>
+                                    <div><p className="text-xs font-black uppercase tracking-[0.18em] text-blue-500">Saldo CampusLink</p><h2 className="mt-1 text-2xl font-black tracking-tight text-[var(--bb-text)]">Paquetes de monedas</h2></div>
                                 </div>
 
                                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                     {coinPackages.map((pkg) => (
-                                        <button key={pkg.id} onClick={() => handlePurchase(pkg.id)} className="group flex min-h-52 flex-col justify-between rounded-2xl border border-white/10 bg-[#17191d] p-5 text-left transition-colors hover:border-blue-500/70 hover:bg-[#1b1e23]">
-                                            <div className="flex items-start justify-between gap-4"><img src="/icons/moneda.png" alt="Monedas" className="h-12 w-12" /><span className="rounded-lg bg-[#0d0f12] px-3 py-1.5 text-xs font-black text-zinc-400">S/ {pkg.price}</span></div>
-                                            <div><p className="text-3xl font-black tabular-nums text-white">{pkg.amount}</p><h3 className="mt-1 text-sm font-bold text-zinc-400">{pkg.name}</h3><span className="mt-4 inline-flex text-sm font-black text-blue-400">Comprar paquete</span></div>
+                                        <button key={pkg.id} onClick={() => handlePurchase(pkg.id)} className="group flex min-h-52 flex-col justify-between rounded-2xl border border-[var(--bb-border)] bg-[var(--bb-card)] p-5 text-left transition-colors hover:border-blue-500/70 hover:bg-[var(--bb-hover)]">
+                                            <div className="flex items-start justify-between gap-4"><img src="/icons/moneda.png" alt="Monedas" className="h-12 w-12" /><span className="rounded-lg bg-[var(--bb-darker)] px-3 py-1.5 text-xs font-black text-[var(--bb-text-secondary)]">S/ {pkg.price}</span></div>
+                                            <div><p className="text-3xl font-black tabular-nums text-[var(--bb-text)]">{pkg.amount}</p><h3 className="mt-1 text-sm font-bold text-[var(--bb-text-secondary)]">{pkg.name}</h3><span className="mt-4 inline-flex text-sm font-black text-blue-500">Comprar paquete</span></div>
                                         </button>
                                     ))}
                                 </div>
 
-                                <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#14161a] p-4">
+                                <div className="flex items-start gap-3 rounded-xl border border-[var(--bb-border)] bg-[var(--bb-card)] p-4">
                                     <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
-                                    <p className="text-sm leading-6 text-zinc-400">Las monedas se acreditan únicamente después de que Mercado Pago confirma la transacción. Si la confirmación tarda, podrás cerrar esta ventana sin perder el pago.</p>
+                                    <p className="text-sm leading-6 text-[var(--bb-text-secondary)]">Las monedas se acreditan únicamente después de que Mercado Pago confirma la transacción. Si la confirmación tarda, podrás cerrar esta ventana sin perder el pago.</p>
                                 </div>
                             </div>
                         </div>
@@ -515,11 +536,11 @@ function StoreContent() {
 
                                 return (
                                     <div key={category.id} className="space-y-5">
-                                        <div className="flex items-end justify-between gap-4 border-b border-white/10 pb-5">
+                                        <div className="flex items-end justify-between gap-4 border-b border-[var(--bb-border)] pb-5">
                                             <div>
                                                 <span className="text-xs font-black uppercase tracking-[0.18em] text-blue-500">Colección</span>
-                                                <h2 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">{category.name}</h2>
-                                                <p className="mt-1 text-xs text-zinc-600">{categoryItems.length} artículo{categoryItems.length === 1 ? '' : 's'}</p>
+                                                <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--bb-text)] sm:text-3xl">{category.name}</h2>
+                                                <p className="mt-1 text-xs text-[var(--bb-text-secondary)]">{categoryItems.length} artículo{categoryItems.length === 1 ? '' : 's'}</p>
                                             </div>
                                         </div>
 
@@ -529,19 +550,19 @@ function StoreContent() {
                                                 return (
                                                     <div
                                                         key={item.id}
-                                                        className={`group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#17191d] transition-all duration-200 hover:border-blue-500/60 hover:bg-[#1b1e23] hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/40 ${isOwned ? 'opacity-70' : ''}`}
+                                                        className={`group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--bb-border)] bg-[var(--bb-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/60 hover:bg-[var(--bb-hover)] hover:shadow-xl ${isOwned ? 'opacity-70' : ''}`}
                                                     >
                                                         {/* ── Preview Area ── */}
                                                         <div
-                                                            className="relative flex items-center justify-center cursor-pointer overflow-hidden bg-[#0d0f12]"
+                                                            className="relative flex cursor-pointer items-center justify-center overflow-hidden bg-[var(--bb-darker)]"
                                                             style={{ aspectRatio: '1/1', minHeight: 0 }}
                                                             onClick={() => setPreviewItem(item)}
                                                         >
                                                             {item.type === 'profile_frame' ? (
                                                                 <div className="relative flex items-center justify-center w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40">
                                                                     {/* Dummy Avatar */}
-                                                                    <div className="relative z-0 flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-white/10 bg-[#1a1c22] opacity-50">
-                                                                        <ImageIcon className="h-8 w-8 text-zinc-700" />
+                                                                    <div className="relative z-0 flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-[var(--bb-border)] bg-[var(--bb-card)] opacity-50">
+                                                                        <ImageIcon className="h-8 w-8 text-[var(--bb-text-secondary)]" />
                                                                     </div>
                                                                     {/* Frame */}
                                                                     {item.image_url && (
@@ -585,18 +606,18 @@ function StoreContent() {
                                                         {/* ── Card Body ── */}
                                                         <div className="flex flex-1 flex-col gap-3 p-3 sm:p-4">
                                                             <div className="space-y-0.5">
-                                                                <div className="text-[9px] font-black uppercase tracking-[0.16em] text-zinc-600">
+                                                                <div className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--bb-text-secondary)]">
                                                                     {item.type.replace('_', ' ')}
                                                                     {item.bundle_items && item.bundle_items.length > 0 && (
                                                                         <span className="ml-1.5 bg-indigo-500/20 text-indigo-400 px-1 py-0.5 rounded uppercase tracking-widest border border-indigo-500/30">PACK</span>
                                                                     )}
                                                                 </div>
-                                                                <h3 className="text-sm font-black leading-tight text-white sm:text-base line-clamp-2">{item.name}</h3>
-                                                                <p className="line-clamp-2 text-[10px] sm:text-xs font-medium leading-4 text-zinc-500 mt-1">{item.description}</p>
+                                                                <h3 className="line-clamp-2 text-sm font-black leading-tight text-[var(--bb-text)] sm:text-base">{item.name}</h3>
+                                                                <p className="mt-1 line-clamp-2 text-[10px] font-medium leading-4 text-[var(--bb-text-secondary)] sm:text-xs">{item.description}</p>
                                                             </div>
 
                                                             {/* ── Action Row ── */}
-                                                            <div className="mt-auto flex items-center gap-1.5 border-t border-white/5 pt-3">
+                                                            <div className="mt-auto flex items-center gap-1.5 border-t border-[var(--bb-border)] pt-3">
                                                                 {item.frame_key === 'vip_exclusive' ? (
                                                                     <>
                                                                         {!profile?.es_vip && (
@@ -606,7 +627,7 @@ function StoreContent() {
                                                                             </div>
                                                                         )}
                                                                         {profile?.es_vip ? (
-                                                                            <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-8 sm:h-9 text-[10px] sm:text-xs px-1" disabled>ADQUIRIDO</Button>
+                                                                            <Button className="h-8 flex-1 rounded-xl bg-[var(--bb-hover)] px-1 text-[10px] font-bold text-[var(--bb-text-secondary)] sm:h-9 sm:text-xs" disabled>ADQUIRIDO</Button>
                                                                         ) : (
                                                                             <Button
                                                                                 onClick={() => setActiveView('recharge')}
@@ -619,15 +640,15 @@ function StoreContent() {
                                                                 ) : (
                                                                     <>
                                                                         {!isOwned && (
-                                                                            <div className="flex-shrink-0 flex items-center gap-1 bg-black px-2 py-1 rounded-lg">
+                                                                            <div className="flex flex-shrink-0 items-center gap-1 rounded-lg bg-[var(--bb-darker)] px-2 py-1">
                                                                                 <img src="/icons/moneda.png" alt="Coin" className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                                                                                <span className="text-white font-black text-[10px] sm:text-xs tracking-tighter">{item.price_coins}</span>
+                                                                                <span className="text-[10px] font-black tracking-tighter text-[var(--bb-text)] sm:text-xs">{item.price_coins}</span>
                                                                             </div>
                                                                         )}
                                                                         {isOwned ? (
-                                                                            <Button className="flex-1 rounded-xl bg-zinc-800 text-zinc-500 font-bold h-8 sm:h-9 text-[10px] sm:text-xs px-1" disabled>ADQUIRIDO</Button>
+                                                                            <Button className="h-8 flex-1 rounded-xl bg-[var(--bb-hover)] px-1 text-[10px] font-bold text-[var(--bb-text-secondary)] sm:h-9 sm:text-xs" disabled>ADQUIRIDO</Button>
                                                                         ) : (
-                                                                            <Button onClick={() => setPreviewItem(item)} className="h-8 sm:h-9 flex-1 rounded-xl bg-white px-1 text-[10px] font-black text-black hover:bg-zinc-200 sm:text-xs">
+                                                                            <Button onClick={() => setPreviewItem(item)} className="h-8 flex-1 rounded-xl bg-[var(--bb-text)] px-1 text-[10px] font-black text-[var(--bb-darker)] hover:opacity-90 sm:h-9 sm:text-xs">
                                                                                 Ver preview
                                                                             </Button>
                                                                         )}
@@ -655,8 +676,8 @@ function StoreContent() {
                     </div>
                 )}
 
-                <div className="border-t border-white/10 py-8">
-                    <div className="flex flex-col gap-4 text-xs font-bold text-zinc-500 sm:flex-row sm:justify-center sm:gap-10">
+                <div className="border-t border-[var(--bb-border)] py-8">
+                    <div className="flex flex-col gap-4 text-xs font-bold text-[var(--bb-text-secondary)] sm:flex-row sm:justify-center sm:gap-10">
                         <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-500" /> Pago validado por el proveedor</div>
                         <div className="flex items-center gap-2"><Star className="h-4 w-4 text-blue-500" /> Artículos ligados a tu cuenta</div>
                         <div className="flex items-center gap-2"><Zap className="h-4 w-4 text-blue-500" /> Entrega automática tras confirmación</div>
@@ -687,5 +708,3 @@ function StoreContent() {
         </main>
     );
 }
-
-

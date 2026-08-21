@@ -29,15 +29,18 @@ export default function EndfieldLoadingScreen({
     useEffect(() => {
         const updatePosition = () => {
             if (!containerRef.current) return;
-            const h = containerRef.current.clientHeight || window.innerHeight;
-            const barBottom = (progressRef.current / 100) * h;
-            const pctHeight = 90;
-            setPctTopPx(Math.min(barBottom, Math.max(20, h - pctHeight - 30)));
+            const height = containerRef.current.clientHeight;
+            const labelHeight = 82;
+            const edgeGap = 20;
+            const progressY = (progressRef.current / 100) * height;
+            const centeredTop = progressY - labelHeight / 2;
+            setPctTopPx(Math.max(edgeGap, Math.min(centeredTop, height - labelHeight - edgeGap)));
         };
 
         updatePosition();
-        window.addEventListener('resize', updatePosition);
-        return () => window.removeEventListener('resize', updatePosition);
+        const observer = new ResizeObserver(updatePosition);
+        if (containerRef.current) observer.observe(containerRef.current);
+        return () => observer.disconnect();
     }, []);
 
     // Bucle de incremento fluido de progreso sin saltos bruscos
@@ -78,10 +81,12 @@ export default function EndfieldLoadingScreen({
 
             // Calcular posición vertical dentro del contenedor (Desktop)
             if (containerRef.current) {
-                const h = containerRef.current.clientHeight || window.innerHeight;
-                const barBottom = (next / 100) * h;
-                const pctHeight = 90;
-                setPctTopPx(Math.min(barBottom, Math.max(20, h - pctHeight - 30)));
+                const height = containerRef.current.clientHeight;
+                const labelHeight = 82;
+                const edgeGap = 20;
+                const progressY = (next / 100) * height;
+                const centeredTop = progressY - labelHeight / 2;
+                setPctTopPx(Math.max(edgeGap, Math.min(centeredTop, height - labelHeight - edgeGap)));
             }
 
             // Al tocar el 100% exacto:
@@ -128,12 +133,14 @@ export default function EndfieldLoadingScreen({
     return (
         <div
             ref={containerRef}
-            className="absolute inset-0 z-40 overflow-hidden select-none bg-[#141414]"
-            style={{ minHeight: '100%' }}
+            role="status"
+            aria-live="polite"
+            aria-label={`Cargando tienda: ${floorPct}%`}
+            className="absolute inset-0 z-40 h-full min-h-0 select-none overflow-hidden bg-[var(--bb-dark)] text-[var(--bb-text)] transition-colors duration-200"
         >
             {/* ── OVERLAY AMARILLO (CORTINA EXPANSIVA DENTRO DEL CONTENEDOR) ── */}
             <div
-                className={`absolute inset-0 z-50 bg-[#fffa00] pointer-events-none transition-all ${
+                className={`pointer-events-none absolute inset-0 z-50 bg-[var(--faculty-primary)] transition-all ${
                     phase === 'transition' ? 'opacity-100' : 'opacity-0'
                 }`}
                 style={{
@@ -144,13 +151,13 @@ export default function EndfieldLoadingScreen({
             />
 
             {/* ── PANTALLA PRINCIPAL DE CARGA (CONFINADA AL ÁREA DE TIENDA) ── */}
-            <div className={`relative w-full h-full text-white transition-opacity duration-150 ${phase === 'transition' ? 'opacity-0' : 'opacity-100'}`}>
+            <div className={`relative h-full w-full text-[var(--bb-text)] transition-opacity duration-150 ${phase === 'transition' ? 'opacity-0' : 'opacity-100'}`}>
 
                 {/* ─────────────────── DESKTOP ( >= 641px ) ─────────────────── */}
                 <div className="hidden sm:block">
                     {/* Barra vertical izquierda que crece hacia abajo */}
                     <div
-                        className="absolute left-0 top-0 w-[6px] bg-[#fffa00] z-20 transition-[height] duration-75 ease-out"
+                        className="absolute left-0 top-0 z-20 w-[6px] bg-[var(--faculty-primary)] transition-[height] duration-75 ease-out"
                         style={{
                             height: `${progress}%`
                         }}
@@ -163,27 +170,27 @@ export default function EndfieldLoadingScreen({
                             top: `${pctTopPx}px`
                         }}
                     >
-                        <div className="text-[54px] font-semibold text-[#fffa00] leading-none tracking-[-1px] flex items-baseline">
+                        <div className="flex items-baseline text-[54px] font-semibold leading-none tracking-[-1px] text-[var(--faculty-primary)]">
                             <span>{floorPct}</span>
                             <span className="text-[26px] font-normal ml-0.5">%</span>
                         </div>
-                        <div className={`text-[11px] tracking-[1.5px] mt-1 uppercase font-mono transition-colors ${isCompleted ? 'text-[#fffa00] font-bold' : 'text-white/35'}`}>
+                        <div className={`mt-1 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors ${isCompleted ? 'font-bold text-[var(--faculty-primary)]' : 'text-[var(--bb-text-secondary)]'}`}>
                             {isCompleted ? 'SYSTEM READY' : 'UPDATING...'}
                         </div>
                     </div>
 
                     {/* Logo central Desktop */}
-                    <div className="absolute left-[54%] top-[48%] -translate-x-1/2 -translate-y-1/2 w-[240px] text-white z-20">
+                    <div className="absolute left-[54%] top-[48%] z-20 w-[240px] -translate-x-1/2 -translate-y-1/2 text-[var(--bb-text)]">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 74.14 36.99" className="w-full fill-current">
                             <path fillRule="evenodd" d="M3.37,13.25h7.9V9.68H3.37V7.37H9.68L11.46,5.6V3.82H0V19.45H11.6V15.81H3.37ZM7.52,1.18h.23l.36.62h.52L8.2,1.1A.51.51,0,0,0,8.53.59C8.53.16,8.19,0,7.77,0H7.05V1.8h.47Zm0-.81h.21c.22,0,.34,0,.34.22S8,.84,7.73.84H7.52ZM0,37H3.38V30.8H11V27.24H3.38v-2.3h7.8V21.41H0ZM.59,1.4h.58l.12.4h.49L1.17,0H.61L0,1.8H.48ZM.73.92C.78.74.83.54.88.35h0c0,.18.1.39.15.57l0,.15H.68Zm54.69.55a.82.82,0,0,1-.48-.18l-.27.29a1.19,1.19,0,0,0,.74.26c.47,0,.74-.26.74-.56A.49.49,0,0,0,55.77.8L55.52.71c-.17-.06-.3-.1-.3-.2s.09-.15.24-.15a.67.67,0,0,1,.4.14L56.1.23A1,1,0,0,0,55.46,0c-.42,0-.71.24-.71.54a.52.52,0,0,0,.39.48l.26.1c.16.06.27.09.27.2S55.59,1.47,55.42,1.47ZM12.46,37h3.39V26.09H12.5l3.35-3.34V21.41H12.46ZM21.35,1.22c0-.22,0-.46-.06-.66h0l.19.39L22,1.8h.48V0H22V.62a6.26,6.26,0,0,0,.06.65h0L21.87.88,21.38,0H20.9V1.8h.45ZM28.45,0H28V1.8h.48ZM39.34,19a6.45,6.45,0,0,0,2.22-1.22A5.88,5.88,0,0,0,42.9,16a7.87,7.87,0,0,0,.69-2,11.46,11.46,0,0,0,.18-2.09v-.63a11,11,0,0,0-.14-1.77,9.85,9.85,0,0,0-.45-1.69,4.78,4.78,0,0,0-.89-1.55A7.34,7.34,0,0,0,40.89,5a6.33,6.33,0,0,0-2-.85,12.06,12.06,0,0,0-2.74-.29H28.9V19.45h7.21A9.93,9.93,0,0,0,39.34,19Zm-7-3.28H28.94l3.36-3.36V7.52h3.54c2.91,0,4.36,1.33,4.36,4v.12q0,4-4.36,4ZM41.42,1.08h.65V1.8h.46V0h-.46V.71h-.65V0H41V1.8h.47Zm7,.72h.47V.39h.53V0H47.9V.39h.53Zm-13.59,0a1,1,0,0,0,.65-.22V.79h-.73v.35h.32v.29a.53.53,0,0,1-.19,0,.49.49,0,0,1-.54-.56.5.5,0,0,1,.5-.55.53.53,0,0,1,.36.14l.25-.27A.91.91,0,0,0,34.83,0a.91.91,0,0,0-1,.93A.88.88,0,0,0,34.84,1.84Zm-20.39-.5.21-.26.46.72h.52L14.93.74l.6-.71H15l-.56.7h0V0H14V1.8h.48Zm6.46,29.43h7.9V27.2h-7.9V24.88h6.33L29,23.13v-1.8H17.55V37h11.6V33.33H20.91Zm38.47,0h-.09v.12h.09ZM27.18,16.12V3.87H23.82v9.81L16.9,3.87H13.12v15.6h3.35V9.14l7.35,10.33ZM59.38,31h-.09v.13h.09Zm.56,0h-.18v.11h.18Zm8.89,2H66.91v.46h1.57v.74H66.91v.15l1.82,1.26v-.36l.5-.18V33.68h-.4ZM58.64,21.41V36.9h15.5V21.41Zm3.56,9.26h.22a.56.56,0,0,0,0-.12h.2l-.07.11h.32V31H63v.15h-.13v.25c0,.07,0,.11-.06.13a.36.36,0,0,1-.19,0,.42.42,0,0,0,0-.15h.1s0,0,0,0v-.24h-.39a.64.64,0,0,1-.2.42.63.63,0,0,0-.12-.11.52.52,0,0,0,.16-.31h-.14V31h.15Zm.38.75a.73.73,0,0,0-.18-.16l.1-.08a.55.55,0,0,1,.19.14Zm-1.51-.55v-.15h.45a.75.75,0,0,0-.06-.13l.16-.06s.06.12.08.16l-.08,0h.44v.15h-.55a.37.37,0,0,1,0,.11H62v.07c0,.29,0,.41-.09.46a.2.2,0,0,1-.13.06h-.19a.32.32,0,0,0-.06-.15h.24s0-.11.06-.28h-.32a.65.65,0,0,1-.31.46.45.45,0,0,0-.11-.13.61.61,0,0,0,.28-.59Zm-.87-.26H61v1h-.17V31.5h-.45v.07H60.2Zm-.59,0h.48v.82c0,.08,0,.12-.06.14a.38.38,0,0,1-.2,0,.47.47,0,0,0-.06-.15h.14s0,0,0,0v-.17h-.2a.54.54,0,0,1-.18.35.58.58,0,0,0-.12-.1.61.61,0,0,0,.17-.5Zm-.47,0h.38v.67h-.23v.09h-.15Zm0,2.74L60,31.76h.92l-1.23,2.33h-.57Zm2,2.84-2,.4v-.7l2-.41Zm12.79.41H71.45l-.72-.37V34.37l-.42.16v-.85h-.24v1l.46-.17v1l-1.62.6v.44l-2-1.42v1.38H66V35.21L64,36.6H62.82l-1.67-1.19.62-.46,1.65,1.14L66,34.31v-.15H64.41v-.74H66V33h-2v.18l-.86.6,1,.64v.88l-1.6-1.1-1.47,1v.12l-1.92.41v-.25l1.6-2.76H61l.68-.91h.9l-.32.43H66v-.46h.92v.46h2v.72h.27V32h.84v.94h.46v.6l.2-.08V32.29h.84v.85l.21-.08v-1.3h.84v1l1-.4v2.54l-.84.35V33.57l-.21.08V35.3l-.84.35V34l-.21.08v1.78h2.32Zm-12-1.78.63-.46.86.59v.92Zm.59-1.5L63,33H61.89Zm-2.5-2.58h-.18v.11h.18Zm1.14,3.07h-.21l-.43.83.38-.09v-.1l1-.72-.47-.32ZM42.62,33.2h0ZM34.05,21.39H30.66V37H41.59V33.11H34.05Zm22.86,3.87A4.74,4.74,0,0,0,56,23.72a6.75,6.75,0,0,0-1.4-1.24,6.06,6.06,0,0,0-2-.85,11.64,11.64,0,0,0-2.75-.3h-7.2V33.19l3.4-3.4V25h3.54q4.36,0,4.36,4v.13q0,4-4.36,4H42.63V37h7.22a9.91,9.91,0,0,0,3.22-.48,6.29,6.29,0,0,0,2.22-1.22,5.84,5.84,0,0,0,1.34-1.78,7.62,7.62,0,0,0,.69-2,11.54,11.54,0,0,0,.18-2.09v-.63A11.17,11.17,0,0,0,57.36,27,9.43,9.43,0,0,0,56.91,25.26Zm3.91,5.51h-.45V31h.45Zm0,.36h-.45v.21h.45Zm1.59-.23.1-.08h-.15V31h.19A.55.55,0,0,0,62.41,30.9Zm.17.12h.16v-.2h-.22a.61.61,0,0,1,.15.12Z" />
                         </svg>
                     </div>
 
                     {/* Bloque técnico Desktop */}
-                    <div className="absolute left-[54%] top-[48%] -translate-x-1/2 translate-y-[45px] z-20 flex items-start gap-2.5 text-white/30">
+                    <div className="absolute left-[54%] top-[48%] z-20 flex -translate-x-1/2 translate-y-[45px] items-start gap-2.5 text-[var(--bb-text-secondary)] opacity-60">
                         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" className="block mt-0.5 shrink-0">
-                            <polygon points="10,2 18,16 2,16" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" fill="none" />
-                            <polygon points="10,7 15,14 5,14" fill="rgba(255,255,255,0.15)" />
+                            <polygon points="10,2 18,16 2,16" stroke="currentColor" strokeWidth="1.2" fill="none" />
+                            <polygon points="10,7 15,14 5,14" fill="currentColor" opacity="0.45" />
                         </svg>
                         <div className="text-[8px] tracking-[2px] leading-[1.9] uppercase font-mono">
                             CAMPUSLINK STORE PROTOCOL<br />
@@ -194,58 +201,58 @@ export default function EndfieldLoadingScreen({
                     </div>
 
                     {/* Línea divisora y slogan */}
-                    <div className="absolute left-0 right-0 bottom-[18%] h-[1px] bg-white/[0.08] z-20" />
-                    <div className="absolute left-[54%] bottom-[calc(18%-32px)] -translate-x-1/2 text-[11px] tracking-[5px] text-white/60 uppercase whitespace-nowrap z-20 font-mono">
+                    <div className="absolute bottom-[18%] left-0 right-0 z-20 h-px bg-[var(--bb-border)]" />
+                    <div className="absolute bottom-[calc(18%-32px)] left-[54%] z-20 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] uppercase tracking-[5px] text-[var(--bb-text-secondary)]">
                         CAMPUSLINK / STORE & RECHARGE
                     </div>
                 </div>
 
                 {/* ─────────────────── MÓVIL ( <= 640px ) ─────────────────── */}
-                <div className="block sm:hidden relative w-full h-full min-h-[480px]">
+                <div className="relative block h-full min-h-0 w-full sm:hidden">
                     {/* Logo móvil centrado */}
-                    <div className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 w-[190px] text-white z-20">
+                    <div className="absolute left-1/2 top-[40%] z-20 w-[190px] -translate-x-1/2 -translate-y-1/2 text-[var(--bb-text)]">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 74.14 36.99" className="w-full fill-current">
                             <path fillRule="evenodd" d="M3.37,13.25h7.9V9.68H3.37V7.37H9.68L11.46,5.6V3.82H0V19.45H11.6V15.81H3.37ZM7.52,1.18h.23l.36.62h.52L8.2,1.1A.51.51,0,0,0,8.53.59C8.53.16,8.19,0,7.77,0H7.05V1.8h.47Zm0-.81h.21c.22,0,.34,0,.34.22S8,.84,7.73.84H7.52ZM0,37H3.38V30.8H11V27.24H3.38v-2.3h7.8V21.41H0ZM.59,1.4h.58l.12.4h.49L1.17,0H.61L0,1.8H.48ZM.73.92C.78.74.83.54.88.35h0c0,.18.1.39.15.57l0,.15H.68Zm54.69.55a.82.82,0,0,1-.48-.18l-.27.29a1.19,1.19,0,0,0,.74.26c.47,0,.74-.26.74-.56A.49.49,0,0,0,55.77.8L55.52.71c-.17-.06-.3-.1-.3-.2s.09-.15.24-.15a.67.67,0,0,1,.4.14L56.1.23A1,1,0,0,0,55.46,0c-.42,0-.71.24-.71.54a.52.52,0,0,0,.39.48l.26.1c.16.06.27.09.27.2S55.59,1.47,55.42,1.47ZM12.46,37h3.39V26.09H12.5l3.35-3.34V21.41H12.46ZM21.35,1.22c0-.22,0-.46-.06-.66h0l.19.39L22,1.8h.48V0H22V.62a6.26,6.26,0,0,0,.06.65h0L21.87.88,21.38,0H20.9V1.8h.45ZM28.45,0H28V1.8h.48ZM39.34,19a6.45,6.45,0,0,0,2.22-1.22A5.88,5.88,0,0,0,42.9,16a7.87,7.87,0,0,0,.69-2,11.46,11.46,0,0,0,.18-2.09v-.63a11,11,0,0,0-.14-1.77,9.85,9.85,0,0,0-.45-1.69,4.78,4.78,0,0,0-.89-1.55A7.34,7.34,0,0,0,40.89,5a6.33,6.33,0,0,0-2-.85,12.06,12.06,0,0,0-2.74-.29H28.9V19.45h7.21A9.93,9.93,0,0,0,39.34,19Zm-7-3.28H28.94l3.36-3.36V7.52h3.54c2.91,0,4.36,1.33,4.36,4v.12q0,4-4.36,4ZM41.42,1.08h.65V1.8h.46V0h-.46V.71h-.65V0H41V1.8h.47Zm7,.72h.47V.39h.53V0H47.9V.39h.53Zm-13.59,0a1,1,0,0,0,.65-.22V.79h-.73v.35h.32v.29a.53.53,0,0,1-.19,0,.49.49,0,0,1-.54-.56.5.5,0,0,1,.5-.55.53.53,0,0,1,.36.14l.25-.27A.91.91,0,0,0,34.83,0a.91.91,0,0,0-1,.93A.88.88,0,0,0,34.84,1.84Zm-20.39-.5.21-.26.46.72h.52L14.93.74l.6-.71H15l-.56.7h0V0H14V1.8h.48Zm6.46,29.43h7.9V27.2h-7.9V24.88h6.33L29,23.13v-1.8H17.55V37h11.6V33.33H20.91Zm38.47,0h-.09v.12h.09ZM27.18,16.12V3.87H23.82v9.81L16.9,3.87H13.12v15.6h3.35V9.14l7.35,10.33ZM59.38,31h-.09v.13h.09Zm.56,0h-.18v.11h.18Zm8.89,2H66.91v.46h1.57v.74H66.91v.15l1.82,1.26v-.36l.5-.18V33.68h-.4ZM58.64,21.41V36.9h15.5V21.41Zm3.56,9.26h.22a.56.56,0,0,0,0-.12h.2l-.07.11h.32V31H63v.15h-.13v.25c0,.07,0,.11-.06.13a.36.36,0,0,1-.19,0,.42.42,0,0,0,0-.15h.1s0,0,0,0v-.24h-.39a.64.64,0,0,1-.2.42.63.63,0,0,0-.12-.11.52.52,0,0,0,.16-.31h-.14V31h.15Zm.38.75a.73.73,0,0,0-.18-.16l.1-.08a.55.55,0,0,1,.19.14Zm-1.51-.55v-.15h.45a.75.75,0,0,0-.06-.13l.16-.06s.06.12.08.16l-.08,0h.44v.15h-.55a.37.37,0,0,1,0,.11H62v.07c0,.29,0,.41-.09.46a.2.2,0,0,1-.13.06h-.19a.32.32,0,0,0-.06-.15h.24s0-.11.06-.28h-.32a.65.65,0,0,1-.31.46.45.45,0,0,0-.11-.13.61.61,0,0,0,.28-.59Zm-.87-.26H61v1h-.17V31.5h-.45v.07H60.2Zm-.59,0h.48v.82c0,.08,0,.12-.06.14a.38.38,0,0,1-.2,0,.47.47,0,0,0-.06-.15h.14s0,0,0,0v-.17h-.2a.54.54,0,0,1-.18.35.58.58,0,0,0-.12-.1.61.61,0,0,0,.17-.5Zm-.47,0h.38v.67h-.23v.09h-.15Zm0,2.74L60,31.76h.92l-1.23,2.33h-.57Zm2,2.84-2,.4v-.7l2-.41Zm12.79.41H71.45l-.72-.37V34.37l-.42.16v-.85h-.24v1l.46-.17v1l-1.62.6v.44l-2-1.42v1.38H66V35.21L64,36.6H62.82l-1.67-1.19.62-.46,1.65,1.14L66,34.31v-.15H64.41v-.74H66V33h-2v.18l-.86.6,1,.64v.88l-1.6-1.1-1.47,1v.12l-1.92.41v-.25l1.6-2.76H61l.68-.91h.9l-.32.43H66v-.46h.92v.46h2v.72h.27V32h.84v.94h.46v.6l.2-.08V32.29h.84v.85l.21-.08v-1.3h.84v1l1-.4v2.54l-.84.35V33.57l-.21.08V35.3l-.84.35V34l-.21.08v1.78h2.32Zm-12-1.78.63-.46.86.59v.92Zm.59-1.5L63,33H61.89Zm-2.5-2.58h-.18v.11h.18Zm1.14,3.07h-.21l-.43.83.38-.09v-.1l1-.72-.47-.32ZM42.62,33.2h0ZM34.05,21.39H30.66V37H41.59V33.11H34.05Zm22.86,3.87A4.74,4.74,0,0,0,56,23.72a6.75,6.75,0,0,0-1.4-1.24,6.06,6.06,0,0,0-2-.85,11.64,11.64,0,0,0-2.75-.3h-7.2V33.19l3.4-3.4V25h3.54q4.36,0,4.36,4v.13q0,4-4.36,4H42.63V37h7.22a9.91,9.91,0,0,0,3.22-.48,6.29,6.29,0,0,0,2.22-1.22,5.84,5.84,0,0,0,1.34-1.78,7.62,7.62,0,0,0,.69-2,11.54,11.54,0,0,0,.18-2.09v-.63A11.17,11.17,0,0,0,57.36,27,9.43,9.43,0,0,0,56.91,25.26Zm3.91,5.51h-.45V31h.45Zm0,.36h-.45v.21h.45Zm1.59-.23.1-.08h-.15V31h.19A.55.55,0,0,0,62.41,30.9Zm.17.12h.16v-.2h-.22a.61.61,0,0,1,.15.12Z" />
                         </svg>
                     </div>
 
                     {/* Bloque técnico móvil */}
-                    <div className="absolute left-[24px] bottom-[calc(26%+70px)] z-20 flex flex-col gap-1 text-white/30">
+                    <div className="absolute bottom-[calc(26%+70px)] left-[24px] z-20 flex flex-col gap-1 text-[var(--bb-text-secondary)] opacity-60">
                         <div className="flex items-center gap-1.5">
                             <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-                                <polygon points="10,2 18,16 2,16" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" fill="none" />
-                                <polygon points="10,7 15,14 5,14" fill="rgba(255,255,255,0.15)" />
+                                <polygon points="10,2 18,16 2,16" stroke="currentColor" strokeWidth="1.2" fill="none" />
+                                <polygon points="10,7 15,14 5,14" fill="currentColor" opacity="0.45" />
                             </svg>
-                            <span className="text-[8px] tracking-[2px] text-white/30 uppercase font-mono">
+                            <span className="font-mono text-[8px] uppercase tracking-[2px]">
                                 CAMPUSLINK STORE PROTOCOL
                             </span>
                         </div>
-                        <div className="text-[7px] tracking-[2px] text-white/20 font-mono">
+                        <div className="font-mono text-[7px] tracking-[2px] opacity-60">
                             ■■ ■■ ■■ ■■ ■■ ■■ ■■ ■■
                         </div>
                     </div>
 
                     {/* Porcentaje móvil */}
                     <div className="absolute left-[24px] bottom-[calc(26%+8px)] z-20 flex flex-col">
-                        <div className="text-[44px] font-semibold text-[#fffa00] leading-none tracking-[-1px] flex items-baseline">
+                        <div className="flex items-baseline text-[44px] font-semibold leading-none tracking-[-1px] text-[var(--faculty-primary)]">
                             <span>{floorPct}</span>
                             <span className="text-[22px] font-normal ml-0.5">%</span>
                         </div>
-                        <div className={`text-[10px] tracking-[1.5px] mt-1 uppercase font-mono transition-colors ${isCompleted ? 'text-[#fffa00] font-bold' : 'text-white/35'}`}>
+                        <div className={`mt-1 font-mono text-[10px] uppercase tracking-[1.5px] transition-colors ${isCompleted ? 'font-bold text-[var(--faculty-primary)]' : 'text-[var(--bb-text-secondary)]'}`}>
                             {isCompleted ? 'SYSTEM READY' : 'UPDATING...'}
                         </div>
                     </div>
 
                     {/* Barra horizontal móvil que crece hacia la derecha */}
                     <div
-                        className="absolute left-0 bottom-[26%] h-[4px] bg-[#fffa00] z-20 transition-[width] duration-75 ease-out"
+                        className="absolute bottom-[26%] left-0 z-20 h-1 bg-[var(--faculty-primary)] transition-[width] duration-75 ease-out"
                         style={{
                             width: `${progress}%`
                         }}
                     />
 
                     {/* Slogan móvil inferior */}
-                    <div className="absolute left-0 right-0 bottom-0 p-4 text-[9px] tracking-[3px] text-white/55 uppercase border-t border-white/[0.08] z-20 font-mono text-center">
+                    <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-[var(--bb-border)] p-4 text-center font-mono text-[9px] uppercase tracking-[3px] text-[var(--bb-text-secondary)]">
                         CAMPUSLINK / STORE & RECHARGE
                     </div>
                 </div>

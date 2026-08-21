@@ -16,6 +16,7 @@ import {
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { useProfile } from '@/lib/profile-context';
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/lib/theme-context';
 
 const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || 'APP_USR-c89b2d7b-b44e-4926-ba40-3d456209235d';
 
@@ -94,6 +95,7 @@ export default function PaymentModal({
     onPaymentError,
 }: PaymentModalProps) {
     const { profile, refreshProfile } = useProfile();
+    const { themeMode } = useTheme();
     const attemptIdRef = useRef<string | null>(null);
     const [method, setMethod] = useState<PaymentMethod>('brick');
     const [paymentState, setPaymentState] = useState<PaymentState>('form');
@@ -227,20 +229,20 @@ export default function PaymentModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-5" role="dialog" aria-modal="true" aria-label="Completar pago">
-            <div className="relative flex max-h-[94dvh] w-full max-w-[500px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#151719] shadow-2xl">
-                <header className="flex shrink-0 items-center justify-between border-b border-white/10 bg-[#1b1e21] px-4 py-4 sm:px-5">
+            <div className="relative flex max-h-[94dvh] w-full max-w-[500px] flex-col overflow-hidden rounded-2xl border border-[var(--bb-border)] bg-[var(--bb-card)] text-[var(--bb-text)] shadow-2xl">
+                <header className="flex shrink-0 items-center justify-between border-b border-[var(--bb-border)] bg-[var(--bb-card)] px-4 py-4 sm:px-5">
                     <div className="flex min-w-0 items-center gap-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#009ee3] text-white">
                             <ShieldCheck size={21} />
                         </span>
                         <div className="min-w-0">
-                            <p className="truncate text-base font-extrabold text-white">Pago seguro con Mercado Pago</p>
-                            <p className="truncate text-xs text-zinc-400">
+                            <p className="truncate text-base font-extrabold text-[var(--bb-text)]">Pago seguro con Mercado Pago</p>
+                            <p className="truncate text-xs text-[var(--bb-text-secondary)]">
                                 {product.name} <span className="px-1">·</span> <strong className="text-emerald-400">S/ {product.price.toFixed(2)}</strong>
                             </p>
                         </div>
                     </div>
-                    <button onClick={onClose} aria-label="Cerrar" className="ml-3 rounded-full p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white">
+                    <button onClick={onClose} aria-label="Cerrar" className="ml-3 rounded-full p-2 text-[var(--bb-text-secondary)] transition-colors hover:bg-[var(--bb-hover)] hover:text-[var(--bb-text)]">
                         <X size={20} />
                     </button>
                 </header>
@@ -250,8 +252,8 @@ export default function PaymentModal({
                         <div className="flex flex-col items-center gap-4 p-8 text-center">
                             <span className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white"><CheckCircle2 size={34} /></span>
                             <div>
-                                <h2 className="text-2xl font-extrabold text-white">Pago confirmado</h2>
-                                <p className="mt-2 text-sm leading-6 text-zinc-400">Tu compra de <strong className="text-zinc-200">{product.name}</strong> ya fue acreditada.</p>
+                                <h2 className="text-2xl font-extrabold text-[var(--bb-text)]">Pago confirmado</h2>
+                                <p className="mt-2 text-sm leading-6 text-[var(--bb-text-secondary)]">Tu compra de <strong className="text-[var(--bb-text)]">{product.name}</strong> ya fue acreditada.</p>
                             </div>
                             <button onClick={onClose} className="mt-2 w-full rounded-xl bg-[#009ee3] px-4 py-3 font-bold text-white transition-colors hover:bg-[#008dcc]">Volver a la tienda</button>
                         </div>
@@ -259,24 +261,24 @@ export default function PaymentModal({
                         <div className="flex flex-col items-center gap-4 p-8 text-center">
                             <span className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-400 text-[#191919]"><Clock3 size={32} /></span>
                             <div>
-                                <h2 className="text-2xl font-extrabold text-white">Pago en confirmación</h2>
-                                <p className="mt-2 text-sm leading-6 text-zinc-400">{statusMessage}</p>
+                                <h2 className="text-2xl font-extrabold text-[var(--bb-text)]">Pago en confirmación</h2>
+                                <p className="mt-2 text-sm leading-6 text-[var(--bb-text-secondary)]">{statusMessage}</p>
                             </div>
                             {externalResourceUrl && (
                                 <a href={externalResourceUrl} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#009ee3] px-4 py-3 font-bold text-white">
                                     Ver instrucciones <ExternalLink size={17} />
                                 </a>
                             )}
-                            <button onClick={onClose} className="w-full rounded-xl border border-white/15 px-4 py-3 font-bold text-white transition-colors hover:bg-white/5">Cerrar</button>
+                            <button onClick={onClose} className="w-full rounded-xl border border-[var(--bb-border)] px-4 py-3 font-bold text-[var(--bb-text)] transition-colors hover:bg-[var(--bb-hover)]">Cerrar</button>
                         </div>
                     ) : (
                         <>
-                            <div className="border-b border-white/10 p-3">
-                                <div className="grid grid-cols-2 rounded-xl bg-[#0f1113] p-1">
-                                    <button onClick={() => setMethod('brick')} className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold transition-colors ${method === 'brick' ? 'bg-[#009ee3] text-white' : 'text-zinc-400 hover:text-white'}`}>
+                            <div className="border-b border-[var(--bb-border)] p-3">
+                                <div className="grid grid-cols-2 rounded-xl bg-[var(--bb-darker)] p-1">
+                                    <button onClick={() => setMethod('brick')} className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold transition-colors ${method === 'brick' ? 'bg-[#009ee3] text-white' : 'text-[var(--bb-text-secondary)] hover:bg-[var(--bb-hover)] hover:text-[var(--bb-text)]'}`}>
                                         <CreditCard size={16} /> Tarjetas y saldo
                                     </button>
-                                    <button onClick={() => setMethod('yape')} className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold transition-colors ${method === 'yape' ? 'bg-[#6c3fd1] text-white' : 'text-zinc-400 hover:text-white'}`}>
+                                    <button onClick={() => setMethod('yape')} className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold transition-colors ${method === 'yape' ? 'bg-[#6c3fd1] text-white' : 'text-[var(--bb-text-secondary)] hover:bg-[var(--bb-hover)] hover:text-[var(--bb-text)]'}`}>
                                         <img src="/yape-logo.png.png" alt="" className="h-5 w-5 object-contain" /> Yape
                                     </button>
                                 </div>
@@ -286,10 +288,10 @@ export default function PaymentModal({
                                 <div className="p-3 sm:p-4">
                                     {brickError && <div className="mb-3 flex items-start gap-2 rounded-xl border border-red-900 bg-red-950 px-3 py-3 text-xs text-red-200"><AlertCircle size={16} className="mt-0.5 shrink-0" />{brickError}</div>}
                                     <Payment
-                                        key={brickKey}
+                                        key={`${brickKey}-${themeMode}`}
                                         initialization={{ amount: product.price, payer: { email: profile?.email || '' } }}
                                         customization={{
-                                            visual: { style: { theme: 'dark' } },
+                                            visual: { style: { theme: themeMode === 'dark' ? 'dark' : 'default' } },
                                             paymentMethods: {
                                                 creditCard: 'all',
                                                 debitCard: 'all',
@@ -308,25 +310,25 @@ export default function PaymentModal({
                                 </div>
                             ) : (
                                 <form onSubmit={handleYapePay} className="space-y-4 p-5">
-                                    <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#1b1e21] p-4">
+                                    <div className="flex items-start gap-3 rounded-xl border border-[var(--bb-border)] bg-[var(--bb-darker)] p-4">
                                         <img src="/yape-logo.png.png" alt="Yape" className="h-11 w-11 shrink-0 object-contain" />
                                         <div>
-                                            <p className="font-extrabold text-white">Paga con tu código de aprobación</p>
-                                            <p className="mt-1 text-xs leading-5 text-zinc-400">En Yape abre <strong className="text-zinc-200">Menú → Código de aprobación</strong> y usa el código de 6 dígitos.</p>
+                                            <p className="font-extrabold text-[var(--bb-text)]">Paga con tu código de aprobación</p>
+                                            <p className="mt-1 text-xs leading-5 text-[var(--bb-text-secondary)]">En Yape abre <strong className="text-[var(--bb-text)]">Menú → Código de aprobación</strong> y usa el código de 6 dígitos.</p>
                                         </div>
                                     </div>
 
                                     <label className="block space-y-2">
-                                        <span className="flex items-center gap-2 text-xs font-bold text-zinc-300"><Smartphone size={15} /> Celular afiliado a Yape</span>
-                                        <div className="flex overflow-hidden rounded-xl border border-white/15 bg-[#0f1113] focus-within:border-[#6c3fd1]">
-                                            <span className="border-r border-white/10 px-3 py-3 text-sm text-zinc-400">+51</span>
-                                            <input type="tel" inputMode="numeric" autoComplete="tel" maxLength={9} value={yapePhone} onChange={(event) => setYapePhone(event.target.value.replace(/\D/g, ''))} placeholder="987654321" className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-white outline-none" required />
+                                        <span className="flex items-center gap-2 text-xs font-bold text-[var(--bb-text)]"><Smartphone size={15} /> Celular afiliado a Yape</span>
+                                        <div className="flex overflow-hidden rounded-xl border border-[var(--bb-border)] bg-[var(--bb-darker)] focus-within:border-[#6c3fd1]">
+                                            <span className="border-r border-[var(--bb-border)] px-3 py-3 text-sm text-[var(--bb-text-secondary)]">+51</span>
+                                            <input type="tel" inputMode="numeric" autoComplete="tel" maxLength={9} value={yapePhone} onChange={(event) => setYapePhone(event.target.value.replace(/\D/g, ''))} placeholder="987654321" className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-[var(--bb-text)] outline-none" required />
                                         </div>
                                     </label>
 
                                     <label className="block space-y-2">
-                                        <span className="text-xs font-bold text-zinc-300">Código de aprobación</span>
-                                        <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={yapeOtp} onChange={(event) => setYapeOtp(event.target.value.replace(/\D/g, ''))} placeholder="000000" className="w-full rounded-xl border border-white/15 bg-[#0f1113] px-4 py-3 text-center font-mono text-xl tracking-[0.35em] text-white outline-none focus:border-[#6c3fd1]" required />
+                                        <span className="text-xs font-bold text-[var(--bb-text)]">Código de aprobación</span>
+                                        <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={yapeOtp} onChange={(event) => setYapeOtp(event.target.value.replace(/\D/g, ''))} placeholder="000000" className="w-full rounded-xl border border-[var(--bb-border)] bg-[var(--bb-darker)] px-4 py-3 text-center font-mono text-xl tracking-[0.35em] text-[var(--bb-text)] outline-none focus:border-[#6c3fd1]" required />
                                     </label>
 
                                     {yapeError && <div className="flex items-start gap-2 rounded-xl border border-red-900 bg-red-950 px-3 py-3 text-xs text-red-200"><AlertCircle size={16} className="mt-0.5 shrink-0" />{yapeError}</div>}
@@ -337,7 +339,7 @@ export default function PaymentModal({
                                 </form>
                             )}
 
-                            <footer className="flex items-center justify-center gap-2 border-t border-white/10 px-4 py-3 text-[11px] text-zinc-500">
+                            <footer className="flex items-center justify-center gap-2 border-t border-[var(--bb-border)] px-4 py-3 text-[11px] text-[var(--bb-text-secondary)]">
                                 <LockKeyhole size={13} /> CampusLink no recibe ni almacena tus datos de pago.
                             </footer>
                         </>
