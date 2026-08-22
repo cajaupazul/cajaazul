@@ -21,7 +21,7 @@ import { resizeImage } from '@/lib/image-utils';
 import { FrameEditor } from '@/components/admin/FrameEditor';
 
 type ItemType = 'profile_frame' | 'background' | 'badge' | 'sticker' | 'other';
-type Notice = { type: 'error' | 'success'; text: string } | null;
+type Notice = { type: 'error' | 'success' | 'warning'; text: string } | null;
 
 const fieldClass = 'h-12 w-full rounded-xl border border-white/10 bg-[#0d0f12] px-4 text-sm font-semibold text-white outline-none transition-colors placeholder:text-zinc-700 focus:border-blue-500';
 const itemTypes: { value: ItemType; label: string; help: string }[] = [
@@ -82,15 +82,19 @@ export default function NewShopItemPage() {
       setNotice({ type: 'error', text: 'Usa una imagen PNG, JPG, WebP o GIF.' });
       return;
     }
-    if (file.size > 12 * 1024 * 1024) {
-      setNotice({ type: 'error', text: 'La imagen no puede superar 12 MB.' });
+    const maxBytes = file.type === 'image/gif' ? 6 * 1024 * 1024 : 12 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setNotice({ type: 'error', text: file.type === 'image/gif' ? 'El GIF no puede superar 6 MB.' : 'La imagen no puede superar 12 MB.' });
       return;
     }
     if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
     setPreserveAnimation(file.type === 'image/gif');
-    setNotice(null);
+    setNotice(file.type === 'image/gif' ? {
+      type: 'warning',
+      text: 'El GIF conservará su animación. Para que la tienda siga rápida, procura que pese menos de 3 MB; para animaciones largas conviene WebP animado.'
+    } : null);
   };
 
   const normalizeKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9_-]/g, '_').replace(/_+/g, '_').slice(0, 80);
@@ -167,7 +171,7 @@ export default function NewShopItemPage() {
           <span className="text-xs font-black tabular-nums text-zinc-400">{completion}% listo</span>
         </div>
 
-        {notice && <div className={`mt-5 flex gap-3 rounded-xl border p-4 text-sm font-semibold ${notice.type === 'error' ? 'border-red-500/40 bg-red-500/10 text-red-300' : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'}`}>{notice.type === 'error' ? <AlertCircle className="h-4 w-4 shrink-0" /> : <Check className="h-4 w-4 shrink-0" />}{notice.text}</div>}
+        {notice && <div className={`mt-5 flex gap-3 rounded-xl border p-4 text-sm font-semibold ${notice.type === 'error' ? 'border-red-500/40 bg-red-500/10 text-red-300' : notice.type === 'warning' ? 'border-amber-500/40 bg-amber-500/10 text-amber-200' : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'}`}>{notice.type === 'success' ? <Check className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}{notice.text}</div>}
 
         <div className="mt-7 grid gap-5 xl:grid-cols-[460px_1fr]">
           <section className="space-y-5">
@@ -196,9 +200,9 @@ export default function NewShopItemPage() {
 
           <section className="space-y-5">
             <div className="rounded-2xl border border-white/10 bg-[#17191d] p-5 sm:p-6">
-              <div className="flex items-center justify-between"><div><h2 className="font-black">Archivo y vista previa</h2><p className="mt-1 text-xs text-zinc-500">PNG, JPG, WebP o GIF · máximo 12 MB.</p></div>{previewUrl && <button onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-zinc-500 hover:text-white"><X className="h-4 w-4" /></button>}</div>
+              <div className="flex items-center justify-between"><div><h2 className="font-black">Archivo y vista previa</h2><p className="mt-1 text-xs text-zinc-500">PNG, JPG o WebP hasta 12 MB; GIF hasta 6 MB.</p></div>{previewUrl && <button onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-zinc-500 hover:text-white"><X className="h-4 w-4" /></button>}</div>
               <label className="mt-5 grid min-h-80 cursor-pointer place-items-center overflow-hidden rounded-2xl border border-dashed border-white/15 bg-[#0d0f12] p-6 transition-colors hover:border-blue-500/70">
-                {previewUrl ? <img src={previewUrl} alt="Vista previa" className="max-h-[420px] w-full object-contain" /> : <div className="text-center"><div className="mx-auto grid h-14 w-14 place-items-center rounded-xl bg-blue-600"><ImageIcon className="h-6 w-6" /></div><p className="mt-5 font-black">Seleccionar imagen</p><p className="mt-1 text-xs text-zinc-600">PNG, JPG, WebP o GIF de hasta 12 MB.</p></div>}
+                {previewUrl ? <img src={previewUrl} alt="Vista previa" decoding="async" className="max-h-[420px] w-full object-contain" /> : <div className="text-center"><div className="mx-auto grid h-14 w-14 place-items-center rounded-xl bg-blue-600"><ImageIcon className="h-6 w-6" /></div><p className="mt-5 font-black">Seleccionar imagen</p><p className="mt-1 text-xs text-zinc-600">GIF recomendado: menos de 3 MB. Límite: 6 MB.</p></div>}
                 <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => handleFile(event.target.files?.[0])} className="sr-only" />
               </label>
               <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-[#0d0f12] p-4"><input type="checkbox" checked={preserveAnimation} onChange={(event) => setPreserveAnimation(event.target.checked)} className="mt-0.5 h-4 w-4 accent-blue-600" /><span><span className="block text-sm font-bold">Conservar animación original</span><span className="mt-1 block text-xs leading-5 text-zinc-600">Actívalo para GIF o WebP animado. Las imágenes estáticas se optimizan automáticamente.</span></span></label>

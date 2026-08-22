@@ -127,8 +127,20 @@ function EditShopItemWrapper() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
+                alert('Usa una imagen PNG, JPG, WebP o GIF.');
+                e.target.value = '';
+                return;
+            }
+            const maxBytes = file.type === 'image/gif' ? 6 * 1024 * 1024 : 12 * 1024 * 1024;
+            if (file.size > maxBytes) {
+                alert(file.type === 'image/gif' ? 'El GIF no puede superar 6 MB.' : 'La imagen no puede superar 12 MB.');
+                e.target.value = '';
+                return;
+            }
             setSelectedFile(file);
             setPreviewUrl(URL.createObjectURL(file));
+            setSkipResize(file.type === 'image/gif');
         }
     };
 
@@ -152,6 +164,7 @@ function EditShopItemWrapper() {
                     .from('profile-frames')
                     .upload(fileName, imageBlob, {
                         contentType: skipResize ? selectedFile.type : 'image/webp',
+                        cacheControl: '31536000',
                         upsert: true
                     });
 
@@ -418,7 +431,7 @@ function EditShopItemWrapper() {
                                         {/* Overlay para subir nueva si ya hay una */}
                                         <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center cursor-pointer">
                                             <div className="text-white font-bold text-sm bg-black/50 px-3 py-1.5 rounded-lg backdrop-blur-sm">Cambiar Imagen</div>
-                                            <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                            <input type="file" className="hidden" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleFileChange} />
                                         </label>
                                     </div>
                                 ) : (
@@ -430,7 +443,7 @@ function EditShopItemWrapper() {
                                             <p className="font-bold">Haz clic para subir nueva imagen</p>
                                             <p className="text-xs text-bb-text-secondary mt-1">Reemplazará la actual (PNG, GIF, WebP)</p>
                                         </div>
-                                        <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                        <input type="file" className="hidden" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleFileChange} />
                                     </label>
                                 )}
                             </div>

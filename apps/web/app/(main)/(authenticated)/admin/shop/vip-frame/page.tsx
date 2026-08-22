@@ -1,417 +1,400 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTheme } from '@/lib/theme-context';
+import {
+  AlertCircle,
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  Clock3,
+  Image as ImageIcon,
+  Loader2,
+  Save,
+  Sparkles,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
 import { useProfile } from '@/lib/profile-context';
 import { supabase } from '@/lib/supabase';
 import { resizeImage } from '@/lib/image-utils';
-import {
-    Plus,
-    Save,
-    Image as ImageIcon,
-    RefreshCw,
-    X,
-    ChevronLeft,
-    Sparkles,
-    AlertCircle,
-    Clock,
-    Calendar
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { PLACEHOLDERS } from '@/lib/constants';
-import Link from 'next/link';
 
-export default function NewVipFramePage() {
-    const { colors } = useTheme();
-    const { profile } = useProfile();
-    const router = useRouter();
-    const [isSaving, setIsSaving] = useState(false);
+interface ScheduledFrame {
+  id: string;
+  image_url: string;
+  label: string;
+  description: string | null;
+  starts_at: string;
+  expires_at: string | null;
+  is_active: boolean;
+  scale_factor: number;
+  offset_x: number;
+  offset_y: number;
+}
 
-    // Form state
-    const [form, setForm] = useState({
-        label: 'Marco Exclusivo',
-        description: '',
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
-        scale_factor: 1.4,
-        offset_x: 0,
-        offset_y: 0
+interface MonthSlot {
+  key: string;
+  label: string;
+  shortLabel: string;
+  monthStart: Date;
+  monthEnd: Date;
+  frame: ScheduledFrame | null;
+}
+
+const FIELD_CLASS =
+  'h-11 border-white/10 !bg-[#0e1117] !text-zinc-100 caret-amber-300 placeholder:!text-zinc-600 focus-visible:border-amber-400 focus-visible:ring-amber-400/20';
+
+const pad = (value: number) => String(value).padStart(2, '0');
+
+function toLocalInputValue(date: Date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function getMonthWindow(offset: number) {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth() + offset, 1, 0, 0, 0, 0);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + offset + 1, 1, 0, 0, 0, 0);
+  const startsAt = offset === 0 && now > monthStart ? now : monthStart;
+  startsAt.setSeconds(0, 0);
+  return { monthStart, monthEnd, startsAt };
+}
+
+function frameOverlapsMonth(frame: ScheduledFrame, monthStart: Date, monthEnd: Date) {
+  const start = new Date(frame.starts_at).getTime();
+  const end = frame.expires_at ? new Date(frame.expires_at).getTime() : Number.POSITIVE_INFINITY;
+  return start < monthEnd.getTime() && end > monthStart.getTime();
+}
+
+export default function VipFrameSchedulePage() {
+  const { profile } = useProfile();
+  const router = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState<ScheduledFrame[]>([]);
+  const [selectedMonthOffset, setSelectedMonthOffset] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [skipResize, setSkipResize] = useState(false);
+  const initialWindow = getMonthWindow(0);
+  const [form, setForm] = useState({
+    label: 'Marco exclusivo',
+    description: '',
+    starts_at: toLocalInputValue(initialWindow.startsAt),
+    expires_at: toLocalInputValue(initialWindow.monthEnd),
+    scale_factor: 1.4,
+    offset_x: 0,
+    offset_y: 0,
+  });
+
+  useEffect(() => {
+    if (profile && profile.role !== 'admin' && profile.role !== 'superadmin') {
+      router.replace('/dashboard/store');
+    }
+  }, [profile, router]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const fetchSchedule = useCallback(async () => {
+    setIsLoadingSchedule(true);
+    const { data, error } = await supabase
+      .from('vip_exclusive_frames')
+      .select('id,image_url,label,description,starts_at,expires_at,is_active,scale_factor,offset_x,offset_y')
+      .eq('is_active', true)
+      .order('starts_at', { ascending: true });
+
+    if (error) {
+      console.error('[VIP frames] No se pudo cargar el cronograma:', error);
+    } else {
+      setSchedule((data || []) as ScheduledFrame[]);
+    }
+    setIsLoadingSchedule(false);
+  }, []);
+
+  useEffect(() => {
+    if (profile?.role === 'admin' || profile?.role === 'superadmin') void fetchSchedule();
+  }, [fetchSchedule, profile?.role]);
+
+  const monthSlots = useMemo<MonthSlot[]>(() => {
+    return Array.from({ length: 12 }, (_, offset) => {
+      const { monthStart, monthEnd } = getMonthWindow(offset);
+      return {
+        key: `${monthStart.getFullYear()}-${pad(monthStart.getMonth() + 1)}`,
+        label: new Intl.DateTimeFormat('es-PE', { month: 'long', year: 'numeric' }).format(monthStart),
+        shortLabel: new Intl.DateTimeFormat('es-PE', { month: 'short' }).format(monthStart).replace('.', ''),
+        monthStart,
+        monthEnd,
+        frame: schedule.find((item) => frameOverlapsMonth(item, monthStart, monthEnd)) || null,
+      };
     });
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [skipResize, setSkipResize] = useState(false);
+  }, [schedule]);
 
-    // Proteccion de ruta
-    useEffect(() => {
-        if (profile && profile.role !== 'admin' && profile.role !== 'superadmin') {
-            router.push('/dashboard/store');
-        }
-    }, [profile, router]);
+  const selectedSlot = monthSlots[selectedMonthOffset];
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setSelectedFile(file);
-            setPreviewUrl(URL.createObjectURL(file));
+  const selectMonth = (offset: number) => {
+    const slot = monthSlots[offset];
+    if (!slot || slot.frame) return;
+    const window = getMonthWindow(offset);
+    setSelectedMonthOffset(offset);
+    setForm((current) => ({
+      ...current,
+      label: `Marco ${slot.label}`,
+      starts_at: toLocalInputValue(window.startsAt),
+      expires_at: toLocalInputValue(window.monthEnd),
+    }));
+  };
 
-            if (file.type === 'image/gif' || file.name.endsWith('.gif') || file.type === 'image/webp') {
-                setSkipResize(true); // Auto-suggest keeping animation for gifs
-            }
-        }
-    };
-
-    const handleSave = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-
-        if (!selectedFile) {
-            alert('Por favor selecciona una imagen para el marco exclusivo');
-            return;
-        }
-
-        setIsSaving(true);
-        try {
-            // 1. Process Image
-            const imageBlob = await resizeImage(selectedFile, 512, skipResize);
-            const extension = skipResize ? selectedFile.name.split('.').pop() : 'webp';
-            const fileName = `vip_frame_${Date.now()}.${extension}`;
-
-            // 2. Upload to Storage
-            const { error: uploadError } = await supabase.storage
-                .from('profile-frames') // Re-using profile-frames bucket
-                .upload(fileName, imageBlob, {
-                    contentType: skipResize ? selectedFile.type : 'image/webp',
-                    upsert: true
-                });
-
-            if (uploadError) throw uploadError;
-
-            // 3. Get Public URL
-            const { data: { publicUrl } } = supabase.storage
-                .from('profile-frames')
-                .getPublicUrl(fileName);
-
-            // 4. Update existing active frames
-            await supabase.from('vip_exclusive_frames').update({ is_active: false }).eq('is_active', true);
-
-            // 5. Insert to DB
-            const { error: dbError } = await supabase
-                .from('vip_exclusive_frames')
-                .insert([{
-                    image_url: publicUrl,
-                    label: form.label,
-                    description: form.description,
-                    expires_at: new Date(form.expires_at).toISOString(),
-                    scale_factor: form.scale_factor,
-                    offset_x: form.offset_x,
-                    offset_y: form.offset_y,
-                    is_active: true
-                }]);
-
-            if (dbError) throw dbError;
-
-            // 6. Sync to shop_items for global usage
-            // First, find the "Decoraciones de Avatar" category
-            const { data: categoryData } = await supabase
-                .from('shop_categories')
-                .select('id')
-                .eq('name', 'Decoraciones de Avatar')
-                .single();
-
-            const { error: shopItemError } = await supabase
-                .from('shop_items')
-                .upsert({
-                    type: 'profile_frame',
-                    name: form.label,
-                    description: form.description,
-                    image_url: publicUrl,
-                    price_coins: 0, // Unpurchasable with coins
-                    is_active: true,
-                    frame_key: 'vip_exclusive',
-                    category_id: categoryData?.id || null, // Auto-assign category
-                    frame_settings: {
-                        card: { scale: form.scale_factor, x: form.offset_x, y: form.offset_y },
-                        profile: { scale: form.scale_factor, x: form.offset_x, y: form.offset_y },
-                        navbar: { scale: form.scale_factor, x: form.offset_x, y: form.offset_y },
-                    }
-                }, { onConflict: 'frame_key' });
-
-            if (shopItemError) throw shopItemError;
-
-            // Success
-            router.push('/dashboard/store');
-            router.refresh();
-        } catch (error: any) {
-            console.error('Error saving VIP frame:', error);
-            alert(`Error: ${error.message}`);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'superadmin')) {
-        return null; // or loading
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Selecciona una imagen PNG, WebP o GIF.');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      alert('La imagen no puede superar 8 MB. Para una carga rápida, recomendamos menos de 2 MB.');
+      return;
     }
 
-    return (
-        <div className="min-h-screen bg-bb-darker p-4 sm:p-8">
-            <div className="max-w-6xl mx-auto space-y-8">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Link href="/dashboard/store">
-                            <Button variant="ghost" size="icon" className="rounded-full bg-bb-sidebar/50 hover:bg-bb-sidebar">
-                                <ChevronLeft className="w-6 h-6" />
-                            </Button>
-                        </Link>
-                        <div>
-                            <h1 className="text-3xl font-[1000] text-amber-400 italic uppercase tracking-tighter flex items-center gap-3">
-                                <Sparkles className="text-amber-400" /> Nuevo Marco VIP
-                            </h1>
-                            <p className="text-bb-text-secondary">Configuración del marco exclusivo temporal</p>
-                        </div>
-                    </div>
-                    <Button
-                        onClick={() => handleSave()}
-                        className="font-[1000] uppercase italic tracking-wider h-12 px-8 rounded-xl shadow-[0_0_20px_rgba(251,191,36,0.3)] hidden md:flex"
-                        style={{ backgroundColor: colors?.primary }}
-                        disabled={isSaving}
-                    >
-                        {isSaving ? 'Activando...' : 'Activar Marco Exclusivo'}
-                    </Button>
-                </div>
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setSkipResize(file.type === 'image/gif' || file.type === 'image/webp');
+  };
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Form Side */}
-                    <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-bb-card border border-amber-500/20 rounded-3xl p-6 shadow-xl space-y-6 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full pointer-events-none" />
+  const clearSelectedFile = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setSkipResize(false);
+  };
 
-                            <h2 className="font-bold text-lg flex items-center gap-2 border-b border-bb-border pb-4 relative z-10 text-amber-100">
-                                <AlertCircle className="w-5 h-5 text-amber-400" /> Información del Marco
-                            </h2>
+  const handleSave = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+    if (!selectedFile) {
+      alert('Selecciona la imagen del marco.');
+      return;
+    }
+    if (!form.label.trim()) {
+      alert('Escribe una etiqueta para identificar el marco.');
+      return;
+    }
 
-                            <div className="space-y-4 relative z-10">
-                                <div className="space-y-2">
-                                    <Label className="text-amber-400 uppercase text-[10px] tracking-widest font-black">Etiqueta</Label>
-                                    <Input
-                                        required
-                                        value={form.label}
-                                        onChange={e => setForm({ ...form, label: e.target.value })}
-                                        className="bg-bb-sidebar/50 border-white/10 h-11 text-white font-bold"
-                                        placeholder="Ej: MARCO LUNAR"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-amber-400 uppercase text-[10px] tracking-widest font-black">Límite de Tiempo</Label>
-                                    <div className="relative">
-                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none">
-                                            <Calendar className="w-4 h-4" />
-                                        </div>
-                                        <input
-                                            type="datetime-local"
-                                            required
-                                            value={form.expires_at}
-                                            onChange={e => setForm({ ...form, expires_at: e.target.value })}
-                                            className="w-full pl-10 pr-4 bg-bb-sidebar/50 border border-white/10 rounded-max h-11 text-white text-sm [color-scheme:dark] rounded-md outline-none focus:border-amber-500 transition-colors"
-                                        />
-                                    </div>
-                                    <p className="text-[10px] text-bb-text-secondary italic pl-1">El marco expirará automáticamente al pasar la fecha.</p>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-amber-400 uppercase text-[10px] tracking-widest font-black">Descripción (Opcional)</Label>
-                                    <Textarea
-                                        value={form.description}
-                                        onChange={e => setForm({ ...form, description: e.target.value })}
-                                        className="bg-bb-sidebar/50 border-white/10 min-h-[100px] text-white"
-                                        placeholder="Descripción promocional corta..."
-                                    />
-                                </div>
-                            </div>
-                        </div>
+    const startsAt = new Date(form.starts_at);
+    const expiresAt = new Date(form.expires_at);
+    if (!Number.isFinite(startsAt.getTime()) || !Number.isFinite(expiresAt.getTime()) || startsAt >= expiresAt) {
+      alert('La fecha de fin debe ser posterior a la fecha de inicio.');
+      return;
+    }
 
-                        {/* Adjustments */}
-                        <div className="bg-bb-card border border-amber-500/20 rounded-3xl p-6 shadow-xl space-y-6 relative overflow-hidden">
-                            <h2 className="font-bold text-lg flex items-center gap-2 border-b border-bb-border pb-4 text-amber-100">
-                                Ajustes de Alineación
-                            </h2>
-                            <div className="space-y-5">
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <Label className="text-zinc-400 uppercase text-[10px] tracking-widest font-black">Escala del marco</Label>
-                                        <span className="text-xs text-amber-500 font-bold">{form.scale_factor.toFixed(2)}x</span>
-                                    </div>
-                                    <input
-                                        type="range"
-                                        min="0.5" max="3.0" step="0.05"
-                                        value={form.scale_factor}
-                                        onChange={e => setForm({ ...form, scale_factor: parseFloat(e.target.value) })}
-                                        className="w-full accent-amber-500"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <Label className="text-zinc-400 uppercase text-[10px] tracking-widest font-black">Pos X (Pixels)</Label>
-                                            <span className="text-xs text-amber-500 font-bold">{form.offset_x}</span>
-                                        </div>
-                                        <input
-                                            type="range"
-                                            min="-100" max="100" step="1"
-                                            value={form.offset_x}
-                                            onChange={e => setForm({ ...form, offset_x: parseInt(e.target.value) })}
-                                            className="w-full accent-amber-500"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <Label className="text-zinc-400 uppercase text-[10px] tracking-widest font-black">Pos Y (Pixels)</Label>
-                                            <span className="text-xs text-amber-500 font-bold">{form.offset_y}</span>
-                                        </div>
-                                        <input
-                                            type="range"
-                                            min="-100" max="100" step="1"
-                                            value={form.offset_y}
-                                            onChange={e => setForm({ ...form, offset_y: parseInt(e.target.value) })}
-                                            className="w-full accent-amber-500"
-                                        />
-                                    </div>
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    className="w-full text-xs"
-                                    onClick={(e) => { e.preventDefault(); setForm({ ...form, scale_factor: 1.4, offset_x: 0, offset_y: 0 }); }}
-                                >
-                                    Resetear ajustes
-                                </Button>
-                            </div>
-                        </div>
+    setIsSaving(true);
+    let uploadedPath: string | null = null;
+    try {
+      const imageBlob = await resizeImage(selectedFile, 512, skipResize);
+      const sourceExtension = selectedFile.name.split('.').pop()?.toLowerCase() || 'webp';
+      const extension = skipResize ? sourceExtension : 'webp';
+      const monthKey = `${startsAt.getFullYear()}-${pad(startsAt.getMonth() + 1)}`;
+      uploadedPath = `scheduled/${monthKey}/vip-frame-${Date.now()}.${extension}`;
 
-                        {/* Image Upload Area */}
-                        <div className="bg-bb-card border border-bb-border rounded-3xl p-6 shadow-xl space-y-4">
-                            <h2 className="font-bold text-lg border-b border-bb-border pb-4">Imagen del Marco</h2>
-                            <div className="flex flex-col items-center justify-center border-2 border-dashed border-bb-border rounded-2xl p-8 bg-bb-sidebar/20 hover:bg-bb-sidebar/30 transition-all cursor-pointer relative">
-                                {previewUrl ? (
-                                    <div className="relative group">
-                                        <img src={previewUrl} className="w-48 h-48 object-contain rounded-xl shadow-2xl" alt="Preview" />
-                                        <button
-                                            type="button"
-                                            onClick={(e) => { e.preventDefault(); setSelectedFile(null); setPreviewUrl(null); }}
-                                            className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 shadow-lg hover:scale-110 transition-transform"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <label className="flex flex-col items-center gap-3 cursor-pointer w-full">
-                                        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400">
-                                            <ImageIcon className="w-8 h-8" />
-                                        </div>
-                                        <div className="text-center">
-                                            <p className="font-bold text-bb-text">Haz clic para subir</p>
-                                            <p className="text-xs text-bb-text-secondary mt-1">Soporta PNG, GIF, WebP animado</p>
-                                        </div>
-                                        <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                                    </label>
-                                )}
-                            </div>
+      const { error: uploadError } = await supabase.storage
+        .from('profile-frames')
+        .upload(uploadedPath, imageBlob, {
+          contentType: skipResize ? selectedFile.type : 'image/webp',
+          cacheControl: '31536000',
+          upsert: false,
+        });
+      if (uploadError) throw uploadError;
 
-                            {/* Optimization Option */}
-                            <div className="bg-amber-500/5 border border-amber-500/10 p-4 rounded-2xl space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="checkbox"
-                                        id="skip_resize"
-                                        checked={skipResize}
-                                        onChange={(e) => setSkipResize(e.target.checked)}
-                                        className="w-5 h-5 accent-amber-500"
-                                    />
-                                    <Label htmlFor="skip_resize" className="text-sm font-bold flex flex-col cursor-pointer">
-                                        Preservar Animación (Saltar Optimizador)
-                                        <span className="text-[10px] font-normal text-bb-text-secondary">Usa esto si subes un GIF o WebP animado.</span>
-                                    </Label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+      const { data: publicData } = supabase.storage.from('profile-frames').getPublicUrl(uploadedPath);
+      const { error: dbError } = await supabase.from('vip_exclusive_frames').insert({
+        image_url: publicData.publicUrl,
+        label: form.label.trim(),
+        description: form.description.trim() || null,
+        starts_at: startsAt.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        scale_factor: form.scale_factor,
+        offset_x: form.offset_x,
+        offset_y: form.offset_y,
+        is_active: true,
+      });
+      if (dbError) throw dbError;
 
-                    {/* Preview / Adjust Side */}
-                    <div className="lg:col-span-2">
-                        {previewUrl ? (
-                            <div className="bg-bb-card border border-bb-border rounded-3xl p-6 sm:p-8 shadow-xl space-y-8 h-full">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-bb-border pb-6">
-                                    <h2 className="font-bold text-2xl flex items-center gap-3">
-                                        <Sparkles className="text-amber-400 w-6 h-6 animate-pulse" /> Vista Previa del Marco VIP
-                                    </h2>
-                                    <p className="text-xs bg-bb-darker px-3 py-1.5 rounded-full text-bb-text-secondary italic">
-                                        Se mostrará en la Tienda debajo de Origi
-                                    </p>
-                                </div>
+      clearSelectedFile();
+      setForm((current) => ({ ...current, description: '' }));
+      await fetchSchedule();
+      alert('Marco programado. Se activará automáticamente en la fecha indicada.');
+    } catch (error: any) {
+      if (uploadedPath) await supabase.storage.from('profile-frames').remove([uploadedPath]);
+      console.error('[VIP frames] Error al programar:', error);
+      const overlap = error?.code === '23P01';
+      alert(overlap ? 'Ese periodo ya tiene un marco programado. Cancélalo o elige otro mes.' : `No se pudo guardar: ${error?.message || 'error desconocido'}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-                                <div className="flex items-center justify-center p-10 bg-black/40 rounded-2xl border border-white/5 shadow-inner">
-                                    <div className="relative w-28 h-28 my-2">
-                                        {/* Fallback avatar preview */}
-                                        <div className="absolute inset-0 bg-zinc-800 rounded-full flex items-center justify-center border-2 border-zinc-700">
-                                            <ImageIcon size={24} className="text-zinc-600" />
-                                        </div>
-                                        {/* Actual Frame Layer with live transformation */}
-                                        <img
-                                            src={previewUrl}
-                                            alt="Preview"
-                                            className="absolute top-1/2 left-1/2 w-[140%] h-[140%] object-contain drop-shadow-2xl z-10 pointer-events-none"
-                                            style={{
-                                                transform: `translate(calc(-50% + ${form.offset_x}px), calc(-50% + ${form.offset_y}px)) scale(${form.scale_factor})`,
-                                                transformOrigin: 'center center'
-                                            }}
-                                        />
-                                    </div>
-                                </div>
+  const cancelFrame = async (frame: ScheduledFrame) => {
+    if (!confirm(`¿Cancelar “${frame.label}”? Dejará de mostrarse en su periodo.`)) return;
+    setRemovingId(frame.id);
+    const { error } = await supabase.from('vip_exclusive_frames').update({ is_active: false }).eq('id', frame.id);
+    if (error) alert(`No se pudo cancelar: ${error.message}`);
+    else await fetchSchedule();
+    setRemovingId(null);
+  };
 
-                                <div className="bg-amber-500/5 border border-amber-500/10 p-5 rounded-2xl flex gap-4 mt-8">
-                                    <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-                                        <Clock className="text-amber-500 w-5 h-5 animate-pulse" />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-amber-500 text-sm">Recordatorio</p>
-                                        <p className="text-xs text-bb-text-secondary mt-1 leading-relaxed">
-                                            El marco exclusivo se activará de inmediato para todos los usuarios VIP y estará disponible
-                                            hasta la fecha límite. Al llegar la fecha, expirará automáticamente.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="bg-bb-card border border-bb-border rounded-3xl p-8 shadow-xl h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50 relative overflow-hidden">
-                                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-                                <div className="w-24 h-24 rounded-full bg-bb-sidebar/50 flex items-center justify-center relative z-10 shadow-lg">
-                                    <ImageIcon className="w-12 h-12 text-bb-text-secondary opacity-50" />
-                                </div>
-                                <div className="relative z-10">
-                                    <h3 className="font-bold text-xl text-bb-text italic">Esperando Imagen</h3>
-                                    <p className="text-bb-text-secondary max-w-xs mx-auto mt-2">
-                                        Sube la imagen del marco exclusivo. Te mostraremos una simulación de cómo se verá envolviendo un avatar VIP.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'superadmin')) return null;
 
-                {/* Mobile Save Button */}
-                <div className="md:hidden pt-4">
-                    <Button
-                        onClick={() => handleSave()}
-                        className="font-bold w-full h-14 rounded-2xl shadow-xl flex items-center justify-center gap-3 font-[1000] uppercase italic tracking-wider"
-                        style={{ backgroundColor: colors?.primary }}
-                        disabled={isSaving}
-                    >
-                        <Save className="w-5 h-5" />
-                        {isSaving ? 'Activando...' : 'Activar Marco Exclusivo'}
-                    </Button>
-                </div>
+  const now = Date.now();
+
+  return (
+    <main className="min-h-screen bg-[#070809] px-4 py-6 text-zinc-100 sm:px-8 lg:px-10">
+      <div className="mx-auto max-w-[1500px] space-y-7">
+        <header className="flex flex-col gap-5 border-b border-white/10 pb-6 md:flex-row md:items-end md:justify-between">
+          <div className="flex items-start gap-3">
+            <Link href="/admin/shop">
+              <Button variant="outline" size="icon" className="mt-1 border-white/10 bg-[#111318] text-zinc-200 hover:bg-[#1a1d23] hover:text-white">
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-amber-400">Tienda · Colección VIP</p>
+              <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">Cronograma de marcos</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">Programa los próximos doce meses. Al terminar un periodo, el siguiente marco se publica automáticamente.</p>
             </div>
+          </div>
+          <Button onClick={() => handleSave()} disabled={isSaving || Boolean(selectedSlot?.frame)} className="h-11 bg-blue-600 px-6 font-black text-white hover:bg-blue-500 disabled:opacity-40">
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {isSaving ? 'Guardando…' : 'Programar marco'}
+          </Button>
+        </header>
+
+        <section className="rounded-2xl border border-white/10 bg-[#101214] p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-base font-black"><CalendarDays className="h-5 w-5 text-amber-400" /> Próximos 12 meses</h2>
+              <p className="mt-1 text-xs text-zinc-500">Selecciona una casilla vacía para cargar su marco.</p>
+            </div>
+            <div className="hidden items-center gap-4 text-[11px] font-bold text-zinc-500 sm:flex"><span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500" />Activo</span><span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-blue-500" />Programado</span></div>
+          </div>
+
+          {isLoadingSchedule ? (
+            <div className="grid h-28 place-items-center"><Loader2 className="h-6 w-6 animate-spin text-zinc-500" /></div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-12">
+              {monthSlots.map((slot, index) => {
+                const isCurrent = slot.monthStart.getMonth() === new Date().getMonth() && slot.monthStart.getFullYear() === new Date().getFullYear();
+                const isLive = Boolean(slot.frame && new Date(slot.frame.starts_at).getTime() <= now && (!slot.frame.expires_at || new Date(slot.frame.expires_at).getTime() > now));
+                const isSelected = selectedMonthOffset === index && !slot.frame;
+                return (
+                  <button
+                    key={slot.key}
+                    type="button"
+                    onClick={() => selectMonth(index)}
+                    disabled={Boolean(slot.frame)}
+                    className={`relative min-h-28 rounded-xl border p-3 text-left transition-colors ${isSelected ? 'border-amber-400 bg-amber-400/10' : slot.frame ? 'border-white/10 bg-[#17191c]' : 'border-white/10 bg-[#0b0d0f] hover:border-white/30 hover:bg-[#141619]'}`}
+                  >
+                    <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">{slot.monthStart.getFullYear()}</span>
+                    <span className="mt-1 block text-sm font-black capitalize text-zinc-100">{slot.shortLabel}</span>
+                    {slot.frame ? (
+                      <>
+                        <img src={slot.frame.image_url} alt="" className="absolute right-2 top-2 h-10 w-10 rounded-full object-contain" />
+                        <span className={`mt-4 inline-flex items-center gap-1 text-[10px] font-black uppercase ${isLive ? 'text-emerald-400' : 'text-blue-400'}`}><i className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-emerald-400' : 'bg-blue-400'}`} />{isLive ? 'Activo' : 'Listo'}</span>
+                      </>
+                    ) : (
+                      <span className="mt-5 inline-flex items-center gap-1 text-[10px] font-bold text-zinc-600">{isSelected ? <Check className="h-3 w-3 text-amber-400" /> : <Upload className="h-3 w-3" />}{isCurrent ? 'Este mes' : 'Vacío'}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(460px,1.05fr)]">
+          <form onSubmit={handleSave} className="space-y-5">
+            <section className="rounded-2xl border border-white/10 bg-[#101214] p-5 sm:p-6">
+              <div className="mb-6 flex items-center justify-between gap-4 border-b border-white/10 pb-4">
+                <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400">Periodo seleccionado</p><h2 className="mt-1 text-xl font-black capitalize">{selectedSlot?.label}</h2></div>
+                {selectedSlot?.frame && <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-[10px] font-black uppercase text-blue-400">Ya programado</span>}
+              </div>
+
+              {selectedSlot?.frame ? (
+                <div className="space-y-5">
+                  <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-[#0b0d0f] p-4">
+                    <img src={selectedSlot.frame.image_url} alt={selectedSlot.frame.label} className="h-20 w-20 shrink-0 rounded-full object-contain" />
+                    <div className="min-w-0 flex-1"><p className="truncate font-black">{selectedSlot.frame.label}</p><p className="mt-1 text-xs text-zinc-500">{new Date(selectedSlot.frame.starts_at).toLocaleString('es-PE')} — {selectedSlot.frame.expires_at ? new Date(selectedSlot.frame.expires_at).toLocaleString('es-PE') : 'sin límite'}</p></div>
+                  </div>
+                  <Button type="button" variant="outline" onClick={() => cancelFrame(selectedSlot.frame!)} disabled={removingId === selectedSlot.frame.id} className="w-full border-red-500/30 bg-transparent text-red-400 hover:bg-red-500/10 hover:text-red-300">
+                    {removingId === selectedSlot.frame.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}Cancelar programación
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <label className="block"><Label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400">Etiqueta</Label><Input required value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} className={FIELD_CLASS} placeholder="Ej. Marco de septiembre" /></label>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label><Label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400">Se publica</Label><Input type="datetime-local" required value={form.starts_at} onChange={(event) => setForm({ ...form, starts_at: event.target.value })} className={`${FIELD_CLASS} [color-scheme:dark]`} /></label>
+                    <label><Label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400">Se retira</Label><Input type="datetime-local" required value={form.expires_at} onChange={(event) => setForm({ ...form, expires_at: event.target.value })} className={`${FIELD_CLASS} [color-scheme:dark]`} /></label>
+                  </div>
+                  <label className="block"><Label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400">Descripción opcional</Label><Textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="min-h-24 border-white/10 !bg-[#0e1117] !text-zinc-100 caret-amber-300 placeholder:!text-zinc-600 focus-visible:border-amber-400 focus-visible:ring-amber-400/20" placeholder="Describe brevemente esta edición…" /></label>
+                </div>
+              )}
+            </section>
+
+            {!selectedSlot?.frame && (
+              <section className="rounded-2xl border border-white/10 bg-[#101214] p-5 sm:p-6">
+                <h2 className="text-base font-black">Imagen y ajuste</h2>
+                <label className="mt-4 flex min-h-48 cursor-pointer items-center justify-center rounded-xl border border-dashed border-white/15 bg-[#0b0d0f] p-5 transition-colors hover:border-amber-400/50">
+                  {previewUrl ? <img src={previewUrl} alt="Vista previa" className="h-40 w-40 object-contain" /> : <div className="text-center"><ImageIcon className="mx-auto h-8 w-8 text-zinc-600" /><p className="mt-3 text-sm font-black">Subir marco</p><p className="mt-1 text-xs text-zinc-600">PNG, WebP o GIF · máximo 8 MB</p></div>}
+                  <input type="file" accept="image/png,image/webp,image/gif" onChange={handleFileChange} className="hidden" />
+                </label>
+                {previewUrl && <button type="button" onClick={clearSelectedFile} className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-red-400"><X className="h-3.5 w-3.5" />Quitar imagen</button>}
+
+                <div className="mt-6 space-y-5 border-t border-white/10 pt-5">
+                  <label className="block"><span className="flex justify-between text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500"><span>Escala</span><b className="text-amber-400">{form.scale_factor.toFixed(2)}×</b></span><input type="range" min="0.5" max="3" step="0.05" value={form.scale_factor} onChange={(event) => setForm({ ...form, scale_factor: Number(event.target.value) })} className="mt-2 w-full accent-amber-400" /></label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <label><span className="flex justify-between text-[10px] font-black uppercase text-zinc-500"><span>Posición X</span><b>{form.offset_x}</b></span><input type="range" min="-100" max="100" value={form.offset_x} onChange={(event) => setForm({ ...form, offset_x: Number(event.target.value) })} className="mt-2 w-full accent-amber-400" /></label>
+                    <label><span className="flex justify-between text-[10px] font-black uppercase text-zinc-500"><span>Posición Y</span><b>{form.offset_y}</b></span><input type="range" min="-100" max="100" value={form.offset_y} onChange={(event) => setForm({ ...form, offset_y: Number(event.target.value) })} className="mt-2 w-full accent-amber-400" /></label>
+                  </div>
+                  <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#0b0d0f] p-3"><input type="checkbox" checked={skipResize} onChange={(event) => setSkipResize(event.target.checked)} className="mt-0.5 h-4 w-4 accent-amber-400" /><span className="text-xs leading-5 text-zinc-400"><b className="block text-zinc-200">Preservar animación</b>Úsalo para GIF o WebP animado. Para mejor rendimiento, mantén el archivo por debajo de 2 MB.</span></label>
+                </div>
+              </section>
+            )}
+          </form>
+
+          <aside className="space-y-5">
+            <section className="rounded-2xl border border-white/10 bg-[#101214] p-5 sm:p-6">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Vista previa</p><h2 className="mt-1 text-xl font-black">Perfil con marco</h2></div><Sparkles className="h-5 w-5 text-amber-400" /></div>
+              <div className="mt-5 grid min-h-[330px] place-items-center rounded-xl bg-[#08090a] p-8">
+                {previewUrl ? (
+                  <div className="relative h-36 w-36">
+                    <div className="absolute inset-3 rounded-full border border-white/10 bg-[#22262c]" />
+                    <ImageIcon className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-zinc-700" />
+                    <img src={previewUrl} alt="Marco" className="pointer-events-none absolute left-1/2 top-1/2 h-[140%] w-[140%] object-contain" style={{ transform: `translate(calc(-50% + ${form.offset_x}px), calc(-50% + ${form.offset_y}px)) scale(${form.scale_factor})`, transformOrigin: 'center' }} />
+                  </div>
+                ) : selectedSlot?.frame ? (
+                  <img src={selectedSlot.frame.image_url} alt={selectedSlot.frame.label} className="h-44 w-44 object-contain" />
+                ) : (
+                  <div className="max-w-xs text-center"><ImageIcon className="mx-auto h-10 w-10 text-zinc-700" /><p className="mt-3 font-black text-zinc-400">Esperando imagen</p><p className="mt-1 text-xs leading-5 text-zinc-600">La previsualización aparecerá aquí antes de programar.</p></div>
+                )}
+              </div>
+            </section>
+            <div className="flex gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4"><Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" /><p className="text-xs leading-5 text-zinc-400"><b className="text-zinc-200">Cambio automático.</b> El sistema revisa el cronograma cada minuto y publica el marco vigente sin intervención manual.</p></div>
+            <div className="flex gap-3 rounded-xl border border-white/10 bg-[#101214] p-4"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" /><p className="text-xs leading-5 text-zinc-400">Los periodos no pueden superponerse. Puedes cancelar una programación y volver a cargarla antes de que empiece.</p></div>
+          </aside>
         </div>
-    );
+
+        <div className="sticky bottom-3 z-20 md:hidden"><Button onClick={() => handleSave()} disabled={isSaving || Boolean(selectedSlot?.frame)} className="h-12 w-full bg-blue-600 font-black text-white"><Save className="mr-2 h-4 w-4" />Programar marco</Button></div>
+      </div>
+    </main>
+  );
 }

@@ -49,6 +49,7 @@ interface VipExclusiveFrame {
     image_url: string;
     label: string;
     description: string;
+    starts_at: string;
     expires_at: string;
     is_active: boolean;
     scale_factor: number;
@@ -115,6 +116,7 @@ function StoreContent() {
                 (url) =>
                     new Promise<void>((resolve) => {
                         const img = new Image();
+                        img.decoding = 'async';
                         let settled = false;
                         const finish = () => {
                             if (settled) return;
@@ -178,11 +180,16 @@ function StoreContent() {
                 }
 
                 // 4. Fetch Active VIP Frame
+                const currentTimestamp = new Date().toISOString();
                 const { data: frameData } = await supabase
                     .from('vip_exclusive_frames')
                     .select('*')
                     .eq('is_active', true)
-                    .single();
+                    .lte('starts_at', currentTimestamp)
+                    .gt('expires_at', currentTimestamp)
+                    .order('starts_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
                 if (frameData) setActiveFrame(frameData);
 
                 // 5. Fetch Inventory
@@ -198,11 +205,17 @@ function StoreContent() {
                 }
 
                 // 6. Precargar imágenes críticas
+                // Solo bloqueamos la entrada por la primera fila visible. Las demas
+                // imagenes se cargan al acercarse al viewport, especialmente los GIF.
+                const firstCategoryId = catData?.[0]?.id;
+                const firstCategoryItems = (itemData || []).filter((item: any) => item.category_id === firstCategoryId);
+                const initialCatalogItems = (firstCategoryItems.length > 0 ? firstCategoryItems : (itemData || [])).slice(0, 4);
                 const imagesToPreload: (string | null | undefined)[] = [
                     '/icons/moneda.png',
-                    '/tienda/orivipp.png',
-                    frameData?.image_url,
-                    ...(itemData || []).map((i: any) => i.image_url)
+                    '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1) 1.png',
+                    '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1)2.png',
+                    '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1) 4.png',
+                    ...initialCatalogItems.map((item: any) => item.image_url)
                 ];
 
                 await preloadImages(imagesToPreload);
@@ -508,12 +521,20 @@ function StoreContent() {
                                 </div>
 
                                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                                    {coinPackages.map((pkg) => (
-                                        <button key={pkg.id} onClick={() => handlePurchase(pkg.id)} className="group flex min-h-52 flex-col justify-between rounded-2xl border border-[var(--bb-border)] bg-[var(--bb-card)] p-5 text-left transition-colors hover:border-blue-500/70 hover:bg-[var(--bb-hover)]">
-                                            <div className="flex items-start justify-between gap-4"><img src="/icons/moneda.png" alt="Monedas" className="h-12 w-12" /><span className="rounded-lg bg-[var(--bb-darker)] px-3 py-1.5 text-xs font-black text-[var(--bb-text-secondary)]">S/ {pkg.price}</span></div>
-                                            <div><p className="text-3xl font-black tabular-nums text-[var(--bb-text)]">{pkg.amount}</p><h3 className="mt-1 text-sm font-bold text-[var(--bb-text-secondary)]">{pkg.name}</h3><span className="mt-4 inline-flex text-sm font-black text-blue-500">Comprar paquete</span></div>
-                                        </button>
-                                    ))}
+                                    {coinPackages.map((pkg) => {
+                                        const coinImage = pkg.amount <= 100
+                                            ? '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1) 1.png'
+                                            : pkg.amount <= 500
+                                                ? '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1)2.png'
+                                                : '/tienda/ChatGPT Image 20 feb 2026, 12_02_20 (1) 4.png';
+
+                                        return (
+                                            <button key={pkg.id} onClick={() => handlePurchase(pkg.id)} className="group flex min-h-52 flex-col justify-between rounded-2xl border border-[var(--bb-border)] bg-[var(--bb-card)] p-5 text-left transition-colors hover:border-blue-500/70 hover:bg-[var(--bb-hover)]">
+                                                <div className="flex items-start justify-between gap-4"><img src={coinImage} alt={`Paquete de ${pkg.amount} monedas`} loading="lazy" decoding="async" className="h-16 w-16 object-contain" /><span className="rounded-lg bg-[var(--bb-darker)] px-3 py-1.5 text-xs font-black text-[var(--bb-text-secondary)]">S/ {pkg.price}</span></div>
+                                                <div><p className="text-3xl font-black tabular-nums text-[var(--bb-text)]">{pkg.amount}</p><h3 className="mt-1 text-sm font-bold text-[var(--bb-text-secondary)]">{pkg.name}</h3><span className="mt-4 inline-flex text-sm font-black text-blue-500">Comprar paquete</span></div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
 
                                 <div className="flex items-start gap-3 rounded-xl border border-[var(--bb-border)] bg-[var(--bb-card)] p-4">
@@ -551,6 +572,7 @@ function StoreContent() {
                                                     <div
                                                         key={item.id}
                                                         className={`group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--bb-border)] bg-[var(--bb-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/60 hover:bg-[var(--bb-hover)] hover:shadow-xl ${isOwned ? 'opacity-70' : ''}`}
+                                                        style={{ contentVisibility: 'auto', containIntrinsicSize: '420px' }}
                                                     >
                                                         {/* ── Preview Area ── */}
                                                         <div
@@ -569,6 +591,8 @@ function StoreContent() {
                                                                         <img
                                                                             src={item.image_url}
                                                                             alt={item.name}
+                                                                            loading="lazy"
+                                                                            decoding="async"
                                                                             className="absolute z-10 max-w-none object-contain"
                                                                             style={{
                                                                                 top: '50%',
@@ -586,6 +610,7 @@ function StoreContent() {
                                                                     alt={item.name}
                                                                     className="h-28 w-28 sm:h-36 sm:w-36 object-contain"
                                                                     loading="lazy"
+                                                                    decoding="async"
                                                                 />
                                                             )}
 

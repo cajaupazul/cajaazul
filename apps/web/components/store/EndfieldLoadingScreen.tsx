@@ -7,6 +7,9 @@ interface EndfieldLoadingScreenProps {
     onFinished?: () => void;
 }
 
+const STORE_LOADING_YELLOW = '#facc15';
+const STORE_LOADING_TRACK = 'rgba(250, 204, 21, 0.2)';
+
 export default function EndfieldLoadingScreen({
     isReady,
     onFinished
@@ -128,22 +131,27 @@ export default function EndfieldLoadingScreen({
     }
 
     const floorPct = Math.min(100, Math.floor(progress));
+    const visibleProgress = Math.max(2, Math.min(100, progress));
     const isCompleted = floorPct >= 100;
 
     return (
         <div
             ref={containerRef}
-            role="status"
+            role="progressbar"
             aria-live="polite"
             aria-label={`Cargando tienda: ${floorPct}%`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={floorPct}
             className="absolute inset-0 z-40 h-full min-h-0 select-none overflow-hidden bg-[var(--bb-dark)] text-[var(--bb-text)] transition-colors duration-200"
         >
             {/* ── OVERLAY AMARILLO (CORTINA EXPANSIVA DENTRO DEL CONTENEDOR) ── */}
             <div
-                className={`pointer-events-none absolute inset-0 z-50 bg-[var(--faculty-primary)] transition-all ${
+                className={`pointer-events-none absolute inset-0 z-50 transition-all ${
                     phase === 'transition' ? 'opacity-100' : 'opacity-0'
                 }`}
                 style={{
+                    backgroundColor: STORE_LOADING_YELLOW,
                     width: phase === 'transition' ? '100%' : '0%',
                     transform: phase === 'transition' ? 'translateX(0%)' : 'translateX(0%)',
                     animation: phase === 'transition' ? 'endfieldYellowWipe 1.05s cubic-bezier(0.76, 0, 0.24, 1) forwards' : 'none'
@@ -157,11 +165,18 @@ export default function EndfieldLoadingScreen({
                 <div className="hidden sm:block">
                     {/* Barra vertical izquierda que crece hacia abajo */}
                     <div
-                        className="absolute left-0 top-0 z-20 w-[6px] bg-[var(--faculty-primary)] transition-[height] duration-75 ease-out"
-                        style={{
-                            height: `${progress}%`
-                        }}
-                    />
+                        aria-hidden="true"
+                        className="absolute bottom-0 left-0 top-0 z-20 w-[6px] overflow-hidden"
+                        style={{ backgroundColor: STORE_LOADING_TRACK }}
+                    >
+                        <div
+                            className="absolute left-0 top-0 w-full transition-[height] duration-75 ease-out"
+                            style={{
+                                height: `${visibleProgress}%`,
+                                backgroundColor: STORE_LOADING_YELLOW
+                            }}
+                        />
+                    </div>
 
                     {/* Porcentaje que sigue la punta de la barra */}
                     <div
@@ -170,11 +185,11 @@ export default function EndfieldLoadingScreen({
                             top: `${pctTopPx}px`
                         }}
                     >
-                        <div className="flex items-baseline text-[54px] font-semibold leading-none tracking-[-1px] text-[var(--faculty-primary)]">
+                        <div className="flex items-baseline text-[54px] font-semibold leading-none tracking-[-1px]" style={{ color: STORE_LOADING_YELLOW }}>
                             <span>{floorPct}</span>
                             <span className="text-[26px] font-normal ml-0.5">%</span>
                         </div>
-                        <div className={`mt-1 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors ${isCompleted ? 'font-bold text-[var(--faculty-primary)]' : 'text-[var(--bb-text-secondary)]'}`}>
+                        <div className={`mt-1 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors ${isCompleted ? 'font-bold' : 'text-[var(--bb-text-secondary)]'}`} style={isCompleted ? { color: STORE_LOADING_YELLOW } : undefined}>
                             {isCompleted ? 'SYSTEM READY' : 'UPDATING...'}
                         </div>
                     </div>
@@ -234,22 +249,29 @@ export default function EndfieldLoadingScreen({
 
                     {/* Porcentaje móvil */}
                     <div className="absolute left-[24px] bottom-[calc(26%+8px)] z-20 flex flex-col">
-                        <div className="flex items-baseline text-[44px] font-semibold leading-none tracking-[-1px] text-[var(--faculty-primary)]">
+                        <div className="flex items-baseline text-[44px] font-semibold leading-none tracking-[-1px]" style={{ color: STORE_LOADING_YELLOW }}>
                             <span>{floorPct}</span>
                             <span className="text-[22px] font-normal ml-0.5">%</span>
                         </div>
-                        <div className={`mt-1 font-mono text-[10px] uppercase tracking-[1.5px] transition-colors ${isCompleted ? 'font-bold text-[var(--faculty-primary)]' : 'text-[var(--bb-text-secondary)]'}`}>
+                        <div className={`mt-1 font-mono text-[10px] uppercase tracking-[1.5px] transition-colors ${isCompleted ? 'font-bold' : 'text-[var(--bb-text-secondary)]'}`} style={isCompleted ? { color: STORE_LOADING_YELLOW } : undefined}>
                             {isCompleted ? 'SYSTEM READY' : 'UPDATING...'}
                         </div>
                     </div>
 
                     {/* Barra horizontal móvil que crece hacia la derecha */}
                     <div
-                        className="absolute bottom-[26%] left-0 z-20 h-1 bg-[var(--faculty-primary)] transition-[width] duration-75 ease-out"
-                        style={{
-                            width: `${progress}%`
-                        }}
-                    />
+                        aria-hidden="true"
+                        className="absolute bottom-[26%] left-0 right-0 z-20 h-1 overflow-hidden"
+                        style={{ backgroundColor: STORE_LOADING_TRACK }}
+                    >
+                        <div
+                            className="h-full transition-[width] duration-75 ease-out"
+                            style={{
+                                width: `${visibleProgress}%`,
+                                backgroundColor: STORE_LOADING_YELLOW
+                            }}
+                        />
+                    </div>
 
                     {/* Slogan móvil inferior */}
                     <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-[var(--bb-border)] p-4 text-center font-mono text-[9px] uppercase tracking-[3px] text-[var(--bb-text-secondary)]">
