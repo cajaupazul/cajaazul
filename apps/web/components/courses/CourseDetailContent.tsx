@@ -20,6 +20,7 @@ import { Autocomplete } from '@/components/ui/Autocomplete';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import StudentGradeCalculator from './StudentGradeCalculator';
 import AdminGradingFormulaEditor from './AdminGradingFormulaEditor';
+import CourseContributors from './CourseContributors';
 
 const PREDEFINED_SUBFOLDERS = [
     '📖 Sílabo y Cronograma',
@@ -748,6 +749,8 @@ export default function CourseDetailContent({
                                 <div><span className="text-bb-text/50">Facultad:</span> {course.facultad}</div>
                                 <div><span className="text-bb-text/50">Ciclo:</span> {course.ciclo}</div>
                             </div>
+
+                            <CourseContributors materials={materials} />
 
                             {course.descripcion && <p className="text-bb-text-secondary leading-relaxed text-sm md:text-base mb-10">{course.descripcion}</p>}
                         </div>
