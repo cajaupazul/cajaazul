@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Trash2, Eye } from 'lucide-react';
+import { Search, Plus, Trash2, Eye, Star, ArrowRight } from 'lucide-react';
 import { supabase, Course, Profile } from '@/lib/supabase';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import { useProfile } from '@/lib/profile-context';
@@ -111,6 +111,18 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
         };
     }, []);
 
+    const favoritesStorageKey = `campuslink:pinned-courses:${profile?.id || 'guest'}`;
+
+    useEffect(() => {
+        try {
+            const stored = window.localStorage.getItem(favoritesStorageKey);
+            const parsed = stored ? JSON.parse(stored) : [];
+            setSavedCourses(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : []);
+        } catch {
+            setSavedCourses([]);
+        }
+    }, [favoritesStorageKey]);
+
     const filteredCourses = courses.filter((course) => {
         const matchesSearch =
             course.nombre.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
@@ -120,12 +132,20 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
         const matchesFaculty = selectedFaculty === 'todos' || course.facultad === selectedFaculty;
 
         return matchesSearch && matchesCycle && matchesFaculty;
-    });
+    }).sort((a, b) => Number(savedCourses.includes(b.id)) - Number(savedCourses.includes(a.id)));
 
     const toggleSavedCourse = (courseId: string) => {
-        setSavedCourses((prev) =>
-            prev.includes(courseId) ? prev.filter((id) => id !== courseId) : [...prev, courseId]
-        );
+        setSavedCourses((prev) => {
+            const next = prev.includes(courseId)
+                ? prev.filter((id) => id !== courseId)
+                : [...prev, courseId];
+            try {
+                window.localStorage.setItem(favoritesStorageKey, JSON.stringify(next));
+            } catch {
+                // Keep the in-memory preference when local storage is unavailable.
+            }
+            return next;
+        });
     };
 
     const cycles = Array.from(new Set(courses.map((c) => c.ciclo))).sort((a, b) => (a || 0) - (b || 0));
@@ -260,7 +280,7 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
                             {filteredCourses.slice(0, currentPage * itemsPerPage).map((course) => (
                                 <div
                                     key={course.id}
-                                    className="group cursor-pointer overflow-hidden rounded-lg shadow-md glass-card transition-all hover:shadow-lg hover:border-blue-500/30 flex flex-col"
+                                    className="group cursor-pointer overflow-hidden rounded-lg shadow-md glass-card transition-all hover:shadow-lg hover:border-blue-500/30 flex h-full flex-col"
                                     onClick={() => router.push(`/dashboard/courses/view?id=${course.id}`)}
                                 >
                                     <div className="relative h-28 md:h-40 overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0">
@@ -275,74 +295,70 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
                                         ) : (
                                             <div className="h-full w-full bg-gradient-to-br from-blue-400 via-blue-500 to-teal-600 transition-transform group-hover:scale-105" />
                                         )}
+                                        {profile?.role === 'admin' && (
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm('¿Estás seguro de que quieres eliminar este curso?')) {
+                                                        await deleteManagedCourse(course);
+                                                    }
+                                                }}
+                                                disabled={deletingCourseId === course.id}
+                                                className="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-md border border-red-500/30 bg-[#161616] text-red-400 transition-colors hover:bg-red-500 hover:text-white disabled:cursor-wait disabled:opacity-50 md:right-3 md:top-3"
+                                                title="Eliminar curso"
+                                                aria-label={`Eliminar ${course.nombre}`}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        )}
                                     </div>
 
                                     <div className="p-2.5 md:p-4 flex flex-col flex-1 min-h-0">
-                                        <span className="text-[10px] md:text-xs font-semibold text-bb-text-secondary uppercase truncate">
-                                            {course.codigo}
-                                        </span>
-
-                                        <h3 className="mt-1 md:mt-2 line-clamp-2 text-xs md:text-sm font-bold text-bb-text group-hover:text-blue-400 transition-colors leading-tight">
-                                            {course.nombre}
-                                        </h3>
-
-                                        <div className="mt-1.5 md:mt-2 text-[10px] md:text-xs text-bb-text-secondary space-y-0.5 md:space-y-1 block">
-                                            <div className="truncate">{course.facultad || 'Sin Facultad'}</div>
-                                            {/* Ocultar ciclo en móvil muy pequeño si es necesario, o dejarlo */}
-                                            <div>Ciclo {course.ciclo}</div>
-                                        </div>
-
-                                        <div className="mt-auto pt-2 md:pt-3 border-t border-bb-border flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px] md:text-xs h-5 md:h-6 px-1.5 md:px-2.5">
-                                                    Abierto
-                                                </Badge>
-                                                <div className="flex items-center gap-1 text-bb-text-secondary text-[10px] md:text-xs font-medium bg-bb-dark px-1.5 rounded-md border border-bb-border" title={`${course.views || 0} visualizaciones`}>
-                                                    <Eye className="w-3.5 h-3.5" />
-                                                    <span>{course.views || 0}</span>
-                                                </div>
-                                                {profile?.role === 'admin' && (
-                                                    <button
-                                                        onClick={async (e) => {
-                                                            e.stopPropagation();
-                                                            if (confirm('¿Estás seguro de que quieres eliminar este curso?')) {
-                                                                await deleteManagedCourse(course);
-                                                            }
-                                                        }}
-                                                        disabled={deletingCourseId === course.id}
-                                                        className="p-1 text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
-                                                        title="Eliminar curso"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-1 md:gap-2">
+                                        <div className="flex min-w-0 items-center justify-between gap-2">
+                                            <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wide text-bb-text-secondary md:text-xs">
+                                                {course.codigo}
+                                            </span>
+                                            <div className="flex shrink-0 items-center gap-1">
+                                                <span className="inline-flex h-6 items-center gap-1 rounded-md border border-bb-border bg-bb-dark px-1.5 text-[10px] font-semibold text-bb-text-secondary md:px-2 md:text-xs" title={`${course.views || 0} visualizaciones`}>
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                    {course.views || 0}
+                                                </span>
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         toggleSavedCourse(course.id);
                                                     }}
-                                                    className={`text-base md:text-lg transition-colors p-1 ${savedCourses.includes(course.id)
-                                                        ? 'text-yellow-400'
-                                                        : 'text-bb-text-secondary hover:text-yellow-400'
+                                                    className={`grid h-6 w-6 place-items-center rounded-md transition-colors ${savedCourses.includes(course.id)
+                                                        ? 'bg-yellow-400/15 text-yellow-400'
+                                                        : 'text-bb-text-secondary hover:bg-bb-hover hover:text-yellow-400'
                                                         }`}
-                                                    aria-label="Guardar curso"
+                                                    aria-label={savedCourses.includes(course.id) ? 'Quitar de cursos destacados' : 'Destacar curso primero'}
+                                                    title={savedCourses.includes(course.id) ? 'Quitar de destacados' : 'Mostrar primero'}
                                                 >
-                                                    ★
+                                                    <Star className="h-3.5 w-3.5" fill={savedCourses.includes(course.id) ? 'currentColor' : 'none'} />
                                                 </button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        router.push(`/dashboard/courses/view?id=${course.id}`);
-                                                    }}
-                                                    className="text-blue-500 hover:bg-blue-500/10 hover:text-blue-400 text-[10px] md:text-xs h-7 md:h-9 px-2 hidden sm:inline-flex"
-                                                >
-                                                    Ver más
-                                                </Button>
                                             </div>
+                                        </div>
+
+                                        <h3 className="mt-1 min-h-8 line-clamp-2 text-xs font-bold leading-tight text-bb-text transition-colors group-hover:text-blue-400 md:mt-2 md:min-h-10 md:text-sm">
+                                            {course.nombre}
+                                        </h3>
+
+                                        <div className="mt-1.5 block space-y-0.5 text-[10px] text-bb-text-secondary md:mt-2 md:space-y-1 md:text-xs">
+                                            <div className="truncate">{course.facultad || 'Sin Facultad'}</div>
+                                            <div>Ciclo {course.ciclo}</div>
+                                        </div>
+
+                                        <div className="mt-auto flex items-center justify-between gap-2 border-t border-bb-border pt-2 md:pt-3">
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="secondary" className="h-5 border-green-500/20 bg-green-500/10 px-1.5 text-[10px] text-green-500 md:h-6 md:px-2.5 md:text-xs">
+                                                    Abierto
+                                                </Badge>
+                                            </div>
+                                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-500 transition-colors group-hover:text-blue-400 md:text-xs">
+                                                Ver curso
+                                                <ArrowRight className="h-3.5 w-3.5" />
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
