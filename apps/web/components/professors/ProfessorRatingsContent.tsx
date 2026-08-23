@@ -22,7 +22,7 @@ import { PLACEHOLDERS, getDiversifiedProfessorBackground, getStringHash } from '
 import SecureFileModal from '@/components/secure/SecureFileModal';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
 import MaterialCard from '@/components/courses/MaterialCard';
-import { extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
+import { deleteFileFromR2WithRetry, extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
 
 interface ProfessorComment {
     id: string;
@@ -486,27 +486,13 @@ export default function ProfessorRatingsContent({
         }
 
         try {
-            // Delete from storage
-            const { deleteFileFromR2 } = await import('@/lib/r2-storage');
-            const urlPath = new URL(materialUrl).searchParams.get('path');
-            const storagePath = urlPath || materialUrl.split('/course-materials/')[1] || materialUrl.split('&path=')[1]?.split('&')[0];
-
-            if (storagePath) {
-                const deleted = await deleteFileFromR2('course-materials', decodeURIComponent(storagePath));
-                if (!deleted) console.warn('Could not confirm deletion from R2 storage');
-            }
+            const storagePath = extractPathFromUrl(materialUrl, 'course-materials');
+            if (storagePath) await deleteFileFromR2WithRetry('course-materials', storagePath);
 
             // Delete thumbnail if exists
             if (material.thumbnail_url) {
-                try {
-                    const thumbUrl = new URL(material.thumbnail_url);
-                    const thumbPath = thumbUrl.searchParams.get('path');
-                    if (thumbPath) {
-                        await deleteFileFromR2('thumbnails', decodeURIComponent(thumbPath));
-                    }
-                } catch (e) {
-                    console.error('Error parsing thumbnail URL for deletion:', e);
-                }
+                const thumbPath = extractPathFromUrl(material.thumbnail_url, 'thumbnails');
+                if (thumbPath) await deleteFileFromR2WithRetry('thumbnails', thumbPath);
             }
 
             // Delete from database
@@ -857,10 +843,44 @@ export default function ProfessorRatingsContent({
             // 2. Delete from course_professors if mapping exists
             const courseId = courseMapping[courseName.toLowerCase()];
             if (courseId) {
-                await supabase
-                    .from('course_professors')
-                    .delete()
-                    .match({ professor_id: professor.id, course_id: courseId });
+                const [{ data: courseMaterials, error: selectMaterialsError }, { data: sets, error: setsError }] = await Promise.all([
+                    supabase.from('materials').select('url_archivo, thumbnail_url').match({ professor_id: professor.id, course_id: courseId }),
+                    supabase.from('bb_material_sets').select('id').match({ professor_id: professor.id, course_id: courseId }),
+                ]);
+                if (selectMaterialsError) throw selectMaterialsError;
+                if (setsError) throw setsError;
+
+                const setIds = (sets || []).map(set => set.id);
+                let bbFiles: Array<{ storage_path: string }> = [];
+                if (setIds.length > 0) {
+                    const { data, error } = await supabase.from('bb_files').select('storage_path').in('set_id', setIds);
+                    if (error) throw error;
+                    bbFiles = data || [];
+                }
+
+                const objects = new Map<string, { bucket: string; path: string }>();
+                const addObject = (bucket: string, value?: string | null) => {
+                    if (!value) return;
+                    const path = extractPathFromUrl(value, bucket);
+                    if (path) objects.set(`${bucket}:${path}`, { bucket, path });
+                };
+                (courseMaterials || []).forEach(material => {
+                    addObject('course-materials', material.url_archivo);
+                    addObject('thumbnails', material.thumbnail_url);
+                });
+                bbFiles.forEach(file => addObject('course-materials', file.storage_path));
+
+                const pendingObjects = Array.from(objects.values());
+                for (let index = 0; index < pendingObjects.length; index += 10) {
+                    await Promise.all(pendingObjects.slice(index, index + 10).map(({ bucket, path }) =>
+                        deleteFileFromR2WithRetry(bucket, path),
+                    ));
+                }
+
+                if (setIds.length > 0) {
+                    const { error } = await supabase.from('bb_material_sets').delete().in('id', setIds);
+                    if (error) throw error;
+                }
 
                 // 3. ALSO delete all materials associated with this professor and this course
                 // Requirement: "cuando se elimina el curso ahí si se elimina todos los archivos de dicho curso"
@@ -870,8 +890,14 @@ export default function ProfessorRatingsContent({
                     .match({ professor_id: professor.id, course_id: courseId });
 
                 if (materialsError) {
-                    console.error('Error deleting materials for course:', materialsError);
+                    throw materialsError;
                 }
+
+                const { error: mappingError } = await supabase
+                    .from('course_professors')
+                    .delete()
+                    .match({ professor_id: professor.id, course_id: courseId });
+                if (mappingError) throw mappingError;
             }
 
             alert('Curso y sus materiales asociados eliminados exitosamente.');

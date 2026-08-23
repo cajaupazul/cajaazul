@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Star, Mail, LayoutPanelLeft, FileText, FolderRoot, Users, Filter, Trash2, Pencil, Upload, List, Calculator, CheckSquare, X } from 'lucide-react';
+import { ArrowLeft, Star, Mail, LayoutPanelLeft, FolderRoot, Folder, FolderOpen, Users, Filter, Trash2, Pencil, Upload, List, Calculator, CheckSquare, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import { extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import StudentGradeCalculator from './StudentGradeCalculator';
 import AdminGradingFormulaEditor from './AdminGradingFormulaEditor';
 import CourseContributors from './CourseContributors';
+import { FileTypeIcon } from '@/components/files/FileTypeIcon';
 
 const PREDEFINED_SUBFOLDERS = [
     '📖 Sílabo y Cronograma',
@@ -36,6 +37,7 @@ interface CourseDetailContentProps {
     topProfessor: any;
     allProfessors: any[];
     initialMaterials: any[];
+    initialBlackboardContributions: any[];
     currentUser: any | null;
     initialCourseCycles: any[];
 }
@@ -45,12 +47,14 @@ export default function CourseDetailContent({
     topProfessor,
     allProfessors,
     initialMaterials,
+    initialBlackboardContributions,
     initialCourseCycles
 }: CourseDetailContentProps) {
     const { profile: currentUser, isGuest } = useProfile();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [materials, setMaterials] = useState<any[]>(initialMaterials);
+    const [blackboardContributions, setBlackboardContributions] = useState<any[]>(initialBlackboardContributions);
     const [courseCycles, setCourseCycles] = useState<any[]>(initialCourseCycles);
     
     // UI state for Add Cycle Modal
@@ -72,7 +76,7 @@ export default function CourseDetailContent({
     const [selectedProfessorId, setSelectedProfessorId] = useState<string>(searchParams.get('professor') || 'all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [typeFilter, setTypeFilter] = useState<string | null>(null);
-    const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
+    const [activeCycleId, setActiveCycleId] = useState<string | null>(searchParams.get('cycle'));
     const [activeSubfolder, setActiveSubfolder] = useState<string | null>(null);
     const [showAdminManager, setShowAdminManager] = useState(false);
     const [showCalculatorModal, setShowCalculatorModal] = useState(false);
@@ -104,6 +108,10 @@ export default function CourseDetailContent({
         setMaterials(initialMaterials);
     }, [initialMaterials]);
 
+    useEffect(() => {
+        setBlackboardContributions(initialBlackboardContributions);
+    }, [initialBlackboardContributions]);
+
     // Track view once per session
     useEffect(() => {
         const hasViewedKey = `viewed_course_${course.id}`;
@@ -121,18 +129,30 @@ export default function CourseDetailContent({
 
     // Load BB material sets when entering a specific cycle
     useEffect(() => {
-        if (!activeCycleId || activeCycleId === 'historical' || activeCycleId === 'general') {
+        if (!activeCycleId || activeCycleId === 'general') {
             setBbSets([]);
             return;
         }
-        const cycle = courseCycles.find(c => c.id === activeCycleId);
-        if (!cycle) return;
-        supabase
-            .from('bb_material_sets')
-            .select('id, course_name, ciclo, professor_id, professors(nombre)')
-            .eq('course_id', course.id)
-            .eq('ciclo', cycle.ciclo_name)
-            .then(({ data }) => setBbSets(data || []));
+        const loadBlackboardSets = async () => {
+            let setsQuery = supabase
+                .from('bb_material_sets')
+                .select('id, course_name, ciclo, cycle_id, professor_id, uploaded_by, created_at, professors(nombre)')
+                .eq('course_id', course.id)
+                .order('created_at', { ascending: false });
+            setsQuery = activeCycleId === 'historical'
+                ? setsQuery.is('cycle_id', null)
+                : setsQuery.eq('cycle_id', activeCycleId);
+            const { data: sets } = await setsQuery;
+
+            const setIds = (sets || []).map((set: any) => set.id);
+            const { data: fileRows } = setIds.length > 0
+                ? await supabase.from('bb_files').select('set_id').in('set_id', setIds)
+                : { data: [] as any[] };
+            const counts = new Map<string, number>();
+            (fileRows || []).forEach((row: any) => counts.set(row.set_id, (counts.get(row.set_id) || 0) + 1));
+            setBbSets((sets || []).map((set: any) => ({ ...set, file_count: counts.get(set.id) || 0 })));
+        };
+        void loadBlackboardSets();
     }, [activeCycleId, course.id, courseCycles]);
 
     // Load BB folder tree when a set is selected
@@ -150,7 +170,7 @@ export default function CourseDetailContent({
         if (!activeBbSetId) { setBbFolderFiles([]); return; }
         const baseQuery = supabase
             .from('bb_files')
-            .select('id, name, storage_path, size_bytes, mime_type')
+            .select('id, name, storage_path, size_bytes, mime_type, relative_path, uploaded_by, created_at')
             .eq('set_id', activeBbSetId);
         const query = activeBbFolderId === null
             ? baseQuery.is('folder_id', null)
@@ -184,12 +204,14 @@ export default function CourseDetailContent({
 
         try {
             // Delete from storage
-            const { deleteFileFromR2 } = await import('@/lib/r2-storage');
-            await deleteFileFromR2('course-materials', materialUrl);
+            const { deleteFileFromR2OrThrow, extractPathFromUrl } = await import('@/lib/r2-storage');
+            if (extractPathFromUrl(materialUrl, 'course-materials')) {
+                await deleteFileFromR2OrThrow('course-materials', materialUrl);
+            }
 
             // Delete thumbnail if exists
             if (material.thumbnail_url) {
-                await deleteFileFromR2('thumbnails', material.thumbnail_url);
+                await deleteFileFromR2OrThrow('thumbnails', material.thumbnail_url);
             }
 
             // Delete from database
@@ -227,20 +249,14 @@ export default function CourseDetailContent({
             // Get all files to delete from R2
             const { data: files } = await supabase
                 .from('bb_files')
-                .select('file_url')
+                .select('id, storage_path')
                 .eq('set_id', setId);
 
             if (files && files.length > 0) {
-                const { deleteFileFromR2 } = await import('@/lib/r2-storage');
-                for (const file of files) {
-                    if (file.file_url) {
-                        try {
-                            await deleteFileFromR2('course-materials', file.file_url);
-                        } catch (err) {
-                            console.error('Error deleting file from R2:', file.file_url, err);
-                        }
-                    }
-                }
+                const { deleteFileFromR2OrThrow } = await import('@/lib/r2-storage');
+                await Promise.all(files
+                    .filter(file => file.storage_path)
+                    .map(file => deleteFileFromR2OrThrow('course-materials', file.storage_path)));
             }
 
             // Delete from database
@@ -253,6 +269,7 @@ export default function CourseDetailContent({
 
             // Update state
             setBbSets(prev => prev.filter(s => s.id !== setId));
+            setBlackboardContributions(prev => prev.filter(item => item.bb_set_id !== setId));
             if (activeBbSetId === setId) {
                 setActiveBbSetId(null);
                 setActiveSubfolder(null);
@@ -281,13 +298,9 @@ export default function CourseDetailContent({
         try {
             // Delete file from R2 storage
             if (file.storage_path || file.file_url) {
-                const { deleteFileFromR2 } = await import('@/lib/r2-storage');
+                const { deleteFileFromR2OrThrow } = await import('@/lib/r2-storage');
                 const urlToDelete = file.storage_path || file.file_url;
-                try {
-                    await deleteFileFromR2('course-materials', urlToDelete);
-                } catch (err) {
-                    console.error('Error deleting file from R2:', urlToDelete, err);
-                }
+                await deleteFileFromR2OrThrow('course-materials', urlToDelete);
             }
 
             // Delete from database
@@ -300,6 +313,7 @@ export default function CourseDetailContent({
 
             // Update local state
             setBbFolderFiles(prev => prev.filter(f => f.id !== file.id));
+            setBlackboardContributions(prev => prev.filter(item => item.bb_file_id !== file.id));
 
             alert('Archivo eliminado exitosamente');
         } catch (error: any) {
@@ -632,6 +646,61 @@ export default function CourseDetailContent({
         return map;
     }, [materialsForCounts]);
 
+    const blackboardCycleCounts = useMemo(() => {
+        const counts = new Map<string, number>();
+        blackboardContributions.forEach((item) => {
+            const key = item.cycle_id || 'historical';
+            counts.set(key, (counts.get(key) || 0) + 1);
+        });
+        return counts;
+    }, [blackboardContributions]);
+
+    const renderBlackboardImportCards = () => {
+        if (bbSets.length === 0) return null;
+        return (
+            <section className="border-t border-bb-border/60 pt-5" aria-label="Importaciones de Blackboard">
+                <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-400">Material por docente</p>
+                        <h4 className="text-base font-black text-bb-text">Importaciones de Blackboard</h4>
+                        <p className="mt-1 text-xs text-bb-text-secondary">Conservan la estructura original de carpetas y archivos.</p>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-bb-text-secondary">
+                        {bbSets.reduce((total, set) => total + (set.file_count || 0), 0)} recursos
+                    </span>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {bbSets.map((set) => (
+                        <div key={set.id} className="group/folder relative">
+                            <button
+                                onClick={() => { setActiveBbSetId(set.id); setActiveBbFolderId(null); setActiveSubfolder('__bb__'); }}
+                                className="flex min-h-24 w-full items-center gap-3 rounded-xl border border-bb-border bg-bb-card p-4 text-left transition-colors hover:border-blue-500/60 hover:bg-bb-hover"
+                            >
+                                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
+                                    <FolderOpen className="h-6 w-6" />
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-sm font-black text-bb-text">{(set.professors as any)?.nombre || 'Profesor sin asignar'}</span>
+                                    <span className="mt-1 block truncate text-[11px] text-bb-text-secondary">{set.course_name || 'Carpeta importada'}</span>
+                                    <span className="mt-1.5 block text-[10px] font-bold uppercase tracking-wider text-blue-400">{set.file_count || 0} archivos</span>
+                                </span>
+                            </button>
+                            {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+                                <button
+                                    onClick={(e) => handleDeleteBbSet(set.id, e)}
+                                    className="absolute right-2 top-2 rounded-lg bg-bb-dark p-1.5 text-red-400 opacity-0 transition-opacity hover:bg-red-500/15 group-hover/folder:opacity-100 focus-visible:opacity-100"
+                                    title="Eliminar importación completa"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </section>
+        );
+    };
+
     const breadcrumbs = useMemo(() => {
         if (!activeCycleId) return null;
         let cycleName = '';
@@ -750,7 +819,7 @@ export default function CourseDetailContent({
                                 <div><span className="text-bb-text/50">Ciclo:</span> {course.ciclo}</div>
                             </div>
 
-                            <CourseContributors materials={materials} />
+                            <CourseContributors materials={[...materials, ...blackboardContributions]} />
 
                             {course.descripcion && <p className="text-bb-text-secondary leading-relaxed text-sm md:text-base mb-10">{course.descripcion}</p>}
                         </div>
@@ -866,7 +935,7 @@ export default function CourseDetailContent({
                                     )}
                                     {!isGuest && (
                                         <Link
-                                            href={`/dashboard/courses/upload?courseId=${course.id}`}
+                                            href={`/dashboard/courses/upload?courseId=${course.id}${activeCycleId && activeCycleId !== 'general' ? `&cycle=${activeCycleId}` : ''}`}
                                             className="inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 h-10 sm:h-11 px-3 sm:px-5 shadow-lg shadow-blue-600/20 active:scale-95 whitespace-nowrap flex-shrink-0"
                                         >
                                             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -940,7 +1009,7 @@ export default function CourseDetailContent({
                                                         onClick={() => setActiveBbFolderId(isActive ? folder.parent_id || null : folder.id)}
                                                         className={`flex items-center gap-2 w-full py-1.5 px-2 rounded-lg text-left text-sm transition-all ${isActive ? 'bg-violet-500/20 text-violet-300 font-bold' : 'hover:bg-violet-500/10 text-bb-text/80 hover:text-violet-300'}`}
                                                     >
-                                                        <span className="text-base">{isActive ? '📂' : '📁'}</span>
+                                                        {isActive ? <FolderOpen className="h-4 w-4 shrink-0" /> : <Folder className="h-4 w-4 shrink-0" />}
                                                         <span className="truncate flex-1 font-medium">{folder.name}</span>
                                                         {children.length > 0 && <span className="text-[10px] text-bb-text-secondary shrink-0">{children.length}</span>}
                                                     </button>
@@ -952,7 +1021,7 @@ export default function CourseDetailContent({
                                             <div className="flex gap-4">
                                                 <div className="w-56 shrink-0 border-r border-bb-border/30 pr-3 space-y-0.5 max-h-[60vh] overflow-y-auto">
                                                     <button onClick={() => setActiveBbFolderId(null)} className={`flex items-center gap-2 w-full py-1.5 px-2 rounded-lg text-left text-sm transition-all ${!activeBbFolderId ? 'bg-violet-500/20 text-violet-300 font-bold' : 'hover:bg-violet-500/10 text-bb-text/80 hover:text-violet-300'}`}>
-                                                        <span className="text-base">📁</span>
+                                                        <FolderRoot className="h-4 w-4 shrink-0" />
                                                         <span className="truncate flex-1 font-medium">Raíz</span>
                                                     </button>
                                                     {rootFolders.map(f => renderTreeNode(f, 1))}
@@ -973,7 +1042,7 @@ export default function CourseDetailContent({
                                                         <div key={file.id} className="relative group/file">
                                                             <button onClick={() => setViewingFile({ path: file.storage_path, name: file.name })}
                                                                 className="flex items-center gap-3 w-full p-2.5 bg-bb-card border border-bb-border hover:border-violet-500/40 rounded-xl transition-all text-left">
-                                                                <FileText className="h-4 w-4 text-violet-400 shrink-0" />
+                                                                <FileTypeIcon fileName={file.name} mimeType={file.mime_type} size="sm" />
                                                                 <div className="min-w-0 flex-1">
                                                                     <p className="text-sm font-bold text-bb-text truncate">{file.name}</p>
                                                                     <p className="text-[10px] text-bb-text-secondary">{file.size_bytes ? `${(file.size_bytes / 1024 / 1024).toFixed(1)} MB` : ''}</p>
@@ -1024,7 +1093,7 @@ export default function CourseDetailContent({
                                                     {displayFolders.map((folder: any) => (
                                                         <button key={folder.id} onClick={() => setActiveBbFolderId(folder.id)}
                                                             className="flex flex-col items-center gap-2 p-3 bg-violet-500/10 border border-violet-500/30 hover:border-violet-400 hover:bg-violet-500/20 rounded-2xl transition-all text-center cursor-pointer">
-                                                            <div className="text-3xl">📂</div>
+                                                            <FolderOpen className="h-8 w-8 text-blue-400" />
                                                             <p className="text-[11px] font-black text-violet-300 leading-tight">{folder.name}</p>
                                                         </button>
                                                     ))}
@@ -1038,7 +1107,7 @@ export default function CourseDetailContent({
                                                             <div key={file.id} className="relative group/file">
                                                                 <button onClick={() => setViewingFile({ path: file.storage_path, name: file.name })}
                                                                     className="flex items-center gap-3 w-full p-3 bg-bb-card border border-bb-border hover:border-violet-500/40 rounded-xl transition-all text-left">
-                                                                    <FileText className="h-5 w-5 text-violet-400 shrink-0" />
+                                                                    <FileTypeIcon fileName={file.name} mimeType={file.mime_type} size="md" />
                                                                     <div className="min-w-0 flex-1">
                                                                         <p className="text-sm font-bold text-bb-text truncate">{file.name}</p>
                                                                         <p className="text-[10px] text-bb-text-secondary">{file.size_bytes ? `${(file.size_bytes / 1024 / 1024).toFixed(1)} MB` : ''}</p>
@@ -1139,7 +1208,7 @@ export default function CourseDetailContent({
                                                         <FolderCard
                                                             key={cycle.id}
                                                             name={`Ciclo ${cycle.ciclo_name}`}
-                                                            count={(cycleMaterialsMap.get(cycle.id) || []).length}
+                                                            count={(cycleMaterialsMap.get(cycle.id) || []).length + (blackboardCycleCounts.get(cycle.id) || 0)}
                                                             onClick={() => {
                                                                 setActiveCycleId(cycle.id);
                                                                 setActiveSubfolder(null);
@@ -1147,10 +1216,10 @@ export default function CourseDetailContent({
                                                         />
                                                     ))}
 
-                                                    {historicalMaterials.length > 0 && (
+                                                    {(historicalMaterials.length > 0 || (blackboardCycleCounts.get('historical') || 0) > 0) && (
                                                         <FolderCard
                                                             name="Archivos Históricos"
-                                                            count={historicalMaterials.length}
+                                                            count={historicalMaterials.length + (blackboardCycleCounts.get('historical') || 0)}
                                                             onClick={() => {
                                                                 setActiveCycleId('historical');
                                                                 setActiveSubfolder(null);
@@ -1179,15 +1248,20 @@ export default function CourseDetailContent({
                                         if (activeCycleId === 'historical') {
                                             if (!activeSubfolder) {
                                                 return (
-                                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                                                        {historicalCategories.map((cat) => (
-                                                            <FolderCard
-                                                                key={cat.id}
-                                                                name={cat.label}
-                                                                count={cat.items.length}
-                                                                onClick={() => setActiveSubfolder(cat.label)}
-                                                            />
-                                                        ))}
+                                                    <div className="space-y-8">
+                                                        {historicalCategories.length > 0 && (
+                                                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
+                                                                {historicalCategories.map((cat) => (
+                                                                    <FolderCard
+                                                                        key={cat.id}
+                                                                        name={cat.label}
+                                                                        count={cat.items.length}
+                                                                        onClick={() => setActiveSubfolder(cat.label)}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        {renderBlackboardImportCards()}
                                                     </div>
                                                 );
                                             }
@@ -1218,41 +1292,60 @@ export default function CourseDetailContent({
                                             matchedMatsMap.set('📝 Exámenes', examsCount);
 
                                             return (
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                                                    {PREDEFINED_SUBFOLDERS.map((sub) => (
-                                                        <FolderCard
-                                                            key={sub}
-                                                            name={sub}
-                                                            count={matchedMatsMap.get(sub) || 0}
-                                                            onClick={() => setActiveSubfolder(sub)}
-                                                        />
-                                                    ))}
-                                                    {/* Blackboard folder sets for this cycle */}
-                                                    {bbSets.map((set) => (
-                                                        <div key={set.id} className="relative group/folder">
-                                                            <button
-                                                                onClick={() => { setActiveBbSetId(set.id); setActiveBbFolderId(null); setActiveSubfolder('__bb__'); }}
-                                                                className="flex flex-col w-full h-full items-center justify-center gap-2 p-3 bg-violet-500/10 border border-violet-500/30 hover:border-violet-400 hover:bg-violet-500/20 rounded-2xl transition-all text-center group cursor-pointer"
-                                                            >
-                                                                <div className="text-3xl">📁</div>
-                                                                <div className="space-y-0.5">
-                                                                    <p className="text-[11px] font-black text-violet-300 leading-tight">
-                                                                        {(set.professors as any)?.nombre || 'Carpeta BB'}
-                                                                    </p>
-                                                                    <p className="text-[9px] text-bb-text-secondary">{set.course_name}</p>
+                                                <div className="space-y-8">
+                                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
+                                                        {PREDEFINED_SUBFOLDERS.map((sub) => (
+                                                            <FolderCard
+                                                                key={sub}
+                                                                name={sub}
+                                                                count={matchedMatsMap.get(sub) || 0}
+                                                                onClick={() => setActiveSubfolder(sub)}
+                                                            />
+                                                        ))}
+                                                    </div>
+
+                                                    {bbSets.length > 0 && (
+                                                        <section className="border-t border-bb-border/60 pt-5" aria-labelledby="blackboard-imports-title">
+                                                            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                                                                <div>
+                                                                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-400">Material por docente</p>
+                                                                    <h4 id="blackboard-imports-title" className="text-base font-black text-bb-text">Importaciones de Blackboard</h4>
+                                                                    <p className="mt-1 text-xs text-bb-text-secondary">Conservan la estructura original de carpetas y archivos de cada profesor.</p>
                                                                 </div>
-                                                            </button>
-                                                            {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
-                                                                <button
-                                                                    onClick={(e) => handleDeleteBbSet(set.id, e)}
-                                                                    className="absolute -top-2 -right-2 p-1.5 bg-red-500/80 hover:bg-red-500 text-white rounded-full opacity-0 group-hover/folder:opacity-100 transition-opacity shadow-lg"
-                                                                    title="Eliminar carpeta completa"
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    ))}
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-bb-text-secondary">
+                                                                    {bbSets.reduce((total, set) => total + (set.file_count || 0), 0)} recursos
+                                                                </span>
+                                                            </div>
+                                                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                                                {bbSets.map((set) => (
+                                                                    <div key={set.id} className="group/folder relative">
+                                                                        <button
+                                                                            onClick={() => { setActiveBbSetId(set.id); setActiveBbFolderId(null); setActiveSubfolder('__bb__'); }}
+                                                                            className="flex min-h-24 w-full items-center gap-3 rounded-xl border border-bb-border bg-bb-card p-4 text-left transition-colors hover:border-blue-500/60 hover:bg-bb-hover"
+                                                                        >
+                                                                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
+                                                                                <FolderOpen className="h-6 w-6" />
+                                                                            </span>
+                                                                            <span className="min-w-0 flex-1">
+                                                                                <span className="block truncate text-sm font-black text-bb-text">{(set.professors as any)?.nombre || 'Profesor sin asignar'}</span>
+                                                                                <span className="mt-1 block truncate text-[11px] text-bb-text-secondary">{set.course_name || 'Carpeta importada'}</span>
+                                                                                <span className="mt-1.5 block text-[10px] font-bold uppercase tracking-wider text-blue-400">{set.file_count || 0} archivos</span>
+                                                                            </span>
+                                                                        </button>
+                                                                        {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+                                                                            <button
+                                                                                onClick={(e) => handleDeleteBbSet(set.id, e)}
+                                                                                className="absolute right-2 top-2 rounded-lg bg-bb-dark p-1.5 text-red-400 opacity-0 transition-opacity hover:bg-red-500/15 group-hover/folder:opacity-100 focus-visible:opacity-100"
+                                                                                title="Eliminar importación completa"
+                                                                            >
+                                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </section>
+                                                    )}
                                                 </div>
                                             );
                                         }

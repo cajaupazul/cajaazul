@@ -32,6 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { FrameEditor } from '@/components/admin/FrameEditor';
 import { PLACEHOLDERS } from '@/lib/constants';
 import Link from 'next/link';
+import { removeSupabaseStorageUrl } from '@/lib/supabase-storage-cleanup';
 
 function EditShopItemWrapper() {
     const { colors } = useTheme();
@@ -149,6 +150,8 @@ function EditShopItemWrapper() {
         if (!itemId) return;
 
         setIsSaving(true);
+        let uploadedPath: string | null = null;
+        let databaseSaved = false;
         try {
             let finalImageUrl = item?.image_url;
 
@@ -158,14 +161,15 @@ function EditShopItemWrapper() {
                 const imageBlob = await resizeImage(selectedFile, 512, skipResize);
                 const extension = skipResize ? selectedFile.name.split('.').pop() : 'webp';
                 // Añadimos "_update_" para no pisar el original u otra caché fácilmente
-                const fileName = `${Date.now()}_update_${form.frame_key}.${extension}`;
+                const fileName = `catalog/${crypto.randomUUID()}-update-${form.frame_key}.${extension}`;
+                uploadedPath = fileName;
 
                 const { error: uploadError } = await supabase.storage
                     .from('profile-frames')
                     .upload(fileName, imageBlob, {
                         contentType: skipResize ? selectedFile.type : 'image/webp',
                         cacheControl: '31536000',
-                        upsert: true
+                        upsert: false
                     });
 
                 if (uploadError) throw uploadError;
@@ -188,11 +192,19 @@ function EditShopItemWrapper() {
                 .eq('id', itemId);
 
             if (dbError) throw dbError;
+            databaseSaved = true;
+
+            if (selectedFile && item?.image_url && item.image_url !== finalImageUrl) {
+                await removeSupabaseStorageUrl(supabase, 'profile-frames', item.image_url);
+            }
 
             // Éxito
             router.push('/admin/shop');
             router.refresh();
         } catch (error: any) {
+            if (!databaseSaved && uploadedPath) {
+                await supabase.storage.from('profile-frames').remove([uploadedPath]).catch(console.error);
+            }
             console.error('Error al actualizar item:', error);
             alert(`Error: ${error.message}`);
         } finally {

@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { getStorageUrl } from '@/lib/supabase';
+import { removeSupabaseStorageUrl } from '@/lib/supabase-storage-cleanup';
 
 interface Event {
     id?: string;
@@ -112,6 +113,8 @@ export default function CreateEventModal({
         setLoading(true);
         setError(null);
         setSuccess(null);
+        let uploadedPath: string | null = null;
+        let databaseSaved = false;
 
         try {
             let imageUrl = formData.imagen_url;
@@ -120,6 +123,7 @@ export default function CreateEventModal({
             if (imageFile) {
                 const fileExt = imageFile.name.split('.').pop();
                 const fileName = `events/${Date.now()}.${fileExt}`;
+                uploadedPath = fileName;
 
                 const { error: uploadError } = await supabase.storage
                     .from('r2-images') // Verify bucket name
@@ -158,6 +162,11 @@ export default function CreateEventModal({
             }
 
             if (error) throw error;
+            databaseSaved = true;
+
+            if (imageFile && initialData?.imagen_url && initialData.imagen_url !== imageUrl) {
+                await removeSupabaseStorageUrl(supabase, 'r2-images', initialData.imagen_url);
+            }
 
             setSuccess(isEditing ? 'Evento actualizado correctamente' : 'Evento creado correctamente');
             setTimeout(() => {
@@ -166,6 +175,10 @@ export default function CreateEventModal({
             }, 1000);
 
         } catch (err: any) {
+            if (!databaseSaved && uploadedPath) {
+                const { error: cleanupError } = await supabase.storage.from('r2-images').remove([uploadedPath]);
+                if (cleanupError) console.error('No se pudo limpiar la imagen nueva del evento:', cleanupError);
+            }
             console.error(err);
             setError(err.message || 'Error al guardar el evento');
         } finally {

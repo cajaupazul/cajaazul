@@ -44,8 +44,9 @@ export function extractPathFromUrl(url: string, bucket: string): string {
             return parts[1];
         }
         
-        // Fallback to basename if nothing else works
-        return urlObj.pathname.split('/').pop() || url;
+        // An unrelated external URL is not an R2 object. Returning its basename
+        // could delete an unrelated object that happens to share the same name.
+        return '';
     } catch (e) {
         console.warn('Error parsing URL in extractPathFromUrl:', e);
         return url;
@@ -165,6 +166,10 @@ export async function deleteFileFromR2(bucket: string, path: string): Promise<bo
     }
 
     const cleanPath = extractPathFromUrl(path, bucket);
+    if (!cleanPath) {
+        console.warn('La URL no pertenece al bucket administrado; se omite la eliminación.', { bucket });
+        return false;
+    }
 
     try {
         const response = await fetch(
@@ -191,4 +196,29 @@ export async function deleteFileFromR2(bucket: string, path: string): Promise<bo
         console.error('Excepción eliminando archivo:', error)
         return false;
     }
+}
+
+/**
+ * Strict deletion variant for destructive UI flows. Database rows must not be
+ * removed silently when their R2 object could not be deleted.
+ */
+export async function deleteFileFromR2OrThrow(bucket: string, path: string): Promise<void> {
+    const deleted = await deleteFileFromR2(bucket, path);
+    if (!deleted) {
+        throw new Error(`No se pudo eliminar el objeto de almacenamiento (${bucket}).`);
+    }
+}
+
+export async function deleteFileFromR2WithRetry(bucket: string, path: string, attempts = 3): Promise<void> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        try {
+            await deleteFileFromR2OrThrow(bucket, path);
+            return;
+        } catch (error) {
+            lastError = error;
+            if (attempt < attempts) await new Promise(resolve => setTimeout(resolve, attempt * 250));
+        }
+    }
+    throw lastError instanceof Error ? lastError : new Error('No se pudo limpiar el objeto de almacenamiento.');
 }

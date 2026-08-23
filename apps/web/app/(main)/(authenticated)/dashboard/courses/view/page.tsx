@@ -11,6 +11,7 @@ function CourseDetailWrapper() {
   const courseId = searchParams.get('id');
   const [course, setCourse] = useState<any>(null);
   const [materials, setMaterials] = useState<any[]>([]);
+  const [blackboardContributions, setBlackboardContributions] = useState<any[]>([]);
   const [allProfessors, setAllProfessors] = useState<any[]>([]);
   const [topProfessor, setTopProfessor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -58,7 +59,8 @@ function CourseDetailWrapper() {
           { data: materialsData },
           { data: linkedData },
           { data: sessionData },
-          { data: cyclesData }
+          { data: cyclesData },
+          { data: blackboardSets }
         ] = await Promise.all([
           supabase.from('materials')
             .select('*, professors(nombre), profiles(*)')
@@ -80,11 +82,53 @@ function CourseDetailWrapper() {
           supabase.from('course_cycles')
             .select('*')
             .eq('course_id', courseId)
-            .order('ciclo_name', { ascending: false })
+            .order('ciclo_name', { ascending: false }),
+          supabase.from('bb_material_sets')
+            .select('id, cycle_id, uploaded_by, created_at')
+            .eq('course_id', courseId)
         ]);
 
         setMaterials(materialsData || []);
         setCourseCycles(cyclesData || []);
+
+        // Blackboard imports are stored in bb_files instead of materials. Include
+        // them in the community attribution and resource total without duplicating
+        // the physical files or inventing a second ownership model.
+        const setIds = (blackboardSets || []).map((set: any) => set.id);
+        if (setIds.length > 0) {
+          const { data: bbFilesData } = await supabase
+            .from('bb_files')
+            .select('id, set_id, uploaded_by, created_at, relative_path')
+            .in('set_id', setIds);
+
+          const setById = new Map((blackboardSets || []).map((set: any) => [set.id, set]));
+          const uploaderIds = Array.from(new Set(
+            (bbFilesData || [])
+              .map((file: any) => file.uploaded_by || setById.get(file.set_id)?.uploaded_by)
+              .filter(Boolean)
+          ));
+
+          const { data: uploaderProfiles } = uploaderIds.length > 0
+            ? await supabase.from('profiles').select('*').in('id', uploaderIds)
+            : { data: [] as any[] };
+          const profileById = new Map((uploaderProfiles || []).map((profile: any) => [profile.id, profile]));
+
+          setBlackboardContributions((bbFilesData || []).map((file: any) => {
+            const set = setById.get(file.set_id);
+            const userId = file.uploaded_by || set?.uploaded_by;
+            return {
+              id: `bb-${file.id}`,
+              bb_file_id: file.id,
+              bb_set_id: file.set_id,
+              cycle_id: set?.cycle_id || null,
+              user_id: userId,
+              created_at: file.created_at || set?.created_at,
+              profiles: userId ? profileById.get(userId) : null,
+            };
+          }));
+        } else {
+          setBlackboardContributions([]);
+        }
 
         // 3. Handle User Permissions - ONLY if not guest
         const isGuest = !sessionData?.user || !!sessionData?.user?.is_anonymous;
@@ -181,6 +225,7 @@ function CourseDetailWrapper() {
       topProfessor={topProfessor}
       allProfessors={allProfessors}
       initialMaterials={materials}
+      initialBlackboardContributions={blackboardContributions}
       currentUser={currentUser}
       initialCourseCycles={courseCycles}
     />

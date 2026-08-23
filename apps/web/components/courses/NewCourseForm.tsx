@@ -129,6 +129,8 @@ export default function NewCourseForm() {
 
         setCreatingCourse(true);
         let imagenUrl = formData.currentImageUrl;
+        let newlyUploadedImageUrl: string | null = null;
+        let databaseSaved = false;
 
         try {
             if (formData.imagen) {
@@ -137,6 +139,7 @@ export default function NewCourseForm() {
 
                 const { uploadFileToR2 } = await import('@/lib/r2-storage');
                 imagenUrl = await uploadFileToR2('course-images', fileName, formData.imagen);
+                newlyUploadedImageUrl = imagenUrl;
             }
 
             if (isEditing) {
@@ -155,6 +158,11 @@ export default function NewCourseForm() {
                     .eq('id', courseId);
 
                 if (error) throw error;
+                databaseSaved = true;
+                if (newlyUploadedImageUrl && formData.currentImageUrl && formData.currentImageUrl !== newlyUploadedImageUrl) {
+                    const { deleteFileFromR2WithRetry } = await import('@/lib/r2-storage');
+                    await deleteFileFromR2WithRetry('course-images', formData.currentImageUrl);
+                }
                 alert('¡Curso actualizado exitosamente!');
             } else {
                 const { data, error } = await supabase
@@ -173,6 +181,7 @@ export default function NewCourseForm() {
                     .single();
 
                 if (error) throw error;
+                databaseSaved = true;
                 if (data) addCourse(data);
                 alert('¡Curso creado exitosamente!');
             }
@@ -181,6 +190,10 @@ export default function NewCourseForm() {
             router.refresh();
 
         } catch (error: any) {
+            if (!databaseSaved && newlyUploadedImageUrl) {
+                const { deleteFileFromR2WithRetry } = await import('@/lib/r2-storage');
+                await deleteFileFromR2WithRetry('course-images', newlyUploadedImageUrl).catch(console.error);
+            }
             console.error('Error:', error);
             alert(error.message || 'Error al procesar el curso');
         } finally {

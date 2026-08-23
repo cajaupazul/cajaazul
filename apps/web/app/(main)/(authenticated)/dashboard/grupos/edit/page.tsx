@@ -6,7 +6,7 @@ import { supabase, getStorageUrl } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
 import { useProfile } from '@/lib/profile-context';
 import { ArrowLeft, Upload, Save, Loader2, Image as ImageIcon, Camera } from 'lucide-react';
-import { uploadFileToR2, deleteFileFromR2 } from '@/lib/r2-storage';
+import { uploadFileToR2, deleteFileFromR2WithRetry } from '@/lib/r2-storage';
 import Link from 'next/link';
 
 export default function EditGroupPage() {
@@ -101,6 +101,9 @@ export default function EditGroupPage() {
     const handleSave = async () => {
         if (!grupo || !profile) return;
         setSaving(true);
+        let newLogoPath: string | null = null;
+        let newBannerPath: string | null = null;
+        let databaseSaved = false;
 
         try {
             let finalLogoUrl = logoUrl;
@@ -109,30 +112,22 @@ export default function EditGroupPage() {
             // 1. Upload new Logo + Delete Old
             if (logoFile) {
                 setUploadingLogo(true);
-                // Clean up old logo if it exists
-                if (grupo.logo_url) {
-                    await deleteFileFromR2('grupos', grupo.logo_url);
-                }
-
                 const fileExt = logoFile.name.split('.').pop()?.toLowerCase() || 'jpg';
                 const fileName = `${profile.id}/logo-${Date.now()}.${fileExt}`;
                 await uploadFileToR2('grupos', fileName, logoFile);
                 finalLogoUrl = fileName;
+                newLogoPath = fileName;
                 setUploadingLogo(false);
             }
 
             // 2. Upload new Banner + Delete Old
             if (bannerFile) {
                 setUploadingBanner(true);
-                // Clean up old banner if it exists
-                if (grupo.banner_url) {
-                    await deleteFileFromR2('grupos', grupo.banner_url);
-                }
-
                 const fileExt = bannerFile.name.split('.').pop()?.toLowerCase() || 'jpg';
                 const fileName = `${profile.id}/banner-${Date.now()}.${fileExt}`;
                 await uploadFileToR2('grupos', fileName, bannerFile);
                 finalBannerUrl = fileName;
+                newBannerPath = fileName;
                 setUploadingBanner(false);
             }
 
@@ -150,14 +145,30 @@ export default function EditGroupPage() {
                 .eq('id', grupo.id);
 
             if (error) throw error;
+            databaseSaved = true;
+
+            if (newLogoPath && grupo.logo_url && grupo.logo_url !== newLogoPath) {
+                await deleteFileFromR2WithRetry('grupos', grupo.logo_url);
+            }
+            if (newBannerPath && grupo.banner_url && grupo.banner_url !== newBannerPath) {
+                await deleteFileFromR2WithRetry('grupos', grupo.banner_url);
+            }
 
             router.push(`/dashboard/grupos/view?id=${grupo.id}`);
             router.refresh();
 
         } catch (error) {
+            if (!databaseSaved) {
+                await Promise.all([
+                    newLogoPath ? deleteFileFromR2WithRetry('grupos', newLogoPath).catch(console.error) : Promise.resolve(),
+                    newBannerPath ? deleteFileFromR2WithRetry('grupos', newBannerPath).catch(console.error) : Promise.resolve(),
+                ]);
+            }
             console.error('Error saving group:', error);
             alert('Error al guardar los cambios.');
         } finally {
+            setUploadingLogo(false);
+            setUploadingBanner(false);
             setSaving(false);
         }
     };

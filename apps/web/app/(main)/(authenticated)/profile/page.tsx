@@ -162,11 +162,11 @@ export default function ProfilePage() {
     setUploadingBackground(true);
     // ... rest of logic
     try {
-      const { uploadFileToR2, deleteFileFromR2 } = await import('@/lib/r2-storage');
+      const { uploadFileToR2, deleteFileFromR2WithRetry } = await import('@/lib/r2-storage');
 
       // Cleanup previous staged background if it exists and hasn't been saved
       if (stagedBackgroundUrl && stagedBackgroundUrl !== profile.background_url) {
-        await deleteFileFromR2('profile-avatars', stagedBackgroundUrl);
+        await deleteFileFromR2WithRetry('profile-avatars', stagedBackgroundUrl);
       }
 
       const fileExt = file.name.split('.').pop();
@@ -198,11 +198,11 @@ export default function ProfilePage() {
     setUploadingAvatar(true);
     // ... rest of logic
     try {
-      const { uploadFileToR2, deleteFileFromR2 } = await import('@/lib/r2-storage');
+      const { uploadFileToR2, deleteFileFromR2WithRetry } = await import('@/lib/r2-storage');
 
       // Cleanup previous staged avatar if it exists and hasn't been saved
       if (stagedAvatarUrl && stagedAvatarUrl !== profile.avatar_url) {
-        await deleteFileFromR2('profile-avatars', stagedAvatarUrl);
+        await deleteFileFromR2WithRetry('profile-avatars', stagedAvatarUrl);
       }
 
       const fileExt = file.name.split('.').pop();
@@ -241,14 +241,14 @@ export default function ProfilePage() {
       if (error) throw error;
 
       if (profile.avatar_url && dataToSave.avatar_url && profile.avatar_url !== dataToSave.avatar_url) {
-        await import('@/lib/r2-storage').then(({ deleteFileFromR2 }) =>
-          deleteFileFromR2('profile-avatars', profile.avatar_url!)
+        await import('@/lib/r2-storage').then(({ deleteFileFromR2WithRetry }) =>
+          deleteFileFromR2WithRetry('profile-avatars', profile.avatar_url!)
         );
       }
 
       if (profile.background_url && dataToSave.background_url && profile.background_url !== dataToSave.background_url) {
-        await import('@/lib/r2-storage').then(({ deleteFileFromR2 }) =>
-          deleteFileFromR2('profile-avatars', profile.background_url!)
+        await import('@/lib/r2-storage').then(({ deleteFileFromR2WithRetry }) =>
+          deleteFileFromR2WithRetry('profile-avatars', profile.background_url!)
         );
       }
 
@@ -265,14 +265,14 @@ export default function ProfilePage() {
   const handleCancel = async () => {
     if (!profile) return;
 
-    const { deleteFileFromR2 } = await import('@/lib/r2-storage');
+    const { deleteFileFromR2WithRetry } = await import('@/lib/r2-storage');
 
     if (stagedAvatarUrl && stagedAvatarUrl !== profile.avatar_url) {
-      await deleteFileFromR2('profile-avatars', stagedAvatarUrl);
+      await deleteFileFromR2WithRetry('profile-avatars', stagedAvatarUrl);
     }
 
     if (stagedBackgroundUrl && stagedBackgroundUrl !== profile.background_url) {
-      await deleteFileFromR2('profile-avatars', stagedBackgroundUrl);
+      await deleteFileFromR2WithRetry('profile-avatars', stagedBackgroundUrl);
     }
 
     setEditing(false);

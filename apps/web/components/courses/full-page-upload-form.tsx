@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase, Professor } from '@/lib/supabase';
 import { generateThumbnailFromFile } from '@/lib/thumbnail-generator';
-import { Upload, X, UserPlus, ArrowLeft, FileText, CheckCircle } from 'lucide-react';
+import { Upload, X, UserPlus, ArrowLeft, CheckCircle, FolderUp, Files, Link2, FolderTree, FolderOpen } from 'lucide-react';
+import { FileTypeIcon } from '@/components/files/FileTypeIcon';
+import { buildBlackboardStoragePath, buildCourseMaterialPath } from '@/lib/course-storage-paths';
 import {
     Select,
     SelectContent,
@@ -41,11 +43,17 @@ export default function FullPageUploadForm({
     courseCycles = [],
 }: FullPageUploadFormProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [uploading, setUploading] = useState(false);
     
     // Multi-dropzone structural state
     const [uploadMethod, setUploadMethod] = useState<'file' | 'link' | 'bb-folder'>('file');
-    const [selectedCycleId, setSelectedCycleId] = useState<string>('historical');
+    const requestedCycle = searchParams.get('cycle');
+    const [selectedCycleId, setSelectedCycleId] = useState<string>(
+        courseCycles.some((cycle: any) => cycle.id === requestedCycle)
+            ? requestedCycle!
+            : courseCycles[0]?.id || 'historical'
+    );
     const [selectedSubfolder, setSelectedSubfolder] = useState<string>('');
     
     const [professorId, setProfessorId] = useState<string>(
@@ -121,6 +129,8 @@ export default function FullPageUploadForm({
         setBbFiles(entries);
         const root = entries[0]?.relativePath.split('/')[0] || '';
         setBbRootName(root);
+        setBbProgress(0);
+        setBbProgressMsg('');
     };
 
     const uploadBbFiles = async (setId: string, entries: FileEntry[], isComplement: boolean) => {
@@ -156,16 +166,25 @@ export default function FullPageUploadForm({
 
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
+        const uploaderId = session?.user?.id;
+        if (!token || !uploaderId) throw new Error('Tu sesión expiró. Vuelve a iniciar sesión antes de subir archivos.');
+
         const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev';
+        const cycleId = selectedCycleId === 'historical' ? null : selectedCycleId;
 
         for (let i = 0; i < entries.length; i++) {
             const entry = entries[i];
-            setBbProgress(Math.round(((i + 1) / entries.length) * 100));
             setBbProgressMsg(`Subiendo ${i + 1} de ${entries.length}: ${entry.file.name}`);
 
-            const storagePath = `${setId}/${entry.relativePath}`;
+            const storagePath = buildBlackboardStoragePath({
+                courseId,
+                cycleId,
+                professorId,
+                setId,
+                relativePath: entry.relativePath,
+            });
 
-            await fetch(`${apiBase}/storage/upload?path=${encodeURIComponent(storagePath)}&bucket=course-materials`, {
+            const uploadResponse = await fetch(`${apiBase}/storage/upload?path=${encodeURIComponent(storagePath)}&bucket=course-materials`, {
                 method: 'PUT',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -174,20 +193,36 @@ export default function FullPageUploadForm({
                 body: entry.file,
             });
 
+            if (!uploadResponse.ok) {
+                const details = await uploadResponse.json().catch(() => null) as { error?: string } | null;
+                throw new Error(details?.error || `No se pudo subir ${entry.file.name}`);
+            }
+
             const fileParts = entry.relativePath.split('/');
             fileParts.pop();
             const folderPath = fileParts.join('/');
             const folderId = folderPath ? folderMap[folderPath] : null;
 
-            await supabase.from('bb_files').insert({
+            const { error: fileError } = await supabase.from('bb_files').insert({
                 set_id: setId,
                 folder_id: folderId,
                 name: entry.file.name,
                 storage_path: storagePath,
+                relative_path: entry.relativePath,
                 size_bytes: entry.file.size,
                 mime_type: entry.file.type,
-                uploaded_by: session?.user?.id,
+                uploaded_by: uploaderId,
             });
+
+            if (fileError) {
+                await fetch(`${apiBase}/storage/delete?path=${encodeURIComponent(storagePath)}&bucket=course-materials`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` },
+                }).catch(() => null);
+                throw new Error(`No se pudo registrar ${entry.file.name}: ${fileError.message}`);
+            }
+
+            setBbProgress(Math.round(((i + 1) / entries.length) * 100));
         }
     };
 
@@ -214,6 +249,7 @@ export default function FullPageUploadForm({
                 const { data: existing } = await supabase
                     .from('bb_material_sets')
                     .select('id')
+                    .eq('course_id', courseId)
                     .eq('professor_id', professorId)
                     .eq('course_name', bbRootName)
                     .eq('ciclo', cicloName)
@@ -221,9 +257,12 @@ export default function FullPageUploadForm({
 
                 let setId = existing?.id;
                 if (existing) {
-                    const { data: existingFiles } = await supabase.from('bb_files').select('storage_path').eq('set_id', setId);
-                    const existingPaths = new Set((existingFiles || []).map((f: any) => f.storage_path));
-                    const newFiles = bbFiles.filter(f => !existingPaths.has(`${setId}/${f.relativePath}`));
+                    const { data: existingFiles } = await supabase
+                        .from('bb_files')
+                        .select('relative_path')
+                        .eq('set_id', setId);
+                    const existingPaths = new Set((existingFiles || []).map((f: any) => f.relative_path).filter(Boolean));
+                    const newFiles = bbFiles.filter(f => !existingPaths.has(f.relativePath));
                     if (newFiles.length === 0) {
                         alert('Todos los archivos de esta carpeta ya existen en este ciclo para este profesor.');
                         setUploading(false);
@@ -238,6 +277,7 @@ export default function FullPageUploadForm({
                             course_id: courseId,
                             course_name: bbRootName,
                             ciclo: cicloName,
+                            cycle_id: selectedCycleId === 'historical' ? null : selectedCycleId,
                             uploaded_by: (await supabase.auth.getUser()).data.user?.id,
                         })
                         .select('id')
@@ -246,7 +286,7 @@ export default function FullPageUploadForm({
                     setId = newSet.id;
                     await uploadBbFiles(setId!, bbFiles, false);
                 }
-                router.push(`/dashboard/courses/view?id=${courseId}`);
+                router.push(`/dashboard/courses/view?id=${courseId}&cycle=${selectedCycleId}`);
                 router.refresh();
             } catch (err: any) {
                 alert(err.message || 'Error al subir la carpeta');
@@ -325,8 +365,13 @@ export default function FullPageUploadForm({
                 // 1. Upload all files to R2 in parallel
                 const uploadedFilesInfo = await Promise.all(allFiles.map(async ({ file, target }) => {
                     const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
-                    const originalName = file.name.split('.').slice(0, -1).join('.').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                    const storagePath = `${Date.now()}-${originalName}.${fileExt}`;
+                    const finalSection = target === 'General' ? selectedSubfolder : target;
+                    const storagePath = buildCourseMaterialPath({
+                        courseId,
+                        cycleId: selectedCycleId === 'historical' ? null : selectedCycleId,
+                        section: finalSection,
+                        fileName: file.name,
+                    });
 
                     const { uploadFileToR2 } = await import('@/lib/r2-storage');
 
@@ -354,14 +399,14 @@ export default function FullPageUploadForm({
                     }
 
                     const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
-                    return { file, materialUrl, thumbnailUrl, fileExt, target };
+                    return { file, materialUrl, thumbnailUrl, fileExt, target, storagePath };
                 }));
 
                 // 2. Insert into DB with explicitly staggered timestamps
                 const nowMs = Date.now();
                 for (let i = 0; i < uploadedFilesInfo.length; i++) {
                     const info = uploadedFilesInfo[i];
-                    const { file, materialUrl, thumbnailUrl, fileExt, target } = info;
+                    const { file, materialUrl, thumbnailUrl, fileExt, target, storagePath } = info;
 
                     const fileCreatedAt = new Date(nowMs - i * 1000).toISOString();
                     const finalTipo = target === 'General' ? selectedSubfolder : target;
@@ -379,7 +424,11 @@ export default function FullPageUploadForm({
                         created_at: fileCreatedAt,
                     });
 
-                    if (insertError) throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
+                    if (insertError) {
+                        const { deleteFileFromR2 } = await import('@/lib/r2-storage');
+                        await deleteFileFromR2('course-materials', storagePath).catch(() => false);
+                        throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
+                    }
 
                     if (finalTipo === '📖 Sílabo y Cronograma') {
                         await supabase
@@ -404,7 +453,7 @@ export default function FullPageUploadForm({
                 }
             }
 
-            router.push(`/dashboard/courses/view?id=${courseId}`);
+            router.push(`/dashboard/courses/view?id=${courseId}&cycle=${selectedCycleId}`);
             router.refresh();
         } catch (error: any) {
             console.error('Error:', error);
@@ -431,6 +480,14 @@ export default function FullPageUploadForm({
 
     const isReadyForBbFolder = uploadMethod === 'bb-folder' && bbFiles.length > 0 && professorId !== 'none';
     const isReadyToSubmit = uploadMethod === 'bb-folder' ? isReadyForBbFolder : isReadyForFiles;
+    const selectedCycle = courseCycles.find((cycle: any) => cycle.id === selectedCycleId);
+    const selectedProfessor = allProfessors.find((professor: any) => professor.id === professorId);
+    const bbFolderCount = new Set(
+        bbFiles
+            .map((entry) => entry.relativePath.split('/').slice(0, -1).join('/'))
+            .filter(Boolean)
+    ).size;
+    const bbTotalBytes = bbFiles.reduce((total, entry) => total + entry.file.size, 0);
 
     return (
         <div className="max-w-5xl mx-auto py-8 px-4 min-h-screen bg-bb-dark">
@@ -456,10 +513,10 @@ export default function FullPageUploadForm({
                     <div className="flex flex-col items-center justify-center py-12 gap-6">
                         {/* Animated folder icon */}
                         <div className="relative">
-                            <div className="w-20 h-20 rounded-2xl bg-violet-500/20 border-2 border-violet-500/40 flex items-center justify-center animate-pulse">
-                                <span className="text-4xl">📁</span>
+                            <div className="w-20 h-20 rounded-2xl bg-blue-500/10 border-2 border-blue-500/40 flex items-center justify-center animate-pulse">
+                                <FolderUp className="h-9 w-9 text-blue-400" />
                             </div>
-                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-violet-600 rounded-full flex items-center justify-center">
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
                                 <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -469,26 +526,20 @@ export default function FullPageUploadForm({
 
                         <div className="text-center space-y-1">
                             <p className="text-lg font-black text-bb-text">Subiendo carpeta...</p>
-                            <p className="text-sm text-violet-400 font-bold">{bbRootName}</p>
+                            <p className="text-sm text-blue-400 font-bold">{bbRootName}</p>
                         </div>
 
                         {/* Main progress bar */}
                         <div className="w-full max-w-md space-y-2">
                             <div className="flex justify-between text-xs font-bold">
                                 <span className="text-bb-text-secondary truncate max-w-[80%]">{bbProgressMsg}</span>
-                                <span className="text-violet-400 shrink-0 ml-2">{bbProgress}%</span>
+                                <span className="text-blue-400 shrink-0 ml-2">{bbProgress}%</span>
                             </div>
                             <div className="w-full bg-bb-sidebar rounded-full h-3 overflow-hidden border border-bb-border">
                                 <div
-                                    className="h-3 rounded-full transition-all duration-500 ease-out relative overflow-hidden"
-                                    style={{
-                                        width: `${bbProgress}%`,
-                                        background: 'linear-gradient(90deg, #7c3aed, #a855f7, #c084fc)',
-                                    }}
-                                >
-                                    {/* Shimmer effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_1.5s_infinite]" style={{transform: 'skewX(-20deg)'}} />
-                                </div>
+                                    className="relative h-3 overflow-hidden rounded-full bg-blue-500 transition-all duration-500 ease-out"
+                                    style={{ width: `${bbProgress}%` }}
+                                />
                             </div>
                             <p className="text-[10px] text-bb-text-secondary/60 text-center">
                                 {bbProgress < 10 ? 'Preparando estructura de carpetas...' : `${Math.round(bbProgress / 100 * bbFiles.length)} de ${bbFiles.length} archivos subidos`}
@@ -527,7 +578,7 @@ export default function FullPageUploadForm({
                                     </SelectTrigger>
                                     <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60 z-[9999]">
                                         <SelectItem value="historical" className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 font-bold">
-                                            📦 Archivos Históricos (General)
+                                            Sin ciclo / archivo histórico
                                         </SelectItem>
                                         {courseCycles.map((cycle: any) => (
                                             <SelectItem key={cycle.id} value={cycle.id} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2">
@@ -537,6 +588,12 @@ export default function FullPageUploadForm({
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {selectedCycleId === 'historical' && (
+                                <p className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] font-medium leading-relaxed text-amber-300">
+                                    Usa esta opción solo si el material no pertenece a un ciclo. Para una carpeta Blackboard reciente, selecciona el ciclo correspondiente.
+                                </p>
+                            )}
 
                             {uploadMethod !== 'bb-folder' && (
                             <div>
@@ -620,9 +677,9 @@ export default function FullPageUploadForm({
                             <button
                                 type="button"
                                 onClick={() => setUploadMethod('file')}
-                                className={`px-4 py-2 text-xs uppercase tracking-widest font-bold rounded-lg transition-all ${uploadMethod === 'file' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-[10px] sm:text-xs uppercase tracking-wider font-bold rounded-lg transition-colors ${uploadMethod === 'file' ? 'bg-blue-600 text-white' : 'text-bb-text-secondary hover:text-bb-text'}`}
                             >
-                                Archivos
+                                <Files className="h-4 w-4" /> Archivos
                             </button>
                             <button
                                 type="button"
@@ -630,16 +687,16 @@ export default function FullPageUploadForm({
                                     setUploadMethod('link');
                                     if (!linksMap['General']) setLinksMap(prev => ({ ...prev, 'General': [{ titulo: '', url: '' }]}));
                                 }}
-                                className={`px-4 py-2 text-xs uppercase tracking-widest font-bold rounded-lg transition-all ${uploadMethod === 'link' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-[10px] sm:text-xs uppercase tracking-wider font-bold rounded-lg transition-colors ${uploadMethod === 'link' ? 'bg-blue-600 text-white' : 'text-bb-text-secondary hover:text-bb-text'}`}
                             >
-                                Enlaces
+                                <Link2 className="h-4 w-4" /> Enlaces
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setUploadMethod('bb-folder')}
-                                className={`px-4 py-2 text-xs uppercase tracking-widest font-bold rounded-lg transition-all ${uploadMethod === 'bb-folder' ? 'bg-violet-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
+                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-[10px] sm:text-xs uppercase tracking-wider font-bold rounded-lg transition-colors ${uploadMethod === 'bb-folder' ? 'bg-blue-600 text-white' : 'text-bb-text-secondary hover:text-bb-text'}`}
                             >
-                                📁 Carpeta BB
+                                <FolderUp className="h-4 w-4" /> Blackboard
                             </button>
                         </div>
                     </div>
@@ -647,16 +704,22 @@ export default function FullPageUploadForm({
                     {/* BLACKBOARD FOLDER UPLOAD UI */}
                     {uploadMethod === 'bb-folder' && (
                         <div className="space-y-4">
-                            <div className="bg-violet-500/10 border border-violet-500/30 rounded-xl p-4 text-sm text-bb-text-secondary leading-relaxed">
-                                <p className="font-bold text-violet-400 mb-1">📁 Subida de Carpeta Blackboard</p>
-                                <p>Selecciona la carpeta descargada con la extensión de Blackboard. La estructura de subcarpetas (Semana 1, Unidad 2, etc.) se replicará automáticamente y quedará asociada al profesor y ciclo que elegiste arriba.</p>
+                            <div className="grid gap-3 rounded-xl border border-blue-500/30 bg-blue-500/5 p-4 sm:grid-cols-[auto_1fr]">
+                                <FolderTree className="mt-0.5 h-5 w-5 text-blue-400" />
+                                <div className="text-sm leading-relaxed text-bb-text-secondary">
+                                    <p className="font-bold text-bb-text">Importar carpeta descargada de Blackboard</p>
+                                    <p className="mt-1">Se conservarán sus subcarpetas y cada archivo quedará atribuido a tu usuario, al ciclo y al profesor seleccionados.</p>
+                                    <p className="mt-2 text-xs font-bold text-blue-400">
+                                        Destino: {selectedCycle ? `Ciclo ${selectedCycle.ciclo_name}` : 'Sin ciclo'} · {selectedProfessor?.nombre || 'Selecciona un profesor'}
+                                    </p>
+                                </div>
                             </div>
 
                             <div
                                 className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer
                                     ${bbFiles.length > 0
-                                        ? 'border-violet-500 bg-violet-500/10'
-                                        : 'border-bb-border hover:border-violet-500 hover:bg-bb-darker/50'}`}
+                                        ? 'border-blue-500 bg-blue-500/5'
+                                        : 'border-bb-border hover:border-blue-500 hover:bg-bb-darker/50'}`}
                                 onClick={() => document.getElementById('bb-folder-input')?.click()}
                             >
                                 <input
@@ -671,13 +734,13 @@ export default function FullPageUploadForm({
                                 />
                                 <div className="flex flex-col items-center gap-3">
                                     <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all
-                                        ${bbFiles.length > 0 ? 'bg-violet-600 shadow-lg' : 'bg-bb-darker border border-bb-border'}`}>
-                                        📁
+                                        ${bbFiles.length > 0 ? 'bg-blue-600 text-white' : 'bg-bb-darker border border-bb-border text-blue-400'}`}>
+                                        <FolderUp className="h-6 w-6" />
                                     </div>
                                     {bbFiles.length > 0 ? (
                                         <div className="space-y-1">
-                                            <p className="font-black text-violet-400 text-sm">{bbRootName}</p>
-                                            <p className="text-xs text-bb-text-secondary">{bbFiles.length} archivos listos para subir</p>
+                                            <p className="font-black text-blue-400 text-sm">{bbRootName}</p>
+                                            <p className="text-xs text-bb-text-secondary">{bbFiles.length} archivos · {bbFolderCount} carpetas · {(bbTotalBytes / 1024 / 1024).toFixed(1)} MB</p>
                                             <p className="text-[10px] text-bb-text-secondary/60 italic">Clic para cambiar carpeta</p>
                                         </div>
                                     ) : (
@@ -695,13 +758,13 @@ export default function FullPageUploadForm({
                                     <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1">
                                         {Array.from(new Set(bbFiles.map(f => f.relativePath.split('/').slice(0, -1).join('/')))).filter(Boolean).slice(0, 20).map((folder, i) => (
                                             <div key={i} className="flex items-center gap-2 text-xs text-bb-text-secondary py-0.5">
-                                                <span className="text-violet-400">📂</span>
+                                                <FolderOpen className="h-4 w-4 shrink-0 text-blue-400" />
                                                 <span className="font-medium">{folder}</span>
                                             </div>
                                         ))}
                                         {bbFiles.slice(0, 8).map((f, i) => (
                                             <div key={`f-${i}`} className="flex items-center gap-2 text-xs text-bb-text-secondary py-0.5 pl-4">
-                                                <span className="text-blue-400">📄</span>
+                                                <FileTypeIcon fileName={f.file.name} mimeType={f.file.type} size="sm" />
                                                 <span className="truncate max-w-[300px]">{f.file.name}</span>
                                                 <span className="text-bb-text-secondary/50 shrink-0">{(f.file.size / 1024 / 1024).toFixed(1)} MB</span>
                                             </div>
@@ -721,7 +784,7 @@ export default function FullPageUploadForm({
                                     </div>
                                     <div className="w-full bg-bb-sidebar rounded-full h-2">
                                         <div
-                                            className="bg-violet-500 h-2 rounded-full transition-all duration-300"
+                                            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                                             style={{ width: `${bbProgress}%` }}
                                         />
                                     </div>
@@ -823,7 +886,7 @@ export default function FullPageUploadForm({
                                             {currentFiles.map((f, i) => (
                                                 <div key={i} className="flex items-center justify-between p-2.5 bg-bb-card rounded-lg border border-bb-border group hover:border-blue-500/30 transition-all">
                                                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                                                        <FileText className="h-4 w-4 text-blue-400 shrink-0" />
+                                                        <FileTypeIcon fileName={f.name} mimeType={f.type} size="sm" />
                                                         <div className="min-w-0 pr-2">
                                                             <p className="text-[11px] font-bold text-bb-text truncate leading-tight">{f.name}</p>
                                                             <p className="text-[9px] text-bb-text-secondary mt-0.5">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
@@ -861,9 +924,7 @@ export default function FullPageUploadForm({
                         type="submit"
                         disabled={uploading || !isReadyToSubmit}
                         className={`w-full sm:w-64 shadow-lg transition-all text-white font-black uppercase tracking-widest text-xs h-12 rounded-xl active:scale-95 disabled:opacity-50
-                            ${uploadMethod === 'bb-folder'
-                                ? 'bg-violet-600 hover:bg-violet-700 shadow-violet-600/20'
-                                : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'}`}
+                            bg-blue-600 hover:bg-blue-700 shadow-blue-600/20`}
                     >
                         {uploading
                             ? (uploadMethod === 'bb-folder' ? bbProgressMsg || 'Procesando...' : 'Subiendo...')

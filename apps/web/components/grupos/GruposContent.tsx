@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useProfile } from '@/lib/profile-context';
-import { uploadFileToR2, deleteFileFromR2 } from '@/lib/r2-storage';
+import { uploadFileToR2, deleteFileFromR2WithRetry } from '@/lib/r2-storage';
 
 let confetti: any = () => { };
 if (typeof window !== 'undefined') {
@@ -136,39 +136,61 @@ export default function GruposContent({
     const handleCreateGrupo = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.nombre || !formData.tipo) return;
+        let newLogoPath: string | null = null;
+        let newBannerPath: string | null = null;
+        let databaseSaved = false;
         try {
             let logoUrl = editingGrupo?.logo_url;
             let bannerUrl = editingGrupo?.banner_url;
 
             // Lógica de reemplazo de imágenes (Borrar anterior si existe nueva)
             if (logoFile) {
-                if (editingGrupo?.logo_url) {
-                    await deleteFileFromR2('grupos', editingGrupo.logo_url);
-                }
                 setUploadingLogo(true);
                 logoUrl = await uploadFile(logoFile);
+                if (!logoUrl) throw new Error('No se pudo subir el logo.');
+                newLogoPath = logoUrl;
                 setUploadingLogo(false);
             }
 
             if (bannerFile) {
-                if (editingGrupo?.banner_url) {
-                    await deleteFileFromR2('grupos', editingGrupo.banner_url);
-                }
                 setUploadingBanner(true);
                 bannerUrl = await uploadFile(bannerFile);
+                if (!bannerUrl) throw new Error('No se pudo subir el banner.');
+                newBannerPath = bannerUrl;
                 setUploadingBanner(false);
             }
 
             const groupData = { ...formData, logo_url: logoUrl, banner_url: bannerUrl };
             if (editingGrupo) {
-                await supabase.from('grupos').update(groupData).eq('id', editingGrupo.id);
+                const { error } = await supabase.from('grupos').update(groupData).eq('id', editingGrupo.id);
+                if (error) throw error;
             } else {
-                await supabase.from('grupos').insert([{ ...groupData, created_by: profile?.id }]);
+                const { error } = await supabase.from('grupos').insert([{ ...groupData, created_by: profile?.id }]);
+                if (error) throw error;
                 triggerConfetti();
+            }
+            databaseSaved = true;
+            if (newLogoPath && editingGrupo?.logo_url && editingGrupo.logo_url !== newLogoPath) {
+                await deleteFileFromR2WithRetry('grupos', editingGrupo.logo_url);
+            }
+            if (newBannerPath && editingGrupo?.banner_url && editingGrupo.banner_url !== newBannerPath) {
+                await deleteFileFromR2WithRetry('grupos', editingGrupo.banner_url);
             }
             setShowModal(false);
             router.refresh();
-        } catch (error) { console.error(error); }
+        } catch (error) {
+            if (!databaseSaved) {
+                await Promise.all([
+                    newLogoPath ? deleteFileFromR2WithRetry('grupos', newLogoPath).catch(console.error) : Promise.resolve(),
+                    newBannerPath ? deleteFileFromR2WithRetry('grupos', newBannerPath).catch(console.error) : Promise.resolve(),
+                ]);
+            }
+            console.error(error);
+            alert('No se pudo guardar el grupo de forma segura.');
+        } finally {
+            setUploadingLogo(false);
+            setUploadingBanner(false);
+        }
     };
 
     const filteredGrupos = grupos.filter(grupo =>

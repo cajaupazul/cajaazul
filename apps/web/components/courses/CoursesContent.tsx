@@ -11,6 +11,7 @@ import { Search, Plus, Trash2, Eye } from 'lucide-react';
 import { supabase, Course, Profile } from '@/lib/supabase';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import { useProfile } from '@/lib/profile-context';
+import { deleteFileFromR2WithRetry, extractPathFromUrl } from '@/lib/r2-storage';
 import {
     Select,
     SelectContent,
@@ -51,6 +52,7 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
     const [savedCourses, setSavedCourses] = useState<string[]>([]);
     const [itemsPerPage] = useState(24);
     const [currentPage, setCurrentPage] = useState(1);
+    const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
     const router = useRouter();
     const { removeCourse } = useDashboardData();
 
@@ -127,6 +129,57 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
     };
 
     const cycles = Array.from(new Set(courses.map((c) => c.ciclo))).sort((a, b) => (a || 0) - (b || 0));
+
+    const deleteManagedCourse = async (course: Course) => {
+        if (deletingCourseId) return;
+        setDeletingCourseId(course.id);
+        try {
+            const [{ data: materials, error: materialsError }, { data: sets, error: setsError }] = await Promise.all([
+                supabase.from('materials').select('url_archivo, thumbnail_url').eq('course_id', course.id),
+                supabase.from('bb_material_sets').select('id').eq('course_id', course.id),
+            ]);
+            if (materialsError) throw materialsError;
+            if (setsError) throw setsError;
+
+            const setIds = (sets || []).map(set => set.id);
+            let bbFiles: Array<{ storage_path: string }> = [];
+            if (setIds.length > 0) {
+                const { data, error } = await supabase.from('bb_files').select('storage_path').in('set_id', setIds);
+                if (error) throw error;
+                bbFiles = data || [];
+            }
+
+            const objects = new Map<string, { bucket: string; path: string }>();
+            const addObject = (bucket: string, value?: string | null) => {
+                if (!value) return;
+                const path = extractPathFromUrl(value, bucket);
+                if (path) objects.set(`${bucket}:${path}`, { bucket, path });
+            };
+            (materials || []).forEach(material => {
+                addObject('course-materials', material.url_archivo);
+                addObject('thumbnails', material.thumbnail_url);
+            });
+            bbFiles.forEach(file => addObject('course-materials', file.storage_path));
+            addObject('course-images', course.imagen_url);
+
+            const pendingObjects = Array.from(objects.values());
+            for (let index = 0; index < pendingObjects.length; index += 10) {
+                await Promise.all(pendingObjects.slice(index, index + 10).map(({ bucket, path }) =>
+                    deleteFileFromR2WithRetry(bucket, path),
+                ));
+            }
+
+            const { error } = await supabase.from('courses').delete().eq('id', course.id);
+            if (error) throw error;
+            setCourses(prev => prev.filter(item => item.id !== course.id));
+            removeCourse(course.id);
+        } catch (error) {
+            console.error('Error deleting course:', error);
+            alert('No se pudo eliminar el curso y todos sus archivos de forma segura. Intenta nuevamente.');
+        } finally {
+            setDeletingCourseId(null);
+        }
+    };
 
     return (
         <div className="flex-1 overflow-auto p-4 md:p-8 bg-bb-dark transition-colors duration-300">
@@ -253,15 +306,10 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
                                                         onClick={async (e) => {
                                                             e.stopPropagation();
                                                             if (confirm('¿Estás seguro de que quieres eliminar este curso?')) {
-                                                                const { error } = await supabase.from('courses').delete().eq('id', course.id);
-                                                                if (!error) {
-                                                                    setCourses(prev => prev.filter(c => c.id !== course.id));
-                                                                    removeCourse(course.id);
-                                                                } else {
-                                                                    alert('Error al eliminar curso');
-                                                                }
+                                                                await deleteManagedCourse(course);
                                                             }
                                                         }}
+                                                        disabled={deletingCourseId === course.id}
                                                         className="p-1 text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
                                                         title="Eliminar curso"
                                                     >

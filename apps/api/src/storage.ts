@@ -18,6 +18,22 @@ type Bindings = {
 
 const storageRouter = new Hono<{ Bindings: Bindings }>()
 
+function normalizeObjectPath(value: string) {
+    const cleanPath = value.trim().replace(/^\/+/, '')
+    const segments = cleanPath.split('/')
+    const hasUnsafeSegment = segments.some((segment) => !segment || segment === '.' || segment === '..')
+    if (
+        !cleanPath ||
+        cleanPath.length > 1024 ||
+        cleanPath.includes('\\') ||
+        /[\u0000-\u001F\u007F]/.test(cleanPath) ||
+        hasUnsafeSegment
+    ) {
+        return null
+    }
+    return cleanPath
+}
+
 // Middleware de autenticación solo para buckets privados
 const privateAuthMiddleware = async (c: any, next: any) => {
     // EXCEPTION: Public stream endpoint validates its own token
@@ -85,6 +101,8 @@ storageRouter.put('/upload', async (c) => {
     if (!path) {
         return c.json({ error: 'Falta el parámetro "path"' }, 400)
     }
+    const cleanPath = normalizeObjectPath(path)
+    if (!cleanPath) return c.json({ error: 'Ruta de archivo inválida' }, 400)
 
     // Seleccionar el bucket correcto
     let bucket: R2Bucket | undefined
@@ -115,23 +133,25 @@ storageRouter.put('/upload', async (c) => {
             return c.json({ error: 'Cuerpo de la petición vacío' }, 400)
         }
 
-        await bucket.put(path, body, {
+        const authenticatedUser = (c as any).get('user')
+        await bucket.put(cleanPath, body, {
             httpMetadata: {
                 contentType: contentType,
-            }
+            },
+            customMetadata: authenticatedUser?.id ? { uploadedBy: authenticatedUser.id } : undefined,
         })
 
-        console.log(`✅ Archivo subido exitosamente: ${path}`)
+        console.log(`✅ Archivo subido exitosamente: ${cleanPath}`)
 
         // Trigger automatic conversion to PDF in background via Cloudflare Worker
-        const fileExt = path.split('.').pop()?.toLowerCase() || ''
+        const fileExt = cleanPath.split('.').pop()?.toLowerCase() || ''
         const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx']
 
         if (normalizedBucket === 'course-materials' && triggerExtensions.includes(fileExt)) {
             const converterUrl = (c.env as any).CONVERTER_API_URL || 'https://campuslink-converter.onrender.com'
             c.executionCtx.waitUntil((async () => {
                 try {
-                    console.log(`[WORKER BACKGROUND] Triggering conversion for ${path} via ${converterUrl}`)
+                    console.log(`[WORKER BACKGROUND] Triggering conversion for ${cleanPath} via ${converterUrl}`)
                     
                     // Warmup ping first in case Render is cold-starting
                     await fetch(`${converterUrl}/`, { method: 'GET' }).catch(() => {})
@@ -140,7 +160,7 @@ storageRouter.put('/upload', async (c) => {
                     const res = await fetch(`${converterUrl}/convert-stored`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ key: path, bucket: normalizedBucket })
+                        body: JSON.stringify({ key: cleanPath, bucket: normalizedBucket })
                     })
                     
                     if (res.ok) {
@@ -157,9 +177,9 @@ storageRouter.put('/upload', async (c) => {
 
         return c.json({
             success: true,
-            path: path,
+            path: cleanPath,
             bucket: normalizedBucket,
-            url: `${c.env.ALLOWED_ORIGIN}/storage/secure-url?bucket=${normalizedBucket}&path=${encodeURIComponent(path)}`
+            url: `${c.env.ALLOWED_ORIGIN}/storage/secure-url?bucket=${normalizedBucket}&path=${encodeURIComponent(cleanPath)}`
         })
 
     } catch (e: any) {
@@ -213,6 +233,8 @@ storageRouter.delete('/delete', async (c) => {
             console.warn('Worker: Error parsing URL for deletion:', e);
         }
     }
+    cleanPath = normalizeObjectPath(cleanPath) || ''
+    if (!cleanPath) return c.json({ error: 'Ruta de archivo inválida' }, 400)
 
     // Seleccionar el bucket correcto
     let bucket: R2Bucket | undefined
@@ -236,8 +258,8 @@ storageRouter.delete('/delete', async (c) => {
     }
 
     try {
-        await bucket.delete(path)
-        console.log(`✅ Archivo eliminado exitosamente: ${path}`)
+        await bucket.delete(cleanPath)
+        console.log(`✅ Archivo eliminado exitosamente: ${cleanPath}`)
         return c.json({ success: true })
     } catch (e: any) {
         console.error(`❌ Error eliminando archivo:`, e)

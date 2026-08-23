@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { extractSupabaseStoragePath } from '@/lib/supabase-storage-cleanup';
 
 interface Flowchart {
     id: string;
@@ -58,11 +59,10 @@ export default function AdminFlowchartsPage() {
 
         try {
             // 1. Delete from storage if it's in our bucket
-            if (imageUrl.includes('flowcharts/')) {
-                const fileName = imageUrl.split('/').pop();
-                if (fileName) {
-                    await supabase.storage.from('flowcharts').remove([fileName]);
-                }
+            const storagePath = extractSupabaseStoragePath(imageUrl, 'flowcharts');
+            if (storagePath) {
+                const { error: storageError } = await supabase.storage.from('flowcharts').remove([storagePath]);
+                if (storageError) throw storageError;
             }
 
             // 2. Delete from DB

@@ -49,10 +49,12 @@ export default function NewFlowchartPage() {
         if (!file || !name || !faculty) return;
 
         setLoading(true);
+        let uploadedPath: string | null = null;
         try {
             // 1. Upload to storage
             const fileExt = file.name.split('.').pop();
             const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+            uploadedPath = fileName;
             const { data: uploadData, error: uploadError } = await supabase.storage
                 .from('flowcharts')
                 .upload(fileName, file);
@@ -76,6 +78,9 @@ export default function NewFlowchartPage() {
             router.push('/admin/flowcharts');
             router.refresh();
         } catch (error: any) {
+            if (uploadedPath) {
+                await supabase.storage.from('flowcharts').remove([uploadedPath]).catch(console.error);
+            }
             alert('Error: ' + error.message);
         } finally {
             setLoading(false);

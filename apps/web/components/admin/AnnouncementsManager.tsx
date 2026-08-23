@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { uploadFileToR2, deleteFileFromR2 } from '@/lib/r2-storage';
+import { uploadFileToR2, deleteFileFromR2OrThrow } from '@/lib/r2-storage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,9 +73,11 @@ export default function AnnouncementsManager({ isAdminView = false }: Announceme
         }
 
         setIsUploading(true);
+        let uploadedImageUrl: string | null = null;
         try {
             const fileName = `${Date.now()}-${selectedFile.name.replace(/\s+/g, '_')}`;
             const imageUrl = await uploadFileToR2('announcements', fileName, selectedFile);
+            uploadedImageUrl = imageUrl;
 
             const { error } = await supabase
                 .from('announcements')
@@ -99,6 +101,9 @@ export default function AnnouncementsManager({ isAdminView = false }: Announceme
             setPreviewUrl(null);
             fetchAnnouncements();
         } catch (error: any) {
+            if (uploadedImageUrl) {
+                await deleteFileFromR2OrThrow('announcements', uploadedImageUrl).catch(console.error);
+            }
             alert('Error al crear anuncio: ' + error.message);
         } finally {
             setIsUploading(false);
@@ -123,7 +128,7 @@ export default function AnnouncementsManager({ isAdminView = false }: Announceme
 
         try {
             // Delete from R2
-            await deleteFileFromR2('announcements', announcement.image_url);
+            await deleteFileFromR2OrThrow('announcements', announcement.image_url);
 
             // Delete from DB
             const { error } = await supabase

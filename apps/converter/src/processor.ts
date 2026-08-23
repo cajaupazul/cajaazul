@@ -85,9 +85,13 @@ export async function processConversion(data: {
         // 4. Upload PDF immediately after conversion (High Priority)
         let destinationPdfKey: string | null = null;
         if (pdfPath && pdfPath !== currentInputPath) {
-            destinationPdfKey = `converted/${jobId}/${path.basename(pdfPath)}`;
+            const sourceDirectory = key ? path.posix.dirname(key) : '';
+            const convertedFileName = `${jobId}-${path.basename(pdfPath)}`;
+            destinationPdfKey = sourceDirectory && sourceDirectory !== '.'
+                ? `${sourceDirectory}/.converted/${convertedFileName}`
+                : `converted/${jobId}/${path.basename(pdfPath)}`;
             await s3Client.send(new PutObjectCommand({
-                Bucket: process.env.R2_BUCKET_NAME,
+                Bucket: bucket || process.env.R2_BUCKET_NAME,
                 Key: destinationPdfKey,
                 Body: createReadStream(pdfPath),
                 ContentType: 'application/pdf',
@@ -124,7 +128,7 @@ export async function processConversion(data: {
                 // Update `bb_files` table (for folder uploads)
                 const { data: bbFiles, error: fetchBbError } = await supabase
                     .from('bb_files')
-                    .select('id, storage_path, name')
+                    .select('id, storage_path, name, relative_path')
                     .eq('storage_path', key);
 
                 if (!fetchBbError && bbFiles && bbFiles.length > 0) {
@@ -135,7 +139,10 @@ export async function processConversion(data: {
                             .update({ 
                                 storage_path: destinationPdfKey,
                                 mime_type: 'application/pdf',
-                                name: file.name ? file.name.replace(/\.[^/.]+$/, "") + ".pdf" : undefined
+                                name: file.name ? file.name.replace(/\.[^/.]+$/, "") + ".pdf" : undefined,
+                                relative_path: file.relative_path
+                                    ? file.relative_path.replace(/\.[^/.]+$/, '') + '.pdf'
+                                    : undefined,
                             })
                             .eq('id', file.id);
                             

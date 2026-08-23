@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
 import { useProfile } from '@/lib/profile-context';
+import { deleteFileFromR2WithRetry, extractPathFromUrl } from '@/lib/r2-storage';
 
 interface Miembro {
     user_id: string;
@@ -94,14 +95,12 @@ export default function GrupoDetailContent({
 
         try {
             // 1. Eliminar archivos del storage si existen
-            const filesToDelete = [];
-            if (grupo.logo_url && !grupo.logo_url.startsWith('http')) filesToDelete.push(grupo.logo_url);
-            if (grupo.banner_url && !grupo.banner_url.startsWith('http')) filesToDelete.push(grupo.banner_url);
-
-            if (filesToDelete.length > 0) {
-                console.log('[DELETE_GRUPO] Eliminando archivos del storage:', filesToDelete);
-                await supabase.storage.from('grupos').remove(filesToDelete);
-            }
+            const filesToDelete = [grupo.logo_url, grupo.banner_url]
+                .map((value: string | null | undefined) => extractPathFromUrl(value || '', 'grupos'))
+                .filter(Boolean);
+            await Promise.all(Array.from(new Set(filesToDelete)).map(path =>
+                deleteFileFromR2WithRetry('grupos', path),
+            ));
 
             // 2. Eliminar registro del grupo
             const { error } = await supabase

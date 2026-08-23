@@ -31,6 +31,22 @@ async function requireAdmin(c: any) {
   return { allowed: true as const, user, service }
 }
 
+function extractSupabaseStoragePath(value: string | null, bucket: string) {
+  if (!value) return ''
+  if (!value.startsWith('http')) return value.replace(/^\/+/, '')
+  try {
+    const url = new URL(value)
+    for (const visibility of ['public', 'sign', 'authenticated']) {
+      const marker = `/storage/v1/object/${visibility}/${bucket}/`
+      const index = url.pathname.indexOf(marker)
+      if (index >= 0) return decodeURIComponent(url.pathname.slice(index + marker.length))
+    }
+  } catch {
+    return ''
+  }
+  return ''
+}
+
 admin.delete('/catalog/items/:id', async (c) => {
   const access = await requireAdmin(c)
   if (!access.allowed) return access.response
@@ -40,7 +56,7 @@ admin.delete('/catalog/items/:id', async (c) => {
 
   const { data: item, error: itemError } = await service
     .from('shop_items')
-    .select('id, name, frame_key')
+    .select('id, name, frame_key, image_url')
     .eq('id', itemId)
     .single()
 
@@ -68,6 +84,27 @@ admin.delete('/catalog/items/:id', async (c) => {
     .eq('id', itemId)
 
   if (deleteError) return c.json({ error: 'Could not delete the catalog item' }, 500)
+
+  const imagePath = extractSupabaseStoragePath(item.image_url, 'profile-frames')
+  if (imagePath) {
+    let cleanupError: any = null
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const result = await service.storage.from('profile-frames').remove([imagePath])
+      cleanupError = result.error
+      if (!cleanupError) break
+      await new Promise(resolve => setTimeout(resolve, attempt * 200))
+    }
+    if (cleanupError) {
+      await service.from('admin_audit_logs').insert({
+        actor_id: user.id,
+        action: 'CLEANUP_REQUIRED',
+        entity_type: 'shop_item_image',
+        entity_id: itemId,
+        before_data: { image_url: item.image_url, error: cleanupError.message },
+      })
+      return c.json({ error: 'El artículo se eliminó, pero su imagen requiere limpieza manual.' }, 500)
+    }
+  }
 
   // The database trigger records the entity change. This companion entry keeps
   // the authenticated actor explicit when the service-role client performs it.

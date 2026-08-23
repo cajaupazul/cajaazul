@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Folder, FolderOpen, FileText, FileImage, Film, File, ChevronRight, Trash2 } from 'lucide-react';
+import { Folder, FolderOpen, ChevronRight, Trash2 } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
 import { useProfile } from '@/lib/profile-context';
 import { supabase } from '@/lib/supabase';
+import { FileTypeIcon } from '@/components/files/FileTypeIcon';
 
 interface BBFile {
   id: string;
@@ -30,13 +31,6 @@ interface FolderTreeProps {
   onDeleted: () => void;
 }
 
-function getFileIcon(mime: string) {
-  if (mime?.startsWith('image/')) return <FileImage className="w-3.5 h-3.5 text-blue-400" />;
-  if (mime?.startsWith('video/')) return <Film className="w-3.5 h-3.5 text-purple-400" />;
-  if (mime === 'application/pdf') return <FileText className="w-3.5 h-3.5 text-red-400" />;
-  return <File className="w-3.5 h-3.5 text-bb-text-secondary" />;
-}
-
 function formatBytes(bytes: number) {
   if (!bytes) return '—';
   if (bytes < 1024) return `${bytes} B`;
@@ -57,11 +51,18 @@ function FolderNode({ folder, setId, onDeleted, depth = 0 }: { folder: BBFolder;
     setDeleting(file.id);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      await fetch(`${apiBase}/storage/delete?bucket=course-materials&path=${encodeURIComponent(file.storage_path)}`, {
+      const storageResponse = await fetch(`${apiBase}/storage/delete?bucket=course-materials&path=${encodeURIComponent(file.storage_path)}`, {
         method: 'DELETE', headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-      await supabase.from('bb_files').delete().eq('id', file.id);
+      if (!storageResponse.ok && storageResponse.status !== 404) {
+        throw new Error('No se pudo eliminar el archivo del almacenamiento.');
+      }
+      const { error: databaseError } = await supabase.from('bb_files').delete().eq('id', file.id);
+      if (databaseError) throw databaseError;
       onDeleted();
+    } catch (error) {
+      console.error('Error eliminando archivo:', error);
+      alert('No se pudo eliminar el archivo por completo. Intenta nuevamente.');
     } finally { setDeleting(null); }
   };
 
@@ -73,12 +74,19 @@ function FolderNode({ folder, setId, onDeleted, depth = 0 }: { folder: BBFolder;
       const { data: allFiles } = await supabase.from('bb_files').select('storage_path').eq('set_id', setId);
       const toDelete = (allFiles || []).filter(f => f.storage_path.includes(`/${folder.path}/`) || f.storage_path.includes(`/${folder.path}`));
       for (const f of toDelete) {
-        await fetch(`${apiBase}/storage/delete?bucket=course-materials&path=${encodeURIComponent(f.storage_path)}`, {
+        const storageResponse = await fetch(`${apiBase}/storage/delete?bucket=course-materials&path=${encodeURIComponent(f.storage_path)}`, {
           method: 'DELETE', headers: { Authorization: `Bearer ${session?.access_token}` },
         });
+        if (!storageResponse.ok && storageResponse.status !== 404) {
+          throw new Error(`No se pudo eliminar ${f.storage_path} del almacenamiento.`);
+        }
       }
-      await supabase.from('bb_folders').delete().eq('id', folder.id);
+      const { error: databaseError } = await supabase.from('bb_folders').delete().eq('id', folder.id);
+      if (databaseError) throw databaseError;
       onDeleted();
+    } catch (error) {
+      console.error('Error eliminando carpeta:', error);
+      alert('No se pudo eliminar toda la carpeta. Intenta nuevamente.');
     } finally { setDeleting(null); }
   };
 
@@ -111,7 +119,7 @@ function FolderNode({ folder, setId, onDeleted, depth = 0 }: { folder: BBFolder;
           {folder.files.map(file => (
             <div key={file.id} className="flex items-center gap-2 py-1.5 px-2 ml-4 rounded-lg hover:bg-white/3 group transition-colors">
               <div className="w-3.5 shrink-0" />
-              {getFileIcon(file.mime_type)}
+              <FileTypeIcon fileName={file.name} mimeType={file.mime_type} size="sm" />
               <span className="text-xs text-bb-text flex-1 truncate">{file.name}</span>
               <span className="text-[10px] text-bb-text-secondary opacity-60 shrink-0">{formatBytes(file.size_bytes)}</span>
               {isAdmin && (

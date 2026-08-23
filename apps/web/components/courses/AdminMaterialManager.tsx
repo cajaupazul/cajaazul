@@ -112,12 +112,14 @@ export default function AdminMaterialManager({
         setIsDeleting(material.id);
         try {
             // Delete from storage first
-            const { deleteFileFromR2 } = await import('@/lib/r2-storage');
-            await deleteFileFromR2('course-materials', material.url_archivo);
+            const { deleteFileFromR2WithRetry, extractPathFromUrl } = await import('@/lib/r2-storage');
+            const materialPath = extractPathFromUrl(material.url_archivo, 'course-materials');
+            if (materialPath) await deleteFileFromR2WithRetry('course-materials', materialPath);
 
             // Borrar miniatura si existe
             if (material.thumbnail_url) {
-                await deleteFileFromR2('thumbnails', material.thumbnail_url);
+                const thumbnailPath = extractPathFromUrl(material.thumbnail_url, 'thumbnails');
+                if (thumbnailPath) await deleteFileFromR2WithRetry('thumbnails', thumbnailPath);
             }
 
             const { error } = await supabase

@@ -21,6 +21,7 @@ import { PLACEHOLDERS, getProfessorLibraryBackground } from '@/lib/constants';
 import DeleteProfessorModal from './DeleteProfessorModal';
 import { Autocomplete } from '@/components/ui/Autocomplete';
 import styles from './ProfessorCards.module.css';
+import { deleteFileFromR2WithRetry, extractPathFromUrl } from '@/lib/r2-storage';
 
 interface ProfessorsContentProps {
     initialProfessors: any[];
@@ -142,18 +143,48 @@ export default function ProfessorsContent({
         if (!professorToDelete) return;
         setIsDeleting(true);
         try {
+            if (deleteMaterials) {
+                const { data: linkedMaterials, error: materialQueryError } = await supabase
+                    .from('materials')
+                    .select('url_archivo, thumbnail_url')
+                    .eq('professor_id', professorToDelete.id);
+                if (materialQueryError) throw materialQueryError;
+
+                const objects = new Map<string, { bucket: string; path: string }>();
+                const addObject = (bucket: string, value?: string | null) => {
+                    if (!value) return;
+                    const path = extractPathFromUrl(value, bucket);
+                    if (path) objects.set(`${bucket}:${path}`, { bucket, path });
+                };
+                (linkedMaterials || []).forEach(material => {
+                    addObject('course-materials', material.url_archivo);
+                    addObject('thumbnails', material.thumbnail_url);
+                });
+                const pendingObjects = Array.from(objects.values());
+                for (let index = 0; index < pendingObjects.length; index += 10) {
+                    await Promise.all(pendingObjects.slice(index, index + 10).map(({ bucket, path }) =>
+                        deleteFileFromR2WithRetry(bucket, path),
+                    ));
+                }
+            }
+
             // 1. Delete comments
-            await supabase.from('professor_comments').delete().eq('professor_id', professorToDelete.id);
+            const { error: commentsError } = await supabase.from('professor_comments').delete().eq('professor_id', professorToDelete.id);
+            if (commentsError) throw commentsError;
             // 2. Delete stickers
-            await supabase.from('user_decorations').delete().eq('target_type', 'professor').eq('target_id', professorToDelete.id);
+            const { error: decorationsError } = await supabase.from('user_decorations').delete().eq('target_type', 'professor').eq('target_id', professorToDelete.id);
+            if (decorationsError) throw decorationsError;
             // 3. Delete ratings
-            await supabase.from('professor_ratings').delete().eq('professor_id', professorToDelete.id);
+            const { error: ratingsError } = await supabase.from('professor_ratings').delete().eq('professor_id', professorToDelete.id);
+            if (ratingsError) throw ratingsError;
             // 4. Optionally delete materials
             if (deleteMaterials) {
-                await supabase.from('materials').delete().eq('professor_id', professorToDelete.id);
+                const { error } = await supabase.from('materials').delete().eq('professor_id', professorToDelete.id);
+                if (error) throw error;
             } else {
                 // If not deleted, nullify link so files aren't floating with invalid ID
-                await supabase.from('materials').update({ professor_id: null }).eq('professor_id', professorToDelete.id);
+                const { error } = await supabase.from('materials').update({ professor_id: null }).eq('professor_id', professorToDelete.id);
+                if (error) throw error;
             }
             // 5. Delete professor record
             const { error } = await supabase.from('professors').delete().eq('id', professorToDelete.id);
