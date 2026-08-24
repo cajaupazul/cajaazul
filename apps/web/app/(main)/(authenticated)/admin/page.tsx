@@ -18,6 +18,7 @@ import {
   ShoppingBag,
   Tags,
   Users,
+  UserRoundCheck,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
@@ -45,6 +46,7 @@ const operationalModules = [
 ];
 
 const academicModules = [
+  { title: 'Accesos excepcionales', description: 'Autoriza correos externos concretos y revoca sus sesiones cuando sea necesario.', href: '/admin/access', icon: UserRoundCheck },
   { title: 'Cursos y profesores', description: 'Gestiona relaciones académicas mediante importación controlada.', href: '/admin/professors-courses', icon: FileSpreadsheet },
   { title: 'Biblioteca', description: 'Modera recursos y mantén la colección confiable y ordenada.', href: '/admin/library', icon: Library },
   { title: 'Malla curricular', description: 'Edita flujos, requisitos y rutas académicas.', href: '/admin/flowcharts/new', icon: LayoutGrid },

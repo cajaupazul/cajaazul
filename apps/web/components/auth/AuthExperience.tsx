@@ -44,6 +44,17 @@ const modePath: Record<AuthMode, string> = {
   register: '/auth/register',
 };
 
+function getAuthErrorMessage(value: string) {
+  const decoded = decodeURIComponent(value);
+  const messages: Record<string, string> = {
+    DOMAIN_RESTRICTED: 'Este correo no está autorizado para ingresar a CampusLink.',
+    ACCESS_NOT_AUTHORIZED: 'Esta cuenta todavía no tiene acceso. Usa tu correo institucional o solicita autorización a un administrador.',
+    AUTH_ACCESS_UNAVAILABLE: 'No pudimos verificar el acceso en este momento. Inténtalo nuevamente en unos segundos.',
+  };
+
+  return messages[decoded] || decoded;
+}
+
 export function AuthExperience() {
   const router = useRouter();
   const pathname = usePathname();
@@ -85,10 +96,10 @@ export function AuthExperience() {
     if (hash.includes('error=')) {
       const params = new URLSearchParams(hash.substring(1));
       const errorMessage = params.get('error_description') || params.get('error') || 'Error de autenticación';
-      setError(decodeURIComponent(errorMessage));
+      setError(getAuthErrorMessage(errorMessage));
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     } else if (authError) {
-      setError(decodeURIComponent(authError));
+      setError(getAuthErrorMessage(authError));
     }
   }, [searchParams]);
 

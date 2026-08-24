@@ -1,57 +1,88 @@
 import { createMiddleware } from 'hono/factory'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type User } from '@supabase/supabase-js'
 
-type Bindings = {
+export type AuthBindings = {
     SUPABASE_URL: string
     SUPABASE_ANON_KEY: string
     SUPABASE_SERVICE_ROLE_KEY: string
 }
 
-export const authMiddleware = createMiddleware<{ Bindings: Bindings }>(async (c, next) => {
-    const authHeader = c.req.header('Authorization')
+export type AuthVariables = {
+    user: User
+    accessSource: 'institutional' | 'exception' | 'anonymous'
+    allowlistEntryId?: string
+}
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        console.error('❌ Auth Error: Missing or invalid Authorization header')
+const INSTITUTIONAL_SUFFIX = '@alum.up.edu.pe'
+
+export const authMiddleware = createMiddleware<{ Bindings: AuthBindings }>(async (c, next) => {
+    const authHeader = c.req.header('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
         return c.json({ error: 'Missing or invalid Authorization header' }, 401)
     }
 
-    const token = authHeader.split(' ')[1]
-    const supabaseUrl = c.env.SUPABASE_URL
-    const supabaseKey = c.env.SUPABASE_ANON_KEY // Use Anon key for getUser, or Service Role if strictly needed. 
-    // Usually getUser(token) works with Anon key if the token is valid.
-    // However, user asked for SUBPASE_SERVICE_ROLE_KEY. Let's use it to be robust and bypass RLS if we were querying data, 
-    // but for getUser it doesn't strictly matter as long as we pass the JWT.
-    // I will use ANON KEY to initialize client, but validation happens via the token.
-
-    if (!supabaseUrl || !supabaseKey) {
-        console.error('❌ Configuration Error: SUPABASE_URL or Key missing')
-        return c.json({ error: 'Internal Configuration Error' }, 500)
+    const token = authHeader.slice('Bearer '.length).trim()
+    if (!token || !c.env.SUPABASE_URL || !c.env.SUPABASE_ANON_KEY) {
+        return c.json({ error: token ? 'Internal Configuration Error' : 'Missing token' }, token ? 500 : 401)
     }
 
     try {
-        // Create a new client for each request to ensure no shared state
-        const supabase = createClient(supabaseUrl, supabaseKey, {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false,
-                detectSessionInUrl: false
-            }
+        const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY, {
+            auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
         })
-
-        // Validate token strictly with Supabase Auth Server
         const { data: { user }, error } = await supabase.auth.getUser(token)
-
         if (error || !user) {
-            console.error('❌ Auth Failed:', error?.message)
+            console.error('[AUTH_VALIDATION_FAILED]', error?.message)
             return c.json({ error: 'Unauthorized: Invalid Token' }, 401)
         }
 
-        // Attach user specifically to context
-        ; (c as any).set('user', user)
+        let accessSource: AuthVariables['accessSource'] = 'institutional'
+        let allowlistEntryId: string | undefined
 
+        if (user.is_anonymous) {
+            accessSource = 'anonymous'
+        } else if (!user.email?.trim().toLowerCase().endsWith(INSTITUTIONAL_SUFFIX)) {
+            const email = user.email?.trim().toLowerCase()
+            if (!email || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+                return c.json({ error: 'Account is not authorized', reason: 'missing_email' }, 403)
+            }
+
+            const service = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY, {
+                auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+            })
+            const { data: entry, error: accessError } = await service
+                .from('auth_email_allowlist')
+                .select('id, enabled, expires_at')
+                .eq('email', email)
+                .maybeSingle()
+
+            if (accessError) {
+                console.error('[AUTH_ALLOWLIST_LOOKUP]', accessError.code, accessError.message)
+                return c.json({ error: 'Could not verify account access' }, 503)
+            }
+
+            const expired = Boolean(entry?.expires_at && new Date(entry.expires_at).getTime() <= Date.now())
+            if (!entry || !entry.enabled || expired) {
+                const reason = !entry ? 'not_approved' : expired ? 'expired' : 'revoked'
+                const { error: revokeError } = await service.rpc('revoke_external_auth_sessions', {
+                    target_user_id: user.id,
+                })
+                if (revokeError) console.error('[AUTH_SESSION_REVOKE]', revokeError.code, revokeError.message)
+                return c.json({ error: 'Account is not authorized', reason }, 403)
+            }
+
+            accessSource = 'exception'
+            allowlistEntryId = entry.id
+        }
+
+        const context = c as unknown as { set: (key: string, value: unknown) => void }
+        context.set('user', user)
+        context.set('accessSource', accessSource)
+        if (allowlistEntryId) context.set('allowlistEntryId', allowlistEntryId)
         await next()
-    } catch (err: any) {
-        console.error('❌ Unexpected Auth Error:', err.message)
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown validation error'
+        console.error('[AUTH_VALIDATION_ERROR]', message)
         return c.json({ error: 'Unauthorized: Validation Failed' }, 401)
     }
 })

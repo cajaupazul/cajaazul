@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isProfileComplete } from '@/lib/profile-completion'
+import { verifyAccountAccess } from '@/lib/auth-access'
 
 function getSafeDestination(value: string | null) {
     if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/auth')) {
@@ -28,11 +29,12 @@ export async function GET(request: Request) {
             const user = session.user
             const email = user.email || ''
 
-            // STRICT DOMAIN ENFORCEMENT
-            if (!email.toLowerCase().endsWith('@alum.up.edu.pe')) {
-                console.warn(`[AUTH_GATE] Blocked unauthorized domain: ${email}`)
+            const access = await verifyAccountAccess(session.access_token, email)
+            if (!access.allowed) {
+                console.warn(`[AUTH_GATE] Blocked unauthorized account: ${email}; reason=${access.reason}`)
                 await supabase.auth.signOut()
-                return NextResponse.redirect(`${origin}/auth/login?error=DOMAIN_RESTRICTED`)
+                const errorCode = access.reason === 'unavailable' ? 'AUTH_ACCESS_UNAVAILABLE' : 'ACCESS_NOT_AUTHORIZED'
+                return NextResponse.redirect(`${origin}/auth/login?error=${errorCode}`)
             }
 
             // AUTO-REDIRECT FOR REGISTERED USERS

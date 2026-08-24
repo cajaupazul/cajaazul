@@ -48,14 +48,15 @@ export function GoogleButton({ text = 'Continuar con Google' }: { text?: string 
                 window.removeEventListener('focus', handleFocus);
                 throw error;
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error Google OAuth:', error);
+            const message = error instanceof Error ? error.message : 'Error desconocido';
 
             // Tratamiento de error específico para restricción de dominio
-            if (error.message?.includes('dominio') || error.message?.includes('domain')) {
-                alert('Acceso denegado: Debes utilizar obligatoriamente tu correo institucional (@alum.up.edu.pe) para entrar.');
+            if (message.includes('dominio') || message.includes('domain') || message.includes('restringido')) {
+                alert('Acceso denegado: usa tu correo institucional o una cuenta previamente autorizada por CampusLink.');
             } else {
-                alert('Error al iniciar sesión con Google: ' + error.message);
+                alert('Error al iniciar sesión con Google: ' + message);
             }
 
             resetLoading();
