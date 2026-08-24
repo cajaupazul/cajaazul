@@ -1,366 +1,304 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Instagram,
+  LoaderCircle,
+  LockKeyhole,
+  RefreshCw,
+  School,
+  UserRound,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { Instagram, User, School, Sparkles, CheckCircle2, LoaderCircle, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useProfile } from '@/lib/profile-context';
-import { supabase } from '@/lib/supabase';
 import { isProfileComplete } from '@/lib/profile-completion';
+import { supabase } from '@/lib/supabase';
 
 type ProfileGateState = 'checking' | 'ready' | 'error';
 
-const FACULTADES = [
-    'Facultad de Ciencias Empresariales',
-    'Facultad de Derecho',
-    'Facultad de Economía y Finanzas',
-    'Facultad de Ingeniería',
-];
+const FACULTIES = [
+  'Facultad de Ciencias Empresariales',
+  'Facultad de Derecho',
+  'Facultad de Economía y Finanzas',
+  'Facultad de Ingeniería',
+] as const;
 
-const FACULTY_COLORS: { [key: string]: string } = {
-    'Facultad de Ciencias Empresariales': 'from-blue-600 to-indigo-600',
-    'Facultad de Derecho': 'from-red-600 to-orange-600',
-    'Facultad de Economía y Finanzas': 'from-emerald-600 to-teal-600',
-    'Facultad de Ingeniería': 'from-slate-700 to-slate-900',
+const FACULTY_ACCENTS: Record<string, string> = {
+  'Facultad de Ciencias Empresariales': '#155eef',
+  'Facultad de Derecho': '#b42318',
+  'Facultad de Economía y Finanzas': '#067647',
+  'Facultad de Ingeniería': '#344054',
 };
 
-const FACULTY_LOGOS: { [key: string]: string } = {
-    'Facultad de Ciencias Empresariales': '/logo/fce.png',
-    'Facultad de Derecho': '/logo/fd.png',
-    'Facultad de Economía y Finanzas': '/logo/fef.png',
-    'Facultad de Ingeniería': '/logo/fi.png',
-};
+function initials(value: string) {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'CL';
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
+}
 
 export default function CompleteProfilePage() {
-    const router = useRouter();
-    const { refreshProfile } = useProfile();
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [gateState, setGateState] = useState<ProfileGateState>('checking');
-    const [gateMessage, setGateMessage] = useState('');
-    const [formData, setFormData] = useState({
-        nombre: '',
-        carrera: '',
-        instagram: '',
-    });
+  const router = useRouter();
+  const { refreshProfile } = useProfile();
+  const [gateState, setGateState] = useState<ProfileGateState>('checking');
+  const [gateMessage, setGateMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [previewAvatar, setPreviewAvatar] = useState<string | null>(null);
+  const [formData, setFormData] = useState({ nombre: '', carrera: '', instagram: '' });
 
-    const verifyProfile = useCallback(async () => {
-        setGateState('checking');
-        setGateMessage('');
+  const verifyProfile = useCallback(async () => {
+    setGateState('checking');
+    setGateMessage('');
 
-        try {
-            const { data: { user }, error: userError } = await supabase.auth.getUser();
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) {
+        router.replace('/auth/login');
+        return;
+      }
 
-            if (userError) throw userError;
-            if (!user) {
-                router.replace('/auth/login');
-                return;
-            }
+      // Guest mode is intentionally ephemeral. It must not create a fake faculty
+      // or persist a synthetic profile that looks like a completed account.
+      if (user.is_anonymous) {
+        router.replace('/dashboard');
+        return;
+      }
 
-            // AUTO-COMPLETE FOR GUESTS (Anonymous)
-            if (user.is_anonymous) {
-                console.log('[COMPLETE_PROFILE] Guest detected. Auto-creating profile...');
-                try {
-                    const { error: insertError } = await supabase
-                        .from('profiles')
-                        .upsert({
-                            id: user.id,
-                            nombre: 'Invitado',
-                            carrera: 'Facultad de Ciencias Empresariales',
-                            avatar_url: '/logo/fce.png',
-                            universidad: 'Universidad del Pacífico'
-                        }, { onConflict: 'id' });
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
 
-                    if (insertError) throw insertError;
+      if (profileError) throw profileError;
+      if (isProfileComplete(profile)) {
+        router.replace('/dashboard');
+        return;
+      }
 
-                    await refreshProfile();
-                    router.replace('/dashboard');
-                    return;
-                } catch (err) {
-                    console.error('[COMPLETE_PROFILE] Guest auto-creation failed:', err);
-                    throw err;
-                }
-            }
+      const metadataAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+      const savedCareer = profile?.carrera?.trim() ?? '';
+      setPreviewAvatar(profile?.avatar_url || metadataAvatar);
+      setFormData({
+        nombre: profile?.nombre?.trim() || user.user_metadata?.full_name || '',
+        carrera: ['Estudiante', 'General', 'Carrera'].includes(savedCareer) ? '' : savedCareer,
+        instagram: profile?.link_instagram ?? '',
+      });
+      setGateState('ready');
+    } catch (verificationError) {
+      console.error('[COMPLETE_PROFILE] Profile verification failed:', verificationError);
+      setGateMessage('No pudimos comprobar tu perfil en este momento. Vuelve a intentarlo en unos segundos.');
+      setGateState('error');
+    }
+  }, [router]);
 
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .maybeSingle();
+  useEffect(() => { void verifyProfile(); }, [verifyProfile]);
 
-            if (profileError) throw profileError;
+  const accent = FACULTY_ACCENTS[formData.carrera] || '#155eef';
+  const cleanInstagram = useMemo(
+    () => formData.instagram.trim().replace(/^@+/, ''),
+    [formData.instagram],
+  );
 
-            if (isProfileComplete(profile)) {
-                router.replace('/dashboard');
-                return;
-            }
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
 
-            const shouldClearNombre = !profile?.nombre ||
-                profile.nombre === profile.google_full_name ||
-                profile.nombre === profile.email?.split('@')[0];
-
-            setFormData({
-                nombre: shouldClearNombre ? '' : profile?.nombre ?? '',
-                carrera: ['Estudiante', 'General', 'Carrera'].includes(profile?.carrera ?? '') ? '' : (profile?.carrera ?? ''),
-                instagram: profile?.link_instagram ?? '',
-            });
-            setGateState('ready');
-        } catch (verificationError) {
-            console.error('[COMPLETE_PROFILE] Profile verification failed:', verificationError);
-            setGateMessage('No pudimos comprobar tu perfil en este momento. Tus datos están seguros; vuelve a intentarlo.');
-            setGateState('error');
-        }
-    }, [router, refreshProfile]);
-
-    useEffect(() => {
-        void verifyProfile();
-    }, [verifyProfile]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-
-        if (!formData.nombre.trim() || !formData.carrera) {
-            setError('Por favor, ingresa un apodo y selecciona tu facultad.');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('No autenticado');
-
-            // Map faculty to logo
-            const facultyLogos: { [key: string]: string } = {
-                'Facultad de Ciencias Empresariales': '/logo/fce.png',
-                'Facultad de Derecho': '/logo/fd.png',
-                'Facultad de Economía y Finanzas': '/logo/fef.png',
-                'Facultad de Ingeniería': '/logo/fi.png'
-            }
-            const avatarUrl = facultyLogos[formData.carrera] || '/logo/fce.png';
-
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({
-                    nombre: formData.nombre.trim(),
-                    carrera: formData.carrera,
-                    avatar_url: avatarUrl,
-                    link_instagram: formData.instagram.trim() || null,
-                    universidad: 'Universidad del Pacífico'
-                })
-                .eq('id', user.id);
-
-            if (updateError) throw updateError;
-
-            // Refrescar el contexto local para que el sidebar se actualice
-            await refreshProfile();
-
-            // Navegar directamente
-            router.replace('/dashboard');
-        } catch (err: any) {
-            console.error(err);
-            setError('Error al actualizar el perfil: ' + err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const facultyGradient = FACULTY_COLORS[formData.carrera] || 'from-slate-400 to-slate-500';
-
-    if (gateState === 'checking') {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6" role="status" aria-live="polite">
-                <div className="flex flex-col items-center gap-4 text-center">
-                    <LoaderCircle className="h-8 w-8 animate-spin text-blue-600" aria-hidden="true" />
-                    <div>
-                        <p className="font-bold text-slate-900">Preparando tu espacio</p>
-                        <p className="mt-1 text-sm text-slate-500">Estamos verificando tu perfil de CampusLink.</p>
-                    </div>
-                </div>
-            </div>
-        );
+    const nombre = formData.nombre.trim();
+    if (nombre.length < 2) {
+      setError('Tu nombre visible debe tener al menos 2 caracteres.');
+      return;
+    }
+    if (!formData.carrera) {
+      setError('Selecciona tu facultad para continuar.');
+      return;
     }
 
-    if (gateState === 'error') {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6">
-                <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-200/60 sm:p-10">
-                    <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-blue-50 text-blue-600">
-                        <RefreshCw className="h-5 w-5" aria-hidden="true" />
-                    </div>
-                    <h1 className="mt-5 text-2xl font-black tracking-tight text-slate-900">No pudimos verificar tu perfil</h1>
-                    <p className="mt-3 text-sm leading-6 text-slate-500">{gateMessage}</p>
-                    <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                        <Button type="button" variant="outline" onClick={() => router.replace('/auth/login')} className="h-12 flex-1 rounded-xl">
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Volver
-                        </Button>
-                        <Button type="button" onClick={() => void verifyProfile()} className="h-12 flex-1 rounded-xl bg-slate-900 text-white hover:bg-slate-800">
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Reintentar
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    setLoading(true);
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw userError || new Error('La sesión ya no está disponible.');
 
+      const updates: Record<string, string | null> = {
+        nombre,
+        carrera: formData.carrera,
+        link_instagram: cleanInstagram || null,
+        universidad: 'Universidad del Pacífico',
+      };
+      if (previewAvatar) updates.avatar_url = previewAvatar;
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+      if (updateError) throw updateError;
+
+      await refreshProfile();
+      router.replace('/dashboard');
+      router.refresh();
+    } catch (submitError) {
+      console.error('[COMPLETE_PROFILE] Profile update failed:', submitError);
+      setError(submitError instanceof Error ? submitError.message : 'No pudimos guardar tu perfil.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (gateState === 'checking') {
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row items-center justify-center p-4 sm:p-8 gap-8">
-            {/* Left Side: Preview Panel */}
-            <div className="w-full max-w-sm lg:max-w-md animate-in fade-in slide-in-from-left-8 duration-700">
-                <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col">
-                    {/* Card Header/Cover */}
-                    <div className={`h-32 bg-gradient-to-br ${facultyGradient} relative transition-colors duration-500`}>
-                        <div className="absolute -bottom-12 left-8">
-                            <div className="relative group">
-                                <div className="absolute -inset-1 bg-white rounded-full blur-sm opacity-25 group-hover:opacity-50 transition duration-500"></div>
-                                <Avatar className="w-24 h-24 border-4 border-white shadow-xl bg-white">
-                                    <AvatarImage src={FACULTY_LOGOS[formData.carrera]} className="object-contain p-2" />
-                                    <AvatarFallback className="bg-slate-100">
-                                        <User className="w-10 h-10 text-slate-300" />
-                                    </AvatarFallback>
-                                </Avatar>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Card Body */}
-                    <div className="pt-16 pb-10 px-8">
-                        <div className="space-y-1">
-                            <h3 className="text-2xl font-black text-slate-900 truncate">
-                                {formData.nombre || 'Tu Apodo Aquí'}
-                            </h3>
-                            <div className="flex items-center gap-1.5 text-blue-600 font-bold text-sm">
-                                <School className="w-4 h-4" />
-                                <span className="truncate">{formData.carrera || 'Facultad no seleccionada'}</span>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-pink-500">
-                                    <Instagram className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] uppercase tracking-wider font-black text-slate-400">Instagram</p>
-                                    <p className="text-sm font-bold text-slate-700">
-                                        {formData.instagram ? `@${formData.instagram.replace('@', '')}` : 'No conectado'}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
-                            <div className="flex -space-x-2">
-                                {[1, 2, 3].map((i) => (
-                                    <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-200" />
-                                ))}
-                            </div>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Vista Previa</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Right Side: Configuration Form */}
-            <div className="w-full max-w-md animate-in fade-in slide-in-from-right-8 duration-700 delay-100">
-                <div className="bg-white rounded-[2.5rem] p-8 sm:p-10 shadow-2xl border border-slate-100">
-                    <div className="mb-8">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-black uppercase tracking-widest mb-4">
-                            <Sparkles className="w-3 h-3" />
-                            Personalización
-                        </div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-tight">
-                            Personaliza tu <span className="text-blue-600 tracking-tighter italic">perfil.</span>
-                        </h1>
-                        <p className="mt-3 text-slate-500 font-medium leading-relaxed">
-                            Crea la identidad que verán tus compañeros en CampusLink.
-                        </p>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        {error && (
-                            <div className="bg-red-50 border border-red-100 text-red-600 px-5 py-4 rounded-2xl text-sm font-bold flex items-center gap-3 animate-in fade-in zoom-in-95">
-                                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                {error}
-                            </div>
-                        )}
-
-                        <div className="space-y-2">
-                            <Label htmlFor="nombre" className="text-slate-700 font-bold text-sm ml-1 flex items-center gap-2">
-                                <User className="w-4 h-4 text-blue-500" />
-                                Define tu Apodo
-                            </Label>
-                            <Input
-                                id="nombre"
-                                value={formData.nombre}
-                                onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
-                                placeholder="Ej: Alexis UP"
-                                className="h-14 px-5 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl transition-all font-bold placeholder:font-medium"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="instagram" className="text-slate-700 font-bold text-sm ml-1 flex items-center gap-2">
-                                <Instagram className="w-4 h-4 text-pink-500" />
-                                Instagram (Opcional)
-                            </Label>
-                            <Input
-                                id="instagram"
-                                value={formData.instagram}
-                                onChange={(e) => setFormData(prev => ({ ...prev, instagram: e.target.value }))}
-                                placeholder="@tu_usuario"
-                                className="h-14 px-5 border-slate-200 focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 rounded-2xl transition-all font-bold placeholder:font-medium"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="carrera" className="text-slate-700 font-bold text-sm ml-1 flex items-center gap-2">
-                                <School className="w-4 h-4 text-indigo-500" />
-                                Tu Facultad
-                            </Label>
-                            <Select value={formData.carrera} onValueChange={(val) => setFormData(prev => ({ ...prev, carrera: val }))}>
-                                <SelectTrigger className="h-14 px-5 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-2xl transition-all bg-white font-bold">
-                                    <SelectValue placeholder="Selecciona tu facultad" />
-                                </SelectTrigger>
-                                <SelectContent className="rounded-2xl border-slate-200 shadow-2xl p-2">
-                                    {FACULTADES.map((fac) => (
-                                        <SelectItem key={fac} value={fac} className="rounded-xl py-3 focus:bg-slate-50 font-bold">
-                                            {fac}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <Button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-slate-900 hover:bg-black text-white font-black text-lg h-16 rounded-[1.5rem] shadow-2xl shadow-slate-200 transition-all hover:scale-[1.02] active:scale-[0.98] mt-4 flex items-center justify-center gap-3 group"
-                        >
-                            {loading ? (
-                                <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : (
-                                <>
-                                    <span>Comenzar ahora</span>
-                                    <CheckCircle2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                                </>
-                            )}
-                        </Button>
-                    </form>
-                </div>
-            </div>
+      <main className="grid min-h-dvh place-items-center bg-[#f4f1e8] px-6" role="status" aria-live="polite">
+        <div className="text-center">
+          <LoaderCircle className="mx-auto h-7 w-7 animate-spin text-[#155eef]" aria-hidden="true" />
+          <p className="mt-4 text-sm font-bold text-[#102a25]">Preparando tu perfil</p>
+          <p className="mt-1 text-xs text-[#66756f]">Solo tomará un momento.</p>
         </div>
+      </main>
     );
+  }
+
+  if (gateState === 'error') {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-[#f4f1e8] px-5">
+        <section className="w-full max-w-md border border-[#d8d6cf] bg-white p-7 sm:p-9">
+          <div className="grid h-11 w-11 place-items-center bg-[#e9efff] text-[#155eef]"><RefreshCw className="h-5 w-5" /></div>
+          <h1 className="mt-6 text-2xl font-black tracking-[-0.04em] text-[#102a25]">No pudimos abrir tu perfil</h1>
+          <p className="mt-3 text-sm leading-6 text-[#66756f]">{gateMessage}</p>
+          <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <Button type="button" variant="outline" onClick={() => router.replace('/auth/login')} className="h-12 rounded-none border-[#c9cec9]">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+            </Button>
+            <Button type="button" onClick={() => void verifyProfile()} className="h-12 rounded-none bg-[#102a25] hover:bg-[#193b34]">
+              <RefreshCw className="mr-2 h-4 w-4" /> Reintentar
+            </Button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-dvh bg-[#f4f1e8] p-0 text-[#102a25] lg:p-6 xl:p-8">
+      <div className="mx-auto grid min-h-dvh max-w-[1440px] overflow-hidden bg-[#fbfaf6] lg:min-h-[calc(100dvh-3rem)] lg:grid-cols-[0.92fr_1.08fr] lg:border lg:border-[#d8d6cf] xl:min-h-[calc(100dvh-4rem)]">
+        <section className="relative flex min-h-[300px] flex-col overflow-hidden bg-[#155eef] p-6 text-white sm:min-h-[350px] sm:p-9 lg:min-h-0 lg:p-12">
+          <div className="absolute inset-0 opacity-15" aria-hidden="true" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '72px 72px' }} />
+          <div className="relative flex items-center gap-3">
+            <img src="/logo/logo-campuslink-v2.png" alt="CampusLink" className="h-11 w-11 rounded-lg bg-white object-contain p-1.5" />
+            <span className="text-lg font-black tracking-[-0.03em]">CampusLink</span>
+          </div>
+
+          <div className="relative mt-10 max-w-xl lg:mt-20">
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-white/75">Tu cuenta está lista</p>
+            <h1 className="mt-4 max-w-lg text-4xl font-black leading-[0.98] tracking-[-0.055em] sm:text-5xl lg:text-6xl">
+              Ahora hazla realmente tuya.
+            </h1>
+            <p className="mt-5 max-w-md text-sm leading-6 text-white/75 sm:text-base">
+              Elige cómo te verá la comunidad. Tu facultad nunca se asignará automáticamente.
+            </p>
+          </div>
+
+          <div className="relative mt-auto hidden pt-10 lg:block">
+            <div className="max-w-md border border-white/25 bg-[#0f4ed0] p-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/65">Vista previa</p>
+              <div className="mt-4 flex items-center gap-4">
+                <Avatar className="h-14 w-14 border-2 border-white bg-white text-[#102a25]">
+                  <AvatarImage src={previewAvatar || undefined} className="object-cover" />
+                  <AvatarFallback className="bg-white font-black">{initials(formData.nombre)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-black">{formData.nombre || 'Tu nombre visible'}</p>
+                  <p className="mt-1 truncate text-xs text-white/70">{formData.carrera || 'Facultad pendiente'}</p>
+                </div>
+              </div>
+              {cleanInstagram && <p className="mt-4 flex items-center gap-2 text-xs text-white/75"><Instagram className="h-3.5 w-3.5" /> @{cleanInstagram}</p>}
+            </div>
+          </div>
+        </section>
+
+        <section className="flex items-center justify-center px-5 py-10 sm:px-10 sm:py-14 lg:px-14 xl:px-20">
+          <div className="w-full max-w-xl">
+            <div className="flex items-center justify-between border-b border-[#deddd7] pb-5">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#155eef]">Configuración inicial</p>
+                <p className="mt-1 text-sm font-bold text-[#66756f]">Paso único · menos de un minuto</p>
+              </div>
+              <div className="grid h-9 w-9 place-items-center border border-[#cfd5d1] bg-white text-[#155eef]"><UserRound className="h-4 w-4" /></div>
+            </div>
+
+            <div className="mt-8">
+              <h2 className="text-3xl font-black tracking-[-0.045em] sm:text-4xl">Completa tu perfil</h2>
+              <p className="mt-3 max-w-lg text-sm leading-6 text-[#66756f] sm:text-base">
+                Guardaremos tu cuenta como pendiente hasta que elijas una facultad. Si sales ahora, continuarás aquí en tu próximo ingreso.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+              {error && <div role="alert" className="border-l-4 border-[#b42318] bg-[#fef3f2] px-4 py-3 text-sm font-bold text-[#912018]">{error}</div>}
+
+              <Field label="Nombre visible" htmlFor="nombre" icon={<UserRound className="h-4 w-4" />}>
+                <Input id="nombre" value={formData.nombre} onChange={(event) => setFormData((current) => ({ ...current, nombre: event.target.value }))} maxLength={60} placeholder="Ej.: Alexis UP" autoComplete="name" className="h-[3.25rem] rounded-none border-[#cfd5d1] bg-white px-4 font-semibold text-[#102a25] focus-visible:ring-[#155eef]" />
+              </Field>
+
+              <Field label="Facultad" htmlFor="carrera" icon={<School className="h-4 w-4" />} required>
+                <Select value={formData.carrera} onValueChange={(value) => setFormData((current) => ({ ...current, carrera: value }))}>
+                  <SelectTrigger id="carrera" className="h-[3.25rem] rounded-none border-[#cfd5d1] bg-white px-4 font-semibold text-[#102a25] focus:ring-[#155eef]">
+                    <SelectValue placeholder="Selecciona tu facultad" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-none border-[#cfd5d1] bg-white p-1">
+                    {FACULTIES.map((faculty) => (
+                      <SelectItem key={faculty} value={faculty} className="rounded-none py-3 font-semibold focus:bg-[#eef3ff]">
+                        <span className="flex items-center gap-3"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: FACULTY_ACCENTS[faculty] }} />{faculty}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="mt-2 flex items-center gap-2 text-xs text-[#66756f]"><Building2 className="h-3.5 w-3.5" /> Podrás cambiarla después desde tu perfil.</p>
+              </Field>
+
+              <Field label="Instagram" optional htmlFor="instagram" icon={<Instagram className="h-4 w-4" />}>
+                <Input id="instagram" value={formData.instagram} onChange={(event) => setFormData((current) => ({ ...current, instagram: event.target.value }))} maxLength={50} placeholder="@tu_usuario" autoComplete="off" className="h-[3.25rem] rounded-none border-[#cfd5d1] bg-white px-4 font-semibold text-[#102a25] focus-visible:ring-[#155eef]" />
+              </Field>
+
+              <div className="flex items-start gap-3 border-t border-[#deddd7] pt-5 text-xs leading-5 text-[#66756f]">
+                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-[#155eef]" />
+                <p>Tu cuenta ya existe, pero el acceso privado se habilita cuando completas estos datos.</p>
+              </div>
+
+              <Button type="submit" disabled={loading} className="h-14 w-full rounded-none bg-[#102a25] text-base font-black text-white hover:bg-[#193b34] disabled:opacity-60" style={{ borderBottom: `4px solid ${accent}` }}>
+                {loading ? <><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Guardando perfil</> : <>Entrar a CampusLink <ArrowRight className="ml-2 h-5 w-5" /></>}
+              </Button>
+            </form>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function Field({ label, htmlFor, icon, children, optional, required }: { label: string; htmlFor: string; icon: React.ReactNode; children: React.ReactNode; optional?: boolean; required?: boolean }) {
+  return (
+    <div>
+      <Label htmlFor={htmlFor} className="mb-2.5 flex items-center gap-2 text-sm font-black text-[#102a25]">
+        <span className="text-[#155eef]">{icon}</span>
+        {label}
+        {optional && <span className="ml-auto text-[10px] font-bold uppercase tracking-[0.15em] text-[#89938f]">Opcional</span>}
+        {required && <span className="ml-auto text-[10px] font-bold uppercase tracking-[0.15em] text-[#155eef]">Obligatorio</span>}
+      </Label>
+      {children}
+    </div>
+  );
 }

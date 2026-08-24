@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { verifyAccountAccess } from '@/lib/auth-access';
+import { isProfileComplete } from '@/lib/profile-completion';
 
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({ request });
@@ -32,6 +33,12 @@ export async function updateSession(request: NextRequest) {
         || path.startsWith('/profile');
     const isAuthEntryRoute = path === '/' || path === '/auth/login' || path === '/auth/register';
 
+    const redirectWithSession = (url: URL) => {
+        const redirect = NextResponse.redirect(url);
+        supabaseResponse.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+        return redirect;
+    };
+
     // Validate exceptional external accounts on every private navigation. Institutional
     // accounts are accepted locally, so a temporary Worker outage cannot block students.
     if (user && !user.is_anonymous && (isProtectedRoute || isAuthEntryRoute)) {
@@ -49,20 +56,41 @@ export async function updateSession(request: NextRequest) {
                 'error',
                 access.reason === 'unavailable' ? 'AUTH_ACCESS_UNAVAILABLE' : 'ACCESS_NOT_AUTHORIZED',
             );
-            return NextResponse.redirect(loginUrl);
+            return redirectWithSession(loginUrl);
         }
+    }
+
+    let profileComplete = true;
+    if (user && !user.is_anonymous && (isProtectedRoute || isAuthEntryRoute)) {
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('nombre, carrera, onboarding_completed_at')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        // Fail safely without trapping users during a temporary database error. The
+        // client layout performs the same check once the profile becomes available.
+        if (!profileError) profileComplete = isProfileComplete(profile);
+    }
+
+    if (user && !user.is_anonymous && !profileComplete && (isProtectedRoute || isAuthEntryRoute)) {
+        const onboardingUrl = request.nextUrl.clone();
+        onboardingUrl.pathname = '/auth/complete-profile';
+        onboardingUrl.search = '';
+        return redirectWithSession(onboardingUrl);
     }
 
     if (user && isAuthEntryRoute) {
         const dashboardUrl = request.nextUrl.clone();
         dashboardUrl.pathname = '/dashboard';
-        return NextResponse.redirect(dashboardUrl);
+        dashboardUrl.search = '';
+        return redirectWithSession(dashboardUrl);
     }
 
     if (!user && isProtectedRoute) {
         const loginUrl = request.nextUrl.clone();
         loginUrl.pathname = '/auth/login';
-        return NextResponse.redirect(loginUrl);
+        return redirectWithSession(loginUrl);
     }
 
     return supabaseResponse;

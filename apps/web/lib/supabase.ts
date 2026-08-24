@@ -57,6 +57,7 @@ export type Profile = {
   vip_hasta: string | null;
   active_frame_key: string | null;
   google_full_name: string | null;
+  onboarding_completed_at: string | null;
   role: 'user' | 'admin' | 'superadmin';
 };
 

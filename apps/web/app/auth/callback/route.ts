@@ -40,7 +40,7 @@ export async function GET(request: Request) {
             // AUTO-REDIRECT FOR REGISTERED USERS
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .select('nombre, carrera')
+                .select('nombre, carrera, onboarding_completed_at')
                 .eq('id', user.id)
                 .maybeSingle()
 

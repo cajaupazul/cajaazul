@@ -38,6 +38,7 @@ import {
 import { Button } from '@/components/ui/button';
 import AnnouncementPopup from '@/components/announcements/AnnouncementPopup';
 import styles from './AuthenticatedLayout.module.css';
+import { isProfileComplete } from '@/lib/profile-completion';
 
 export default function AuthenticatedLayout({
   children,
@@ -112,8 +113,8 @@ export default function AuthenticatedLayout({
       if (!session) {
         // Guest mode is allowed - just set ready
         setIsAuthReady(true);
-      } else if (!profile) {
-        console.warn('[AUTH_GUARD] Profile missing. Redirecting to onboarding...');
+      } else if (!profile || !isProfileComplete(profile)) {
+        console.warn('[AUTH_GUARD] Profile pending. Redirecting to onboarding...');
         router.replace('/auth/complete-profile');
       } else {
         // Auth is confirmed and profile is loaded
