@@ -44,6 +44,13 @@ const FACULTY_ACCENTS: Record<string, string> = {
   'Facultad de Ingeniería': '#344054',
 };
 
+const FACULTY_AVATARS: Record<string, string> = {
+  'Facultad de Ciencias Empresariales': '/logo/fce.png',
+  'Facultad de Derecho': '/logo/fd.png',
+  'Facultad de Economía y Finanzas': '/logo/fef.png',
+  'Facultad de Ingeniería': '/logo/fi.png',
+};
+
 function initials(value: string) {
   const parts = value.trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return 'CL';
@@ -110,6 +117,8 @@ export default function CompleteProfilePage() {
   useEffect(() => { void verifyProfile(); }, [verifyProfile]);
 
   const accent = FACULTY_ACCENTS[formData.carrera] || '#155eef';
+  const facultyAvatar = FACULTY_AVATARS[formData.carrera] || null;
+  const displayedAvatar = facultyAvatar || previewAvatar;
   const cleanInstagram = useMemo(
     () => formData.instagram.trim().replace(/^@+/, ''),
     [formData.instagram],
@@ -140,7 +149,7 @@ export default function CompleteProfilePage() {
         link_instagram: cleanInstagram || null,
         universidad: 'Universidad del Pacífico',
       };
-      if (previewAvatar) updates.avatar_url = previewAvatar;
+      if (facultyAvatar || previewAvatar) updates.avatar_url = facultyAvatar || previewAvatar;
 
       const { error: updateError } = await supabase
         .from('profiles')
@@ -192,31 +201,31 @@ export default function CompleteProfilePage() {
   }
 
   return (
-    <main className="min-h-dvh bg-[#f4f1e8] p-0 text-[#102a25] lg:p-6 xl:p-8">
-      <div className="mx-auto grid min-h-dvh max-w-[1440px] overflow-hidden bg-[#fbfaf6] lg:min-h-[calc(100dvh-3rem)] lg:grid-cols-[0.92fr_1.08fr] lg:border lg:border-[#d8d6cf] xl:min-h-[calc(100dvh-4rem)]">
-        <section className="relative flex min-h-[300px] flex-col overflow-hidden bg-[#155eef] p-6 text-white sm:min-h-[350px] sm:p-9 lg:min-h-0 lg:p-12">
+    <main className="min-h-dvh bg-[#f4f1e8] p-0 text-[#102a25] lg:h-dvh lg:overflow-hidden lg:p-3">
+      <div className="mx-auto grid min-h-dvh max-w-[1440px] overflow-hidden bg-[#fbfaf6] lg:h-[calc(100dvh-1.5rem)] lg:min-h-0 lg:grid-cols-[0.9fr_1.1fr] lg:border lg:border-[#d8d6cf]">
+        <section className="relative flex min-h-[270px] flex-col overflow-hidden bg-[#155eef] p-6 text-white sm:min-h-[310px] sm:p-8 lg:min-h-0 lg:p-9 xl:p-10">
           <div className="absolute inset-0 opacity-15" aria-hidden="true" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '72px 72px' }} />
           <div className="relative flex items-center gap-3">
             <img src="/logo/logo-campuslink-v2.png" alt="CampusLink" className="h-11 w-11 rounded-lg bg-white object-contain p-1.5" />
             <span className="text-lg font-black tracking-[-0.03em]">CampusLink</span>
           </div>
 
-          <div className="relative mt-10 max-w-xl lg:mt-20">
-            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-white/75">Tu cuenta está lista</p>
-            <h1 className="mt-4 max-w-lg text-4xl font-black leading-[0.98] tracking-[-0.055em] sm:text-5xl lg:text-6xl">
-              Ahora hazla realmente tuya.
+          <div className="relative mt-9 max-w-xl lg:mt-12 xl:mt-14">
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-white/75">¡Ya casi!</p>
+            <h1 className="mt-4 max-w-lg text-4xl font-black leading-[0.98] tracking-[-0.055em] sm:text-5xl lg:text-[3.35rem] xl:text-6xl">
+              Ponle tu estilo a CampusLink.
             </h1>
-            <p className="mt-5 max-w-md text-sm leading-6 text-white/75 sm:text-base">
-              Elige cómo te verá la comunidad. Tu facultad nunca se asignará automáticamente.
+            <p className="mt-4 max-w-md text-sm leading-6 text-white/75 sm:text-base">
+              Elige tu nombre y tu facultad. Lo demás lo puedes cambiar cuando quieras.
             </p>
           </div>
 
-          <div className="relative mt-auto hidden pt-10 lg:block">
-            <div className="max-w-md border border-white/25 bg-[#0f4ed0] p-5">
+          <div className="relative mt-auto hidden pt-5 lg:block">
+            <div className="max-w-md border border-white/25 bg-[#0f4ed0] p-4">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/65">Vista previa</p>
               <div className="mt-4 flex items-center gap-4">
-                <Avatar className="h-14 w-14 border-2 border-white bg-white text-[#102a25]">
-                  <AvatarImage src={previewAvatar || undefined} className="object-cover" />
+                <Avatar className="h-16 w-16 border-2 border-white bg-white text-[#102a25]">
+                  <AvatarImage src={displayedAvatar || undefined} className="object-cover" />
                   <AvatarFallback className="bg-white font-black">{initials(formData.nombre)}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
@@ -229,33 +238,36 @@ export default function CompleteProfilePage() {
           </div>
         </section>
 
-        <section className="flex items-center justify-center px-5 py-10 sm:px-10 sm:py-14 lg:px-14 xl:px-20">
+        <section className="flex items-center justify-center px-5 py-9 sm:px-10 sm:py-10 lg:min-h-0 lg:px-12 lg:py-5 xl:px-16">
           <div className="w-full max-w-xl">
-            <div className="flex items-center justify-between border-b border-[#deddd7] pb-5">
+            <div className="flex items-center justify-between border-b border-[#deddd7] pb-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#155eef]">Configuración inicial</p>
-                <p className="mt-1 text-sm font-bold text-[#66756f]">Paso único · menos de un minuto</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#155eef]">Tu espacio</p>
+                <p className="mt-1 text-sm font-bold text-[#66756f]">Un último paso y entramos</p>
               </div>
-              <div className="grid h-9 w-9 place-items-center border border-[#cfd5d1] bg-white text-[#155eef]"><UserRound className="h-4 w-4" /></div>
+              <Avatar className="h-10 w-10 border border-[#cfd5d1] bg-white text-[#102a25]">
+                <AvatarImage src={displayedAvatar || undefined} className="object-cover" />
+                <AvatarFallback className="bg-white text-xs font-black">{initials(formData.nombre)}</AvatarFallback>
+              </Avatar>
             </div>
 
-            <div className="mt-8">
-              <h2 className="text-3xl font-black tracking-[-0.045em] sm:text-4xl">Completa tu perfil</h2>
-              <p className="mt-3 max-w-lg text-sm leading-6 text-[#66756f] sm:text-base">
-                Guardaremos tu cuenta como pendiente hasta que elijas una facultad. Si sales ahora, continuarás aquí en tu próximo ingreso.
+            <div className="mt-5">
+              <h2 className="text-3xl font-black tracking-[-0.045em] sm:text-4xl">Cuéntanos un poquito de ti</h2>
+              <p className="mt-2 max-w-lg text-sm leading-5 text-[#66756f] sm:text-[15px]">
+                Deja listo tu perfil. Si sales, retomamos justo aquí cuando vuelvas.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               {error && <div role="alert" className="border-l-4 border-[#b42318] bg-[#fef3f2] px-4 py-3 text-sm font-bold text-[#912018]">{error}</div>}
 
               <Field label="Nombre visible" htmlFor="nombre" icon={<UserRound className="h-4 w-4" />}>
-                <Input id="nombre" value={formData.nombre} onChange={(event) => setFormData((current) => ({ ...current, nombre: event.target.value }))} maxLength={60} placeholder="Ej.: Alexis UP" autoComplete="name" className="h-[3.25rem] rounded-none border-[#cfd5d1] bg-white px-4 font-semibold text-[#102a25] focus-visible:ring-[#155eef]" />
+                <Input id="nombre" value={formData.nombre} onChange={(event) => setFormData((current) => ({ ...current, nombre: event.target.value }))} maxLength={60} placeholder="Ej.: Alexis UP" autoComplete="name" className="h-12 rounded-none border-[#cfd5d1] bg-white px-4 font-semibold text-[#102a25] focus-visible:ring-[#155eef]" />
               </Field>
 
               <Field label="Facultad" htmlFor="carrera" icon={<School className="h-4 w-4" />} required>
                 <Select value={formData.carrera} onValueChange={(value) => setFormData((current) => ({ ...current, carrera: value }))}>
-                  <SelectTrigger id="carrera" className="h-[3.25rem] rounded-none border-[#cfd5d1] bg-white px-4 font-semibold text-[#102a25] focus:ring-[#155eef]">
+                  <SelectTrigger id="carrera" className="h-12 rounded-none border-[#cfd5d1] bg-white px-4 font-semibold text-[#102a25] focus:ring-[#155eef]">
                     <SelectValue placeholder="Selecciona tu facultad" />
                   </SelectTrigger>
                   <SelectContent className="rounded-none border-[#cfd5d1] bg-white p-1">
@@ -266,20 +278,20 @@ export default function CompleteProfilePage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="mt-2 flex items-center gap-2 text-xs text-[#66756f]"><Building2 className="h-3.5 w-3.5" /> Podrás cambiarla después desde tu perfil.</p>
+                <p className="mt-1.5 flex items-center gap-2 text-xs text-[#66756f]"><Building2 className="h-3.5 w-3.5" /> Tu mascota cambia con la facultad.</p>
               </Field>
 
               <Field label="Instagram" optional htmlFor="instagram" icon={<Instagram className="h-4 w-4" />}>
-                <Input id="instagram" value={formData.instagram} onChange={(event) => setFormData((current) => ({ ...current, instagram: event.target.value }))} maxLength={50} placeholder="@tu_usuario" autoComplete="off" className="h-[3.25rem] rounded-none border-[#cfd5d1] bg-white px-4 font-semibold text-[#102a25] focus-visible:ring-[#155eef]" />
+                <Input id="instagram" value={formData.instagram} onChange={(event) => setFormData((current) => ({ ...current, instagram: event.target.value }))} maxLength={50} placeholder="@tu_usuario" autoComplete="off" className="h-12 rounded-none border-[#cfd5d1] bg-white px-4 font-semibold text-[#102a25] focus-visible:ring-[#155eef]" />
               </Field>
 
-              <div className="flex items-start gap-3 border-t border-[#deddd7] pt-5 text-xs leading-5 text-[#66756f]">
+              <div className="flex items-start gap-3 border-t border-[#deddd7] pt-3 text-xs leading-5 text-[#66756f]">
                 <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-[#155eef]" />
-                <p>Tu cuenta ya existe, pero el acceso privado se habilita cuando completas estos datos.</p>
+                <p>Listo: después de guardar entrarás directo a CampusLink.</p>
               </div>
 
-              <Button type="submit" disabled={loading} className="h-14 w-full rounded-none bg-[#102a25] text-base font-black text-white hover:bg-[#193b34] disabled:opacity-60" style={{ borderBottom: `4px solid ${accent}` }}>
-                {loading ? <><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Guardando perfil</> : <>Entrar a CampusLink <ArrowRight className="ml-2 h-5 w-5" /></>}
+              <Button type="submit" disabled={loading} className="h-12 w-full rounded-none bg-[#102a25] text-base font-black text-white hover:bg-[#193b34] disabled:opacity-60" style={{ borderBottom: `4px solid ${accent}` }}>
+                {loading ? <><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Guardando perfil</> : <>Guardar y entrar <ArrowRight className="ml-2 h-5 w-5" /></>}
               </Button>
             </form>
           </div>
@@ -292,7 +304,7 @@ export default function CompleteProfilePage() {
 function Field({ label, htmlFor, icon, children, optional, required }: { label: string; htmlFor: string; icon: React.ReactNode; children: React.ReactNode; optional?: boolean; required?: boolean }) {
   return (
     <div>
-      <Label htmlFor={htmlFor} className="mb-2.5 flex items-center gap-2 text-sm font-black text-[#102a25]">
+      <Label htmlFor={htmlFor} className="mb-2 flex items-center gap-2 text-sm font-black text-[#102a25]">
         <span className="text-[#155eef]">{icon}</span>
         {label}
         {optional && <span className="ml-auto text-[10px] font-bold uppercase tracking-[0.15em] text-[#89938f]">Opcional</span>}
