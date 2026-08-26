@@ -134,7 +134,8 @@ export async function uploadFileToR2(bucket: string, path: string, file: File): 
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': file.type
+                'Content-Type': file.type,
+                'X-File-Size': String(file.size)
             },
             body: file
         }

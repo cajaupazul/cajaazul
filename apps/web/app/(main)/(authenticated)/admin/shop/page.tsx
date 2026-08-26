@@ -22,6 +22,11 @@ import { useProfile } from '@/lib/profile-context';
 import { PLACEHOLDERS } from '@/lib/constants';
 
 type Notice = { type: 'success' | 'error'; text: string } | null;
+type AdminShopItem = ShopItem & {
+  owner_count: number;
+  catalog_status: 'active' | 'retired' | 'revoked' | 'deletion_pending';
+  shop_item_assets?: Array<{ id: string; status: string; is_current: boolean }>;
+};
 
 const typeLabels: Record<string, string> = {
   profile_frame: 'Marco',
@@ -33,13 +38,15 @@ const typeLabels: Record<string, string> = {
 
 export default function AdminShopPage() {
   const { profile } = useProfile();
-  const [items, setItems] = useState<ShopItem[]>([]);
+  const [items, setItems] = useState<AdminShopItem[]>([]);
   const [categories, setCategories] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | 'active' | 'paused'>('all');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ShopItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminShopItem | null>(null);
+  const [revokeReason, setRevokeReason] = useState('');
+  const [revokeConfirmation, setRevokeConfirmation] = useState('');
   const [notice, setNotice] = useState<Notice>(null);
 
   const canManage = profile?.role === 'admin' || profile?.role === 'superadmin';
@@ -48,12 +55,12 @@ export default function AdminShopPage() {
     setLoading(true);
     const [categoryResult, itemResult] = await Promise.all([
       supabase.from('shop_categories').select('id, name').order('display_order'),
-      supabase.from('shop_items').select('*').order('updated_at', { ascending: false }).order('created_at', { ascending: false }),
+      apiFetch<{ items: AdminShopItem[] }>('/admin/catalog/items').then(result => ({ data: result.items, error: null })),
     ]);
 
     if (categoryResult.data) setCategories(Object.fromEntries(categoryResult.data.map((category) => [category.id, category.name])));
     if (itemResult.error) setNotice({ type: 'error', text: 'No pudimos cargar el catálogo.' });
-    else setItems((itemResult.data ?? []) as ShopItem[]);
+    else setItems((itemResult.data ?? []) as AdminShopItem[]);
     setLoading(false);
   };
 
@@ -70,22 +77,21 @@ export default function AdminShopPage() {
     });
   }, [items, query, status]);
 
-  const toggleStatus = async (item: ShopItem) => {
+  const toggleStatus = async (item: AdminShopItem) => {
     setBusyId(item.id);
     setNotice(null);
-    const { data, error } = await supabase
-      .from('shop_items')
-      .update({ is_active: !item.is_active })
-      .eq('id', item.id)
-      .select('*')
-      .single();
-
-    if (error || !data) setNotice({ type: 'error', text: error?.message || 'No se pudo cambiar el estado.' });
-    else {
-      setItems((current) => current.map((currentItem) => currentItem.id === item.id ? data as ShopItem : currentItem));
-      setNotice({ type: 'success', text: `${item.name} ahora está ${data.is_active ? 'visible' : 'pausado'}.` });
+    try {
+      const { item: updated } = await apiFetch<{ item: AdminShopItem }>(
+        `/admin/catalog/items/${item.id}/${item.is_active ? 'retire' : 'activate'}`,
+        { method: 'POST' }
+      );
+      setItems(current => current.map(currentItem => currentItem.id === item.id ? { ...currentItem, ...updated } : currentItem));
+      setNotice({ type: 'success', text: `${item.name} ahora esta ${updated.is_active ? 'visible' : 'retirado'}. Las compras existentes se conservan.` });
+    } catch (error) {
+      setNotice({ type: 'error', text: error instanceof Error ? error.message : 'No se pudo cambiar el estado.' });
+    } finally {
+      setBusyId(null);
     }
-    setBusyId(null);
   };
 
   const deleteItem = async () => {
@@ -95,10 +101,53 @@ export default function AdminShopPage() {
     try {
       await apiFetch(`/admin/catalog/items/${deleteTarget.id}`, { method: 'DELETE' });
       setItems((current) => current.filter((item) => item.id !== deleteTarget.id));
-      setNotice({ type: 'success', text: `${deleteTarget.name} se retiró del catálogo y de los inventarios asociados.` });
+      setNotice({ type: 'success', text: `${deleteTarget.name} y su archivo se eliminaron. No tenía propietarios.` });
       setDeleteTarget(null);
     } catch (error) {
       setNotice({ type: 'error', text: error instanceof Error ? error.message : 'No se pudo eliminar el artículo.' });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const revokeItem = async () => {
+    if (!deleteTarget) return;
+    setBusyId(deleteTarget.id);
+    setNotice(null);
+    try {
+      const response = await apiFetch<{ cleanupPending: boolean }>(`/admin/catalog/items/${deleteTarget.id}/revoke`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: revokeReason, confirmation: revokeConfirmation }),
+      });
+      setDeleteTarget(null);
+      setRevokeReason('');
+      setRevokeConfirmation('');
+      await loadItems();
+      setNotice({
+        type: response.cleanupPending ? 'error' : 'success',
+        text: response.cleanupPending
+          ? 'La revocación terminó, pero el archivo requiere limpieza manual.'
+          : 'Revocación de emergencia completada y auditada.',
+      });
+    } catch (error) {
+      setNotice({ type: 'error', text: error instanceof Error ? error.message : 'No se pudo revocar el artículo.' });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const migrateAssets = async () => {
+    setBusyId('migration');
+    setNotice(null);
+    try {
+      const result = await apiFetch<{ migrated: number; cleanupPending: number; failed: number }>('/admin/catalog/migrate-assets', { method: 'POST' });
+      await loadItems();
+      setNotice({
+        type: result.failed ? 'error' : 'success',
+        text: `${result.migrated} archivo(s) migrados a R2${result.cleanupPending ? `; ${result.cleanupPending} con limpieza anterior pendiente` : ''}${result.failed ? `; ${result.failed} fallaron.` : '.'}`,
+      });
+    } catch (error) {
+      setNotice({ type: 'error', text: error instanceof Error ? error.message : 'No se pudo ejecutar la migración.' });
     } finally {
       setBusyId(null);
     }
@@ -119,6 +168,7 @@ export default function AdminShopPage() {
             <p className="mt-3 text-sm text-zinc-400">{items.length} artículos registrados · {items.filter((item) => item.is_active).length} visibles</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
+            <button onClick={() => void migrateAssets()} disabled={busyId === 'migration'} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 text-sm font-bold text-amber-300 hover:bg-amber-500/15 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${busyId === 'migration' ? 'animate-spin' : ''}`} /> Migrar archivos a R2</button>
             <Link href="/admin/shop/categories" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-[#17191d] px-5 text-sm font-bold hover:bg-[#202329]"><LayoutGrid className="h-4 w-4" /> Categorías</Link>
             <Link href="/admin/shop/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-black hover:bg-blue-500"><PackagePlus className="h-4 w-4" /> Nuevo artículo</Link>
           </div>
@@ -155,7 +205,7 @@ export default function AdminShopPage() {
                     <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#0d0f12]">
                       {item.image_url ? <img src={item.image_url || PLACEHOLDERS.ITEM} alt="" className="h-full w-full object-cover" loading="lazy" /> : <ImageIcon className="h-5 w-5 text-zinc-700" />}
                     </div>
-                    <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="truncate font-black text-white">{item.name}</h2><span className="rounded-md bg-[#25282e] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-zinc-400">{typeLabels[item.type] ?? item.type}</span></div><p className="mt-1 line-clamp-1 text-xs text-zinc-500">{item.description || 'Sin descripción'}</p><p className="mt-1 truncate font-mono text-[10px] text-zinc-700">{item.frame_key || item.id}</p></div>
+                    <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="truncate font-black text-white">{item.name}</h2><span className="rounded-md bg-[#25282e] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-zinc-400">{typeLabels[item.type] ?? item.type}</span></div><p className="mt-1 line-clamp-1 text-xs text-zinc-500">{item.description || 'Sin descripción'}</p><p className="mt-1 truncate font-mono text-[10px] text-zinc-700">{item.frame_key || item.id} · {item.owner_count} propietario(s) · {item.shop_item_assets?.some(asset => asset.is_current && asset.status === 'active') ? 'R2' : 'archivo heredado'}</p></div>
                   </div>
                   <div className="flex items-center justify-between gap-3 lg:block"><span className="text-[10px] font-black uppercase text-zinc-600 lg:hidden">Categoría</span><span className="text-sm font-semibold text-zinc-300">{item.category_id ? categories[item.category_id] || 'Sin categoría' : 'Sin categoría'}</span></div>
                   <div className="flex items-center justify-between lg:justify-start"><span className="text-[10px] font-black uppercase text-zinc-600 lg:hidden">Precio</span><span className="inline-flex items-center gap-2 text-sm font-black"><img src="/icons/moneda.png" alt="Moneda" className="h-4 w-4" /> {item.price_coins}</span></div>
@@ -175,11 +225,23 @@ export default function AdminShopPage() {
         <div role="dialog" aria-modal="true" aria-labelledby="delete-title" className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4">
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#17191d] p-6">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-red-500/15 text-red-400"><Trash2 className="h-5 w-5" /></div>
-            <h2 id="delete-title" className="mt-5 text-xl font-black">Retirar “{deleteTarget.name}”</h2>
-            <p className="mt-3 text-sm leading-6 text-zinc-400">Esta acción elimina el artículo, lo desequipa de los perfiles y retira las asociaciones de inventario. No se puede deshacer.</p>
+            <h2 id="delete-title" className="mt-5 text-xl font-black">Administrar “{deleteTarget.name}”</h2>
+            {deleteTarget.owner_count === 0 ? (
+              <p className="mt-3 text-sm leading-6 text-zinc-400">Nadie posee este artículo. Puedes eliminar de forma definitiva sus metadatos y su archivo de R2.</p>
+            ) : (
+              <div className="mt-3 space-y-4">
+                <p className="text-sm leading-6 text-zinc-400"><strong className="text-white">{deleteTarget.owner_count} usuario(s)</strong> lo conservan. El borrado normal está bloqueado; usa “Retirar” en la lista para ocultarlo sin afectar sus compras.</p>
+                <div className="rounded-xl border border-red-500/25 bg-red-500/5 p-4">
+                  <p className="text-xs font-black uppercase tracking-wider text-red-300">Solo para una emergencia real</p>
+                  <textarea value={revokeReason} onChange={event => setRevokeReason(event.target.value)} placeholder="Motivo detallado de la revocación" className="mt-3 min-h-20 w-full rounded-lg border border-white/10 bg-[#0d0f12] p-3 text-sm outline-none focus:border-red-500" />
+                  <input value={revokeConfirmation} onChange={event => setRevokeConfirmation(event.target.value)} placeholder={`Escribe: ${deleteTarget.name}`} className="mt-2 h-11 w-full rounded-lg border border-white/10 bg-[#0d0f12] px-3 text-sm outline-none focus:border-red-500" />
+                  <button onClick={() => void revokeItem()} disabled={busyId === deleteTarget.id || revokeReason.trim().length < 10 || revokeConfirmation !== deleteTarget.name} className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-lg bg-red-700 px-4 text-sm font-black hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40">Revocar a todos y borrar el archivo</button>
+                </div>
+              </div>
+            )}
             <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button onClick={() => setDeleteTarget(null)} className="h-11 rounded-xl border border-white/10 px-5 text-sm font-bold hover:bg-white/5">Cancelar</button>
-              <button onClick={() => void deleteItem()} disabled={busyId === deleteTarget.id} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black hover:bg-red-500 disabled:opacity-50">{busyId === deleteTarget.id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Eliminar definitivamente</button>
+              {deleteTarget.owner_count === 0 && <button onClick={() => void deleteItem()} disabled={busyId === deleteTarget.id} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black hover:bg-red-500 disabled:opacity-50">{busyId === deleteTarget.id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Eliminar archivo y registro</button>}
             </div>
           </div>
         </div>

@@ -32,7 +32,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { FrameEditor } from '@/components/admin/FrameEditor';
 import { PLACEHOLDERS } from '@/lib/constants';
 import Link from 'next/link';
-import { removeSupabaseStorageUrl } from '@/lib/supabase-storage-cleanup';
+import { apiFetch } from '@/lib/api';
+import { cleanupStoreItemAsset, StoreAssetInput, uploadStoreItemAsset } from '@/lib/store-assets';
 
 function EditShopItemWrapper() {
     const { colors } = useTheme();
@@ -146,67 +147,36 @@ function EditShopItemWrapper() {
     };
 
     const handleSave = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+        e?.preventDefault();
         if (!itemId) return;
-
         setIsSaving(true);
-        let uploadedPath: string | null = null;
-        let databaseSaved = false;
+        let uploadedAsset: StoreAssetInput | null = null;
         try {
-            let finalImageUrl = item?.image_url;
-
-            // Si hay un archivo nuevo, subirlo antes de guardar
             if (selectedFile) {
                 const { resizeImage } = await import('@/lib/image-utils');
                 const imageBlob = await resizeImage(selectedFile, 512, skipResize);
-                const extension = skipResize ? selectedFile.name.split('.').pop() : 'webp';
-                // Añadimos "_update_" para no pisar el original u otra caché fácilmente
-                const fileName = `catalog/${crypto.randomUUID()}-update-${form.frame_key}.${extension}`;
-                uploadedPath = fileName;
-
-                const { error: uploadError } = await supabase.storage
-                    .from('profile-frames')
-                    .upload(fileName, imageBlob, {
-                        contentType: skipResize ? selectedFile.type : 'image/webp',
-                        cacheControl: '31536000',
-                        upsert: false
-                    });
-
-                if (uploadError) throw uploadError;
-
-                const { data: { publicUrl } } = supabase.storage
-                    .from('profile-frames')
-                    .getPublicUrl(fileName);
-
-                finalImageUrl = publicUrl;
+                uploadedAsset = await uploadStoreItemAsset(
+                    itemId,
+                    Date.now(),
+                    imageBlob,
+                    skipResize ? selectedFile.type : 'image/webp'
+                );
             }
-
-            const { error: dbError } = await supabase
-                .from('shop_items')
-                .update({
+            await apiFetch(`/admin/catalog/items/${itemId}`, {
+                method: 'PATCH',
+                body: JSON.stringify({
                     ...form,
                     category_id: form.category_id || null,
                     frame_settings: frameSettings,
-                    ...(selectedFile ? { image_url: finalImageUrl } : {})
-                })
-                .eq('id', itemId);
-
-            if (dbError) throw dbError;
-            databaseSaved = true;
-
-            if (selectedFile && item?.image_url && item.image_url !== finalImageUrl) {
-                await removeSupabaseStorageUrl(supabase, 'profile-frames', item.image_url);
-            }
-
-            // Éxito
+                    ...(uploadedAsset ? { asset: uploadedAsset } : {}),
+                }),
+            });
             router.push('/admin/shop');
             router.refresh();
-        } catch (error: any) {
-            if (!databaseSaved && uploadedPath) {
-                await supabase.storage.from('profile-frames').remove([uploadedPath]).catch(console.error);
-            }
+        } catch (error) {
+            if (uploadedAsset) await cleanupStoreItemAsset(uploadedAsset).catch(console.error);
             console.error('Error al actualizar item:', error);
-            alert(`Error: ${error.message}`);
+            alert(`Error: ${error instanceof Error ? error.message : 'No se pudo actualizar el articulo.'}`);
         } finally {
             setIsSaving(false);
         }

@@ -1,9 +1,11 @@
 import { Hono } from 'hono'
 import { authMiddleware } from './auth'
+import { createClient } from '@supabase/supabase-js'
 
 type Bindings = {
     SUPABASE_URL: string
     SUPABASE_ANON_KEY: string
+    SUPABASE_SERVICE_ROLE_KEY: string
     ALLOWED_ORIGIN: string
     COURSE_MATERIALS: R2Bucket
     PROFILE_AVATARS: R2Bucket
@@ -45,9 +47,21 @@ const privateAuthMiddleware = async (c: any, next: any) => {
     const bucketName = c.req.query('bucket') || 'course-materials'
     const method = c.req.method
 
-    // REQUIRE AUTH for all mutations (Upload/Delete) regardless of bucket
+    // Mutations always require a session. Catalog media is admin-only.
     if (method === 'PUT' || method === 'DELETE' || method === 'PATCH') {
-        return authMiddleware(c, next)
+        return authMiddleware(c, async () => {
+            if (bucketName.replace(/_/g, '-') === 'profile-frames') {
+                const user = c.get('user')
+                const service = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY, {
+                    auth: { autoRefreshToken: false, persistSession: false },
+                })
+                const { data: profile, error } = await service.from('profiles').select('role').eq('id', user.id).single()
+                if (error || !profile || !['admin', 'superadmin'].includes(profile.role)) {
+                    return c.json({ error: 'Se requieren permisos de administrador.' }, 403)
+                }
+            }
+            await next()
+        })
     }
 
     // REQUIRE AUTH for course-materials bucket even for GET
@@ -108,6 +122,14 @@ storageRouter.put('/upload', async (c) => {
     let bucket: R2Bucket | undefined
     const normalizedBucket = bucketName.replace(/_/g, '-')
 
+    if (normalizedBucket === 'profile-frames') {
+        const allowedPath = /^(items\/[0-9a-f-]{36}\/v[0-9]+\/(original|display|thumbnail)\.(png|jpe?g|webp|gif)|scheduled\/[0-9a-f-]{36}\/v[0-9]+\/original\.(png|jpe?g|webp|gif))$/i
+        const contentLength = Number(c.req.header('X-File-Size') || c.req.header('Content-Length') || '0')
+        if (!allowedPath.test(cleanPath)) return c.json({ error: 'Ruta de recurso de tienda invalida.' }, 400)
+        if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(contentType.toLowerCase())) return c.json({ error: 'Formato de imagen no permitido.' }, 415)
+        if (!Number.isFinite(contentLength) || contentLength <= 0 || contentLength > 16 * 1024 * 1024) return c.json({ error: 'La imagen debe pesar como maximo 16 MB.' }, 413)
+    }
+
     switch (normalizedBucket) {
         case 'course-materials': bucket = c.env.COURSE_MATERIALS; break;
         case 'course-images': bucket = c.env.COURSE_IMAGES; break;
@@ -137,6 +159,7 @@ storageRouter.put('/upload', async (c) => {
         await bucket.put(cleanPath, body, {
             httpMetadata: {
                 contentType: contentType,
+                ...(normalizedBucket === 'profile-frames' ? { cacheControl: 'public, max-age=31536000, immutable' } : {}),
             },
             customMetadata: authenticatedUser?.id ? { uploadedBy: authenticatedUser.id } : undefined,
         })
@@ -179,7 +202,7 @@ storageRouter.put('/upload', async (c) => {
             success: true,
             path: cleanPath,
             bucket: normalizedBucket,
-            url: `${c.env.ALLOWED_ORIGIN}/storage/secure-url?bucket=${normalizedBucket}&path=${encodeURIComponent(cleanPath)}`
+            url: `${new URL(c.req.url).origin}/storage/secure-url?bucket=${normalizedBucket}&path=${encodeURIComponent(cleanPath)}`
         })
 
     } catch (e: any) {
@@ -194,19 +217,8 @@ storageRouter.put('/upload', async (c) => {
 storageRouter.delete('/delete', async (c) => {
     const path = c.req.query('path')
     const bucketName = c.req.query('bucket') || 'course-materials'
-    const secret = c.req.query('secret')
 
     console.log(`🗑️ Delete request: bucket=${bucketName}, path=${path}`)
-
-    // Allow deletion via maintenance secret OR standard auth
-    const authHeader = c.req.header('Authorization')
-    if (secret && secret !== c.env.SUPABASE_ANON_KEY) {
-        return c.json({ error: 'Secret de mantenimiento inválido' }, 401)
-    }
-
-    if (!secret && !authHeader) {
-        return c.json({ error: 'No autorizado (Falta header o secret)' }, 401)
-    }
 
     if (!path) {
         return c.json({ error: 'Falta el parámetro "path"' }, 400)
@@ -239,6 +251,11 @@ storageRouter.delete('/delete', async (c) => {
     // Seleccionar el bucket correcto
     let bucket: R2Bucket | undefined
     const normalizedBucket = bucketName.replace(/_/g, '-')
+
+    if (normalizedBucket === 'profile-frames') {
+        const managedPath = /^(items\/[0-9a-f-]{36}\/v[0-9]+\/(original|display|thumbnail)\.(png|jpe?g|webp|gif)|scheduled\/[0-9a-f-]{36}\/v[0-9]+\/original\.(png|jpe?g|webp|gif))$/i
+        if (!managedPath.test(cleanPath)) return c.json({ error: 'Ruta de recurso de tienda invalida.' }, 400)
+    }
 
     switch (normalizedBucket) {
         case 'course-materials': bucket = c.env.COURSE_MATERIALS; break;

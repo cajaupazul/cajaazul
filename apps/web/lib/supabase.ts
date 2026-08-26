@@ -66,6 +66,10 @@ export type ShopCategory = {
   name: string;
   icon: string | null;
   is_active: boolean;
+  catalog_status?: 'active' | 'retired' | 'revoked' | 'deletion_pending';
+  retired_at?: string | null;
+  revoked_at?: string | null;
+  revocation_reason?: string | null;
   display_order: number;
   created_at: string;
 };

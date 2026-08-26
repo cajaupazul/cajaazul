@@ -19,6 +19,8 @@ import { supabase, ShopCategory } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
 import { resizeImage } from '@/lib/image-utils';
 import { FrameEditor } from '@/components/admin/FrameEditor';
+import { apiFetch } from '@/lib/api';
+import { cleanupStoreItemAsset, StoreAssetInput, uploadStoreItemAsset } from '@/lib/store-assets';
 
 type ItemType = 'profile_frame' | 'background' | 'badge' | 'sticker' | 'other';
 type Notice = { type: 'error' | 'success' | 'warning'; text: string } | null;
@@ -110,39 +112,30 @@ export default function NewShopItemPage() {
     if (form.description.length > 1600) return setNotice({ type: 'error', text: 'La descripción no puede superar 1600 caracteres.' });
 
     setSaving(true);
-    let uploadedPath: string | null = null;
+    let uploadedAsset: StoreAssetInput | null = null;
     try {
       const blob = await resizeImage(selectedFile, 512, preserveAnimation);
-      const extension = preserveAnimation ? selectedFile.name.split('.').pop()?.toLowerCase() || 'webp' : 'webp';
-      uploadedPath = `catalog/${crypto.randomUUID()}-${cleanKey}.${extension}`;
-      const { error: uploadError } = await supabase.storage.from('profile-frames').upload(uploadedPath, blob, {
-        contentType: preserveAnimation ? selectedFile.type : 'image/webp',
-        cacheControl: '31536000',
-        upsert: false,
-      });
-      if (uploadError) throw uploadError;
-
-      const { data: publicFile } = supabase.storage.from('profile-frames').getPublicUrl(uploadedPath);
-      const { error: insertError } = await supabase.from('shop_items').insert({
+      const itemId = crypto.randomUUID();
+      uploadedAsset = await uploadStoreItemAsset(itemId, 1, blob, preserveAnimation ? selectedFile.type : 'image/webp');
+      await apiFetch('/admin/catalog/items', { method: 'POST', body: JSON.stringify({
+        id: itemId,
         name: cleanName,
         description: form.description.trim() || null,
         type: form.type,
         category_id: form.category_id || null,
         price_coins: form.price_coins,
         frame_key: cleanKey,
-        image_url: publicFile.publicUrl,
-        is_active: form.is_active,
         max_uses: form.max_uses,
         bundle_items: form.type === 'other' ? form.bundle_items : [],
         frame_settings: form.type === 'profile_frame' ? frameSettings : null,
-      });
-      if (insertError) throw insertError;
+        asset: uploadedAsset,
+      }) });
 
       setNotice({ type: 'success', text: 'Artículo creado correctamente.' });
       router.push('/admin/shop');
       router.refresh();
     } catch (error) {
-      if (uploadedPath) await supabase.storage.from('profile-frames').remove([uploadedPath]);
+      if (uploadedAsset) await cleanupStoreItemAsset(uploadedAsset).catch(console.error);
       setNotice({ type: 'error', text: error instanceof Error ? error.message : 'No se pudo crear el artículo.' });
     } finally {
       setSaving(false);

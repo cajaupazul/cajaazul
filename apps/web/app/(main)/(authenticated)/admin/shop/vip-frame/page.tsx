@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { deleteFileFromR2WithRetry, getSecureFileUrl, uploadFileToR2 } from '@/lib/r2-storage';
 
 interface ScheduledFrame {
   id: string;
@@ -36,6 +37,8 @@ interface ScheduledFrame {
   scale_factor: number;
   offset_x: number;
   offset_y: number;
+  asset_bucket: string | null;
+  asset_object_key: string | null;
 }
 
 interface MonthSlot {
@@ -109,7 +112,7 @@ export default function VipFrameSchedulePage() {
     setIsLoadingSchedule(true);
     const { data, error } = await supabase
       .from('vip_exclusive_frames')
-      .select('id,image_url,label,description,starts_at,expires_at,is_active,scale_factor,offset_x,offset_y')
+      .select('id,image_url,label,description,starts_at,expires_at,is_active,scale_factor,offset_x,offset_y,asset_bucket,asset_object_key')
       .eq('is_active', true)
       .order('starts_at', { ascending: true });
 
@@ -203,21 +206,16 @@ export default function VipFrameSchedulePage() {
       const imageBlob = await resizeImage(selectedFile, 512, skipResize);
       const sourceExtension = selectedFile.name.split('.').pop()?.toLowerCase() || 'webp';
       const extension = skipResize ? sourceExtension : 'webp';
-      const monthKey = `${startsAt.getFullYear()}-${pad(startsAt.getMonth() + 1)}`;
-      uploadedPath = `scheduled/${monthKey}/vip-frame-${Date.now()}.${extension}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('profile-frames')
-        .upload(uploadedPath, imageBlob, {
-          contentType: skipResize ? selectedFile.type : 'image/webp',
-          cacheControl: '31536000',
-          upsert: false,
-        });
-      if (uploadError) throw uploadError;
-
-      const { data: publicData } = supabase.storage.from('profile-frames').getPublicUrl(uploadedPath);
+      const frameId = crypto.randomUUID();
+      const mimeType = skipResize ? selectedFile.type : 'image/webp';
+      uploadedPath = `scheduled/${frameId}/v1/original.${extension}`;
+      const uploadFile = new File([imageBlob], `original.${extension}`, { type: mimeType });
+      await uploadFileToR2('profile-frames', uploadedPath, uploadFile);
+      const digest = await crypto.subtle.digest('SHA-256', await uploadFile.arrayBuffer());
+      const checksum = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('');
       const { error: dbError } = await supabase.from('vip_exclusive_frames').insert({
-        image_url: publicData.publicUrl,
+        id: frameId,
+        image_url: getSecureFileUrl('profile-frames', uploadedPath),
         label: form.label.trim(),
         description: form.description.trim() || null,
         starts_at: startsAt.toISOString(),
@@ -226,6 +224,11 @@ export default function VipFrameSchedulePage() {
         offset_x: form.offset_x,
         offset_y: form.offset_y,
         is_active: true,
+        asset_bucket: 'profile-frames',
+        asset_object_key: uploadedPath,
+        asset_mime_type: mimeType,
+        asset_size_bytes: uploadFile.size,
+        asset_checksum_sha256: checksum,
       });
       if (dbError) throw dbError;
 
@@ -234,7 +237,7 @@ export default function VipFrameSchedulePage() {
       await fetchSchedule();
       alert('Marco programado. Se activará automáticamente en la fecha indicada.');
     } catch (error: any) {
-      if (uploadedPath) await supabase.storage.from('profile-frames').remove([uploadedPath]);
+      if (uploadedPath) await deleteFileFromR2WithRetry('profile-frames', uploadedPath).catch(console.error);
       console.error('[VIP frames] Error al programar:', error);
       const overlap = error?.code === '23P01';
       alert(overlap ? 'Ese periodo ya tiene un marco programado. Cancélalo o elige otro mes.' : `No se pudo guardar: ${error?.message || 'error desconocido'}`);
@@ -248,7 +251,10 @@ export default function VipFrameSchedulePage() {
     setRemovingId(frame.id);
     const { error } = await supabase.from('vip_exclusive_frames').update({ is_active: false }).eq('id', frame.id);
     if (error) alert(`No se pudo cancelar: ${error.message}`);
-    else await fetchSchedule();
+    else {
+      if (frame.asset_object_key) await deleteFileFromR2WithRetry('profile-frames', frame.asset_object_key).catch(console.error);
+      await fetchSchedule();
+    }
     setRemovingId(null);
   };
 
