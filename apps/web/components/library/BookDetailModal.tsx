@@ -9,8 +9,11 @@ import {
   Calendar,
   ExternalLink,
   FileText,
+  Library,
+  ShoppingBag,
   Star,
   Trash2,
+  UserRound,
   X,
 } from 'lucide-react';
 import SecureFileModal from '@/components/secure/SecureFileModal';
@@ -176,8 +179,13 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
       </header>
 
       <main className={styles.main}>
-        <section className={styles.hero}>
-          <aside className={styles.coverColumn} aria-label="Portada y datos rápidos">
+        <div className={styles.ambientCover} aria-hidden="true">
+          {book.cover_url && <img src={book.cover_url} alt="" />}
+          <span />
+        </div>
+
+        <section className={styles.bookLayout}>
+          <aside className={styles.sidebar} aria-label="Portada y ficha del libro">
             <div className={styles.cover}>
               {book.cover_url ? (
                 <img src={book.cover_url} alt={`Portada de ${book.title}`} />
@@ -188,6 +196,38 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
                 </div>
               )}
             </div>
+
+            <section className={styles.authorCard} aria-labelledby="book-author-heading">
+              <span className={styles.sideLabel}>Autor</span>
+              <div className={styles.authorIdentity}>
+                <span className={styles.authorIcon}><UserRound aria-hidden="true" /></span>
+                <div>
+                  <h2 id="book-author-heading">{book.author || 'Autor no especificado'}</h2>
+                  <p>{book.editorial || 'Editorial no indicada'}</p>
+                </div>
+              </div>
+            </section>
+
+            {book.buy_links && book.buy_links.length > 0 && (
+              <section className={styles.purchaseCard} aria-labelledby="purchase-heading">
+                <span className={styles.sideLabel}>Leer o comprar</span>
+                <h2 id="purchase-heading">Ediciones oficiales</h2>
+                <div className={styles.externalLinks}>
+                  {book.buy_links.map((link, index) => {
+                    const favicon = getFavicon(link.url);
+                    return (
+                      <a key={`${link.url}-${index}`} href={link.url} target="_blank" rel="noopener noreferrer">
+                        <span className={styles.storeIdentity}>
+                          {favicon ? <img src={favicon} alt="" /> : <ShoppingBag aria-hidden="true" />}
+                          <span>{link.store}</span>
+                        </span>
+                        <ExternalLink aria-hidden="true" />
+                      </a>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             <dl className={styles.quickFacts}>
               <div>
@@ -203,107 +243,76 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
             </dl>
           </aside>
 
-          <div className={styles.bookInformation}>
-            <div className={styles.kickerRow}>
-              <span className={styles.kicker}>{book.metadata?.collection || 'Biblioteca CampusLink'}</span>
-              <span className={styles.availability}>
-                <span aria-hidden="true" />
-                Disponible para lectura
-              </span>
-            </div>
-
-            <h1 id="book-detail-title" className={styles.title}>
-              {book.title}
-            </h1>
-
-            <p className={styles.author}>
-              <span>Autor</span>
-              <strong>{book.author || 'Autor no especificado'}</strong>
-            </p>
-
-            <div className={styles.rating} aria-label={`Calificación: ${rating} de 5`}>
-              <div className={styles.stars} aria-hidden="true">
-                {Array.from({ length: 5 }, (_, index) => (
-                  <Star key={index} className={index < Math.floor(rating) ? styles.starActive : styles.starInactive} />
-                ))}
+          <div className={styles.contentColumn}>
+            <section className={styles.heroInformation}>
+              <div className={styles.kickerRow}>
+                <span className={styles.kicker}><Library aria-hidden="true" /> {book.metadata?.collection || 'Biblioteca CampusLink'}</span>
+                <span className={styles.availability}>
+                  <span aria-hidden="true" />
+                  Disponible para lectura
+                </span>
               </div>
-              <strong>{rating.toFixed(1)}</strong>
-              <span>de 5</span>
-            </div>
 
-            {genres.length > 0 && (
-              <div className={styles.topics}>
-                <span>Áreas temáticas</span>
-                <div>
-                  {genres.map((genre) => (
-                    <span key={genre}>{genre}</span>
-                  ))}
+              <h1 id="book-detail-title" className={styles.title}>{book.title}</h1>
+              <p className={styles.heroAuthor}>por <strong>{book.author || 'Autor no especificado'}</strong></p>
+
+              <div className={styles.heroActions}>
+                <button
+                  type="button"
+                  onClick={() => setShowViewer(true)}
+                  disabled={!book.pdf_url}
+                  className={styles.readButton}
+                >
+                  <BookOpen aria-hidden="true" />
+                  <span>{book.pdf_url ? 'Comenzar a leer' : 'Documento no disponible'}</span>
+                </button>
+
+                <div className={styles.rating} aria-label={`Calificación: ${rating} de 5`}>
+                  <div className={styles.stars} aria-hidden="true">
+                    {Array.from({ length: 5 }, (_, index) => (
+                      <Star key={index} className={index < Math.floor(rating) ? styles.starActive : styles.starInactive} />
+                    ))}
+                  </div>
+                  <strong>{rating.toFixed(1)}</strong>
+                  <span>/ 5</span>
                 </div>
               </div>
-            )}
 
-            <div className={styles.primaryActions}>
-              <button
-                type="button"
-                onClick={() => setShowViewer(true)}
-                disabled={!book.pdf_url}
-                className={styles.readButton}
-              >
-                <BookOpen aria-hidden="true" />
-                <span>{book.pdf_url ? 'Leer documento' : 'Documento no disponible'}</span>
-              </button>
-              {book.pdf_url && <span className={styles.actionHint}>Se abrirá en el visor seguro de CampusLink.</span>}
-            </div>
+              {genres.length > 0 && (
+                <div className={styles.topics}>
+                  {genres.map((genre) => <span key={genre}>{genre}</span>)}
+                </div>
+              )}
+            </section>
+
+            <section className={styles.synopsis} aria-labelledby="book-summary-heading">
+              <span className={styles.sectionLabel}>Sobre esta publicación</span>
+              <h2 id="book-summary-heading">De qué trata</h2>
+              <p>{book.synopsis || 'Este libro todavía no tiene una descripción disponible.'}</p>
+            </section>
+
+            <section className={styles.publicationDetails} aria-labelledby="publication-details-heading">
+              <div className={styles.detailsHeading}>
+                <span className={styles.sectionLabel}>Ficha bibliográfica</span>
+                <h2 id="publication-details-heading">Información de la edición</h2>
+              </div>
+              <dl>
+                <div>
+                  <dt><Calendar aria-hidden="true" /> Publicación</dt>
+                  <dd>{book.year || 'No indicada'}</dd>
+                </div>
+                <div>
+                  <dt><FileText aria-hidden="true" /> Extensión</dt>
+                  <dd>{pages ? `${pages} páginas` : 'No indicada'}</dd>
+                </div>
+                <div>
+                  <dt><Building2 aria-hidden="true" /> Editorial</dt>
+                  <dd>{book.editorial || 'No indicada'}</dd>
+                </div>
+              </dl>
+            </section>
           </div>
         </section>
-
-        <div className={styles.contentGrid}>
-          <section className={styles.synopsis} aria-labelledby="book-summary-heading">
-            <span className={styles.sectionLabel}>Sobre esta publicación</span>
-            <h2 id="book-summary-heading">Resumen</h2>
-            <p>{book.synopsis || 'No hay una descripción disponible para este libro.'}</p>
-          </section>
-
-          <aside className={styles.publicationDetails} aria-labelledby="publication-details-heading">
-            <span className={styles.sectionLabel}>Ficha bibliográfica</span>
-            <h2 id="publication-details-heading">Detalles</h2>
-            <dl>
-              <div>
-                <dt><Calendar aria-hidden="true" /> Publicación</dt>
-                <dd>{book.year || 'No indicada'}</dd>
-              </div>
-              <div>
-                <dt><FileText aria-hidden="true" /> Extensión</dt>
-                <dd>{pages ? `${pages} páginas` : 'No indicada'}</dd>
-              </div>
-              <div>
-                <dt><Building2 aria-hidden="true" /> Editorial</dt>
-                <dd>{book.editorial || 'No indicada'}</dd>
-              </div>
-            </dl>
-          </aside>
-        </div>
-
-        {book.buy_links && book.buy_links.length > 0 && (
-          <section className={styles.externalSection} aria-labelledby="external-links-heading">
-            <div>
-              <span className={styles.sectionLabel}>Enlaces relacionados</span>
-              <h2 id="external-links-heading">Consultar en otros sitios</h2>
-            </div>
-            <div className={styles.externalLinks}>
-              {book.buy_links.map((link, index) => {
-                const favicon = getFavicon(link.url);
-                return (
-                  <a key={`${link.url}-${index}`} href={link.url} target="_blank" rel="noopener noreferrer">
-                    {favicon && <img src={favicon} alt="" />}
-                    <span>{link.store}</span>
-                    <ExternalLink aria-hidden="true" />
-                  </a>
-                );
-              })}
-            </div>
-          </section>
-        )}
       </main>
 
       <SecureFileModal
