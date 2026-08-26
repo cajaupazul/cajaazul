@@ -1,41 +1,39 @@
 .dialog {
-  --page: #0d1117;
-  --surface: #151a21;
-  --surface-strong: #1b2129;
-  --border: #2a323d;
-  --text: #f5f7fa;
-  --muted: #a5b0bf;
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  overflow-x: hidden;
-  overflow-y: auto;
+  --page: var(--bb-dark);
+  --surface: var(--bb-card);
+  --surface-strong: var(--bb-sidebar);
+  --border: var(--bb-border);
+  --text: var(--bb-text);
+  --muted: var(--bb-text-secondary);
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+  overflow: hidden;
   color: var(--text);
   background: var(--page);
   animation: detail-enter 180ms ease-out;
 }
 
 .header {
-  position: sticky;
-  top: 0;
-  z-index: 30;
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 10;
   min-height: 70px;
   padding: 11px clamp(14px, 3vw, 42px);
   display: grid;
   grid-template-columns: minmax(max-content, 1fr) minmax(0, 1.2fr) minmax(max-content, 1fr);
   align-items: center;
   gap: 20px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(13, 17, 23, 0.94);
-  backdrop-filter: blur(16px);
+  border: 0;
+  background: transparent;
 }
 
 .backButton,
 .deleteButton,
 .closeButton {
-  border: 1px solid var(--border);
-  color: var(--text);
-  background: var(--surface);
+  border: 1px solid #3a3a3a;
+  color: #fff;
+  background: #101010;
   cursor: pointer;
   transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
 }
@@ -54,8 +52,8 @@
 
 .backButton:hover,
 .closeButton:hover {
-  border-color: #566476;
-  background: var(--surface-strong);
+  border-color: #737373;
+  background: #202020;
 }
 
 .backButton svg,
@@ -76,7 +74,7 @@
   align-items: center;
   justify-content: center;
   gap: 9px;
-  color: var(--muted);
+  color: #d4d4d4;
   font-size: 0.78rem;
 }
 
@@ -87,7 +85,7 @@
 .breadcrumb strong {
   min-width: 0;
   overflow: hidden;
-  color: #dce3eb;
+  color: #fff;
   font-weight: 750;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -136,7 +134,8 @@
 
 .main {
   position: relative;
-  min-height: calc(100vh - 70px);
+  width: 100%;
+  min-height: calc(100dvh - 140px);
   isolation: isolate;
 }
 
@@ -144,10 +143,10 @@
   position: absolute;
   inset: 0 0 auto;
   z-index: -1;
-  height: clamp(350px, 46vw, 510px);
+  height: clamp(350px, 34vw, 430px);
   overflow: hidden;
-  border-bottom: 1px solid #27303a;
-  background: #151c25;
+  border-bottom: 1px solid var(--border);
+  background: #171717;
 }
 
 .ambientCover img {
@@ -156,21 +155,20 @@
   width: calc(100% + 84px);
   height: calc(100% + 84px);
   object-fit: cover;
-  filter: blur(20px) saturate(0.72) brightness(0.52);
+  filter: blur(18px) saturate(0.7) brightness(0.5);
   transform: scale(1.05);
 }
 
 .ambientCover span {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(13, 17, 23, 0.68), rgba(13, 17, 23, 0.35) 55%, rgba(13, 17, 23, 0.7)),
-    linear-gradient(180deg, rgba(13, 17, 23, 0.05) 25%, var(--page) 100%);
+  background: rgba(0, 0, 0, 0.56);
 }
 
 .bookLayout {
-  width: min(100%, 1380px);
+  width: 100%;
   margin: 0 auto;
-  padding: clamp(38px, 5vw, 68px) clamp(18px, 4vw, 56px) 84px;
+  padding: clamp(76px, 7vw, 96px) clamp(18px, 3.5vw, 52px) 76px;
   display: grid;
   grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
   align-items: start;
@@ -187,7 +185,7 @@
   margin: 0 auto;
   aspect-ratio: 3 / 4;
   overflow: hidden;
-  border: 1px solid #44505e;
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.32);
@@ -221,7 +219,7 @@
 .coverFallback span,
 .sideLabel,
 .sectionLabel {
-  color: #aab5c3;
+  color: var(--muted);
   font-size: 0.66rem;
   font-weight: 850;
   letter-spacing: 0.13em;
@@ -249,7 +247,7 @@
   height: 38px;
   display: grid;
   place-items: center;
-  border: 1px solid #3b4654;
+  border: 1px solid var(--border);
   border-radius: 50%;
   color: var(--book-accent);
   background: var(--surface);
@@ -299,7 +297,7 @@
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 8px;
-  color: #e4eaf1;
+  color: var(--text);
   background: var(--surface);
   font-size: 0.76rem;
   font-weight: 750;
@@ -307,7 +305,7 @@
 }
 
 .externalLinks a:hover {
-  border-color: #566476;
+  border-color: var(--muted);
   background: var(--surface-strong);
 }
 
@@ -384,12 +382,17 @@
 }
 
 .heroInformation {
-  min-height: clamp(285px, 35vw, 380px);
-  padding: clamp(20px, 3vw, 34px) 0 36px;
+  min-height: calc(clamp(350px, 34vw, 430px) - clamp(76px, 7vw, 96px));
+  padding: 0 0 28px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-end;
+}
+
+.informationBar {
+  padding: 20px 0 30px;
+  border-bottom: 1px solid var(--border);
 }
 
 .kickerRow {
@@ -462,7 +465,7 @@
 }
 
 .heroActions {
-  margin-top: 24px;
+  margin-top: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -476,10 +479,10 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  border: 1px solid var(--book-accent);
+  border: 1px solid var(--text);
   border-radius: 9px;
-  color: #fff;
-  background: var(--book-accent);
+  color: var(--page);
+  background: var(--text);
   cursor: pointer;
   font-size: 0.84rem;
   font-weight: 850;
@@ -524,7 +527,7 @@
 }
 
 .starInactive {
-  color: #697484;
+  color: var(--muted);
 }
 
 .rating strong {
@@ -534,7 +537,7 @@
 }
 
 .rating > span {
-  color: #bbc5d1;
+  color: var(--muted);
   font-size: 0.72rem;
 }
 
@@ -549,10 +552,10 @@
   max-width: 100%;
   padding: 6px 10px;
   overflow-wrap: anywhere;
-  border: 1px solid rgba(225, 234, 244, 0.24);
+  border: 1px solid var(--border);
   border-radius: 7px;
-  color: #e0e7f0;
-  background: rgba(21, 26, 33, 0.72);
+  color: var(--text);
+  background: var(--surface);
   font-size: 0.7rem;
   font-weight: 750;
 }
@@ -578,7 +581,7 @@
   margin: 19px 0 0;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
-  color: #bdc7d3;
+  color: var(--muted);
   font-size: clamp(0.96rem, 1.35vw, 1.08rem);
   line-height: 1.8;
 }
@@ -624,7 +627,7 @@
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
-  color: #e5eaf1;
+  color: var(--text);
   font-size: 0.78rem;
   font-weight: 750;
   text-align: right;
@@ -665,30 +668,33 @@
   }
 
   .ambientCover {
-    height: 355px;
+    height: 365px;
   }
 
   .bookLayout {
-    padding-top: 26px;
-    grid-template-columns: 1fr;
-    gap: 28px;
+    padding-top: 78px;
+    grid-template-columns: minmax(120px, 160px) minmax(0, 1fr);
+    grid-template-areas:
+      "cover hero"
+      "info info"
+      "facts facts"
+      "author author"
+      "purchase purchase"
+      "synopsis synopsis"
+      "details details";
+    gap: 22px 20px;
   }
 
-  .sidebar {
-    display: grid;
-    grid-template-columns: minmax(126px, 168px) minmax(0, 1fr);
-    grid-template-areas:
-      "cover author"
-      "cover purchase"
-      "facts facts";
-    gap: 16px 18px;
-    align-items: start;
+  .sidebar,
+  .contentColumn {
+    display: contents;
   }
 
   .cover {
     grid-area: cover;
     width: 100%;
     margin: 0;
+    align-self: end;
   }
 
   .authorCard,
@@ -711,13 +717,26 @@
   }
 
   .heroInformation {
-    min-height: 0;
-    padding: 4px 0 32px;
+    grid-area: hero;
+    min-height: 250px;
+    padding: 0 0 18px;
+  }
+
+  .informationBar {
+    grid-area: info;
+  }
+
+  .synopsis {
+    grid-area: synopsis;
+  }
+
+  .publicationDetails {
+    grid-area: details;
   }
 
   .title {
-    max-width: 22ch;
-    font-size: clamp(2.2rem, 10vw, 3.5rem);
+    max-width: 18ch;
+    font-size: clamp(1.9rem, 7.5vw, 3.25rem);
   }
 }
 
@@ -749,13 +768,10 @@
   }
 
   .bookLayout {
-    padding-inline: 16px;
+    padding-inline: 14px;
     padding-bottom: 54px;
-  }
-
-  .sidebar {
-    grid-template-columns: minmax(108px, 136px) minmax(0, 1fr);
-    gap: 14px;
+    grid-template-columns: minmax(96px, 126px) minmax(0, 1fr);
+    gap: 18px 14px;
   }
 
   .authorIdentity {
@@ -778,8 +794,22 @@
   }
 
   .title {
-    font-size: clamp(2rem, 11vw, 2.85rem);
+    margin-top: 12px;
+    font-size: clamp(1.7rem, 7.8vw, 2.45rem);
     line-height: 1.01;
+  }
+
+  .heroAuthor {
+    margin-top: 11px;
+    font-size: 0.78rem;
+  }
+
+  .kicker {
+    font-size: 0.58rem;
+  }
+
+  .availability {
+    display: none;
   }
 
   .heroActions {
@@ -800,22 +830,6 @@
   .publicationDetails dd {
     padding-left: 22px;
     text-align: left;
-  }
-}
-
-@media (max-width: 360px) {
-  .sidebar {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "cover"
-      "author"
-      "purchase"
-      "facts";
-  }
-
-  .cover {
-    width: min(100%, 190px);
-    margin: 0 auto;
   }
 }
 

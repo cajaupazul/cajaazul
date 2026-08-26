@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
   BookOpen,
@@ -39,24 +38,6 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
   const { profile } = useProfile();
   const [showViewer, setShowViewer] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen) {
-      document.body.style.overflow = '';
-      setShowViewer(false);
-      return;
-    }
-
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -67,7 +48,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen, onClose, showViewer]);
 
-  if (!book || !mounted || !isOpen) return null;
+  if (!book || !isOpen) return null;
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
   const accentColor = colors?.primary || '#2563eb';
@@ -140,8 +121,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
   const pageContent = (
     <div
       className={styles.dialog}
-      role="dialog"
-      aria-modal="true"
+      role="region"
       aria-labelledby="book-detail-title"
       style={{ '--book-accent': accentColor } as React.CSSProperties}
     >
@@ -255,7 +235,9 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
 
               <h1 id="book-detail-title" className={styles.title}>{book.title}</h1>
               <p className={styles.heroAuthor}>por <strong>{book.author || 'Autor no especificado'}</strong></p>
+            </section>
 
+            <section className={styles.informationBar} aria-label="Acciones y calificación">
               <div className={styles.heroActions}>
                 <button
                   type="button"
@@ -325,5 +307,5 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
     </div>
   );
 
-  return createPortal(pageContent, document.body);
+  return pageContent;
 };
