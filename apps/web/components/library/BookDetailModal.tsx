@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowLeft,
   BookOpen,
@@ -9,6 +10,7 @@ import {
   ExternalLink,
   FileText,
   Library,
+  Pencil,
   ShoppingBag,
   Star,
   Trash2,
@@ -25,14 +27,12 @@ interface BookDetailModalProps {
   book: LibraryBook | null;
   isOpen: boolean;
   onClose: () => void;
-  onDeleted?: () => void;
 }
 
 export const BookDetailModal: React.FC<BookDetailModalProps> = ({
   book,
   isOpen,
   onClose,
-  onDeleted,
 }) => {
   const { colors } = useTheme();
   const { profile } = useProfile();
@@ -107,7 +107,6 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
       if (error) throw error;
 
       alert('Libro eliminado correctamente');
-      onDeleted?.();
       onClose();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Ocurrió un error inesperado';
@@ -140,16 +139,26 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
 
         <div className={styles.headerActions}>
           {isAdmin && (
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className={styles.deleteButton}
-              title="Eliminar libro de la biblioteca"
-            >
-              <Trash2 aria-hidden="true" />
-              <span>{isDeleting ? 'Eliminando…' : 'Eliminar'}</span>
-            </button>
+            <>
+              <Link
+                href={`/admin/library?edit=${encodeURIComponent(book.id)}`}
+                className={styles.editButton}
+                title="Editar todos los datos del libro"
+              >
+                <Pencil aria-hidden="true" />
+                <span>Editar</span>
+              </Link>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className={styles.deleteButton}
+                title="Eliminar libro de la biblioteca"
+              >
+                <Trash2 aria-hidden="true" />
+                <span>{isDeleting ? 'Eliminando…' : 'Eliminar'}</span>
+              </button>
+            </>
           )}
           <button type="button" onClick={onClose} className={styles.closeButton} title="Cerrar">
             <span className="sr-only">Cerrar</span>
