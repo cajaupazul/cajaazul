@@ -1,67 +1,29 @@
 /**
- * Triggers file conversion to PDF via the campuslink-converter service on Render.
+ * Best-effort wakeup for the document converter.
  *
- * Resilient to cold starts: sends a warmup ping first, then uses keepalive + long timeout
- * so the request survives even if the user navigates away before Render wakes up.
+ * The upload API persists the actual job in Supabase before returning. This
+ * browser call never carries an R2 key and is therefore safe to abandon when
+ * the user navigates away or Render is still waking up.
  */
-export async function triggerFileConversion(fileKey: string, bucket: string = 'course-materials') {
-    const getConverterUrl = () => {
-        if (process.env.NEXT_PUBLIC_CONVERTER_API_URL) return process.env.NEXT_PUBLIC_CONVERTER_API_URL;
-        if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-            return 'https://campuslink-converter.onrender.com';
-        }
-        return 'http://localhost:3000';
-    };
+export async function triggerFileConversion(fileKey: string, bucket = 'course-materials') {
+    const extension = fileKey.split('.').pop()?.toLowerCase();
+    if (bucket.replace(/_/g, '-') !== 'course-materials') return null;
+    if (!extension || !['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(extension)) return null;
 
-    const converterApiUrl = getConverterUrl();
-
-    // 1. Fire a warmup GET ping (fire and forget — wakes Render up in background)
-    //    We don't await this — its only purpose is to trigger the cold start early.
-    if (typeof window !== 'undefined') {
-        fetch(`${converterApiUrl}/`, {
-            method: 'GET',
-            keepalive: true,
-        }).catch(() => { /* ignore warmup errors */ });
-    }
-
-    // 2. Small delay to give Render a head start on waking up
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    // 3. Send the actual conversion job with a long timeout and keepalive
-    const controller = new AbortController();
-    // 90 seconds: more than enough time for Render free tier to cold-start
-    const timeoutId = setTimeout(() => controller.abort(), 90_000);
+    const converterUrl = process.env.NEXT_PUBLIC_CONVERTER_API_URL
+        || 'https://campuslink-converter.onrender.com';
 
     try {
-        console.log(`[CONVERTER] Triggering conversion for "${fileKey}" via ${converterApiUrl}`);
-
-        const response = await fetch(`${converterApiUrl}/convert-stored`, {
+        await fetch(`${converterUrl}/drain`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: fileKey, bucket }),
-            keepalive: true,   // Survives page navigation / modal close
-            signal: controller.signal,
+            body: JSON.stringify({ source: 'campuslink-web' }),
+            keepalive: true,
         });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            const errBody = await response.json().catch(() => ({ error: 'Unknown error' }));
-            console.error('[CONVERTER] Job creation failed:', errBody);
-            return null;
-        }
-
-        const data = await response.json();
-        console.log('[CONVERTER] Job queued successfully. jobId:', data.jobId);
-        return data;
-
-    } catch (error: any) {
-        clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-            console.warn('[CONVERTER] Request timed out (90s). Render may still wake up and process if keepalive worked.');
-        } else {
-            console.error('[CONVERTER] Fetch error:', error.message);
-        }
-        return null;
+        return { status: 'wake-requested' };
+    } catch {
+        // Supabase cron is the durable fallback, so a cold-start timeout here
+        // must never turn an otherwise successful upload into a user error.
+        return { status: 'queued-in-supabase' };
     }
 }

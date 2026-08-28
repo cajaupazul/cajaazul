@@ -97,14 +97,20 @@ export function UploadFolderModal({ isOpen, onClose, onSuccess }: UploadFolderMo
 
       const storagePath = `bb_sets/${setId}/${entry.relativePath}`;
 
-      await fetch(`${apiBase}/storage/upload?path=${encodeURIComponent(storagePath)}&bucket=course-materials`, {
+      const uploadResponse = await fetch(`${apiBase}/storage/upload?path=${encodeURIComponent(storagePath)}&bucket=course-materials`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': entry.file.type || 'application/octet-stream',
+          'X-File-Size': String(entry.file.size),
         },
         body: entry.file,
       });
+
+      if (!uploadResponse.ok) {
+        const details = await uploadResponse.json().catch(() => ({})) as { error?: string };
+        throw new Error(details.error || `No se pudo subir ${entry.file.name}`);
+      }
 
       const fileParts = entry.relativePath.split('/');
       fileParts.pop();

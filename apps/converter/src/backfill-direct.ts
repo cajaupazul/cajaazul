@@ -1,12 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import { processConversion } from './processor';
+import { enqueueLegacyJob } from './queue';
 import dotenv from 'dotenv';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
-
-import fs from 'fs';
-
-dotenv.config();
 
 dotenv.config();
 
@@ -58,13 +53,8 @@ async function backfill() {
                 console.log(`Processing: ${material.titulo} (${fileExt}) - materialId: ${material.id}`);
 
                 try {
-                    await processConversion({
-                        key,
-                        bucket: 'course-materials',
-                        jobId: uuidv4(),
-                        originalName: material.titulo
-                    });
-                    console.log(`✅ Completed: ${material.titulo}`);
+                    await enqueueLegacyJob(key, 'course-materials');
+                    console.log(`✅ Queued: ${material.titulo}`);
                 } catch (e: any) {
                     console.error(`❌ Failed processing ${material.titulo}:`, e.message);
                 }

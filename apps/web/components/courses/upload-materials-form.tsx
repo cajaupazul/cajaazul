@@ -124,6 +124,7 @@ export default function UploadMaterialsForm({
                         titulo: file.name.split('.')[0] || file.name,
                         descripcion: description.trim() || null,
                         url_archivo: materialUrl,
+                        storage_path: storagePath,
                         tipo: materialType,
                         descargas: 0,
                     });

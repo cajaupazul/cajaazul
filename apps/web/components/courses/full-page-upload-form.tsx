@@ -417,6 +417,7 @@ export default function FullPageUploadForm({
                         professor_id: professorId === 'none' ? null : professorId,
                         titulo: file.name.split('.')[0] || file.name,
                         url_archivo: materialUrl,
+                        storage_path: storagePath,
                         tipo: finalTipo,
                         cycle_id: selectedCycleId === 'historical' ? null : selectedCycleId,
                         descargas: 0,

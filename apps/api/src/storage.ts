@@ -15,6 +15,7 @@ type Bindings = {
     THUMBNAILS: R2Bucket
     ANNOUNCEMENTS: R2Bucket
     LIBRARY: R2Bucket
+    CONVERTER_API_URL?: string
     // NO R2_ACCESS_KEYS required (Native Bindings)
 }
 
@@ -166,42 +167,68 @@ storageRouter.put('/upload', async (c) => {
 
         console.log(`✅ Archivo subido exitosamente: ${cleanPath}`)
 
-        // Trigger automatic conversion to PDF in background via Cloudflare Worker
+        // Persist conversion before waking Render. Supabase keeps the job if the
+        // free Render instance is sleeping or restarts during conversion.
         const fileExt = cleanPath.split('.').pop()?.toLowerCase() || ''
-        const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx']
+        const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx']
+        let conversionJobId: string | null = null
 
         if (normalizedBucket === 'course-materials' && triggerExtensions.includes(fileExt)) {
-            const converterUrl = (c.env as any).CONVERTER_API_URL || 'https://campuslink-converter.onrender.com'
-            c.executionCtx.waitUntil((async () => {
-                try {
-                    console.log(`[WORKER BACKGROUND] Triggering conversion for ${cleanPath} via ${converterUrl}`)
-                    
-                    // Warmup ping first in case Render is cold-starting
-                    await fetch(`${converterUrl}/`, { method: 'GET' }).catch(() => {})
-                    
-                    // Send conversion request
-                    const res = await fetch(`${converterUrl}/convert-stored`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ key: cleanPath, bucket: normalizedBucket })
-                    })
-                    
-                    if (res.ok) {
-                        const data: any = await res.json().catch(() => ({}))
-                        console.log(`[WORKER BACKGROUND] Conversion job queued successfully on Render! JobId: ${data?.jobId}`)
-                    } else {
-                        console.error(`[WORKER BACKGROUND] Render returned status ${res.status}`)
-                    }
-                } catch (err: any) {
-                    console.error(`[WORKER BACKGROUND] Error calling converter: ${err.message}`)
-                }
-            })())
+            const service = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY, {
+                auth: { autoRefreshToken: false, persistSession: false },
+            })
+            const sourceSize = Number(c.req.header('X-File-Size') || c.req.header('Content-Length') || '0')
+            const { data: queued, error: queueError } = await service
+                .from('conversion_jobs')
+                .insert({
+                    bucket: normalizedBucket,
+                    source_key: cleanPath,
+                    source_size_bytes: Number.isFinite(sourceSize) && sourceSize > 0 ? sourceSize : null,
+                    requested_by: authenticatedUser?.id || null,
+                })
+                .select('id')
+                .single()
+
+            if (!queueError) {
+                conversionJobId = queued.id
+            } else if (queueError.code === '23505') {
+                const { data: existing } = await service
+                    .from('conversion_jobs')
+                    .select('id')
+                    .eq('bucket', normalizedBucket)
+                    .eq('source_key', cleanPath)
+                    .in('status', ['pending', 'processing'])
+                    .limit(1)
+                    .maybeSingle()
+                conversionJobId = existing?.id || null
+            } else {
+                console.error(`[CONVERSION QUEUE] Could not persist ${cleanPath}: ${queueError.message}`)
+            }
+
+            if (!conversionJobId) {
+                // An Office upload without a durable job could be lost when
+                // Render sleeps. Roll the R2 write back and let the client retry.
+                await bucket.delete(cleanPath)
+                return c.json({ error: 'No se pudo programar la conversión. Intenta subir el archivo nuevamente.' }, 503)
+            }
+
+            const converterUrl = c.env.CONVERTER_API_URL || 'https://campuslink-converter.onrender.com'
+            c.executionCtx.waitUntil(
+                fetch(`${converterUrl}/drain`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ source: 'cloudflare-upload' }),
+                }).catch((error) => {
+                    console.warn(`[CONVERSION QUEUE] Immediate wakeup failed; Supabase cron will retry: ${error.message}`)
+                }),
+            )
         }
 
         return c.json({
             success: true,
             path: cleanPath,
             bucket: normalizedBucket,
+            conversion_job_id: conversionJobId,
             url: `${new URL(c.req.url).origin}/storage/secure-url?bucket=${normalizedBucket}&path=${encodeURIComponent(cleanPath)}`
         })
 
@@ -276,6 +303,19 @@ storageRouter.delete('/delete', async (c) => {
 
     try {
         await bucket.delete(cleanPath)
+        if (normalizedBucket === 'course-materials') {
+            const service = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY, {
+                auth: { autoRefreshToken: false, persistSession: false },
+            })
+            const { error: cancelError } = await service.rpc('cancel_conversion_jobs', {
+                p_bucket: normalizedBucket,
+                p_source_key: cleanPath,
+                p_reason: 'Source object deleted through CampusLink API',
+            })
+            if (cancelError) {
+                console.warn(`[CONVERSION QUEUE] Could not cancel jobs for ${cleanPath}: ${cancelError.message}`)
+            }
+        }
         console.log(`✅ Archivo eliminado exitosamente: ${cleanPath}`)
         return c.json({ success: true })
     } catch (e: any) {
