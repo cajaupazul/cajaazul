@@ -159,7 +159,7 @@ export async function processConversion(data: {
     const jobDir = path.join(TMP_DIR, jobId);
     const sourcePath = path.join(jobDir, path.basename(key));
     const extension = path.extname(key).toLowerCase();
-    const officeExtensions = new Set(['.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx']);
+    const officeExtensions = new Set(['.doc', '.docx', '.ppt', '.pptx']);
 
     if (!officeExtensions.has(extension)) {
         throw new Error(`Unsupported conversion format: ${extension || 'unknown'}`);

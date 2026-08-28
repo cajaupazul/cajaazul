@@ -170,7 +170,7 @@ storageRouter.put('/upload', async (c) => {
         // Persist conversion before waking Render. Supabase keeps the job if the
         // free Render instance is sleeping or restarts during conversion.
         const fileExt = cleanPath.split('.').pop()?.toLowerCase() || ''
-        const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx']
+        const triggerExtensions = ['doc', 'docx', 'ppt', 'pptx']
         let conversionJobId: string | null = null
 
         if (normalizedBucket === 'course-materials' && triggerExtensions.includes(fileExt)) {

@@ -27,7 +27,7 @@ async function backfill() {
 
         console.log(`Found ${materials.length} materials without thumbnails.`);
 
-        const supportedExtensions = ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.webp'];
+        const supportedExtensions = ['.doc', '.docx', '.ppt', '.pptx'];
 
         for (const material of materials) {
             const url = material.url_archivo;

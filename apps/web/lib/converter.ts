@@ -8,7 +8,7 @@
 export async function triggerFileConversion(fileKey: string, bucket = 'course-materials') {
     const extension = fileKey.split('.').pop()?.toLowerCase();
     if (bucket.replace(/_/g, '-') !== 'course-materials') return null;
-    if (!extension || !['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(extension)) return null;
+    if (!extension || !['doc', 'docx', 'ppt', 'pptx'].includes(extension)) return null;
 
     const converterUrl = process.env.NEXT_PUBLIC_CONVERTER_API_URL
         || 'https://campuslink-converter.onrender.com';
