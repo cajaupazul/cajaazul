@@ -84,7 +84,7 @@ function CourseDetailWrapper() {
             .eq('course_id', courseId)
             .order('ciclo_name', { ascending: false }),
           supabase.from('bb_material_sets')
-            .select('id, cycle_id, uploaded_by, created_at')
+            .select('id, cycle_id, uploaded_by, created_at, professor_id, course_name, ciclo, professors(nombre)')
             .eq('course_id', courseId)
         ]);
 
@@ -98,7 +98,7 @@ function CourseDetailWrapper() {
         if (setIds.length > 0) {
           const { data: bbFilesData } = await supabase
             .from('bb_files')
-            .select('id, set_id, uploaded_by, created_at, relative_path')
+            .select('id, set_id, folder_id, name, storage_path, size_bytes, mime_type, uploaded_by, created_at, relative_path, material_category')
             .in('set_id', setIds);
 
           const setById = new Map((blackboardSets || []).map((set: any) => [set.id, set]));
@@ -120,7 +120,18 @@ function CourseDetailWrapper() {
               id: `bb-${file.id}`,
               bb_file_id: file.id,
               bb_set_id: file.set_id,
+              source: 'blackboard',
+              titulo: file.name,
+              name: file.name,
+              url_archivo: file.storage_path,
+              storage_path: file.storage_path,
+              size_bytes: file.size_bytes,
+              mime_type: file.mime_type,
+              relative_path: file.relative_path,
+              material_category: file.material_category,
               cycle_id: set?.cycle_id || null,
+              professor_id: set?.professor_id || null,
+              professors: set?.professors || null,
               user_id: userId,
               created_at: file.created_at || set?.created_at,
               profiles: userId ? profileById.get(userId) : null,

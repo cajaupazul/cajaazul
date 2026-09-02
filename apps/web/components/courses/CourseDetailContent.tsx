@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Star, Mail, LayoutPanelLeft, FolderRoot, Folder, FolderOpen, Users, Filter, Trash2, Pencil, Upload, List, Calculator, CheckSquare, X } from 'lucide-react';
+import { ArrowLeft, Star, Mail, LayoutPanelLeft, FolderRoot, Folder, FolderOpen, Users, Filter, Trash2, Pencil, Upload, List, Calculator, CheckSquare, X, Compass, Folders } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import { extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
@@ -22,6 +22,7 @@ import StudentGradeCalculator from './StudentGradeCalculator';
 import AdminGradingFormulaEditor from './AdminGradingFormulaEditor';
 import CourseContributors from './CourseContributors';
 import { FileTypeIcon } from '@/components/files/FileTypeIcon';
+import SmartCourseMaterials from './SmartCourseMaterials';
 
 const PREDEFINED_SUBFOLDERS = [
     '📖 Sílabo y Cronograma',
@@ -74,6 +75,7 @@ export default function CourseDetailContent({
 
     const [viewingFile, setViewingFile] = useState<{ path: string; name: string; useAdvanced?: boolean } | null>(null);
     const [selectedProfessorId, setSelectedProfessorId] = useState<string>(searchParams.get('professor') || 'all');
+    const [libraryMode, setLibraryMode] = useState<'smart' | 'folders'>('smart');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [typeFilter, setTypeFilter] = useState<string | null>(null);
     const [activeCycleId, setActiveCycleId] = useState<string | null>(searchParams.get('cycle'));
@@ -282,8 +284,8 @@ export default function CourseDetailContent({
         }
     };
 
-    const handleDeleteBbFile = async (file: any, e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleDeleteBbFile = async (file: any, e?: { stopPropagation: () => void }) => {
+        e?.stopPropagation();
 
         const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
         if (!isAdmin) {
@@ -477,6 +479,28 @@ export default function CourseDetailContent({
         }
         return results;
     }, [materials, selectedProfessorId]);
+
+    const smartMaterials = useMemo(
+        () => [...materials, ...blackboardContributions],
+        [materials, blackboardContributions]
+    );
+
+    const canDeleteSmartMaterial = (material: any) => {
+        if (!currentUser) return false;
+        const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
+        if (material.source === 'blackboard') return isAdmin;
+        const createdAt = new Date(material.created_at).getTime();
+        const within24Hours = Number.isFinite(createdAt) && (Date.now() - createdAt) / (1000 * 60 * 60) < 24;
+        return isAdmin || (material.user_id === currentUser.id && within24Hours);
+    };
+
+    const handleDeleteSmartMaterial = (material: any) => {
+        if (material.source === 'blackboard') {
+            void handleDeleteBbFile(material);
+            return;
+        }
+        void handleDeleteMaterial(material);
+    };
 
     const handleToggleSelect = (id: string) => {
         setSelectedMaterialIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -824,7 +848,7 @@ export default function CourseDetailContent({
                             {course.descripcion && <p className="text-bb-text-secondary leading-relaxed text-sm md:text-base mb-10">{course.descripcion}</p>}
                         </div>
 
-                        <div className="mb-6">
+                        <div className={libraryMode === 'folders' ? 'mb-6' : 'hidden'}>
                             <div className="flex items-center gap-2 mb-3 px-1">
                                 <div className="p-1.5 bg-blue-500/10 rounded-lg">
                                     <Filter className="w-4 h-4 text-blue-400" />
@@ -882,14 +906,34 @@ export default function CourseDetailContent({
                         <div className="w-full">
                             <div className="flex flex-col sm:flex-row items-stretch justify-between gap-4 mb-4">
                                 <div className="flex-1 flex flex-col justify-center">
-                                    <h3 className="text-xl md:text-2xl font-black text-bb-text tracking-tight uppercase flex items-center gap-3">
+                                    <h3 className="text-xl md:text-2xl font-black text-bb-text tracking-tight flex items-center gap-3">
                                         <FolderRoot className="w-6 h-6 text-blue-500" />
-                                        Estructura del Curso
+                                        Materiales del curso
                                     </h3>
-                                    <p className="text-xs text-bb-text-secondary mt-1 font-medium">Navega por las carpetas para encontrar el material</p>
+                                    <p className="text-xs text-bb-text-secondary mt-1 font-medium">Busca por tipo, profesor o ciclo sin recorrer carpeta por carpeta.</p>
                                 </div>
                                 <div className="flex items-center justify-end gap-2 sm:gap-3 self-center sm:self-auto w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
-                                    <div className="flex items-center gap-1 sm:gap-2 bg-bb-darker/50 p-1 rounded-xl border border-bb-border flex-shrink-0">
+                                    <div className="flex items-center gap-1 bg-bb-card p-1 rounded-xl border border-bb-border flex-shrink-0">
+                                        <button
+                                            onClick={() => setLibraryMode('smart')}
+                                            className={`flex h-9 items-center gap-2 rounded-lg px-3 text-[11px] font-bold transition-colors ${libraryMode === 'smart' ? 'bg-blue-600 text-white' : 'text-bb-text-secondary hover:bg-bb-hover hover:text-bb-text'}`}
+                                            title="Explorar todos los materiales"
+                                        >
+                                            <Compass className="h-4 w-4" />
+                                            Explorar
+                                        </button>
+                                        <button
+                                            onClick={() => setLibraryMode('folders')}
+                                            className={`flex h-9 items-center gap-2 rounded-lg px-3 text-[11px] font-bold transition-colors ${libraryMode === 'folders' ? 'bg-blue-600 text-white' : 'text-bb-text-secondary hover:bg-bb-hover hover:text-bb-text'}`}
+                                            title="Abrir la estructura clásica"
+                                        >
+                                            <Folders className="h-4 w-4" />
+                                            Carpetas
+                                        </button>
+                                    </div>
+
+                                    {libraryMode === 'folders' && (
+                                    <div className="flex items-center gap-1 bg-bb-card p-1 rounded-xl border border-bb-border flex-shrink-0">
                                         <button
                                             onClick={() => setViewMode('grid')}
                                             className={`p-1.5 sm:p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
@@ -905,6 +949,7 @@ export default function CourseDetailContent({
                                             <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
                                         </button>
                                     </div>
+                                    )}
                                     
                                     {currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
                                         <button
@@ -922,14 +967,14 @@ export default function CourseDetailContent({
                                         </button>
                                     )}
 
-                                    {!isGuest && (
+                                    {!isGuest && currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
                                         <button
                                             onClick={() => setShowAddCycleModal(true)}
                                             className="inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all bg-bb-border text-bb-text hover:bg-bb-card border border-transparent hover:border-bb-border h-10 sm:h-11 px-3 sm:px-4 active:scale-95 whitespace-nowrap flex-shrink-0"
                                         >
                                             <div className="flex items-center gap-1.5 sm:gap-2">
                                                 <FolderRoot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                                <span>+ Ciclo</span>
+                                                <span>Nuevo ciclo</span>
                                             </div>
                                         </button>
                                     )}
@@ -940,12 +985,30 @@ export default function CourseDetailContent({
                                         >
                                             <div className="flex items-center gap-1.5 sm:gap-2">
                                                 <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
-                                                Subir
+                                                Compartir material
                                             </div>
                                         </Link>
                                     )}
                                 </div>
                             </div>
+
+                            {libraryMode === 'smart' && (
+                                <SmartCourseMaterials
+                                    materials={smartMaterials}
+                                    cycles={courseCycles}
+                                    professors={allProfessors}
+                                    selectedProfessorId={selectedProfessorId}
+                                    onProfessorChange={setSelectedProfessorId}
+                                    isSelectionMode={isSelectionMode}
+                                    selectedMaterialIds={selectedMaterialIds}
+                                    onToggleSelect={handleToggleSelect}
+                                    onOpen={handleMaterialClick}
+                                    canDelete={canDeleteSmartMaterial}
+                                    onDelete={handleDeleteSmartMaterial}
+                                />
+                            )}
+
+                            <div className={libraryMode === 'folders' ? 'block' : 'hidden'}>
 
                             {/* Evaluation Filter Chips */}
                             {allEvaluationTypes.length > 0 && (
@@ -1545,6 +1608,7 @@ export default function CourseDetailContent({
                                         )}
                                     </Accordion>
                                 )}
+                            </div>
                             </div>
                         </div>
                     </div>

@@ -34,6 +34,23 @@ const PREDEFINED_SUBFOLDERS = [
     '📚 Otros Recursos'
 ];
 
+const MATERIAL_CATEGORY_OPTIONS = [
+    { value: PREDEFINED_SUBFOLDERS[1], label: 'Evaluaciones', description: 'PC, parciales, finales y solucionarios' },
+    { value: PREDEFINED_SUBFOLDERS[2], label: 'Clases y diapositivas', description: 'PPT, sesiones y material docente' },
+    { value: PREDEFINED_SUBFOLDERS[4], label: 'Apuntes y recursos', description: 'Guías, resúmenes y archivos de apoyo' },
+    { value: PREDEFINED_SUBFOLDERS[0], label: 'Sílabo y cronograma', description: 'Información oficial del curso' },
+];
+
+const BLACKBOARD_CATEGORY_OPTIONS = [
+    { value: 'evaluations', label: 'Evaluaciones' },
+    { value: 'classes', label: 'Clases y diapositivas' },
+    { value: 'notes', label: 'Apuntes y recursos' },
+    { value: 'syllabus', label: 'Sílabo y cronograma' },
+    { value: 'resources', label: 'Mixto / otros recursos' },
+];
+
+const fileKey = (file: File) => `${file.name}:${file.size}:${file.lastModified}`;
+
 interface FileEntry { file: File; relativePath: string; }
 
 export default function FullPageUploadForm({
@@ -55,6 +72,8 @@ export default function FullPageUploadForm({
             : courseCycles[0]?.id || 'historical'
     );
     const [selectedSubfolder, setSelectedSubfolder] = useState<string>('');
+    const [fileCategoryOverrides, setFileCategoryOverrides] = useState<Record<string, string>>({});
+    const [showFileCategories, setShowFileCategories] = useState(false);
     
     const [professorId, setProfessorId] = useState<string>(
         allProfessors.length === 1 ? allProfessors[0].id : 'none'
@@ -65,6 +84,9 @@ export default function FullPageUploadForm({
     const [bbRootName, setBbRootName] = useState('');
     const [bbProgress, setBbProgress] = useState(0);
     const [bbProgressMsg, setBbProgressMsg] = useState('');
+    const [bbDefaultCategory, setBbDefaultCategory] = useState('');
+    const [bbCategoryOverrides, setBbCategoryOverrides] = useState<Record<string, string>>({});
+    const [showBbCategories, setShowBbCategories] = useState(false);
 
     // Mapped State: Folder Name -> Files/Links
     const [filesMap, setFilesMap] = useState<Record<string, File[]>>({});
@@ -113,6 +135,14 @@ export default function FullPageUploadForm({
     };
 
     const removeFile = (key: string, index: number) => {
+        const removed = filesMap[key]?.[index];
+        if (removed) {
+            setFileCategoryOverrides(current => {
+                const next = { ...current };
+                delete next[fileKey(removed)];
+                return next;
+            });
+        }
         setFilesMap(prev => ({
             ...prev,
             [key]: prev[key].filter((_, i) => i !== index)
@@ -131,6 +161,8 @@ export default function FullPageUploadForm({
         setBbRootName(root);
         setBbProgress(0);
         setBbProgressMsg('');
+        setBbCategoryOverrides({});
+        setShowBbCategories(false);
     };
 
     const uploadBbFiles = async (setId: string, entries: FileEntry[], isComplement: boolean) => {
@@ -212,6 +244,7 @@ export default function FullPageUploadForm({
                 size_bytes: entry.file.size,
                 mime_type: entry.file.type,
                 uploaded_by: uploaderId,
+                material_category: bbCategoryOverrides[fileKey(entry.file)] || bbDefaultCategory,
             });
 
             if (fileError) {
@@ -236,6 +269,10 @@ export default function FullPageUploadForm({
             }
             if (bbFiles.length === 0) {
                 alert('Por favor selecciona una carpeta para subir.');
+                return;
+            }
+            if (!bbDefaultCategory) {
+                alert('Elige una categoría para esta importación. Si mezcla tipos, podrás ajustar archivos concretos antes de subir.');
                 return;
             }
             setUploading(true);
@@ -296,8 +333,8 @@ export default function FullPageUploadForm({
             return;
         }
 
-        if (!selectedSubfolder) {
-            alert('Por favor selecciona la carpeta de destino primero');
+        if (uploadMethod === 'file' && !selectedSubfolder) {
+            alert('Por favor elige la categoría del material antes de subirlo.');
             return;
         }
 
@@ -339,7 +376,7 @@ export default function FullPageUploadForm({
                 for (let i = 0; i < allLinks.length; i++) {
                     const link = allLinks[i];
                     const linkCreatedAt = new Date(nowMs - i * 1000).toISOString();
-                    const finalTipo = link.target === 'General' ? selectedSubfolder : link.target;
+                    const finalTipo = 'enlace';
 
                     const { error: insertError } = await supabase.from('materials').insert({
                         course_id: courseId,
@@ -365,7 +402,9 @@ export default function FullPageUploadForm({
                 // 1. Upload all files to R2 in parallel
                 const uploadedFilesInfo = await Promise.all(allFiles.map(async ({ file, target }) => {
                     const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
-                    const finalSection = target === 'General' ? selectedSubfolder : target;
+                    const finalSection = target === 'General'
+                        ? (fileCategoryOverrides[fileKey(file)] || selectedSubfolder)
+                        : target;
                     const storagePath = buildCourseMaterialPath({
                         courseId,
                         cycleId: selectedCycleId === 'historical' ? null : selectedCycleId,
@@ -399,17 +438,17 @@ export default function FullPageUploadForm({
                     }
 
                     const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
-                    return { file, materialUrl, thumbnailUrl, fileExt, target, storagePath };
+                    return { file, materialUrl, thumbnailUrl, fileExt, storagePath, finalSection };
                 }));
 
                 // 2. Insert into DB with explicitly staggered timestamps
                 const nowMs = Date.now();
                 for (let i = 0; i < uploadedFilesInfo.length; i++) {
                     const info = uploadedFilesInfo[i];
-                    const { file, materialUrl, thumbnailUrl, fileExt, target, storagePath } = info;
+                    const { file, materialUrl, thumbnailUrl, fileExt, storagePath, finalSection } = info;
 
                     const fileCreatedAt = new Date(nowMs - i * 1000).toISOString();
-                    const finalTipo = target === 'General' ? selectedSubfolder : target;
+                    const finalTipo = finalSection;
 
                     const { error: insertError } = await supabase.from('materials').insert({
                         course_id: courseId,
@@ -464,23 +503,21 @@ export default function FullPageUploadForm({
         }
     };
 
-    // Calculate active zones to render
-    const isExams = selectedSubfolder === '📝 Exámenes';
-    const nestedSubfolders = isExams && selectedCycleId !== 'historical'
-        ? courseCycles.find(c => c.id === selectedCycleId)?.active_subfolders?.filter((s: string) => !PREDEFINED_SUBFOLDERS.includes(s)) || []
-        : [];
-        
-    const dropzoneKeys = (isExams && nestedSubfolders.length > 0)
-        ? [...nestedSubfolders, 'General']
-        : ['General'];
+    // Una sola zona de carga. La organización se define por categoría explícita,
+    // no por nombres de archivo ni por obligar a separar el lote en muchas carpetas.
+    const dropzoneKeys = ['General'];
 
     const totalSelectedFiles = Object.values(filesMap).reduce((acc, arr) => acc + arr.length, 0);
     const hasAnyFilesSelected = totalSelectedFiles > 0;
     const hasAnyLinksEntered = Object.values(linksMap).some(arr => arr.some(l => l.url));
     const isReadyForFiles = uploadMethod === 'link' ? hasAnyLinksEntered : hasAnyFilesSelected;
 
-    const isReadyForBbFolder = uploadMethod === 'bb-folder' && bbFiles.length > 0 && professorId !== 'none';
-    const isReadyToSubmit = uploadMethod === 'bb-folder' ? isReadyForBbFolder : isReadyForFiles;
+    const isReadyForBbFolder = uploadMethod === 'bb-folder' && bbFiles.length > 0 && professorId !== 'none' && !!bbDefaultCategory;
+    const isReadyToSubmit = uploadMethod === 'bb-folder'
+        ? isReadyForBbFolder
+        : uploadMethod === 'file'
+            ? isReadyForFiles && !!selectedSubfolder
+            : isReadyForFiles;
     const selectedCycle = courseCycles.find((cycle: any) => cycle.id === selectedCycleId);
     const selectedProfessor = allProfessors.find((professor: any) => professor.id === professorId);
     const bbFolderCount = new Set(
@@ -561,8 +598,8 @@ export default function FullPageUploadForm({
                     {/* Destino */}
                     <div className="space-y-4">
                         <Label className="text-lg font-black text-bb-text uppercase tracking-tight flex items-center gap-2">
-                            <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${(selectedSubfolder || uploadMethod === 'bb-folder') ? 'bg-green-500/20 text-green-500 border-green-500/50' : 'bg-bb-sidebar text-blue-400 border border-bb-border'}`}>
-                                {(selectedSubfolder || uploadMethod === 'bb-folder') ? <CheckCircle className="w-4 h-4" /> : '1'}
+                            <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${(selectedSubfolder || uploadMethod === 'bb-folder' || uploadMethod === 'link') ? 'bg-green-500/20 text-green-500 border-green-500/50' : 'bg-bb-sidebar text-blue-400 border border-bb-border'}`}>
+                                {(selectedSubfolder || uploadMethod === 'bb-folder' || uploadMethod === 'link') ? <CheckCircle className="w-4 h-4" /> : '1'}
                             </span>
                             {uploadMethod === 'bb-folder' ? 'Ciclo y Profesor' : 'Destino del Archivo'}
                         </Label>
@@ -572,7 +609,6 @@ export default function FullPageUploadForm({
                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">¿A qué Ciclo pertenece?</Label>
                                 <Select value={selectedCycleId} onValueChange={(val) => {
                                     setSelectedCycleId(val);
-                                    setSelectedSubfolder('');
                                 }}>
                                     <SelectTrigger className="h-12 bg-bb-card border-bb-border text-bb-text rounded-xl focus:ring-blue-500/20">
                                         <SelectValue placeholder="Selecciona un ciclo" />
@@ -596,21 +632,24 @@ export default function FullPageUploadForm({
                                 </p>
                             )}
 
-                            {uploadMethod !== 'bb-folder' && (
+                            {uploadMethod === 'file' && (
                             <div>
-                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">Sección o Carpeta</Label>
-                                <Select value={selectedSubfolder} onValueChange={setSelectedSubfolder}>
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">Categoría del material</Label>
+                                    <Select value={selectedSubfolder} onValueChange={setSelectedSubfolder}>
                                     <SelectTrigger className="h-12 bg-bb-card border-bb-border text-bb-text rounded-xl focus:ring-blue-500/20">
                                         <SelectValue placeholder="Selecciona una sección..." />
                                     </SelectTrigger>
                                     <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60 z-[9999]">
-                                        {PREDEFINED_SUBFOLDERS.map((sub: string) => (
-                                            <SelectItem key={sub} value={sub} className={`hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 font-bold ${sub === '📝 Exámenes' ? 'text-blue-400' : ''}`}>
-                                                {sub}
+                                        {MATERIAL_CATEGORY_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2 font-bold">
+                                                {option.label}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                <p className="mt-2 px-1 text-[10px] font-medium leading-relaxed text-bb-text-secondary">
+                                    Elige una categoría para el lote. CampusLink nunca la deduce a partir del nombre del archivo.
+                                </p>
                             </div>
                             )}
                         </div>
@@ -716,6 +755,42 @@ export default function FullPageUploadForm({
                                 </div>
                             </div>
 
+                            <div className="rounded-xl border border-bb-border bg-bb-sidebar/50 p-4">
+                                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="text-xs font-black text-bb-text">¿Qué contiene principalmente esta carpeta?</p>
+                                        <p className="mt-1 text-[10px] text-bb-text-secondary">Una elección aplica al lote completo. No analizamos nombres ni rutas para adivinarlo.</p>
+                                    </div>
+                                    {bbFiles.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowBbCategories((visible) => !visible)}
+                                            className="mt-2 text-left text-[11px] font-bold text-blue-400 hover:text-blue-300 sm:mt-0"
+                                        >
+                                            {showBbCategories ? 'Ocultar ajustes individuales' : '¿La carpeta mezcla tipos? Ajustar archivos'}
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-5">
+                                    {BLACKBOARD_CATEGORY_OPTIONS.map((option) => {
+                                        const active = bbDefaultCategory === option.value;
+                                        return (
+                                            <button
+                                                key={option.value}
+                                                type="button"
+                                                onClick={() => setBbDefaultCategory(option.value)}
+                                                className={`rounded-lg border px-3 py-2 text-left text-[11px] font-bold transition-colors ${active
+                                                    ? 'border-blue-500 bg-blue-600 text-white'
+                                                    : 'border-bb-border bg-bb-card text-bb-text-secondary hover:border-blue-500/50 hover:text-bb-text'
+                                                }`}
+                                            >
+                                                {option.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
                             <div
                                 className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer
                                     ${bbFiles.length > 0
@@ -763,14 +838,34 @@ export default function FullPageUploadForm({
                                                 <span className="font-medium">{folder}</span>
                                             </div>
                                         ))}
-                                        {bbFiles.slice(0, 8).map((f, i) => (
+                                        {(showBbCategories ? bbFiles : bbFiles.slice(0, 8)).map((f, i) => (
                                             <div key={`f-${i}`} className="flex items-center gap-2 text-xs text-bb-text-secondary py-0.5 pl-4">
                                                 <FileTypeIcon fileName={f.file.name} mimeType={f.file.type} size="sm" />
-                                                <span className="truncate max-w-[300px]">{f.file.name}</span>
+                                                <span className="min-w-0 flex-1 truncate">{f.file.name}</span>
                                                 <span className="text-bb-text-secondary/50 shrink-0">{(f.file.size / 1024 / 1024).toFixed(1)} MB</span>
+                                                {showBbCategories && (
+                                                    <Select
+                                                        value={bbCategoryOverrides[fileKey(f.file)] || bbDefaultCategory || 'resources'}
+                                                        onValueChange={(value) => setBbCategoryOverrides((current) => {
+                                                            const next = { ...current };
+                                                            if (value === bbDefaultCategory) delete next[fileKey(f.file)];
+                                                            else next[fileKey(f.file)] = value;
+                                                            return next;
+                                                        })}
+                                                    >
+                                                        <SelectTrigger className="h-8 w-[156px] shrink-0 border-bb-border bg-bb-card px-2 text-[10px] font-bold text-bb-text">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="border-bb-border bg-bb-card text-bb-text">
+                                                            {BLACKBOARD_CATEGORY_OPTIONS.map((option) => (
+                                                                <SelectItem key={option.value} value={option.value} className="text-xs">{option.label}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
                                             </div>
                                         ))}
-                                        {bbFiles.length > 8 && (
+                                        {!showBbCategories && bbFiles.length > 8 && (
                                             <p className="text-[10px] text-bb-text-secondary/50 pl-4">...y {bbFiles.length - 8} archivos más</p>
                                         )}
                                     </div>
@@ -796,14 +891,31 @@ export default function FullPageUploadForm({
 
                     {/* DYNAMIC DROPZONES (files / links) */}
                     {uploadMethod !== 'bb-folder' && (
-                    <div className={`transition-opacity duration-300 ${!selectedSubfolder ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
+                    <div className={`transition-opacity duration-300 ${uploadMethod === 'file' && !selectedSubfolder ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
+
+                    {uploadMethod === 'file' && hasAnyFilesSelected && (
+                        <div className="mb-4 flex flex-col gap-2 rounded-xl border border-bb-border bg-bb-sidebar/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-xs font-black text-bb-text">¿El lote mezcla categorías?</p>
+                                <p className="mt-0.5 text-[10px] text-bb-text-secondary">Solo ajusta los archivos que sean una excepción; los demás conservan la categoría del lote.</p>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setShowFileCategories((visible) => !visible)}
+                                className="h-9 shrink-0 border-bb-border bg-bb-card px-3 text-[11px] font-bold text-bb-text hover:bg-bb-hover"
+                            >
+                                {showFileCategories ? 'Ocultar ajustes' : 'Ajustar por archivo'}
+                            </Button>
+                        </div>
+                    )}
 
                     {/* DYNAMIC DROPZONES */}
                     <div className={dropzoneKeys.length > 1 ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "w-full space-y-4"}>
                         {dropzoneKeys.map((key) => {
                             const isGeneral = key === 'General';
                             const label = isGeneral 
-                                ? (dropzoneKeys.length > 1 ? 'Material General' : selectedSubfolder || 'General') 
+                                ? (selectedSubfolder || (uploadMethod === 'link' ? 'Enlaces externos' : 'Categoría del lote'))
                                 : key;
 
                             if (uploadMethod === 'link') {
@@ -893,6 +1005,26 @@ export default function FullPageUploadForm({
                                                             <p className="text-[9px] text-bb-text-secondary mt-0.5">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
                                                         </div>
                                                     </div>
+                                                    {showFileCategories && (
+                                                        <Select
+                                                            value={fileCategoryOverrides[fileKey(f)] || selectedSubfolder}
+                                                            onValueChange={(value) => setFileCategoryOverrides((current) => {
+                                                                const next = { ...current };
+                                                                if (value === selectedSubfolder) delete next[fileKey(f)];
+                                                                else next[fileKey(f)] = value;
+                                                                return next;
+                                                            })}
+                                                        >
+                                                            <SelectTrigger className="h-8 w-[176px] shrink-0 border-bb-border bg-bb-sidebar px-2 text-[10px] font-bold text-bb-text">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="border-bb-border bg-bb-card text-bb-text">
+                                                                {MATERIAL_CATEGORY_OPTIONS.map((option) => (
+                                                                    <SelectItem key={option.value} value={option.value} className="text-xs">{option.label}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    )}
                                                     <button
                                                         type="button"
                                                         onClick={() => removeFile(key, i)}
