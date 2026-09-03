@@ -102,6 +102,49 @@ function formatDate(value?: string | null) {
     return new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
 }
 
+function cycleSortKey(cycleName?: string | null) {
+    const match = (cycleName || '').match(/(\d{4})\D+(\d+)/);
+    if (!match) return -1;
+    return Number(match[1]) * 10 + Number(match[2]);
+}
+
+function evaluationSortKey(material: any) {
+    const type = normalize(material.tipo);
+    const pc = type.match(/^pc\s*([1-5])$/);
+    if (pc) return Number(pc[1]);
+    if (type.includes('parcial')) return 20;
+    if (type.includes('final')) return 30;
+    if (type.includes('sustitutorio')) return 40;
+    return 15;
+}
+
+function materialSortKey(material: any) {
+    const category = materialCategory(material);
+    const categoryOrder: Record<Exclude<MaterialCategory, 'all'>, number> = {
+        syllabus: 0,
+        classes: 1,
+        notes: 2,
+        evaluations: 3,
+        links: 4,
+        resources: 5,
+    };
+
+    return {
+        category: categoryOrder[category],
+        evaluation: category === 'evaluations' ? evaluationSortKey(material) : 0,
+        date: new Date(material.created_at || 0).getTime(),
+    };
+}
+
+function uploaderName(material: any) {
+    const profile = material.profiles;
+    return profile?.nombre || profile?.apodo || profile?.username || profile?.display_name || 'Comunidad CampusLink';
+}
+
+function fileNameForIcon(material: any, title: string) {
+    return material.relative_path || material.storage_path || material.url_archivo || material.name || title;
+}
+
 export default function SmartCourseMaterials({
     materials,
     cycles,
@@ -166,8 +209,36 @@ export default function SmartCourseMaterials({
                     cycleName,
                 ].filter(Boolean).join(' ')).includes(normalizedQuery);
             })
-            .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+            .sort((a, b) => {
+                const aKey = materialSortKey(a);
+                const bKey = materialSortKey(b);
+                if (aKey.category !== bKey.category) return aKey.category - bKey.category;
+                if (aKey.evaluation !== bKey.evaluation) return aKey.evaluation - bKey.evaluation;
+                return bKey.date - aKey.date;
+            });
     }, [category, cycleFiltered, cycleNameById, query]);
+
+    const groupedMaterials = useMemo(() => {
+        const groups = new Map<string, { id: string; name: string; materials: any[]; sortKey: number }>();
+
+        filtered.forEach((material) => {
+            const id = material.cycle_id || 'historical';
+            const cycleName = material.cycle_id ? cycleNameById.get(material.cycle_id) : null;
+            const existing = groups.get(id);
+            if (existing) {
+                existing.materials.push(material);
+                return;
+            }
+            groups.set(id, {
+                id,
+                name: cycleName ? `Ciclo ${cycleName}` : 'Archivo histórico',
+                materials: [material],
+                sortKey: cycleName ? cycleSortKey(cycleName) : -1,
+            });
+        });
+
+        return Array.from(groups.values()).sort((a, b) => b.sortKey - a.sortKey);
+    }, [cycleNameById, filtered]);
 
     const resetFilters = () => {
         setQuery('');
@@ -311,13 +382,27 @@ export default function SmartCourseMaterials({
             </div>
 
             {filtered.length > 0 ? (
-                <div className="divide-y divide-bb-border overflow-hidden rounded-xl border border-bb-border bg-bb-card">
-                    {filtered.map((material) => {
+                <div className="space-y-5">
+                    {groupedMaterials.map((group) => (
+                        <section key={group.id} className="overflow-hidden rounded-xl border border-bb-border bg-bb-card">
+                            <header className="flex items-center justify-between gap-3 border-b border-bb-border bg-bb-dark/40 px-4 py-3">
+                                <div className="min-w-0 border-l-2 border-blue-500 pl-3">
+                                    <h3 className="truncate text-sm font-black text-bb-text">{group.name}</h3>
+                                    <p className="mt-0.5 text-[11px] text-bb-text-secondary">
+                                        {group.materials.length} {group.materials.length === 1 ? 'recurso' : 'recursos'} · orden académico
+                                    </p>
+                                </div>
+                                <span className="shrink-0 rounded-md border border-bb-border px-2 py-1 text-[10px] font-bold text-bb-text-secondary">
+                                    {group.id === 'historical' ? 'Sin ciclo' : 'Periodo académico'}
+                                </span>
+                            </header>
+                            <div className="divide-y divide-bb-border">
+                    {group.materials.map((material) => {
                         const isBlackboard = material.source === 'blackboard';
                         const title = material.titulo || material.name || 'Material sin título';
-                        const cycleName = material.cycle_id ? cycleNameById.get(material.cycle_id) : null;
                         const selected = selectedMaterialIds.includes(material.id);
                         const categoryLabel = CATEGORY_OPTIONS.find((option) => option.id === materialCategory(material))?.label;
+                        const uploader = uploaderName(material);
 
                         return (
                             <div key={material.id} className={`group flex min-w-0 gap-3 px-3 py-3 transition-colors hover:bg-bb-hover sm:px-4 ${organizeMode ? 'flex-wrap' : 'items-center'}`}>
@@ -333,13 +418,13 @@ export default function SmartCourseMaterials({
                                 )}
 
                                 <button type="button" onClick={() => onOpen(material)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                                    <FileTypeIcon fileName={title} mimeType={material.mime_type} size="md" />
+                                    <FileTypeIcon fileName={fileNameForIcon(material, title)} mimeType={material.mime_type} size="md" />
                                     <span className="min-w-0 flex-1">
                                         <span className="block truncate text-sm font-bold text-bb-text transition-colors group-hover:text-blue-400">{title}</span>
                                         <span className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-bb-text-secondary">
                                             <span className="font-bold text-blue-400">{categoryLabel || 'Recurso'}</span>
                                             {material.professors?.nombre && <span className="max-w-[220px] truncate">{material.professors.nombre}</span>}
-                                            <span>{cycleName ? `Ciclo ${cycleName}` : 'Sin ciclo'}</span>
+                                            <span className="max-w-[220px] truncate">Aportó: {uploader}</span>
                                             {isBlackboard && <span className="rounded bg-violet-500/10 px-1.5 py-0.5 font-bold text-violet-400">Importado</span>}
                                             {formatDate(material.created_at) && <span className="hidden md:inline">{formatDate(material.created_at)}</span>}
                                         </span>
@@ -379,6 +464,9 @@ export default function SmartCourseMaterials({
                             </div>
                         );
                     })}
+                            </div>
+                        </section>
+                    ))}
                 </div>
             ) : (
                 <div className="rounded-xl border border-dashed border-bb-border bg-bb-card px-6 py-14 text-center">
