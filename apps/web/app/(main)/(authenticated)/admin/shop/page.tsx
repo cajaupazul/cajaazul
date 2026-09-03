@@ -99,55 +99,17 @@ export default function AdminShopPage() {
     setBusyId(deleteTarget.id);
     setNotice(null);
     try {
-      await apiFetch(`/admin/catalog/items/${deleteTarget.id}`, { method: 'DELETE' });
-      setItems((current) => current.filter((item) => item.id !== deleteTarget.id));
-      setNotice({ type: 'success', text: `${deleteTarget.name} y su archivo se eliminaron. No tenía propietarios.` });
-      setDeleteTarget(null);
-    } catch (error) {
-      setNotice({ type: 'error', text: error instanceof Error ? error.message : 'No se pudo eliminar el artículo.' });
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const revokeItem = async () => {
-    if (!deleteTarget) return;
-    setBusyId(deleteTarget.id);
-    setNotice(null);
-    try {
-      const response = await apiFetch<{ cleanupPending: boolean }>(`/admin/catalog/items/${deleteTarget.id}/revoke`, {
-        method: 'POST',
+      const response = await apiFetch<{ deleted: { revokedOwners: number } }>(`/admin/catalog/items/${deleteTarget.id}`, {
+        method: 'DELETE',
         body: JSON.stringify({ reason: revokeReason, confirmation: revokeConfirmation }),
       });
+      setItems((current) => current.filter((item) => item.id !== deleteTarget.id));
+      setNotice({ type: 'success', text: `${deleteTarget.name} se eliminó del catálogo, de ${response.deleted.revokedOwners} inventario(s) y de R2.` });
       setDeleteTarget(null);
       setRevokeReason('');
       setRevokeConfirmation('');
-      await loadItems();
-      setNotice({
-        type: response.cleanupPending ? 'error' : 'success',
-        text: response.cleanupPending
-          ? 'La revocación terminó, pero el archivo requiere limpieza manual.'
-          : 'Revocación de emergencia completada y auditada.',
-      });
     } catch (error) {
-      setNotice({ type: 'error', text: error instanceof Error ? error.message : 'No se pudo revocar el artículo.' });
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const migrateAssets = async () => {
-    setBusyId('migration');
-    setNotice(null);
-    try {
-      const result = await apiFetch<{ migrated: number; cleanupPending: number; failed: number }>('/admin/catalog/migrate-assets', { method: 'POST' });
-      await loadItems();
-      setNotice({
-        type: result.failed ? 'error' : 'success',
-        text: `${result.migrated} archivo(s) migrados a R2${result.cleanupPending ? `; ${result.cleanupPending} con limpieza anterior pendiente` : ''}${result.failed ? `; ${result.failed} fallaron.` : '.'}`,
-      });
-    } catch (error) {
-      setNotice({ type: 'error', text: error instanceof Error ? error.message : 'No se pudo ejecutar la migración.' });
+      setNotice({ type: 'error', text: error instanceof Error ? error.message : 'No se pudo eliminar el artículo.' });
     } finally {
       setBusyId(null);
     }
@@ -168,7 +130,6 @@ export default function AdminShopPage() {
             <p className="mt-3 text-sm text-zinc-400">{items.length} artículos registrados · {items.filter((item) => item.is_active).length} visibles</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <button onClick={() => void migrateAssets()} disabled={busyId === 'migration'} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 text-sm font-bold text-amber-300 hover:bg-amber-500/15 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${busyId === 'migration' ? 'animate-spin' : ''}`} /> Migrar archivos a R2</button>
             <Link href="/admin/shop/categories" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-[#17191d] px-5 text-sm font-bold hover:bg-[#202329]"><LayoutGrid className="h-4 w-4" /> Categorías</Link>
             <Link href="/admin/shop/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-black hover:bg-blue-500"><PackagePlus className="h-4 w-4" /> Nuevo artículo</Link>
           </div>
@@ -225,23 +186,18 @@ export default function AdminShopPage() {
         <div role="dialog" aria-modal="true" aria-labelledby="delete-title" className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4">
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#17191d] p-6">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-red-500/15 text-red-400"><Trash2 className="h-5 w-5" /></div>
-            <h2 id="delete-title" className="mt-5 text-xl font-black">Administrar “{deleteTarget.name}”</h2>
-            {deleteTarget.owner_count === 0 ? (
-              <p className="mt-3 text-sm leading-6 text-zinc-400">Nadie posee este artículo. Puedes eliminar de forma definitiva sus metadatos y su archivo de R2.</p>
-            ) : (
-              <div className="mt-3 space-y-4">
-                <p className="text-sm leading-6 text-zinc-400"><strong className="text-white">{deleteTarget.owner_count} usuario(s)</strong> lo conservan. El borrado normal está bloqueado; usa “Retirar” en la lista para ocultarlo sin afectar sus compras.</p>
-                <div className="rounded-xl border border-red-500/25 bg-red-500/5 p-4">
-                  <p className="text-xs font-black uppercase tracking-wider text-red-300">Solo para una emergencia real</p>
-                  <textarea value={revokeReason} onChange={event => setRevokeReason(event.target.value)} placeholder="Motivo detallado de la revocación" className="mt-3 min-h-20 w-full rounded-lg border border-white/10 bg-[#0d0f12] p-3 text-sm outline-none focus:border-red-500" />
-                  <input value={revokeConfirmation} onChange={event => setRevokeConfirmation(event.target.value)} placeholder={`Escribe: ${deleteTarget.name}`} className="mt-2 h-11 w-full rounded-lg border border-white/10 bg-[#0d0f12] px-3 text-sm outline-none focus:border-red-500" />
-                  <button onClick={() => void revokeItem()} disabled={busyId === deleteTarget.id || revokeReason.trim().length < 10 || revokeConfirmation !== deleteTarget.name} className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-lg bg-red-700 px-4 text-sm font-black hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40">Revocar a todos y borrar el archivo</button>
-                </div>
+            <h2 id="delete-title" className="mt-5 text-xl font-black">Eliminar “{deleteTarget.name}”</h2>
+            <div className="mt-3 space-y-4">
+              <p className="text-sm leading-6 text-zinc-400">Se eliminará del catálogo, de R2 y de los inventarios de <strong className="text-white">{deleteTarget.owner_count} usuario(s)</strong>. No se puede deshacer.</p>
+              <div className="rounded-xl border border-red-500/25 bg-red-500/5 p-4">
+                <p className="text-xs font-black uppercase tracking-wider text-red-300">Eliminación definitiva</p>
+                <textarea value={revokeReason} onChange={event => setRevokeReason(event.target.value)} placeholder="Motivo (mínimo 10 caracteres)" className="mt-3 min-h-20 w-full rounded-lg border border-white/10 bg-[#0d0f12] p-3 text-sm outline-none focus:border-red-500" />
+                <input value={revokeConfirmation} onChange={event => setRevokeConfirmation(event.target.value)} placeholder={`Escribe: ${deleteTarget.name}`} className="mt-2 h-11 w-full rounded-lg border border-white/10 bg-[#0d0f12] px-3 text-sm outline-none focus:border-red-500" />
               </div>
-            )}
+            </div>
             <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button onClick={() => setDeleteTarget(null)} className="h-11 rounded-xl border border-white/10 px-5 text-sm font-bold hover:bg-white/5">Cancelar</button>
-              {deleteTarget.owner_count === 0 && <button onClick={() => void deleteItem()} disabled={busyId === deleteTarget.id} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black hover:bg-red-500 disabled:opacity-50">{busyId === deleteTarget.id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Eliminar archivo y registro</button>}
+              <button onClick={() => void deleteItem()} disabled={busyId === deleteTarget.id || revokeReason.trim().length < 10 || revokeConfirmation !== deleteTarget.name} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50">{busyId === deleteTarget.id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Eliminar de todos y de R2</button>
             </div>
           </div>
         </div>

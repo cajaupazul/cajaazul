@@ -426,11 +426,21 @@ admin.delete('/catalog/items/:id', async (c) => {
   const access = await requireAdmin(c)
   if (!access.allowed) return access.response
   const itemId = c.req.param('id')
+  const parsed = await readAdminBody(c)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const reason = typeof parsed.body.reason === 'string' ? parsed.body.reason.trim() : ''
+  const confirmation = typeof parsed.body.confirmation === 'string' ? parsed.body.confirmation.trim() : ''
   const { data: item, error: itemError } = await access.service.from('shop_items').select('id, name, image_url').eq('id', itemId).single()
   if (itemError || !item) return c.json({ error: 'Artículo no encontrado.' }, 404)
-  const { count } = await access.service.from('user_inventory').select('id', { count: 'exact', head: true }).eq('item_id', itemId)
-  if ((count ?? 0) > 0) return c.json({ error: `No se puede borrar: ${count} usuario(s) conservan este artículo. Retíralo del catálogo.` }, 409)
+  if (confirmation !== item.name) return c.json({ error: 'Confirma con el nombre exacto del artículo.' }, 400)
+  if (reason.length < 10 || reason.length > 1000) return c.json({ error: 'El motivo debe tener entre 10 y 1000 caracteres.' }, 400)
   const { data: assets } = await access.service.from('shop_item_assets').select('id, object_key').eq('item_id', itemId).neq('status', 'deleted')
+  const { data: revocation, error: revocationError } = await access.service.rpc('internal_revoke_shop_item', {
+    p_item_id: itemId,
+    p_actor_id: access.user.id,
+    p_reason: reason,
+  })
+  if (revocationError) return c.json({ error: 'No se pudo retirar el artículo de los inventarios.' }, 500)
   await access.service.from('shop_items').update({ is_active: false, catalog_status: 'deletion_pending', updated_by: access.user.id }).eq('id', itemId)
   try {
     if (assets?.length) await removeR2Assets(c.env.PROFILE_FRAMES, assets)
@@ -442,8 +452,8 @@ admin.delete('/catalog/items/:id', async (c) => {
   }
   const { error } = await access.service.from('shop_items').delete().eq('id', itemId)
   if (error) return c.json({ error: 'El archivo se limpió, pero el registro requiere revisión.' }, 500)
-  await logAdminAction(access.service, access.user.id, 'DELETE', 'shop_item_admin_action', itemId, item, null)
-  return c.json({ success: true, deleted: { id: item.id, name: item.name } })
+  await logAdminAction(access.service, access.user.id, 'DELETE', 'shop_item_admin_action', itemId, item, { reason, revoked_owners: revocation?.owner_count ?? 0 })
+  return c.json({ success: true, deleted: { id: item.id, name: item.name, revokedOwners: revocation?.owner_count ?? 0 } })
 })
 
 admin.post('/catalog/items/:id/revoke', async (c) => {
