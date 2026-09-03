@@ -28,10 +28,13 @@ const PREDEFINED_SUBFOLDERS = [
     '📖 Sílabo y Cronograma',
     '📝 Exámenes',
     '📊 Presentaciones y Diapositivas',
+    '📚 Otros Recursos',
+    '🔗 Enlaces Útiles',
 ];
 
-// These types go to the global Cajón General, not per-cycle folders
-const GENERAL_TIPOS = ['🔗 Enlaces Útiles', '📚 Otros Recursos', 'enlace'];
+// Los enlaces antiguos con tipo `enlace` se conservan en el cajón general.
+// Los nuevos se guardan en la carpeta del ciclo que eligió el usuario.
+const GENERAL_TIPOS = ['enlace'];
 
 interface CourseDetailContentProps {
     course: Course;
@@ -570,7 +573,7 @@ export default function CourseDetailContent({
 
     // Extracted material click handler (shared across render helpers)
     const handleMaterialClick = async (material: any) => {
-        if (material.tipo?.toLowerCase() === 'enlace') {
+        if (material.tipo?.toLowerCase() === 'enlace' || material.tipo === '🔗 Enlaces Útiles') {
             window.open(material.url_archivo, '_blank');
             return;
         }
@@ -683,7 +686,7 @@ export default function CourseDetailContent({
         return cats;
     }, [historicalMaterials]);
 
-    // Cajón General: all links and other resources from ALL materials (any cycle or historical)
+    // Archivo general: enlaces creados antes de la clasificación por ciclo.
     const cajonGeneralMaterials = useMemo(() => {
         return materialsForCounts.filter(m =>
             GENERAL_TIPOS.includes(m.tipo) || m.tipo?.toLowerCase() === 'enlace'
@@ -762,7 +765,7 @@ export default function CourseDetailContent({
         if (activeCycleId === 'historical') {
             cycleName = '📦 Archivos Históricos';
         } else if (activeCycleId === 'general') {
-            cycleName = '🗂 Cajón General';
+            cycleName = '🗂 Archivo general';
         } else {
             const cycle = courseCycles.find(c => c.id === activeCycleId);
             cycleName = cycle ? `📁 Ciclo ${cycle.ciclo_name}` : '';
@@ -1325,7 +1328,7 @@ export default function CourseDetailContent({
 
                                                     {cajonGeneralMaterials.length > 0 && (
                                                         <FolderCard
-                                                            name="Cajón General"
+                                                            name="Archivo general"
                                                             count={cajonGeneralMaterials.length}
                                                             onClick={() => {
                                                                 setActiveCycleId('general');
@@ -1622,14 +1625,14 @@ export default function CourseDetailContent({
                                             </AccordionItem>
                                         )}
 
-                                        {/* Global Cajón General accordion */}
+                                        {/* Archivo histórico no clasificado por ciclo */}
                                         {(cajonGeneralMaterials.length > 0 || (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin'))) && (activeCycleId === null || activeCycleId === 'general') && (
                                             <AccordionItem
                                                 key={`general-${activeCycleId === 'general' ? 'open' : 'closed'}`}
                                                 defaultOpen={activeCycleId === 'general'}
                                                 title={
                                                     <div className="flex items-center justify-between w-full">
-                                                        <span className="font-bold flex items-center gap-2">🗂 Cajón General (Enlaces y Recursos)</span>
+                                                        <span className="font-bold flex items-center gap-2">🗂 Archivo general (material antiguo)</span>
                                                         <Badge className="ml-4 bg-blue-500/10 border border-blue-500/20 text-blue-400 font-black">
                                                             {cajonGeneralMaterials.length}
                                                         </Badge>

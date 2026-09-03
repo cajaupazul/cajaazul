@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileTypeIcon } from '@/components/files/FileTypeIcon';
+import { UserHoverCard } from '@/components/ui/UserHoverCard';
 
 type MaterialCategory = 'all' | 'evaluations' | 'classes' | 'notes' | 'syllabus' | 'links' | 'resources';
 
@@ -424,7 +425,15 @@ export default function SmartCourseMaterials({
                                         <span className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-bb-text-secondary">
                                             <span className="font-bold text-blue-400">{categoryLabel || 'Recurso'}</span>
                                             {material.professors?.nombre && <span className="max-w-[220px] truncate">{material.professors.nombre}</span>}
-                                            <span className="max-w-[220px] truncate">Aportó: {uploader}</span>
+                                            <UserHoverCard profile={material.profiles || {
+                                                id: material.user_id || material.uploaded_by,
+                                                nombre: uploader,
+                                                role: 'user',
+                                            }}>
+                                                <span className="max-w-[220px] cursor-pointer truncate font-medium text-bb-text-secondary transition-colors hover:text-blue-400">
+                                                    Aportó: {uploader}
+                                                </span>
+                                            </UserHoverCard>
                                             {isBlackboard && <span className="rounded bg-violet-500/10 px-1.5 py-0.5 font-bold text-violet-400">Importado</span>}
                                             {formatDate(material.created_at) && <span className="hidden md:inline">{formatDate(material.created_at)}</span>}
                                         </span>

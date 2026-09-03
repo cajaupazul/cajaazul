@@ -376,7 +376,10 @@ export default function FullPageUploadForm({
                 for (let i = 0; i < allLinks.length; i++) {
                     const link = allLinks[i];
                     const linkCreatedAt = new Date(nowMs - i * 1000).toISOString();
-                    const finalTipo = 'enlace';
+                    // Los enlaces nuevos viven dentro de la carpeta del ciclo,
+                    // igual que el resto de materiales. Conservamos `enlace` solo
+                    // para compatibilidad con registros históricos.
+                    const finalTipo = '🔗 Enlaces Útiles';
 
                     const { error: insertError } = await supabase.from('materials').insert({
                         course_id: courseId,
@@ -541,6 +544,9 @@ export default function FullPageUploadForm({
                 <h1 className="text-3xl font-black text-bb-text uppercase tracking-tight">Subir Material</h1>
                 <p className="text-bb-text-secondary mt-2 font-medium">
                     Comparte tus recursos con la comunidad de <span className="font-bold text-blue-400">{courseName}</span>.
+                </p>
+                <p className="mt-1 text-xs text-bb-text-secondary">
+                    Elige el destino una vez y carga todo el lote. Si mezclas tipos, podrás ajustar únicamente las excepciones antes de enviarlo.
                 </p>
             </div>
 
