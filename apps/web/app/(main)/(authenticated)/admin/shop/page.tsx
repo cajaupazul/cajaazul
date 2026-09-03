@@ -197,7 +197,7 @@ export default function AdminShopPage() {
             </div>
             <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button onClick={() => setDeleteTarget(null)} className="h-11 rounded-xl border border-white/10 px-5 text-sm font-bold hover:bg-white/5">Cancelar</button>
-              <button onClick={() => void deleteItem()} disabled={busyId === deleteTarget.id || revokeReason.trim().length < 10 || revokeConfirmation !== deleteTarget.name} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50">{busyId === deleteTarget.id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Eliminar de todos y de R2</button>
+              <button onClick={() => void deleteItem()} disabled={busyId === deleteTarget.id || revokeReason.trim().length < 10 || revokeConfirmation.trim() !== deleteTarget.name.trim()} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50">{busyId === deleteTarget.id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Eliminar de todos y de R2</button>
             </div>
           </div>
         </div>

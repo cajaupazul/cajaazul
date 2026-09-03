@@ -432,7 +432,7 @@ admin.delete('/catalog/items/:id', async (c) => {
   const confirmation = typeof parsed.body.confirmation === 'string' ? parsed.body.confirmation.trim() : ''
   const { data: item, error: itemError } = await access.service.from('shop_items').select('id, name, image_url').eq('id', itemId).single()
   if (itemError || !item) return c.json({ error: 'Artículo no encontrado.' }, 404)
-  if (confirmation !== item.name) return c.json({ error: 'Confirma con el nombre exacto del artículo.' }, 400)
+  if (confirmation !== item.name.trim()) return c.json({ error: 'Confirma con el nombre exacto del artículo.' }, 400)
   if (reason.length < 10 || reason.length > 1000) return c.json({ error: 'El motivo debe tener entre 10 y 1000 caracteres.' }, 400)
   const { data: assets } = await access.service.from('shop_item_assets').select('id, object_key').eq('item_id', itemId).neq('status', 'deleted')
   const { data: revocation, error: revocationError } = await access.service.rpc('internal_revoke_shop_item', {
