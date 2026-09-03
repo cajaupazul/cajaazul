@@ -10,6 +10,7 @@ import {
     Link2,
     NotebookTabs,
     Presentation,
+    PencilLine,
     Search,
     Trash2,
     X,
@@ -31,6 +32,8 @@ type SmartCourseMaterialsProps = {
     onOpen: (material: any) => void;
     canDelete: (material: any) => boolean;
     onDelete: (material: any) => void;
+    isAdmin?: boolean;
+    onReclassify?: (material: any, value: string) => Promise<void>;
 };
 
 const CATEGORY_OPTIONS: Array<{
@@ -46,6 +49,25 @@ const CATEGORY_OPTIONS: Array<{
     { id: 'syllabus', label: 'Sílabos', description: 'Sílabos y cronogramas', Icon: BookOpenCheck },
     { id: 'links', label: 'Enlaces', description: 'Recursos externos', Icon: Link2 },
     { id: 'resources', label: 'Otros', description: 'Sin categoría específica', Icon: FileArchive },
+];
+
+const BLACKBOARD_CATEGORY_OPTIONS = CATEGORY_OPTIONS
+    .filter((option) => ['evaluations', 'classes', 'notes', 'syllabus', 'resources'].includes(option.id))
+    .map(({ id, label }) => ({ value: id, label }));
+
+const NORMAL_LOCATION_OPTIONS = [
+    { value: 'PC 1', label: 'PC 1' },
+    { value: 'PC 2', label: 'PC 2' },
+    { value: 'PC 3', label: 'PC 3' },
+    { value: 'PC 4', label: 'PC 4' },
+    { value: 'PC 5', label: 'PC 5' },
+    { value: 'Examen Parcial', label: 'Examen parcial' },
+    { value: 'Examen Final', label: 'Examen final' },
+    { value: 'Examen Sustitutorio', label: 'Examen sustitutorio' },
+    { value: '📝 Exámenes', label: 'Evaluaciones (general)' },
+    { value: '📊 Presentaciones y Diapositivas', label: 'Clases y diapositivas' },
+    { value: '📚 Otros Recursos', label: 'Apuntes y recursos' },
+    { value: '📖 Sílabo y Cronograma', label: 'Sílabo y cronograma' },
 ];
 
 function normalize(value?: string | null) {
@@ -66,9 +88,9 @@ function materialCategory(material: any): Exclude<MaterialCategory, 'all'> {
     const type = normalize(material.tipo);
     if (type === 'enlace') return 'links';
     if (type.includes('silabo') || type.includes('syllabus') || type.includes('cronograma')) return 'syllabus';
-    if (type.includes('examen') || type.includes('evaluacion')) return 'evaluations';
+    if (type.includes('examen') || type.includes('evaluacion') || /^pc\s*\d+$/.test(type)) return 'evaluations';
     if (type.includes('presentacion') || type.includes('diapositiva') || type.includes('clase')) return 'classes';
-    if (type.includes('otros recurso')) return 'resources';
+    if (type.includes('otros recurso')) return 'notes';
     if (type.includes('apunte') || type.includes('resumen') || type.includes('guia')) return 'notes';
     return 'resources';
 }
@@ -92,10 +114,14 @@ export default function SmartCourseMaterials({
     onOpen,
     canDelete,
     onDelete,
+    isAdmin = false,
+    onReclassify,
 }: SmartCourseMaterialsProps) {
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState<MaterialCategory>('all');
     const [cycleId, setCycleId] = useState('all');
+    const [organizeMode, setOrganizeMode] = useState(false);
+    const [savingMaterialId, setSavingMaterialId] = useState<string | null>(null);
 
     const cycleNameById = useMemo(
         () => new Map(cycles.map((cycle) => [cycle.id, cycle.ciclo_name])),
@@ -152,6 +178,16 @@ export default function SmartCourseMaterials({
 
     const hasFilters = Boolean(query) || category !== 'all' || cycleId !== 'all' || selectedProfessorId !== 'all';
 
+    const handleReclassify = async (material: any, value: string) => {
+        if (!onReclassify) return;
+        setSavingMaterialId(material.id);
+        try {
+            await onReclassify(material, value);
+        } finally {
+            setSavingMaterialId(null);
+        }
+    };
+
     return (
         <div className="space-y-5">
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_220px]">
@@ -202,15 +238,41 @@ export default function SmartCourseMaterials({
                 </Select>
             </div>
 
-            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 xl:grid-cols-6">
-                {CATEGORY_OPTIONS.map(({ id, label, description, Icon }) => {
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <button
+                    type="button"
+                    onClick={() => setCategory('all')}
+                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-black transition-colors ${category === 'all' ? 'bg-blue-600 text-white' : 'border border-bb-border bg-bb-card text-bb-text-secondary hover:text-bb-text'}`}
+                >
+                    Todos <span className={category === 'all' ? 'text-blue-100' : 'text-bb-text-secondary'}>{counts.get('all') || 0}</span>
+                </button>
+                {isAdmin && onReclassify && (
+                    <button
+                        type="button"
+                        onClick={() => setOrganizeMode((current) => !current)}
+                        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${organizeMode ? 'border-blue-500 bg-blue-600 text-white' : 'border-bb-border bg-bb-card text-bb-text-secondary hover:border-blue-500/60 hover:text-bb-text'}`}
+                    >
+                        <PencilLine className="h-3.5 w-3.5" />
+                        {organizeMode ? 'Terminar organización' : 'Organizar archivos'}
+                    </button>
+                )}
+            </div>
+
+            {organizeMode && (
+                <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-xs text-bb-text-secondary">
+                    <span className="font-black text-blue-400">Modo de organización.</span> Elige la ubicación exacta de cada archivo. Las PC conservan su número; las carpetas Blackboard mantienen su estructura y reciben una categoría manual.
+                </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                {CATEGORY_OPTIONS.filter(({ id }) => id !== 'all').map(({ id, label, description, Icon }) => {
                     const active = category === id;
                     return (
                         <button
                             key={id}
                             type="button"
                             onClick={() => setCategory(id)}
-                            className={`min-w-[142px] rounded-xl border p-3 text-left transition-colors sm:min-w-0 ${active
+                            className={`min-w-0 rounded-xl border p-3 text-left transition-colors ${active
                                 ? 'border-blue-500 bg-blue-600 text-white'
                                 : 'border-bb-border bg-bb-card text-bb-text hover:border-blue-500/60 hover:bg-bb-hover'
                             }`}
@@ -222,7 +284,7 @@ export default function SmartCourseMaterials({
                                 </span>
                             </div>
                             <p className="mt-3 text-xs font-black">{label}</p>
-                            <p className={`mt-0.5 line-clamp-1 text-[10px] ${active ? 'text-blue-100' : 'text-bb-text-secondary'}`}>{description}</p>
+                            <p className={`mt-0.5 truncate text-[10px] ${active ? 'text-blue-100' : 'text-bb-text-secondary'}`}>{description}</p>
                         </button>
                     );
                 })}
@@ -258,7 +320,7 @@ export default function SmartCourseMaterials({
                         const categoryLabel = CATEGORY_OPTIONS.find((option) => option.id === materialCategory(material))?.label;
 
                         return (
-                            <div key={material.id} className="group flex min-w-0 items-center gap-3 px-3 py-3 transition-colors hover:bg-bb-hover sm:px-4">
+                            <div key={material.id} className={`group flex min-w-0 gap-3 px-3 py-3 transition-colors hover:bg-bb-hover sm:px-4 ${organizeMode ? 'flex-wrap' : 'items-center'}`}>
                                 {isSelectionMode && !isBlackboard && (
                                     <button
                                         type="button"
@@ -284,6 +346,25 @@ export default function SmartCourseMaterials({
                                     </span>
                                     <ChevronRight className="h-4 w-4 shrink-0 text-bb-text-secondary transition-transform group-hover:translate-x-0.5 group-hover:text-blue-400" />
                                 </button>
+
+                                {isAdmin && organizeMode && onReclassify && materialCategory(material) !== 'links' && (
+                                    <div className="w-full shrink-0 sm:ml-auto sm:w-64">
+                                        <Select
+                                            value={isBlackboard ? material.material_category || 'resources' : material.tipo || '📚 Otros Recursos'}
+                                            onValueChange={(value) => void handleReclassify(material, value)}
+                                            disabled={savingMaterialId === material.id}
+                                        >
+                                            <SelectTrigger className="h-9 border-bb-border bg-bb-dark text-xs font-bold text-bb-text shadow-none">
+                                                <SelectValue placeholder="Elegir ubicación" />
+                                            </SelectTrigger>
+                                            <SelectContent className="border-bb-border bg-bb-card text-bb-text">
+                                                {(isBlackboard ? BLACKBOARD_CATEGORY_OPTIONS : NORMAL_LOCATION_OPTIONS).map((option) => (
+                                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
 
                                 {canDelete(material) && (
                                     <button

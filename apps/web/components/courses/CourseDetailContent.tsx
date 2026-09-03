@@ -502,6 +502,37 @@ export default function CourseDetailContent({
         void handleDeleteMaterial(material);
     };
 
+    const handleReclassifySmartMaterial = async (material: any, value: string) => {
+        try {
+            if (material.source === 'blackboard') {
+                const { error } = await supabase
+                    .from('bb_files')
+                    .update({ material_category: value })
+                    .eq('id', material.bb_file_id);
+                if (error) throw error;
+
+                setBlackboardContributions((previous) => previous.map((item) =>
+                    item.bb_file_id === material.bb_file_id ? { ...item, material_category: value } : item
+                ));
+                return;
+            }
+
+            const { error } = await supabase
+                .from('materials')
+                .update({ tipo: value })
+                .eq('id', material.id);
+            if (error) throw error;
+
+            setMaterials((previous) => previous.map((item) =>
+                item.id === material.id ? { ...item, tipo: value } : item
+            ));
+        } catch (error: any) {
+            console.error('Error al organizar el material:', error);
+            alert(`No pudimos guardar la ubicación: ${error.message || 'inténtalo nuevamente.'}`);
+            throw error;
+        }
+    };
+
     const handleToggleSelect = (id: string) => {
         setSelectedMaterialIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     };
@@ -904,7 +935,7 @@ export default function CourseDetailContent({
                         </div>
 
                         <div className="w-full">
-                            <div className="flex flex-col sm:flex-row items-stretch justify-between gap-4 mb-4">
+                            <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                                 <div className="flex-1 flex flex-col justify-center">
                                     <h3 className="text-xl md:text-2xl font-black text-bb-text tracking-tight flex items-center gap-3">
                                         <FolderRoot className="w-6 h-6 text-blue-500" />
@@ -912,7 +943,7 @@ export default function CourseDetailContent({
                                     </h3>
                                     <p className="text-xs text-bb-text-secondary mt-1 font-medium">Busca por tipo, profesor o ciclo sin recorrer carpeta por carpeta.</p>
                                 </div>
-                                <div className="flex items-center justify-end gap-2 sm:gap-3 self-center sm:self-auto w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+                                <div className="flex w-full flex-wrap items-center gap-2 self-start xl:w-auto xl:justify-end xl:self-auto">
                                     <div className="flex items-center gap-1 bg-bb-card p-1 rounded-xl border border-bb-border flex-shrink-0">
                                         <button
                                             onClick={() => setLibraryMode('smart')}
@@ -1005,6 +1036,8 @@ export default function CourseDetailContent({
                                     onOpen={handleMaterialClick}
                                     canDelete={canDeleteSmartMaterial}
                                     onDelete={handleDeleteSmartMaterial}
+                                    isAdmin={currentUser?.role === 'admin' || currentUser?.role === 'superadmin'}
+                                    onReclassify={handleReclassifySmartMaterial}
                                 />
                             )}
 
