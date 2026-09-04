@@ -185,7 +185,8 @@ export default function CourseDetailContent({
         const baseQuery = supabase
             .from('bb_files')
             .select('id, name, storage_path, size_bytes, mime_type, relative_path, uploaded_by, created_at')
-            .eq('set_id', activeBbSetId);
+            .eq('set_id', activeBbSetId)
+            .order('created_at', { ascending: true });
         const query = activeBbFolderId === null
             ? baseQuery.is('folder_id', null)
             : baseQuery.eq('folder_id', activeBbFolderId);
@@ -1132,7 +1133,8 @@ export default function CourseDetailContent({
                                     const childFolders = activeBbFolderId
                                         ? sortFolders(bbFolderTree.filter(f => f.parent_id === activeBbFolderId))
                                         : [];
-                                    const sortedFiles = [...bbFolderFiles].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
+                                    // Blackboard conserva el orden en que el usuario incorporó cada archivo.
+                                    const sortedFiles = bbFolderFiles;
                                     const buildPath = (folderId: string | null): any[] => {
                                         if (!folderId) return [];
                                         const folder = bbFolderTree.find(f => f.id === folderId);

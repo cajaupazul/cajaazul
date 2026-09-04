@@ -138,13 +138,10 @@ export default function FullPageUploadForm({
         if (selectedFiles.length > 0) {
             setFilesMap(prev => {
                 const existing = prev[key] || [];
-                const combined = [...existing, ...selectedFiles];
-                // Sort files naturally (like Windows Explorer)
                 return {
                     ...prev,
-                    [key]: combined.sort((a, b) => 
-                        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
-                    )
+                    // El orden de selección es el orden de publicación. No se ordena por nombre.
+                    [key]: [...existing, ...selectedFiles]
                 };
             });
         }
