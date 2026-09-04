@@ -28,13 +28,20 @@ const PREDEFINED_SUBFOLDERS = [
     '📖 Sílabo y Cronograma',
     '📝 Exámenes',
     '📊 Presentaciones y Diapositivas',
-    '📚 Otros Recursos',
+    '📚 Apuntes y Recursos',
     '🔗 Enlaces Útiles',
+    '📦 Otros Recursos',
 ];
 
 // Los enlaces antiguos con tipo `enlace` se conservan en el cajón general.
 // Los nuevos se guardan en la carpeta del ciclo que eligió el usuario.
 const GENERAL_TIPOS = ['enlace'];
+const SHARED_SUBFOLDERS = new Set([
+    '📚 Apuntes y Recursos',
+    '🔗 Enlaces Útiles',
+    '📦 Otros Recursos',
+]);
+const isSharedSubfolder = (value?: string | null) => !!value && SHARED_SUBFOLDERS.has(value);
 
 interface CourseDetailContentProps {
     course: Course;
@@ -387,20 +394,17 @@ export default function CourseDetailContent({
 
     const handleMassMove = async () => {
         if (selectedMaterialIds.length === 0) return;
-        if (targetCycleId !== 'historical' && !targetSubfolder) {
+        if (!targetSubfolder) {
             alert('Por favor selecciona una subcarpeta de destino');
             return;
         }
 
         try {
             setIsMovingFiles(true);
-            const targetCycleUuid = targetCycleId === 'historical' ? null : targetCycleId;
-            const targetTipo = targetCycleId === 'historical' ? targetSubfolder : targetSubfolder;
-
-            const updatePayload: any = { cycle_id: targetCycleUuid };
-            if (targetCycleUuid) {
-                updatePayload.tipo = targetTipo;
-            }
+            const targetCycleUuid = isSharedSubfolder(targetSubfolder)
+                ? null
+                : (targetCycleId === 'historical' ? null : targetCycleId);
+            const updatePayload: any = { cycle_id: targetCycleUuid, tipo: targetSubfolder };
 
             const { error } = await supabase
                 .from('materials')
@@ -505,7 +509,7 @@ export default function CourseDetailContent({
         void handleDeleteMaterial(material);
     };
 
-    const handleReclassifySmartMaterial = async (material: any, value: string) => {
+    const handleReclassifySmartMaterial = async (material: any, value: string, destinationCycleId?: string) => {
         try {
             if (material.source === 'blackboard') {
                 const { error } = await supabase
@@ -520,14 +524,18 @@ export default function CourseDetailContent({
                 return;
             }
 
+            const desiredCycleId = isSharedSubfolder(value) ? null : destinationCycleId;
+            if (!isSharedSubfolder(value) && !desiredCycleId) {
+                throw new Error('Elige un ciclo para las evaluaciones, clases y sílabos.');
+            }
             const { error } = await supabase
                 .from('materials')
-                .update({ tipo: value })
+                .update({ tipo: value, cycle_id: desiredCycleId })
                 .eq('id', material.id);
             if (error) throw error;
 
             setMaterials((previous) => previous.map((item) =>
-                item.id === material.id ? { ...item, tipo: value } : item
+                item.id === material.id ? { ...item, tipo: value, cycle_id: desiredCycleId } : item
             ));
         } catch (error: any) {
             console.error('Error al organizar el material:', error);
@@ -664,8 +672,12 @@ export default function CourseDetailContent({
     );
 
     // Historical materials — excluding general resources (enlaces/otros)
+    const sharedMaterials = useMemo(() => {
+        return materialsForCounts.filter(m => !m.cycle_id && isSharedSubfolder(m.tipo));
+    }, [materialsForCounts]);
+
     const historicalMaterials = useMemo(() => {
-        return materialsForCounts.filter(m => !m.cycle_id && !GENERAL_TIPOS.includes(m.tipo) && m.tipo?.toLowerCase() !== 'enlace');
+        return materialsForCounts.filter(m => !m.cycle_id && !isSharedSubfolder(m.tipo) && !GENERAL_TIPOS.includes(m.tipo) && m.tipo?.toLowerCase() !== 'enlace');
     }, [materialsForCounts]);
 
     const historicalCategories = useMemo(() => {
@@ -1344,6 +1356,24 @@ export default function CourseDetailContent({
                                             return renderFilteredList(cajonGeneralMaterials);
                                         }
 
+                                        if (activeCycleId === 'shared') {
+                                            if (!activeSubfolder) {
+                                                return (
+                                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-6">
+                                                        {PREDEFINED_SUBFOLDERS.filter(isSharedSubfolder).map((sub) => (
+                                                            <FolderCard
+                                                                key={sub}
+                                                                name={sub}
+                                                                count={sharedMaterials.filter((m) => m.tipo === sub).length}
+                                                                onClick={() => setActiveSubfolder(sub)}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                );
+                                            }
+                                            return renderFilteredList(sharedMaterials.filter((m) => m.tipo === activeSubfolder));
+                                        }
+
                                         if (activeCycleId === 'historical') {
                                             if (!activeSubfolder) {
                                                 return (
@@ -1377,7 +1407,9 @@ export default function CourseDetailContent({
                                             // Inside cycle, show predefined subfolders Sílabo, Exámenes, Presentaciones
                                             const matchedMatsMap = new Map<string, number>();
                                             PREDEFINED_SUBFOLDERS.forEach((sub) => {
-                                                const count = cycleMats.filter(m => m.tipo === sub).length;
+                                                const count = isSharedSubfolder(sub)
+                                                    ? sharedMaterials.filter(m => m.tipo === sub).length
+                                                    : cycleMats.filter(m => m.tipo === sub).length;
                                                 matchedMatsMap.set(sub, count);
                                             });
                                             // Exams count summing subfolders
@@ -1398,7 +1430,14 @@ export default function CourseDetailContent({
                                                                 key={sub}
                                                                 name={sub}
                                                                 count={matchedMatsMap.get(sub) || 0}
-                                                                onClick={() => setActiveSubfolder(sub)}
+                                                                onClick={() => {
+                                                                    if (isSharedSubfolder(sub)) {
+                                                                        setActiveCycleId('shared');
+                                                                        setActiveSubfolder(sub);
+                                                                    } else {
+                                                                        setActiveSubfolder(sub);
+                                                                    }
+                                                                }}
                                                             />
                                                         ))}
                                                     </div>
@@ -1940,6 +1979,9 @@ export default function CourseDetailContent({
                                             <SelectItem value="historical" className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2">
                                                 📦 Archivos Históricos (Raíz)
                                             </SelectItem>
+                                            <SelectItem value="shared" className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2">
+                                                🌐 Material compartido del curso
+                                            </SelectItem>
                                             {courseCycles.map(c => (
                                                 <SelectItem key={c.id} value={c.id} className="hover:bg-bb-card focus:bg-bb-card cursor-pointer py-2">
                                                     📁 Ciclo {c.ciclo_name}
@@ -1957,7 +1999,9 @@ export default function CourseDetailContent({
                                                 <SelectValue placeholder="Selecciona una sección..." />
                                             </SelectTrigger>
                                             <SelectContent className="bg-bb-dark border border-bb-border text-bb-text rounded-xl shadow-xl max-h-60">
-                                                {PREDEFINED_SUBFOLDERS.map((sub: string) => (
+                                                {PREDEFINED_SUBFOLDERS
+                                                    .filter((sub: string) => targetCycleId !== 'shared' || isSharedSubfolder(sub))
+                                                    .map((sub: string) => (
                                                     <SelectItem key={sub} value={sub} className={`focus:bg-bb-card cursor-pointer py-2 font-bold ${sub === '📝 Exámenes' ? 'text-blue-400' : ''}`}>
                                                         {sub}
                                                     </SelectItem>
@@ -2004,7 +2048,7 @@ export default function CourseDetailContent({
                                 </Button>
                                 <Button
                                     onClick={handleMassMove}
-                                    disabled={isMovingFiles || (targetCycleId !== 'historical' && !targetSubfolder)}
+                                    disabled={isMovingFiles || !targetSubfolder}
                                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-50"
                                 >
                                     {isMovingFiles ? 'Moviendo...' : 'Confirmar'}

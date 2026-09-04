@@ -30,15 +30,23 @@ const PREDEFINED_SUBFOLDERS = [
     '📖 Sílabo y Cronograma',
     '📝 Exámenes',
     '📊 Presentaciones y Diapositivas',
+    '📚 Apuntes y Recursos',
     '🔗 Enlaces Útiles',
-    '📚 Otros Recursos'
+    '📦 Otros Recursos'
 ];
+
+const SHARED_SUBFOLDERS = new Set([
+    '📚 Apuntes y Recursos',
+    '🔗 Enlaces Útiles',
+    '📦 Otros Recursos',
+]);
 
 const MATERIAL_CATEGORY_OPTIONS = [
     { value: PREDEFINED_SUBFOLDERS[1], label: 'Evaluaciones', description: 'PC, parciales, finales y solucionarios' },
     { value: PREDEFINED_SUBFOLDERS[2], label: 'Clases y diapositivas', description: 'PPT, sesiones y material docente' },
-    { value: PREDEFINED_SUBFOLDERS[4], label: 'Apuntes y recursos', description: 'Guías, resúmenes y archivos de apoyo' },
+    { value: PREDEFINED_SUBFOLDERS[3], label: 'Apuntes y recursos', description: 'Guías, resúmenes y archivos de apoyo para todo el curso' },
     { value: PREDEFINED_SUBFOLDERS[0], label: 'Sílabo y cronograma', description: 'Información oficial del curso' },
+    { value: PREDEFINED_SUBFOLDERS[5], label: 'Otros recursos', description: 'Material compartido que no encaja en otra categoría' },
 ];
 
 const BLACKBOARD_CATEGORY_OPTIONS = [
@@ -50,6 +58,7 @@ const BLACKBOARD_CATEGORY_OPTIONS = [
 ];
 
 const fileKey = (file: File) => `${file.name}:${file.size}:${file.lastModified}`;
+const isSharedSubfolder = (value?: string | null) => !!value && SHARED_SUBFOLDERS.has(value);
 
 interface FileEntry { file: File; relativePath: string; }
 
@@ -78,6 +87,9 @@ export default function FullPageUploadForm({
     const [professorId, setProfessorId] = useState<string>(
         allProfessors.length === 1 ? allProfessors[0].id : 'none'
     );
+
+    const resolvedCycleId = (section?: string | null) =>
+        isSharedSubfolder(section) ? null : (selectedCycleId === 'historical' ? null : selectedCycleId);
 
     // Blackboard folder upload states
     const [bbFiles, setBbFiles] = useState<FileEntry[]>([]);
@@ -202,7 +214,9 @@ export default function FullPageUploadForm({
         if (!token || !uploaderId) throw new Error('Tu sesión expiró. Vuelve a iniciar sesión antes de subir archivos.');
 
         const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev';
-        const cycleId = selectedCycleId === 'historical' ? null : selectedCycleId;
+        const cycleId = ['notes', 'resources'].includes(bbDefaultCategory)
+            ? null
+            : (selectedCycleId === 'historical' ? null : selectedCycleId);
 
         for (let i = 0; i < entries.length; i++) {
             const entry = entries[i];
@@ -275,10 +289,15 @@ export default function FullPageUploadForm({
                 alert('Elige una categoría para esta importación. Si mezcla tipos, podrás ajustar archivos concretos antes de subir.');
                 return;
             }
+            if (!['notes', 'resources'].includes(bbDefaultCategory) && selectedCycleId === 'historical') {
+                alert('Las importaciones de clases, sílabos y evaluaciones necesitan un ciclo. Elige uno antes de continuar.');
+                return;
+            }
             setUploading(true);
             try {
-                let cicloName = 'Histórico';
-                if (selectedCycleId !== 'historical') {
+                const bbIsShared = ['notes', 'resources'].includes(bbDefaultCategory);
+                let cicloName = 'Material compartido';
+                if (!bbIsShared && selectedCycleId !== 'historical') {
                     const cy = courseCycles.find(c => c.id === selectedCycleId);
                     if (cy) cicloName = cy.ciclo_name;
                 }
@@ -314,7 +333,7 @@ export default function FullPageUploadForm({
                             course_id: courseId,
                             course_name: bbRootName,
                             ciclo: cicloName,
-                            cycle_id: selectedCycleId === 'historical' ? null : selectedCycleId,
+                            cycle_id: bbIsShared ? null : selectedCycleId,
                             uploaded_by: (await supabase.auth.getUser()).data.user?.id,
                         })
                         .select('id')
@@ -336,6 +355,19 @@ export default function FullPageUploadForm({
         if (uploadMethod === 'file' && !selectedSubfolder) {
             alert('Por favor elige la categoría del material antes de subirlo.');
             return;
+        }
+        if (uploadMethod === 'file' && !isSharedSubfolder(selectedSubfolder) && selectedCycleId === 'historical') {
+            alert('Las evaluaciones, clases y sílabos necesitan un ciclo. Los apuntes, enlaces y otros recursos se comparten automáticamente en todo el curso.');
+            return;
+        }
+        if (uploadMethod === 'file' && selectedCycleId === 'historical') {
+            const hasCycleOnlyOverride = Object.values(filesMap).some((files) => files.some((file) =>
+                !isSharedSubfolder(fileCategoryOverrides[fileKey(file)] || selectedSubfolder)
+            ));
+            if (hasCycleOnlyOverride) {
+                alert('Uno o más archivos del lote pertenecen a una categoría por ciclo. Selecciona el ciclo correspondiente o deja solo apuntes, enlaces y otros recursos compartidos.');
+                return;
+            }
         }
 
         if (uploadMethod === 'file') {
@@ -388,7 +420,7 @@ export default function FullPageUploadForm({
                         titulo: link.titulo || 'Enlace Externo',
                         url_archivo: link.url,
                         tipo: finalTipo,
-                        cycle_id: selectedCycleId === 'historical' ? null : selectedCycleId,
+                        cycle_id: null,
                         descargas: 0,
                         created_at: linkCreatedAt,
                     });
@@ -410,7 +442,7 @@ export default function FullPageUploadForm({
                         : target;
                     const storagePath = buildCourseMaterialPath({
                         courseId,
-                        cycleId: selectedCycleId === 'historical' ? null : selectedCycleId,
+                        cycleId: resolvedCycleId(finalSection),
                         section: finalSection,
                         fileName: file.name,
                     });
@@ -461,7 +493,7 @@ export default function FullPageUploadForm({
                         url_archivo: materialUrl,
                         storage_path: storagePath,
                         tipo: finalTipo,
-                        cycle_id: selectedCycleId === 'historical' ? null : selectedCycleId,
+                        cycle_id: resolvedCycleId(finalSection),
                         descargas: 0,
                         thumbnail_url: thumbnailUrl,
                         created_at: fileCreatedAt,
@@ -611,6 +643,7 @@ export default function FullPageUploadForm({
                         </Label>
 
                         <div className="space-y-4 bg-bb-sidebar/50 p-5 rounded-xl border border-bb-border">
+                            {uploadMethod !== 'link' && !isSharedSubfolder(selectedSubfolder) && (
                             <div>
                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">¿A qué Ciclo pertenece?</Label>
                                 <Select value={selectedCycleId} onValueChange={(val) => {
@@ -631,8 +664,9 @@ export default function FullPageUploadForm({
                                     </SelectContent>
                                 </Select>
                             </div>
+                            )}
 
-                            {selectedCycleId === 'historical' && (
+                            {uploadMethod !== 'link' && !isSharedSubfolder(selectedSubfolder) && selectedCycleId === 'historical' && (
                                 <p className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] font-medium leading-relaxed text-amber-300">
                                     Usa esta opción solo si el material no pertenece a un ciclo. Para una carpeta Blackboard reciente, selecciona el ciclo correspondiente.
                                 </p>
@@ -656,6 +690,11 @@ export default function FullPageUploadForm({
                                 <p className="mt-2 px-1 text-[10px] font-medium leading-relaxed text-bb-text-secondary">
                                     Elige una categoría para el lote. CampusLink nunca la deduce a partir del nombre del archivo.
                                 </p>
+                                {isSharedSubfolder(selectedSubfolder) && (
+                                    <p className="mt-2 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-2 text-[11px] font-medium leading-relaxed text-teal-300">
+                                        Este material se guardará como recurso compartido del curso y estará disponible desde cualquier ciclo.
+                                    </p>
+                                )}
                             </div>
                             )}
                         </div>

@@ -34,7 +34,7 @@ type SmartCourseMaterialsProps = {
     canDelete: (material: any) => boolean;
     onDelete: (material: any) => void;
     isAdmin?: boolean;
-    onReclassify?: (material: any, value: string) => Promise<void>;
+    onReclassify?: (material: any, value: string, cycleId?: string) => Promise<void>;
 };
 
 const CATEGORY_OPTIONS: Array<{
@@ -67,9 +67,14 @@ const NORMAL_LOCATION_OPTIONS = [
     { value: 'Examen Sustitutorio', label: 'Examen sustitutorio' },
     { value: '📝 Exámenes', label: 'Evaluaciones (general)' },
     { value: '📊 Presentaciones y Diapositivas', label: 'Clases y diapositivas' },
-    { value: '📚 Otros Recursos', label: 'Apuntes y recursos' },
+    { value: '📚 Apuntes y Recursos', label: 'Apuntes y recursos (compartidos)' },
     { value: '📖 Sílabo y Cronograma', label: 'Sílabo y cronograma' },
+    { value: '🔗 Enlaces Útiles', label: 'Enlaces útiles (compartidos)' },
+    { value: '📦 Otros Recursos', label: 'Otros recursos (compartidos)' },
 ];
+
+const SHARED_LOCATIONS = new Set(['📚 Apuntes y Recursos', '🔗 Enlaces Útiles', '📦 Otros Recursos']);
+const isSharedLocation = (value?: string | null) => !!value && SHARED_LOCATIONS.has(value);
 
 function normalize(value?: string | null) {
     return (value || '')
@@ -166,6 +171,7 @@ export default function SmartCourseMaterials({
     const [cycleId, setCycleId] = useState('all');
     const [organizeMode, setOrganizeMode] = useState(false);
     const [savingMaterialId, setSavingMaterialId] = useState<string | null>(null);
+    const [organizeCycleByMaterial, setOrganizeCycleByMaterial] = useState<Record<string, string>>({});
 
     const cycleNameById = useMemo(
         () => new Map(cycles.map((cycle) => [cycle.id, cycle.ciclo_name])),
@@ -180,7 +186,8 @@ export default function SmartCourseMaterials({
 
     const cycleFiltered = useMemo(() => {
         if (cycleId === 'all') return professorFiltered;
-        if (cycleId === 'historical') return professorFiltered.filter((item) => !item.cycle_id);
+        if (cycleId === 'shared') return professorFiltered.filter((item) => !item.cycle_id && ['notes', 'links', 'resources'].includes(materialCategory(item)));
+        if (cycleId === 'historical') return professorFiltered.filter((item) => !item.cycle_id && !['notes', 'links', 'resources'].includes(materialCategory(item)));
         return professorFiltered.filter((item) => item.cycle_id === cycleId);
     }, [professorFiltered, cycleId]);
 
@@ -223,7 +230,9 @@ export default function SmartCourseMaterials({
         const groups = new Map<string, { id: string; name: string; materials: any[]; sortKey: number }>();
 
         filtered.forEach((material) => {
-            const id = material.cycle_id || 'historical';
+            const category = materialCategory(material);
+            const shared = !material.cycle_id && ['notes', 'links', 'resources'].includes(category);
+            const id = shared ? 'shared' : (material.cycle_id || 'historical');
             const cycleName = material.cycle_id ? cycleNameById.get(material.cycle_id) : null;
             const existing = groups.get(id);
             if (existing) {
@@ -232,9 +241,9 @@ export default function SmartCourseMaterials({
             }
             groups.set(id, {
                 id,
-                name: cycleName ? `Ciclo ${cycleName}` : 'Archivo histórico',
+                name: shared ? 'Material compartido del curso' : (cycleName ? `Ciclo ${cycleName}` : 'Archivo histórico'),
                 materials: [material],
-                sortKey: cycleName ? cycleSortKey(cycleName) : -1,
+                sortKey: shared ? 0 : (cycleName ? cycleSortKey(cycleName) : -1),
             });
         });
 
@@ -250,11 +259,11 @@ export default function SmartCourseMaterials({
 
     const hasFilters = Boolean(query) || category !== 'all' || cycleId !== 'all' || selectedProfessorId !== 'all';
 
-    const handleReclassify = async (material: any, value: string) => {
+    const handleReclassify = async (material: any, value: string, destinationCycleId?: string) => {
         if (!onReclassify) return;
         setSavingMaterialId(material.id);
         try {
-            await onReclassify(material, value);
+            await onReclassify(material, value, destinationCycleId);
         } finally {
             setSavingMaterialId(null);
         }
@@ -305,7 +314,8 @@ export default function SmartCourseMaterials({
                         {cycles.map((cycle) => (
                             <SelectItem key={cycle.id} value={cycle.id}>Ciclo {cycle.ciclo_name}</SelectItem>
                         ))}
-                        <SelectItem value="historical">Sin ciclo / histórico</SelectItem>
+                        <SelectItem value="shared">Material compartido</SelectItem>
+                        <SelectItem value="historical">Archivo histórico / sin clasificar</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -394,7 +404,7 @@ export default function SmartCourseMaterials({
                                     </p>
                                 </div>
                                 <span className="shrink-0 rounded-md border border-bb-border px-2 py-1 text-[10px] font-bold text-bb-text-secondary">
-                                    {group.id === 'historical' ? 'Sin ciclo' : 'Periodo académico'}
+                                    {group.id === 'shared' ? 'Todo el curso' : group.id === 'historical' ? 'Sin clasificar' : 'Periodo académico'}
                                 </span>
                             </header>
                             <div className="divide-y divide-bb-border">
@@ -441,11 +451,19 @@ export default function SmartCourseMaterials({
                                     <ChevronRight className="h-4 w-4 shrink-0 text-bb-text-secondary transition-transform group-hover:translate-x-0.5 group-hover:text-blue-400" />
                                 </button>
 
-                                {isAdmin && organizeMode && onReclassify && materialCategory(material) !== 'links' && (
-                                    <div className="w-full shrink-0 sm:ml-auto sm:w-64">
+                                {isAdmin && organizeMode && onReclassify && (
+                                    <div className="grid w-full shrink-0 gap-2 sm:ml-auto sm:w-[430px] sm:grid-cols-2">
                                         <Select
-                                            value={isBlackboard ? material.material_category || 'resources' : material.tipo || '📚 Otros Recursos'}
-                                            onValueChange={(value) => void handleReclassify(material, value)}
+                                            value={isBlackboard ? material.material_category || 'resources' : material.tipo || '📦 Otros Recursos'}
+                                            onValueChange={(value) => {
+                                                if (isBlackboard || isSharedLocation(value)) {
+                                                    void handleReclassify(material, value);
+                                                    return;
+                                                }
+                                                const destination = material.cycle_id || cycles[0]?.id;
+                                                setOrganizeCycleByMaterial((current) => ({ ...current, [material.id]: destination || '' }));
+                                                void handleReclassify(material, value, destination);
+                                            }}
                                             disabled={savingMaterialId === material.id}
                                         >
                                             <SelectTrigger className="h-9 border-bb-border bg-bb-dark text-xs font-bold text-bb-text shadow-none">
@@ -457,6 +475,21 @@ export default function SmartCourseMaterials({
                                                 ))}
                                             </SelectContent>
                                         </Select>
+                                        {!isBlackboard && !isSharedLocation(material.tipo) && (
+                                            <Select
+                                                value={organizeCycleByMaterial[material.id] || material.cycle_id || ''}
+                                                onValueChange={(value) => {
+                                                    setOrganizeCycleByMaterial((current) => ({ ...current, [material.id]: value }));
+                                                    void handleReclassify(material, material.tipo, value);
+                                                }}
+                                                disabled={savingMaterialId === material.id}
+                                            >
+                                                <SelectTrigger className="h-9 border-bb-border bg-bb-dark text-xs font-bold text-bb-text shadow-none"><SelectValue placeholder="Ciclo de destino" /></SelectTrigger>
+                                                <SelectContent className="border-bb-border bg-bb-card text-bb-text">
+                                                    {cycles.map((cycle) => <SelectItem key={cycle.id} value={cycle.id}>Ciclo {cycle.ciclo_name}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
                                     </div>
                                 )}
 
