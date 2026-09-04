@@ -67,7 +67,7 @@ const NORMAL_LOCATION_OPTIONS = [
     { value: 'Examen Sustitutorio', label: 'Examen sustitutorio' },
     { value: '📝 Exámenes', label: 'Evaluaciones (general)' },
     { value: '📊 Presentaciones y Diapositivas', label: 'Clases y diapositivas' },
-    { value: '📚 Apuntes y Recursos', label: 'Apuntes y recursos (compartidos)' },
+    { value: '📚 Apuntes y Recursos', label: 'Apuntes (compartidos)' },
     { value: '📖 Sílabo y Cronograma', label: 'Sílabo y cronograma' },
     { value: '🔗 Enlaces Útiles', label: 'Enlaces útiles (compartidos)' },
     { value: '📦 Otros Recursos', label: 'Otros recursos (compartidos)' },

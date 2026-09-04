@@ -44,7 +44,7 @@ const SHARED_SUBFOLDERS = new Set([
 const MATERIAL_CATEGORY_OPTIONS = [
     { value: PREDEFINED_SUBFOLDERS[1], label: 'Evaluaciones', description: 'PC, parciales, finales y solucionarios' },
     { value: PREDEFINED_SUBFOLDERS[2], label: 'Clases y diapositivas', description: 'PPT, sesiones y material docente' },
-    { value: PREDEFINED_SUBFOLDERS[3], label: 'Apuntes y recursos', description: 'Guías, resúmenes y archivos de apoyo para todo el curso' },
+    { value: PREDEFINED_SUBFOLDERS[3], label: 'Apuntes', description: 'Guías, resúmenes y archivos de apoyo para todo el curso' },
     { value: PREDEFINED_SUBFOLDERS[0], label: 'Sílabo y cronograma', description: 'Información oficial del curso' },
     { value: PREDEFINED_SUBFOLDERS[5], label: 'Otros recursos', description: 'Material compartido que no encaja en otra categoría' },
 ];
@@ -52,13 +52,15 @@ const MATERIAL_CATEGORY_OPTIONS = [
 const BLACKBOARD_CATEGORY_OPTIONS = [
     { value: 'evaluations', label: 'Evaluaciones' },
     { value: 'classes', label: 'Clases y diapositivas' },
-    { value: 'notes', label: 'Apuntes y recursos' },
+    { value: 'notes', label: 'Apuntes' },
     { value: 'syllabus', label: 'Sílabo y cronograma' },
     { value: 'resources', label: 'Mixto / otros recursos' },
 ];
 
 const fileKey = (file: File) => `${file.name}:${file.size}:${file.lastModified}`;
 const isSharedSubfolder = (value?: string | null) => !!value && SHARED_SUBFOLDERS.has(value);
+const requiresGroupTitle = (value?: string | null) =>
+    value === PREDEFINED_SUBFOLDERS[3] || value === PREDEFINED_SUBFOLDERS[5];
 
 interface FileEntry { file: File; relativePath: string; }
 
@@ -81,6 +83,7 @@ export default function FullPageUploadForm({
             : courseCycles[0]?.id || 'historical'
     );
     const [selectedSubfolder, setSelectedSubfolder] = useState<string>('');
+    const [sharedGroupTitle, setSharedGroupTitle] = useState('');
     const [fileCategoryOverrides, setFileCategoryOverrides] = useState<Record<string, string>>({});
     const [showFileCategories, setShowFileCategories] = useState(false);
     
@@ -356,6 +359,10 @@ export default function FullPageUploadForm({
             alert('Por favor elige la categoría del material antes de subirlo.');
             return;
         }
+        if (uploadMethod === 'file' && requiresGroupTitle(selectedSubfolder) && !sharedGroupTitle.trim()) {
+            alert('Escribe un título para agrupar estos recursos, por ejemplo: Apuntes semana 1.');
+            return;
+        }
         if (uploadMethod === 'file' && !isSharedSubfolder(selectedSubfolder) && selectedCycleId === 'historical') {
             alert('Las evaluaciones, clases y sílabos necesitan un ciclo. Los apuntes, enlaces y otros recursos se comparten automáticamente en todo el curso.');
             return;
@@ -493,6 +500,7 @@ export default function FullPageUploadForm({
                         url_archivo: materialUrl,
                         storage_path: storagePath,
                         tipo: finalTipo,
+                        group_title: requiresGroupTitle(finalTipo) ? sharedGroupTitle.trim() : null,
                         cycle_id: resolvedCycleId(finalSection),
                         descargas: 0,
                         thumbnail_url: thumbnailUrl,
@@ -551,7 +559,7 @@ export default function FullPageUploadForm({
     const isReadyToSubmit = uploadMethod === 'bb-folder'
         ? isReadyForBbFolder
         : uploadMethod === 'file'
-            ? isReadyForFiles && !!selectedSubfolder
+            ? isReadyForFiles && !!selectedSubfolder && (!requiresGroupTitle(selectedSubfolder) || !!sharedGroupTitle.trim())
             : isReadyForFiles;
     const selectedCycle = courseCycles.find((cycle: any) => cycle.id === selectedCycleId);
     const selectedProfessor = allProfessors.find((professor: any) => professor.id === professorId);
@@ -694,6 +702,23 @@ export default function FullPageUploadForm({
                                     <p className="mt-2 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-2 text-[11px] font-medium leading-relaxed text-teal-300">
                                         Este material se guardará como recurso compartido del curso y estará disponible desde cualquier ciclo.
                                     </p>
+                                )}
+                                {requiresGroupTitle(selectedSubfolder) && (
+                                    <div className="mt-4">
+                                        <Label htmlFor="shared-group-title" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">
+                                            Título del grupo
+                                        </Label>
+                                        <Input
+                                            id="shared-group-title"
+                                            value={sharedGroupTitle}
+                                            onChange={(event) => setSharedGroupTitle(event.target.value.slice(0, 90))}
+                                            placeholder={selectedSubfolder === PREDEFINED_SUBFOLDERS[3] ? 'Ej.: Apuntes semana 1' : 'Ej.: Material complementario unidad 2'}
+                                            className="h-12 bg-bb-card border-bb-border text-bb-text rounded-xl focus-visible:ring-blue-500/30"
+                                        />
+                                        <p className="mt-2 px-1 text-[10px] font-medium leading-relaxed text-bb-text-secondary">
+                                            Este nombre reunirá los archivos de este aporte para que la comunidad los identifique rápido.
+                                        </p>
+                                    </div>
                                 )}
                             </div>
                             )}

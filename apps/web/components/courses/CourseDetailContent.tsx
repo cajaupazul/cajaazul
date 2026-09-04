@@ -42,6 +42,8 @@ const SHARED_SUBFOLDERS = new Set([
     '📦 Otros Recursos',
 ]);
 const isSharedSubfolder = (value?: string | null) => !!value && SHARED_SUBFOLDERS.has(value);
+const displayFolderName = (value: string) =>
+    value === '📚 Apuntes y Recursos' ? '📚 Apuntes' : value;
 
 interface CourseDetailContentProps {
     course: Course;
@@ -637,6 +639,37 @@ export default function CourseDetailContent({
                         onDelete={() => handleDeleteMaterial(material)}
                     />
                 ))}
+            </div>
+        );
+    };
+
+    const renderSharedGroupedList = (mats: any[]) => {
+        const groups = mats.reduce<Record<string, any[]>>((acc, material) => {
+            const title = material.group_title?.trim() || 'Sin grupo';
+            (acc[title] ||= []).push(material);
+            return acc;
+        }, {});
+
+        return (
+            <div className="space-y-7">
+                {Object.entries(groups)
+                    .sort(([left], [right]) => left.localeCompare(right, 'es'))
+                    .map(([title, groupMaterials]) => (
+                        <section key={title} className="overflow-hidden rounded-2xl border border-bb-border bg-bb-card">
+                            <div className="flex items-center justify-between gap-4 border-b border-bb-border bg-bb-darker px-4 py-3 sm:px-5">
+                                <div>
+                                    <p className="text-sm font-black text-bb-text">{title}</p>
+                                    <p className="mt-0.5 text-xs text-bb-text-secondary">
+                                        {groupMaterials.length} {groupMaterials.length === 1 ? 'archivo compartido' : 'archivos compartidos'}
+                                    </p>
+                                </div>
+                                <span className="rounded-full border border-bb-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-bb-text-secondary">
+                                    Grupo
+                                </span>
+                            </div>
+                            <div className="p-3 sm:p-4">{renderFilteredList(groupMaterials)}</div>
+                        </section>
+                    ))}
             </div>
         );
     };
@@ -1363,7 +1396,7 @@ export default function CourseDetailContent({
                                                         {PREDEFINED_SUBFOLDERS.filter(isSharedSubfolder).map((sub) => (
                                                             <FolderCard
                                                                 key={sub}
-                                                                name={sub}
+                                                                name={displayFolderName(sub)}
                                                                 count={sharedMaterials.filter((m) => m.tipo === sub).length}
                                                                 onClick={() => setActiveSubfolder(sub)}
                                                             />
@@ -1371,7 +1404,10 @@ export default function CourseDetailContent({
                                                     </div>
                                                 );
                                             }
-                                            return renderFilteredList(sharedMaterials.filter((m) => m.tipo === activeSubfolder));
+                                            const folderMaterials = sharedMaterials.filter((m) => m.tipo === activeSubfolder);
+                                            return activeSubfolder === PREDEFINED_SUBFOLDERS[3] || activeSubfolder === PREDEFINED_SUBFOLDERS[5]
+                                                ? renderSharedGroupedList(folderMaterials)
+                                                : renderFilteredList(folderMaterials);
                                         }
 
                                         if (activeCycleId === 'historical') {

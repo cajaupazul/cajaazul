@@ -11,19 +11,19 @@
   --faculty-light: #F0F7FF;
 
   /* --- DEFAULT MODO DARK (SÓLIDO) --- */
-  --bg-primary: #0f0f0f;
-  --bg-secondary: #000000;
-  --bg-card: #1a1a1a;
-  --bg-sidebar: #121212;
+  --bg-primary: #161616;
+  --bg-secondary: #0d0d0d;
+  --bg-card: #1f1f1f;
+  --bg-sidebar: #111111;
 
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
 
-  --border-color: #333333;
-  --border-hover: #454545;
+  --border-color: #353535;
+  --border-hover: #4a4a4a;
 
   /* Theme variables - Solid Minimalist */
-  --glass-bg: #1a1a1a;
+  --glass-bg: #1f1f1f;
   --glass-border: #333333;
   --glass-blur: 0px;
 
@@ -35,8 +35,8 @@
   --bb-text: var(--text-primary);
   --bb-text-secondary: var(--text-secondary);
   --bb-border: var(--border-color);
-  --bb-hover: #2a2a2a;
-  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --bb-hover: #292929;
+  --card-shadow: none;
 }
 
 /* --- MODO LIGHT (SÓLIDO) --- */
@@ -70,22 +70,22 @@
 
 /* --- MODO DARK (EXPLICIT) --- */
 [data-theme="dark"] {
-  --bg-primary: #0f0f0f;
-  --bg-secondary: #000000;
-  --bg-card: #1a1a1a;
-  --bg-sidebar: #121212;
+  --bg-primary: #161616;
+  --bg-secondary: #0d0d0d;
+  --bg-card: #1f1f1f;
+  --bg-sidebar: #111111;
 
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
 
-  --border-color: #333333;
-  --border-hover: #454545;
+  --border-color: #353535;
+  --border-hover: #4a4a4a;
 
-  --glass-bg: #1a1a1a;
+  --glass-bg: #1f1f1f;
   --glass-border: #333333;
   --glass-blur: 0px;
 
-  --bb-hover: #2a2a2a;
+  --bb-hover: #292929;
 }
 
 /* Reset base */
@@ -178,7 +178,7 @@ button {
 
   .card:hover {
     border-color: var(--faculty-primary);
-    box-shadow: 0 0 20px rgba(var(--faculty-primary), 0.2);
+    box-shadow: none;
   }
 
   /* Inputs */
@@ -224,13 +224,13 @@ button {
   /* Glassmorphism Card Utility */
   .glass-card {
     background-color: var(--glass-bg);
-    backdrop-filter: blur(12px);
+    backdrop-filter: none;
     border: 1px solid var(--glass-border);
     transition: all 0.3s ease;
   }
 
   .glass-card:hover {
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.2);
+    box-shadow: none;
     border-color: var(--faculty-primary);
   }
 }
