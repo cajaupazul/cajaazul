@@ -198,6 +198,13 @@ export default function CourseDetailContent({
     };
 
     const handleDeleteMaterial = async (material: any) => {
+        // Blackboard imports use a UI-only `bb-<uuid>` id. Route them to their
+        // own table instead of trying to delete them from `materials`.
+        if (material.source === 'blackboard' || String(material.id || '').startsWith('bb-')) {
+            await handleDeleteBbFile(material);
+            return;
+        }
+
         const materialId = material.id;
         const materialUrl = material.url_archivo;
         const createdAt = new Date(material.created_at);
@@ -300,6 +307,14 @@ export default function CourseDetailContent({
     const handleDeleteBbFile = async (file: any, e?: { stopPropagation: () => void }) => {
         e?.stopPropagation();
 
+        // Objects displayed alongside regular materials carry `bb-<uuid>` as a
+        // React-safe UI id. `bb_files.id` itself remains the original UUID.
+        const bbFileId = file.bb_file_id || String(file.id || '').replace(/^bb-/, '');
+        if (!bbFileId) {
+            alert('No se encontró el identificador del archivo importado. Actualiza la página e inténtalo nuevamente.');
+            return;
+        }
+
         const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
         if (!isAdmin) {
             alert('No tienes permisos para eliminar archivos.');
@@ -322,13 +337,13 @@ export default function CourseDetailContent({
             const { error: dbError } = await supabase
                 .from('bb_files')
                 .delete()
-                .eq('id', file.id);
+                .eq('id', bbFileId);
 
             if (dbError) throw dbError;
 
             // Update local state
-            setBbFolderFiles(prev => prev.filter(f => f.id !== file.id));
-            setBlackboardContributions(prev => prev.filter(item => item.bb_file_id !== file.id));
+            setBbFolderFiles(prev => prev.filter(f => f.id !== bbFileId));
+            setBlackboardContributions(prev => prev.filter(item => item.bb_file_id !== bbFileId));
 
             alert('Archivo eliminado exitosamente');
         } catch (error: any) {
