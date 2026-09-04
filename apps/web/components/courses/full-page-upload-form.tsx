@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase, Professor } from '@/lib/supabase';
 import { generateThumbnailFromFile } from '@/lib/thumbnail-generator';
-import { Upload, X, UserPlus, ArrowLeft, CheckCircle, FolderUp, Files, Link2, FolderTree, FolderOpen } from 'lucide-react';
+import { Upload, X, Trash2, UserPlus, ArrowLeft, CheckCircle, FolderUp, Files, Link2, FolderTree, FolderOpen } from 'lucide-react';
 import { FileTypeIcon } from '@/components/files/FileTypeIcon';
 import { buildBlackboardStoragePath, buildCourseMaterialPath } from '@/lib/course-storage-paths';
 import {
@@ -54,10 +54,11 @@ const BLACKBOARD_CATEGORY_OPTIONS = [
     { value: 'classes', label: 'Clases y diapositivas' },
     { value: 'notes', label: 'Apuntes' },
     { value: 'syllabus', label: 'Sílabo y cronograma' },
-    { value: 'resources', label: 'Mixto / otros recursos' },
+    { value: 'resources', label: 'Otros recursos' },
 ];
 
 const fileKey = (file: File) => `${file.name}:${file.size}:${file.lastModified}`;
+const bbEntryKey = (entry: FileEntry) => `${entry.relativePath}:${fileKey(entry.file)}`;
 const isSharedSubfolder = (value?: string | null) => !!value && SHARED_SUBFOLDERS.has(value);
 const requiresGroupTitle = (value?: string | null) =>
     value === PREDEFINED_SUBFOLDERS[3] || value === PREDEFINED_SUBFOLDERS[5];
@@ -177,7 +178,18 @@ export default function FullPageUploadForm({
         setBbProgress(0);
         setBbProgressMsg('');
         setBbCategoryOverrides({});
-        setShowBbCategories(false);
+        // La revisión empieza abierta: el usuario decide el destino real de cada archivo
+        // antes de crear registros o subir contenido a R2.
+        setShowBbCategories(true);
+    };
+
+    const removeBbFile = (entry: FileEntry) => {
+        setBbFiles((current) => current.filter((candidate) => bbEntryKey(candidate) !== bbEntryKey(entry)));
+        setBbCategoryOverrides((current) => {
+            const next = { ...current };
+            delete next[bbEntryKey(entry)];
+            return next;
+        });
     };
 
     const uploadBbFiles = async (setId: string, entries: FileEntry[], isComplement: boolean) => {
@@ -261,7 +273,7 @@ export default function FullPageUploadForm({
                 size_bytes: entry.file.size,
                 mime_type: entry.file.type,
                 uploaded_by: uploaderId,
-                material_category: bbCategoryOverrides[fileKey(entry.file)] || bbDefaultCategory,
+                material_category: bbCategoryOverrides[bbEntryKey(entry)] || bbDefaultCategory,
             });
 
             if (fileError) {
@@ -829,7 +841,7 @@ export default function FullPageUploadForm({
                                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
                                         <p className="text-xs font-black text-bb-text">¿Qué contiene principalmente esta carpeta?</p>
-                                        <p className="mt-1 text-[10px] text-bb-text-secondary">Una elección aplica al lote completo. No analizamos nombres ni rutas para adivinarlo.</p>
+                                    <p className="mt-1 text-[10px] text-bb-text-secondary">Elige un destino inicial. Puedes revisar cada archivo antes de subirlo; no adivinamos categorías por nombres o rutas.</p>
                                     </div>
                                     {bbFiles.length > 0 && (
                                         <button
@@ -837,7 +849,7 @@ export default function FullPageUploadForm({
                                             onClick={() => setShowBbCategories((visible) => !visible)}
                                             className="mt-2 text-left text-[11px] font-bold text-blue-400 hover:text-blue-300 sm:mt-0"
                                         >
-                                            {showBbCategories ? 'Ocultar ajustes individuales' : '¿La carpeta mezcla tipos? Ajustar archivos'}
+                                            {showBbCategories ? 'Terminar revisión' : 'Revisar, clasificar o excluir archivos'}
                                         </button>
                                     )}
                                 </div>
@@ -900,7 +912,14 @@ export default function FullPageUploadForm({
 
                             {bbFiles.length > 0 && (
                                 <div className="bg-bb-sidebar/50 rounded-xl border border-bb-border p-4 space-y-2">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-bb-text-secondary">Vista previa de estructura</p>
+                                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-bb-text-secondary">
+                                            {showBbCategories ? 'Revisión individual antes de subir' : 'Vista previa de estructura'}
+                                        </p>
+                                        {showBbCategories && (
+                                            <p className="text-[10px] text-bb-text-secondary">Elige destino o excluye lo que no quieres publicar.</p>
+                                        )}
+                                    </div>
                                     <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1">
                                         {Array.from(new Set(bbFiles.map(f => f.relativePath.split('/').slice(0, -1).join('/')))).filter(Boolean).slice(0, 20).map((folder, i) => (
                                             <div key={i} className="flex items-center gap-2 text-xs text-bb-text-secondary py-0.5">
@@ -914,24 +933,34 @@ export default function FullPageUploadForm({
                                                 <span className="min-w-0 flex-1 truncate">{f.file.name}</span>
                                                 <span className="text-bb-text-secondary/50 shrink-0">{(f.file.size / 1024 / 1024).toFixed(1)} MB</span>
                                                 {showBbCategories && (
-                                                    <Select
-                                                        value={bbCategoryOverrides[fileKey(f.file)] || bbDefaultCategory || 'resources'}
-                                                        onValueChange={(value) => setBbCategoryOverrides((current) => {
-                                                            const next = { ...current };
-                                                            if (value === bbDefaultCategory) delete next[fileKey(f.file)];
-                                                            else next[fileKey(f.file)] = value;
-                                                            return next;
-                                                        })}
-                                                    >
-                                                        <SelectTrigger className="h-8 w-[156px] shrink-0 border-bb-border bg-bb-card px-2 text-[10px] font-bold text-bb-text">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="border-bb-border bg-bb-card text-bb-text">
-                                                            {BLACKBOARD_CATEGORY_OPTIONS.map((option) => (
-                                                                <SelectItem key={option.value} value={option.value} className="text-xs">{option.label}</SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <>
+                                                        <Select
+                                                            value={bbCategoryOverrides[bbEntryKey(f)] || bbDefaultCategory || 'resources'}
+                                                            onValueChange={(value) => setBbCategoryOverrides((current) => {
+                                                                const next = { ...current };
+                                                                if (value === bbDefaultCategory) delete next[bbEntryKey(f)];
+                                                                else next[bbEntryKey(f)] = value;
+                                                                return next;
+                                                            })}
+                                                        >
+                                                            <SelectTrigger className="h-8 w-[156px] shrink-0 border-bb-border bg-bb-card px-2 text-[10px] font-bold text-bb-text">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="border-bb-border bg-bb-card text-bb-text">
+                                                                {BLACKBOARD_CATEGORY_OPTIONS.map((option) => (
+                                                                    <SelectItem key={option.value} value={option.value} className="text-xs">{option.label}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeBbFile(f)}
+                                                            aria-label={`Excluir ${f.file.name} de la importación`}
+                                                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-red-500/30 text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </>
                                                 )}
                                             </div>
                                         ))}
