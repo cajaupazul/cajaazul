@@ -403,24 +403,43 @@ function StoreContent() {
                     )}
                 </div>
 
-                {
-                    activeView === 'recharge' ? (
+                {activeView === 'recharge' ? (
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
                             {/* VIP membership */}
                             {vipProduct && (
                                 <div className="lg:col-span-12">
-                                    <div className="flex flex-col items-center gap-8 rounded-2xl border border-[var(--bb-border)] bg-[var(--bb-card)] p-5 sm:p-10 lg:flex-row lg:gap-12">
+                                    <div className="relative overflow-hidden flex flex-col items-center gap-8 rounded-3xl border border-amber-500/30 bg-gradient-to-br from-[#12110c] via-[#1a160d] to-[#0f0e0a] p-5 sm:p-10 lg:flex-row lg:gap-12 shadow-[0_0_60px_-15px_rgba(245,158,11,0.22)]">
+                                        {/* Golden Ambient Lights */}
+                                        <div className="pointer-events-none absolute -left-20 -top-20 h-96 w-96 rounded-full bg-amber-500/15 blur-[100px]" />
+                                        <div className="pointer-events-none absolute -right-20 -bottom-20 h-96 w-96 rounded-full bg-yellow-500/10 blur-[100px]" />
+
                                         {/* Mascot Origi + Frame Component */}
                                         <div className="w-full lg:w-1/2 flex flex-col justify-center items-center relative order-first z-10 gap-8">
-                                            <img
-                                                src="/tienda/orivipp.png"
-                                                alt="Origi Mascot"
-                                                className="relative z-10 w-[180px] select-none object-contain sm:w-[320px]"
-                                            />
+                                            <div className="relative flex flex-col items-center justify-center">
+                                                {/* Golden halo behind mascot */}
+                                                <div className="absolute inset-0 m-auto h-52 w-52 rounded-full bg-amber-500/20 blur-2xl pointer-events-none" />
+                                                <img
+                                                    src="/tienda/orivipp.png"
+                                                    alt="Origi Mascot"
+                                                    className="relative z-10 w-[180px] select-none object-contain sm:w-[320px]"
+                                                    style={{
+                                                        animation: 'vipFloat 4s ease-in-out infinite',
+                                                        filter: 'drop-shadow(0 12px 28px rgba(245, 158, 11, 0.4))'
+                                                    }}
+                                                />
+                                                {/* Floating VIP Badge */}
+                                                <div
+                                                    className="absolute -bottom-3 flex items-center gap-2 rounded-full border border-amber-500/50 bg-black/85 px-4 py-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.6)] backdrop-blur-md z-20"
+                                                    style={{ animation: 'vipFloat 4s ease-in-out infinite 0.7s' }}
+                                                >
+                                                    <img src="/vip-icon.png" alt="VIP" className="h-5 w-5 object-contain drop-shadow-[0_0_8px_rgba(245,158,11,0.85)]" />
+                                                    <span className="text-[11px] font-black tracking-widest text-amber-300 uppercase">VIP EXCLUSIVO</span>
+                                                </div>
+                                            </div>
 
                                             {/* VIP Exclusive Frame Showcase */}
                                             {activeFrame && new Date(activeFrame.expires_at) > new Date() && (
-                                                <div className="relative w-full max-w-[320px] overflow-hidden rounded-2xl border border-[var(--bb-border)] bg-[var(--bb-darker)] p-5">
+                                                <div className="relative w-full max-w-[320px] overflow-hidden rounded-2xl border border-amber-500/25 bg-black/40 backdrop-blur-sm p-5 shadow-inner">
                                                     {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                                                         <Link
                                                             href="/admin/shop/vip-frame"
@@ -431,7 +450,7 @@ function StoreContent() {
                                                         </Link>
                                                     )}
                                                     <div className="flex flex-col items-center text-center gap-3 relative z-10">
-                                                        <div className="flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1">
+                                                        <div className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-1 shadow-sm">
                                                             <Clock size={12} className="text-black" />
                                                             <span className="text-[9px] font-black uppercase tracking-wider text-black">Por tiempo limitado</span>
                                                         </div>
@@ -452,8 +471,8 @@ function StoreContent() {
                                                             </div>
                                                         </div>
                                                         <div>
-                                                            <h4 className="text-lg font-black italic uppercase leading-tight text-[var(--bb-text)]">{activeFrame.label}</h4>
-                                                            {activeFrame.description && <p className="mt-1 text-xs text-[var(--bb-text-secondary)]">{activeFrame.description}</p>}
+                                                            <h4 className="text-lg font-black italic uppercase leading-tight text-amber-200">{activeFrame.label}</h4>
+                                                            {activeFrame.description && <p className="mt-1 text-xs text-amber-300/70">{activeFrame.description}</p>}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -462,7 +481,7 @@ function StoreContent() {
                                                 <Link href="/admin/shop/vip-frame">
                                                     <Button
                                                         variant="ghost"
-                                                        className="gap-2 rounded-full border border-[var(--bb-border)] bg-[var(--bb-darker)] text-xs font-bold text-[var(--bb-text-secondary)] hover:bg-[var(--bb-hover)] hover:text-[var(--bb-text)]"
+                                                        className="gap-2 rounded-full border border-amber-500/30 bg-black/40 text-xs font-bold text-amber-300 hover:bg-amber-500/10 hover:text-amber-200"
                                                     >
                                                         <Plus size={14} /> Activar Marco Exclusivo
                                                     </Button>
@@ -470,38 +489,46 @@ function StoreContent() {
                                             )}
                                         </div>
 
-                                        <div className="w-full space-y-6 text-center lg:w-1/2 lg:text-left">
+                                        <div className="w-full space-y-6 text-center lg:w-1/2 lg:text-left relative z-10">
                                             <div className="space-y-6">
                                                 <div className="space-y-3">
-                                                    <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-500">Membresía CampusLink</p>
-                                                    <h2 className="text-3xl font-black tracking-[-0.04em] text-[var(--bb-text)] sm:text-5xl">
+                                                    <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/40 bg-amber-500/15 px-3.5 py-1.5 shadow-sm">
+                                                        <img src="/vip-icon.png" alt="VIP" className="h-4 w-4 object-contain drop-shadow-[0_0_6px_rgba(245,158,11,0.7)]" />
+                                                        <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-400">Membresía VIP CampusLink</p>
+                                                    </div>
+                                                    <h2 className="text-3xl font-black tracking-[-0.04em] text-white sm:text-5xl">
                                                         Hazte VIP y apoya la comunidad.
                                                     </h2>
-                                                    <p className="mx-auto max-w-xl text-sm font-medium leading-6 text-[var(--bb-text-secondary)] sm:text-base lg:mx-0">
+                                                    <p className="mx-auto max-w-xl text-sm font-medium leading-6 text-zinc-300 sm:text-base lg:mx-0">
                                                         Apoya a los administradores de la plataforma y obtén beneficios cosméticos exclusivos para destacar tu perfil en CampusLink.
                                                     </p>
                                                 </div>
 
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-5">
+                                                    <div className="flex items-center gap-3 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 to-transparent p-3 lg:p-4 shadow-sm">
+                                                        <div className="grid h-6 w-6 place-items-center rounded-full bg-amber-400/20 border border-amber-400/50">
+                                                            <img src="/vip-icon.png" alt="VIP" className="h-4 w-4 object-contain drop-shadow-[0_0_6px_rgba(245,158,11,0.9)]" />
+                                                        </div>
+                                                        <span className="text-xs font-bold text-amber-200 sm:text-sm">Insignia Dorada VIP</span>
+                                                    </div>
                                                     {[
-                                                        { text: 'Insignia Dorada VIP', icon: Check },
                                                         { text: 'Roles Destacados', icon: Check },
                                                         { text: 'Marcos de perfil únicos', icon: Check },
                                                         { text: 'Apoyo a la plataforma', icon: Check }
                                                     ].map((f, i) => (
-                                                        <div key={i} className="flex items-center gap-3 rounded-xl border border-[var(--bb-border)] bg-[var(--bb-darker)] p-3 lg:p-4">
-                                                            <div className="grid h-6 w-6 place-items-center rounded-full bg-emerald-500"><Check className="h-3.5 w-3.5 text-black" /></div>
-                                                            <span className="text-xs font-bold text-[var(--bb-text)] sm:text-sm">{f.text}</span>
+                                                        <div key={i} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 lg:p-4 backdrop-blur-sm">
+                                                            <div className="grid h-6 w-6 place-items-center rounded-full bg-emerald-500/90 shadow-sm"><Check className="h-3.5 w-3.5 text-black" /></div>
+                                                            <span className="text-xs font-bold text-white sm:text-sm">{f.text}</span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-col items-center gap-4 border-t border-[var(--bb-border)] pt-6 sm:flex-row lg:justify-between">
-                                                <div className="text-3xl font-black tabular-nums text-[var(--bb-text)]">S/ {vipProduct.price} <span className="mt-1 block text-xs font-bold uppercase tracking-wider text-[var(--bb-text-secondary)] sm:inline">/ {vipProduct.amount} días</span></div>
+                                            <div className="flex flex-col items-center gap-4 border-t border-amber-500/20 pt-6 sm:flex-row lg:justify-between">
+                                                <div className="text-3xl font-black tabular-nums text-white">S/ {vipProduct.price} <span className="mt-1 block text-xs font-bold uppercase tracking-wider text-amber-300/80 sm:inline">/ {vipProduct.amount} días</span></div>
                                                 <Button
                                                     onClick={() => handlePurchase(vipProduct.id)}
-                                                    className="h-12 w-full rounded-xl bg-blue-600 px-8 text-sm font-black text-white hover:bg-blue-500 sm:w-auto"
+                                                    className="h-12 w-full rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-8 text-sm font-black text-black hover:from-amber-300 hover:to-yellow-400 shadow-[0_0_25px_rgba(245,158,11,0.4)] transition-all sm:w-auto"
                                                 >
                                                     Activar membresía
                                                 </Button>
@@ -730,6 +757,17 @@ function StoreContent() {
                 onPaymentSuccess={handlePaymentSuccess}
                 onPaymentError={handlePaymentError}
             />
+
+            <style jsx global>{`
+                @keyframes vipFloat {
+                    0%, 100% {
+                        transform: translateY(0px);
+                    }
+                    50% {
+                        transform: translateY(-8px);
+                    }
+                }
+            `}</style>
         </main>
     );
 }

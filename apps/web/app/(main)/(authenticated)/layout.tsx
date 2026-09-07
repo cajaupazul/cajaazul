@@ -283,7 +283,8 @@ export default function AuthenticatedLayout({
           <span className={styles.profileCopy}>
             <span className={styles.profileName}>
               <strong>{profile?.nombre || 'Usuario'}</strong>
-              {profile?.es_vip && <img src="/vip-icon.png" alt="Cuenta VIP" />}
+              {profile?.es_vip && <img src="/vip-icon.png" alt="Cuenta VIP" className="w-5 h-5 object-contain inline-block" />}
+
               {isAdmin && <ShieldCheck aria-label="Administrador" />}
             </span>
             <small>{isGuest ? 'Invitado' : isAdmin ? 'Administrador' : (profile?.carrera || 'Estudiante')}</small>

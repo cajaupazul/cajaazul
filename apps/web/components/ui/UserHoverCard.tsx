@@ -170,7 +170,7 @@ export function UserHoverCard({ profile, children }: UserHoverCardProps) {
                                                 {profile.nombre}
                                             </h3>
                                             {profile.es_vip ? (
-                                                <img src="/vip-icon.png" alt="VIP" className="w-6 h-6 object-contain" />
+                                                <img src="/vip-icon.png" alt="VIP" className="w-5 h-5 shrink-0 object-contain" />
                                             ) : (
                                                 <span className={`px-2 py-[1px] rounded text-[10px] uppercase font-bold tracking-wide border ${badgeConfig.color}`}>
                                                     {badgeConfig.label}
