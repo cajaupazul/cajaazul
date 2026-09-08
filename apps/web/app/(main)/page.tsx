@@ -511,6 +511,8 @@ export default function HomePage() {
               <Link href="/dashboard/about" className="hover:text-white">Nosotros</Link>
               <Link href="/auth/login" className="hover:text-white">Ingresar</Link>
               <Link href="/auth/register" className="hover:text-white">Registrarse</Link>
+              <Link href="/privacy" className="hover:text-white">Privacidad</Link>
+              <Link href="/terms" className="hover:text-white">Términos</Link>
               <button
                 type="button"
                 onClick={() => setComplaintOpen(true)}

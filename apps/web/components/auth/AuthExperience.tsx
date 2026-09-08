@@ -224,7 +224,9 @@ function AuthForm({ mode, error, active, onSwitch }: AuthFormProps) {
         </div>
       </div>
 
-      <p className={styles.legal}>Al continuar, aceptas los términos y la política de privacidad de CampusLink.</p>
+      <p className={styles.legal}>
+        Al continuar, aceptas los <Link href="/terms">términos</Link> y la <Link href="/privacy">política de privacidad</Link> de CampusLink.
+      </p>
     </section>
   );
 }
