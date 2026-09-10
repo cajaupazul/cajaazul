@@ -566,37 +566,6 @@ export default function CourseDetailContent({
         setSelectedMaterialIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     };
 
-    // All unique evaluation sub-folder types across all cycles (for filter chips)
-    const allEvaluationTypes = useMemo(() => {
-        const types = new Set<string>();
-        // Add predefined evaluation types to make sure they are always available if needed, or only if they exist in materials or active_subfolders
-        courseCycles.forEach(cycle => {
-            (cycle.active_subfolders || [])
-                .forEach((s: string) => {
-                    if (!PREDEFINED_SUBFOLDERS.includes(s) && !GENERAL_TIPOS.includes(s)) {
-                        types.add(s);
-                    }
-                });
-        });
-        // Also collect from materials directly to ensure any uploaded materials with these types are included
-        materials.forEach(m => {
-            if (m.tipo && !PREDEFINED_SUBFOLDERS.includes(m.tipo) && !GENERAL_TIPOS.includes(m.tipo)) {
-                types.add(m.tipo);
-            }
-        });
-        
-        // Let's sort them logically
-        const order = ['PC 1', 'PC 2', 'PC 3', 'PC 4', 'PC 5', 'Examen Parcial', 'Examen Final', 'Examen Sustitutorio'];
-        return Array.from(types).sort((a, b) => {
-            const idxA = order.indexOf(a);
-            const idxB = order.indexOf(b);
-            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-            if (idxA !== -1) return -1;
-            if (idxB !== -1) return 1;
-            return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-        });
-    }, [courseCycles, materials]);
-
     // Extracted material click handler (shared across render helpers)
     const handleMaterialClick = async (material: any) => {
         if (material.tipo?.toLowerCase() === 'enlace' || material.tipo === '🔗 Enlaces Útiles') {
@@ -1000,15 +969,15 @@ export default function CourseDetailContent({
 
                         <div className="w-full">
                             <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                                <div className="flex-1 flex flex-col justify-center">
-                                    <h3 className="text-xl md:text-2xl font-black text-bb-text tracking-tight flex items-center gap-3">
+                                <div className="min-w-0 flex-1 flex flex-col justify-center">
+                                    <h3 className="flex flex-wrap items-center gap-3 text-xl font-black tracking-tight text-bb-text md:text-2xl">
                                         <FolderRoot className="w-6 h-6 text-blue-500" />
                                         Materiales del curso
                                     </h3>
                                     <p className="text-xs text-bb-text-secondary mt-1 font-medium">Busca por tipo, profesor o ciclo sin recorrer carpeta por carpeta.</p>
                                 </div>
                                 <div className="flex w-full flex-wrap items-center gap-2 self-start xl:w-auto xl:justify-end xl:self-auto">
-                                    <div className="flex items-center gap-1 bg-bb-card p-1 rounded-xl border border-bb-border flex-shrink-0">
+                                    <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-bb-border bg-bb-card p-1">
                                         <button
                                             onClick={() => setLibraryMode('smart')}
                                             className={`flex h-9 items-center gap-2 rounded-lg px-3 text-[11px] font-bold transition-colors ${libraryMode === 'smart' ? 'bg-blue-600 text-white' : 'text-bb-text-secondary hover:bg-bb-hover hover:text-bb-text'}`}
@@ -1028,7 +997,7 @@ export default function CourseDetailContent({
                                     </div>
 
                                     {libraryMode === 'folders' && (
-                                    <div className="flex items-center gap-1 bg-bb-card p-1 rounded-xl border border-bb-border flex-shrink-0">
+                                    <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-bb-border bg-bb-card p-1">
                                         <button
                                             onClick={() => setViewMode('grid')}
                                             className={`p-1.5 sm:p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-lg' : 'text-bb-text-secondary hover:text-bb-text'}`}
@@ -1106,35 +1075,6 @@ export default function CourseDetailContent({
                             )}
 
                             <div className={libraryMode === 'folders' ? 'block' : 'hidden'}>
-
-                            {/* Evaluation Filter Chips */}
-                            {allEvaluationTypes.length > 0 && (
-                                <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
-                                    <button
-                                        onClick={() => setTypeFilter(null)}
-                                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap active:scale-95 ${
-                                            typeFilter === null
-                                                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10'
-                                                : 'bg-bb-darker/50 hover:bg-bb-card border border-bb-border/30 text-bb-text-secondary hover:text-white'
-                                        }`}
-                                    >
-                                        Todos
-                                    </button>
-                                    {allEvaluationTypes.map((type) => (
-                                        <button
-                                            key={type}
-                                            onClick={() => setTypeFilter(type)}
-                                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap active:scale-95 ${
-                                                typeFilter === type
-                                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10'
-                                                    : 'bg-bb-darker/50 hover:bg-bb-card border border-bb-border/30 text-bb-text-secondary hover:text-white'
-                                            }`}
-                                        >
-                                            {type}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
 
                             {/* Breadcrumbs for folder navigation */}
                             {breadcrumbs}

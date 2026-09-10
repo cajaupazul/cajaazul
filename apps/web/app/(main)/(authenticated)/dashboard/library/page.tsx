@@ -34,13 +34,13 @@ export default function LibraryPage() {
 
   return (
     <div className="min-h-full bg-bb-dark">
-      <div className="relative h-64 flex items-center justify-center overflow-hidden">
+      <div className="relative flex h-64 items-center justify-center overflow-hidden px-4">
         <div className="absolute inset-0 bg-gradient-to-b from-faculty-primary/20 to-transparent" />
-        <div className="relative z-10 text-center">
+        <div className="relative z-10 max-w-full text-center">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl font-serif font-black text-white tracking-tighter uppercase mb-2"
+            className="mb-2 break-words text-4xl font-serif font-black tracking-tighter text-bb-text uppercase sm:text-5xl md:text-7xl"
           >
             Biblioteca Digital
           </motion.h1>

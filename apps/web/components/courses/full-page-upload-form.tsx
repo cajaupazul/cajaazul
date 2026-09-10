@@ -46,6 +46,7 @@ const MATERIAL_CATEGORY_OPTIONS = [
     { value: PREDEFINED_SUBFOLDERS[2], label: 'Clases y diapositivas', description: 'PPT, sesiones y material docente' },
     { value: PREDEFINED_SUBFOLDERS[3], label: 'Apuntes', description: 'Guías, resúmenes y archivos de apoyo para todo el curso' },
     { value: PREDEFINED_SUBFOLDERS[0], label: 'Sílabo y cronograma', description: 'Información oficial del curso' },
+    { value: PREDEFINED_SUBFOLDERS[4], label: 'Enlaces útiles', description: 'Recursos externos compartidos para todo el curso' },
     { value: PREDEFINED_SUBFOLDERS[5], label: 'Otros recursos', description: 'Material compartido que no encaja en otra categoría' },
 ];
 
@@ -54,8 +55,11 @@ const BLACKBOARD_CATEGORY_OPTIONS = [
     { value: 'classes', label: 'Clases y diapositivas' },
     { value: 'notes', label: 'Apuntes' },
     { value: 'syllabus', label: 'Sílabo y cronograma' },
+    { value: 'links', label: 'Enlaces útiles' },
     { value: 'resources', label: 'Otros recursos' },
 ];
+
+const SHARED_BLACKBOARD_CATEGORIES = new Set(['notes', 'links', 'resources']);
 
 const fileKey = (file: File) => `${file.name}:${file.size}:${file.lastModified}`;
 const bbEntryKey = (entry: FileEntry) => `${entry.relativePath}:${fileKey(entry.file)}`;
@@ -226,7 +230,7 @@ export default function FullPageUploadForm({
         if (!token || !uploaderId) throw new Error('Tu sesión expiró. Vuelve a iniciar sesión antes de subir archivos.');
 
         const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev';
-        const cycleId = ['notes', 'resources'].includes(bbDefaultCategory)
+        const cycleId = SHARED_BLACKBOARD_CATEGORIES.has(bbDefaultCategory)
             ? null
             : (selectedCycleId === 'historical' ? null : selectedCycleId);
 
@@ -301,13 +305,13 @@ export default function FullPageUploadForm({
                 alert('Elige una categoría para esta importación. Si mezcla tipos, podrás ajustar archivos concretos antes de subir.');
                 return;
             }
-            if (!['notes', 'resources'].includes(bbDefaultCategory) && selectedCycleId === 'historical') {
+            if (!SHARED_BLACKBOARD_CATEGORIES.has(bbDefaultCategory) && selectedCycleId === 'historical') {
                 alert('Las importaciones de clases, sílabos y evaluaciones necesitan un ciclo. Elige uno antes de continuar.');
                 return;
             }
             setUploading(true);
             try {
-                const bbIsShared = ['notes', 'resources'].includes(bbDefaultCategory);
+                const bbIsShared = SHARED_BLACKBOARD_CATEGORIES.has(bbDefaultCategory);
                 let cicloName = 'Material compartido';
                 if (!bbIsShared && selectedCycleId !== 'historical') {
                     const cy = courseCycles.find(c => c.id === selectedCycleId);
@@ -424,10 +428,9 @@ export default function FullPageUploadForm({
                 for (let i = 0; i < allLinks.length; i++) {
                     const link = allLinks[i];
                     const linkCreatedAt = new Date(nowMs - i * 1000).toISOString();
-                    // Los enlaces nuevos viven dentro de la carpeta del ciclo,
-                    // igual que el resto de materiales. Conservamos `enlace` solo
-                    // para compatibilidad con registros históricos.
-                    const finalTipo = '🔗 Enlaces Útiles';
+                    // Los enlaces son recursos compartidos del curso. Conservamos
+                    // `enlace` solo para compatibilidad con registros históricos.
+                    const finalTipo = PREDEFINED_SUBFOLDERS[4];
 
                     const { error: insertError } = await supabase.from('materials').insert({
                         course_id: courseId,
@@ -792,7 +795,7 @@ export default function FullPageUploadForm({
                             {uploadMethod === 'bb-folder' ? 'Carpeta Blackboard' : 'Selecciona los archivos'}
                         </Label>
 
-                        <div className="flex bg-bb-darker rounded-xl p-1 w-max border border-bb-border">
+                        <div className="flex max-w-full overflow-x-auto rounded-xl border border-bb-border bg-bb-darker p-1">
                             <button
                                 type="button"
                                 onClick={() => setUploadMethod('file')}
@@ -804,6 +807,7 @@ export default function FullPageUploadForm({
                                 type="button"
                                 onClick={() => {
                                     setUploadMethod('link');
+                                    setSelectedSubfolder(PREDEFINED_SUBFOLDERS[4]);
                                     if (!linksMap['General']) setLinksMap(prev => ({ ...prev, 'General': [{ titulo: '', url: '' }]}));
                                 }}
                                 className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-[10px] sm:text-xs uppercase tracking-wider font-bold rounded-lg transition-colors ${uploadMethod === 'link' ? 'bg-blue-600 text-white' : 'text-bb-text-secondary hover:text-bb-text'}`}
