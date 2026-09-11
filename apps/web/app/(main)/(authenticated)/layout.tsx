@@ -110,9 +110,9 @@ export default function AuthenticatedLayout({
   // 1. Core Auth Guard & Ready State
   useEffect(() => {
     if (!profileLoading) {
-      if (!session) {
-        // Guest mode is allowed - just set ready
-        setIsAuthReady(true);
+      if (!session || isGuest) {
+        // No session or anonymous user — redirect to login
+        router.replace('/auth/login');
       } else if (!profile || !isProfileComplete(profile)) {
         console.warn('[AUTH_GUARD] Profile pending. Redirecting to onboarding...');
         router.replace('/auth/complete-profile');
@@ -121,7 +121,7 @@ export default function AuthenticatedLayout({
         setIsAuthReady(true);
       }
     }
-  }, [profileLoading, session, profile, router]);
+  }, [profileLoading, session, isGuest, profile, router]);
 
   // 2. Data fetching is now handled on-demand by individual pages to optimize performance.
 

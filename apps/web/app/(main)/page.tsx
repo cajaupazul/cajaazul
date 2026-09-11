@@ -260,25 +260,20 @@ export default function HomePage() {
 
               <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
-                  href="/dashboard"
+                  href="/auth/register"
                   className="group inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-[#ff6646] px-6 py-3.5 text-sm font-bold text-white shadow-[0_16px_40px_rgba(255,102,70,0.25)] transition-all hover:-translate-y-0.5 hover:bg-[#f15737] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
                 >
-                  Explorar CampusLink
+                  Crear mi cuenta
                   <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
                 </Link>
-                <button
-                  type="button"
-                  onClick={handleGuestLogin}
-                  disabled={isGuestLoading}
-                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/30 bg-white/5 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-sm transition-colors hover:border-white/60 hover:bg-white/10 disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                <Link
+                  href="/auth/login"
+                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/30 bg-white/5 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-sm transition-colors hover:border-white/60 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
                 >
-                  {isGuestLoading ? 'Ingresando…' : 'Entrar como invitado'}
-                </button>
+                  Iniciar sesión
+                </Link>
               </div>
 
-              <div aria-live="polite" className="mt-3 min-h-5 text-sm text-[#ffc4b5]">
-                {guestError}
-              </div>
 
               <div className="mt-11 grid max-w-2xl grid-cols-1 gap-3 border-t border-white/20 pt-6 sm:grid-cols-3 sm:gap-6">
                 {['Recursos organizados', 'Opiniones de estudiantes', 'Acceso desde cualquier dispositivo'].map((item) => (
@@ -459,14 +454,6 @@ export default function HomePage() {
               >
                 Crear mi cuenta <ArrowRight size={17} />
               </Link>
-              <button
-                type="button"
-                onClick={handleGuestLogin}
-                disabled={isGuestLoading}
-                className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/50 px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-white hover:text-[#c8492e] disabled:opacity-60"
-              >
-                Probar como invitado
-              </button>
             </div>
           </div>
         </section>

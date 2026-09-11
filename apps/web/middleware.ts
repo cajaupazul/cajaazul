@@ -87,7 +87,8 @@ export async function updateSession(request: NextRequest) {
         return redirectWithSession(dashboardUrl);
     }
 
-    if (!user && isProtectedRoute) {
+    // Block anonymous (guest) users from protected routes — they must log in
+    if ((!user || user.is_anonymous) && isProtectedRoute) {
         const loginUrl = request.nextUrl.clone();
         loginUrl.pathname = '/auth/login';
         return redirectWithSession(loginUrl);

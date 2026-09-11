@@ -92,24 +92,16 @@ export default function HeroCarousel() {
                                 </p>
 
                                 <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 mt-4 sm:mt-6">
-                                    <Link href="/dashboard" className="group relative px-6 py-3 sm:px-8 sm:py-4 bg-secondary text-on-primary rounded-none font-semibold text-sm sm:text-base flex items-center gap-2 overflow-hidden transition-all hover:pr-10 hover:bg-opacity-90 shadow-xl w-full sm:w-auto justify-center">
-                                        <span>Explorar Material</span>
+                                    <Link href="/auth/register" className="group relative px-6 py-3 sm:px-8 sm:py-4 bg-secondary text-on-primary rounded-none font-semibold text-sm sm:text-base flex items-center gap-2 overflow-hidden transition-all hover:pr-10 hover:bg-opacity-90 shadow-xl w-full sm:w-auto justify-center">
+                                        <span>Crear mi cuenta</span>
                                         <ChevronRight size={18} className="transition-transform group-hover:translate-x-2" />
                                     </Link>
-                                    <button 
-                                        onClick={async () => {
-                                            try {
-                                                const { supabase } = await import('@/lib/supabase');
-                                                await supabase.auth.signInAnonymously();
-                                                window.location.href = '/dashboard';
-                                            } catch (err) {
-                                                console.error(err);
-                                            }
-                                        }}
+                                    <Link
+                                        href="/auth/login"
                                         className="text-[11px] sm:text-xs md:text-sm font-semibold text-on-primary border-b border-on-primary/30 pb-1 hover:border-secondary transition-colors uppercase tracking-wider w-full sm:w-auto text-center sm:text-left py-2 sm:py-0"
                                     >
-                                        ENTRAR COMO INVITADO
-                                    </button>
+                                        Iniciar sesión
+                                    </Link>
                                 </div>
                             </motion.div>
                         </div>
