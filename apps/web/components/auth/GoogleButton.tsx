@@ -34,7 +34,7 @@ export function GoogleButton({ text = 'Continuar con Google' }: { text?: string 
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/dashboard')}`,
+                    redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent((typeof window !== "undefined" && new URLSearchParams(window.location.search).get("next")?.startsWith("/")) ? new URLSearchParams(window.location.search).get("next")! : "/dashboard")}`,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'select_account',

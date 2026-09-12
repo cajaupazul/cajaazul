@@ -82,7 +82,7 @@ export default function CompleteProfilePage() {
       // Guest mode is intentionally ephemeral. It must not create a fake faculty
       // or persist a synthetic profile that looks like a completed account.
       if (user.is_anonymous) {
-        router.replace('/dashboard');
+        const nextParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null; router.replace(nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/dashboard");
         return;
       }
 
@@ -94,7 +94,7 @@ export default function CompleteProfilePage() {
 
       if (profileError) throw profileError;
       if (isProfileComplete(profile)) {
-        router.replace('/dashboard');
+        const nextParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null; router.replace(nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/dashboard");
         return;
       }
 
@@ -158,7 +158,7 @@ export default function CompleteProfilePage() {
       if (updateError) throw updateError;
 
       await refreshProfile();
-      router.replace('/dashboard');
+        const nextParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null; router.replace(nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/dashboard");
       router.refresh();
     } catch (submitError) {
       console.error('[COMPLETE_PROFILE] Profile update failed:', submitError);

@@ -112,7 +112,7 @@ export default function CourseContributors({ materials }: CourseContributorsProp
     return (
         <section
             aria-label="Colaboradores del curso"
-            className="mb-8 flex flex-col gap-3 border-y border-bb-border/70 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+            className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-6 border-y border-bb-border/70 py-3.5"
         >
             <div className="flex min-w-0 items-center gap-3.5">
                 <div className="flex shrink-0 items-center pl-1" aria-label={`${contributors.length} colaboradores`}>
@@ -160,7 +160,7 @@ export default function CourseContributors({ materials }: CourseContributorsProp
                     )}
                 </div>
 
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                     <p className="mb-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-blue-400">
                         Comunidad del curso
                     </p>
@@ -170,11 +170,16 @@ export default function CourseContributors({ materials }: CourseContributorsProp
                 </div>
             </div>
 
-            <div className="shrink-0 pl-[54px] text-left sm:pl-0 sm:text-right">
-                <p className="text-sm font-black tabular-nums text-bb-text">{contributionCount}</p>
-                <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-bb-text/40">
-                    {contributionCount === 1 ? 'recurso compartido' : 'recursos compartidos'}
-                </p>
+            <div className="flex items-center justify-between sm:justify-end gap-2 pt-2.5 sm:pt-0 border-t border-bb-border/40 sm:border-t-0 shrink-0">
+                <span className="text-[11px] font-semibold text-bb-text-secondary/70 sm:hidden">
+                    Material aportado
+                </span>
+                <div className="text-right">
+                    <p className="text-sm font-black tabular-nums text-bb-text">{contributionCount}</p>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-bb-text/40">
+                        {contributionCount === 1 ? 'recurso compartido' : 'recursos compartidos'}
+                    </p>
+                </div>
             </div>
         </section>
     );

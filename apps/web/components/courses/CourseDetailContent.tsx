@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Star, Mail, LayoutPanelLeft, FolderRoot, Folder, FolderOpen, Users, Filter, Trash2, Pencil, Upload, List, Calculator, CheckSquare, X, Compass, Folders } from 'lucide-react';
+import { ArrowLeft, Star, Mail, LayoutPanelLeft, FolderRoot, Folder, FolderOpen, Users, Filter, Trash2, Pencil, Upload, List, Calculator, CheckSquare, X, Compass, Folders, Share2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import { extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
@@ -95,6 +95,7 @@ export default function CourseDetailContent({
     const [showAdminManager, setShowAdminManager] = useState(false);
     const [showCalculatorModal, setShowCalculatorModal] = useState(false);
     const [showAdminCalculatorModal, setShowAdminCalculatorModal] = useState(false);
+    const [shareCopied, setShareCopied] = useState(false);
 
     // Mass Move State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -902,9 +903,41 @@ export default function CourseDetailContent({
                                 </div>
                             </div>
 
-                            <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs md:text-sm text-bb-text-secondary mb-10 font-medium">
-                                <div><span className="text-bb-text/50">Facultad:</span> {course.facultad}</div>
-                                <div><span className="text-bb-text/50">Ciclo:</span> {course.ciclo}</div>
+                            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-xs md:text-sm text-bb-text-secondary mb-10 font-medium">
+                                <div className="flex flex-wrap gap-x-6 gap-y-2">
+                                    <div><span className="text-bb-text/50">Facultad:</span> {course.facultad}</div>
+                                    <div><span className="text-bb-text/50">Ciclo:</span> {course.ciclo}</div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        const url = `${window.location.origin}/dashboard/courses/view?id=${course.id}`;
+                                        const title = `${course.nombre} - CampusLink`;
+                                        if (navigator.share) {
+                                            try {
+                                                await navigator.share({ title, text: `Mira este curso en CampusLink: ${course.nombre}`, url });
+                                            } catch (_) { /* user cancelled */ }
+                                        } else {
+                                            await navigator.clipboard.writeText(url);
+                                            setShareCopied(true);
+                                            setTimeout(() => setShareCopied(false), 2000);
+                                        }
+                                    }}
+                                    className="inline-flex items-center gap-2 rounded-xl border border-bb-border bg-bb-card px-3.5 py-1.5 text-xs font-bold text-bb-text transition-all hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-400 active:scale-95 shadow-sm"
+                                    title="Compartir curso"
+                                >
+                                    {shareCopied ? (
+                                        <>
+                                            <Check size={14} className="text-emerald-400" />
+                                            <span className="text-emerald-400 font-bold">¡Enlace copiado!</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Share2 size={14} />
+                                            <span>Compartir</span>
+                                        </>
+                                    )}
+                                </button>
                             </div>
 
                             <CourseContributors materials={[...materials, ...blackboardContributions]} />

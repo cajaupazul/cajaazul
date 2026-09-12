@@ -82,12 +82,13 @@ export function AuthExperience() {
     }
 
     if (isProfileComplete(profile)) {
-      router.replace('/dashboard');
+      const next = searchParams.get('next');
+      router.replace(next && next.startsWith('/') ? next : '/dashboard');
       return;
     }
 
     router.replace('/auth/complete-profile');
-  }, [profile, profileLoading, router, session]);
+  }, [profile, profileLoading, router, searchParams, session]);
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -148,7 +149,7 @@ export function AuthExperience() {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     setError('');
     setMode(nextMode);
-    router.push(modePath[nextMode], { scroll: false });
+    const currentQuery = searchParams.toString(); const destination = currentQuery ? `${modePath[nextMode]}?${currentQuery}` : modePath[nextMode]; router.push(destination, { scroll: false });
 
     if (focusTimer.current) clearTimeout(focusTimer.current);
 
