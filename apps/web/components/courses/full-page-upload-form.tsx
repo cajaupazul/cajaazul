@@ -695,7 +695,16 @@ export default function FullPageUploadForm({
                             {uploadMethod === 'file' && (
                             <div>
                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2 block px-1">Categoría del material</Label>
-                                    <Select value={selectedSubfolder} onValueChange={setSelectedSubfolder}>
+                                    <Select
+                                        value={selectedSubfolder}
+                                        onValueChange={(val) => {
+                                            setSelectedSubfolder(val);
+                                            if (val === PREDEFINED_SUBFOLDERS[4]) {
+                                                setUploadMethod('link');
+                                                if (!linksMap['General']) setLinksMap(prev => ({ ...prev, 'General': [{ titulo: '', url: '' }] }));
+                                            }
+                                        }}
+                                    >
                                     <SelectTrigger className="h-12 bg-bb-card border-bb-border text-bb-text rounded-xl focus:ring-blue-500/20">
                                         <SelectValue placeholder="Selecciona una sección..." />
                                     </SelectTrigger>

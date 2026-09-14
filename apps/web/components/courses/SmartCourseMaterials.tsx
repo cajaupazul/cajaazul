@@ -85,19 +85,65 @@ function normalize(value?: string | null) {
 
 function materialCategory(material: any): Exclude<MaterialCategory, 'all'> {
     const explicitCategory = material.material_category;
-    if (['evaluations', 'classes', 'notes', 'syllabus', 'resources'].includes(explicitCategory)) {
-        return explicitCategory;
+    if (['evaluations', 'classes', 'notes', 'syllabus', 'links', 'resources'].includes(explicitCategory)) {
+        return explicitCategory === 'resources' ? 'resources' : explicitCategory;
     }
 
-    // Para materiales normales, `tipo` lo elige quien sube el recurso. No se
-    // usan títulos, extensiones ni nombres de carpeta para suponer la categoría.
     const type = normalize(material.tipo);
-    if (type === 'enlace') return 'links';
-    if (type.includes('silabo') || type.includes('syllabus') || type.includes('cronograma')) return 'syllabus';
-    if (type.includes('examen') || type.includes('evaluacion') || /^pc\s*\d+$/.test(type)) return 'evaluations';
-    if (type.includes('presentacion') || type.includes('diapositiva') || type.includes('clase')) return 'classes';
-    if (type.includes('otros recurso')) return 'notes';
-    if (type.includes('apunte') || type.includes('resumen') || type.includes('guia')) return 'notes';
+
+    // 1. Enlaces útiles
+    if (
+        type.includes('enlace') ||
+        type.includes('link') ||
+        (material.url_archivo && !material.storage_path && /^https?:\/\//i.test(material.url_archivo) && !material.url_archivo.includes('course-materials'))
+    ) {
+        return 'links';
+    }
+
+    // 2. Sílabos y cronogramas
+    if (type.includes('silabo') || type.includes('syllabus') || type.includes('cronograma')) {
+        return 'syllabus';
+    }
+
+    // 3. Evaluaciones (exámenes, parciales, finales, PCs)
+    if (
+        type.includes('examen') ||
+        type.includes('evaluacion') ||
+        type.includes('parcial') ||
+        type.includes('final') ||
+        type.includes('sustitutorio') ||
+        /^pc\s*\d+$/.test(type)
+    ) {
+        return 'evaluations';
+    }
+
+    // 4. Clases y diapositivas
+    if (
+        type.includes('presentacion') ||
+        type.includes('diapositiva') ||
+        type.includes('clase') ||
+        type === 'ppt'
+    ) {
+        return 'classes';
+    }
+
+    // 5. Apuntes y guías
+    if (
+        type.includes('apunte') ||
+        type.includes('resumen') ||
+        type.includes('guia')
+    ) {
+        return 'notes';
+    }
+
+    // 6. Otros recursos
+    if (
+        type.includes('otro') ||
+        type.includes('recurso')
+    ) {
+        return 'resources';
+    }
+
     return 'resources';
 }
 

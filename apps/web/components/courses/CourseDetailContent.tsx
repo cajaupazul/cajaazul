@@ -1065,22 +1065,7 @@ export default function CourseDetailContent({
                                         </button>
                                     </div>
                                     )}
-                                    
-                                    {currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
-                                        <button
-                                            onClick={() => {
-                                                setIsSelectionMode(!isSelectionMode);
-                                                setSelectedMaterialIds([]);
-                                            }}
-                                            className={`inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all h-10 sm:h-11 px-3 sm:px-4 active:scale-95 whitespace-nowrap flex-shrink-0 ${isSelectionMode ? 'bg-blue-600 text-white shadow-blue-500/20 shadow-lg' : 'bg-bb-border/50 text-bb-text-secondary hover:text-white hover:bg-bb-card border border-transparent hover:border-bb-border'}`}
-                                        >
-                                            <div className="flex items-center gap-1.5 sm:gap-2">
-                                                <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                                <span className="hidden xs:inline">{isSelectionMode ? 'Cancelar Selección' : 'Seleccionar Archivos'}</span>
-                                                <span className="xs:hidden">{isSelectionMode ? 'Cancelar' : 'Seleccionar'}</span>
-                                            </div>
-                                        </button>
-                                    )}
+
 
                                     {!isGuest && currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
                                         <button
