@@ -1067,7 +1067,7 @@ export default function CourseDetailContent({
                                     )}
 
 
-                                    {!isGuest && currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                                    {!isGuest && currentUser && (
                                         <button
                                             onClick={() => setShowAddCycleModal(true)}
                                             className="inline-flex items-center justify-center rounded-xl text-[10px] sm:text-xs font-bold transition-all bg-bb-border text-bb-text hover:bg-bb-card border border-transparent hover:border-bb-border h-10 sm:h-11 px-3 sm:px-4 active:scale-95 whitespace-nowrap flex-shrink-0"
