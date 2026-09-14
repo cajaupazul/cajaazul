@@ -22,6 +22,7 @@ import { PLACEHOLDERS, getDiversifiedProfessorBackground, getStringHash } from '
 import SecureFileModal from '@/components/secure/SecureFileModal';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
 import MaterialCard from '@/components/courses/MaterialCard';
+import { ReportButton } from '@/components/ui/ReportButton';
 import { deleteFileFromR2WithRetry, extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
 
 interface ProfessorComment {
@@ -416,6 +417,12 @@ const CommentItem = ({
                         Responder
                     </button>
                 )}
+
+                <ReportButton
+                    sourceType="comment"
+                    sourceId={comment.id}
+                    contextLabel={`Comentario de ${comment.profiles?.nombre || "usuario"}`}
+                />
             </div>
         </motion.div>
     );

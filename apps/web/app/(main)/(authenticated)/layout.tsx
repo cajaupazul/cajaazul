@@ -14,7 +14,7 @@ import {
   Home,
   Users,
   Calendar,
-  Bell,
+
   Info,
   Layers,
   ShoppingBag,
@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import AnnouncementPopup from '@/components/announcements/AnnouncementPopup';
+import { NotificationBell } from '@/components/ui/NotificationBell';
 import styles from './AuthenticatedLayout.module.css';
 import { isProfileComplete } from '@/lib/profile-completion';
 
@@ -283,7 +284,7 @@ export default function AuthenticatedLayout({
           <span className={styles.profileCopy}>
             <span className={styles.profileName}>
               <strong>{profile?.nombre || 'Usuario'}</strong>
-              {profile?.es_vip && <img src="/vip-icon.png" alt="Cuenta VIP" className="w-5 h-5 object-contain inline-block" />}
+              {profile?.es_vip && (<><img src="/vip-icon.png" alt="Cuenta VIP" className="w-5 h-5 object-contain inline-block" />{profile.vip_hasta && Math.ceil((new Date(profile.vip_hasta).getTime() - Date.now()) / 86400000) <= 30 && (<span className="ml-1 text-[10px] font-black text-amber-400" title="Días restantes VIP">{Math.max(0,Math.ceil((new Date(profile.vip_hasta).getTime()-Date.now())/86400000))}d</span>)}</>)}
 
               {isAdmin && <ShieldCheck aria-label="Administrador" />}
             </span>
@@ -363,10 +364,10 @@ export default function AuthenticatedLayout({
                 <CoinCounter value={profile?.monedas || 0} />
               </Link>
 
-              <button type="button" className={styles.notificationButton} aria-label="Ver notificaciones">
-                <Bell aria-hidden="true" />
-                <span className={styles.notificationDot} />
-              </button>
+              <NotificationBell />
+
+
+
 
               <Link href="/profile" className={styles.topbarProfile} aria-label="Abrir mi perfil">
                 <AvatarWithFrame

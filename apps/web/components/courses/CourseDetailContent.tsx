@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import StudentGradeCalculator from './StudentGradeCalculator';
 import AdminGradingFormulaEditor from './AdminGradingFormulaEditor';
 import CourseContributors from './CourseContributors';
+import { ReportButton } from '@/components/ui/ReportButton';
 import { FileTypeIcon } from '@/components/files/FileTypeIcon';
 import SmartCourseMaterials from './SmartCourseMaterials';
 
@@ -96,7 +97,13 @@ export default function CourseDetailContent({
     const [showCalculatorModal, setShowCalculatorModal] = useState(false);
     const [showAdminCalculatorModal, setShowAdminCalculatorModal] = useState(false);
     const [shareCopied, setShareCopied] = useState(false);
+    const [downloadsEnabled, setDownloadsEnabled] = useState(true);
 
+    // Fetch platform download settings
+    useEffect(() => {
+        supabase.from('platform_settings').select('downloads_enabled').single()
+            .then(({ data }) => { if (data) setDownloadsEnabled(data.downloads_enabled); });
+    }, []);
     // Mass Move State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>([]);
@@ -569,6 +576,14 @@ export default function CourseDetailContent({
 
     // Extracted material click handler (shared across render helpers)
     const handleMaterialClick = async (material: any) => {
+        // Download gate: check platform_settings and VIP
+        const isLink = material.tipo?.toLowerCase() === 'enlace' || material.tipo === '🔗 Enlaces Útiles';
+        const userIsAdmin = (currentUser as any)?.role === 'admin' || (currentUser as any)?.role === 'superadmin';
+        const userIsVip = (currentUser as any)?.es_vip === true;
+        if (!isLink && !downloadsEnabled && !userIsVip && !userIsAdmin) {
+            alert('Las descargas están temporalmente desactivadas. Los miembros VIP pueden seguir descargando.');
+            return;
+        }
         if (material.tipo?.toLowerCase() === 'enlace' || material.tipo === '🔗 Enlaces Útiles') {
             window.open(material.url_archivo, '_blank');
             return;
@@ -938,6 +953,11 @@ export default function CourseDetailContent({
                                         </>
                                     )}
                                 </button>
+                                <ReportButton
+                                    sourceType="course"
+                                    sourceId={course.id}
+                                    contextLabel={course.nombre}
+                                />
                             </div>
 
                             <CourseContributors materials={[...materials, ...blackboardContributions]} />

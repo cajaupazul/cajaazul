@@ -7,6 +7,7 @@ import { useProfile } from '@/lib/profile-context';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import UploadOfertaModal from '@/components/herramientas/upload-oferta-modal';
+import { ReportButton } from '@/components/ui/ReportButton';
 
 export default function HerramientasPage() {
     const { colors } = useTheme();
@@ -43,22 +44,25 @@ export default function HerramientasPage() {
     return (
         <div className="p-6 sm:p-8 max-w-7xl mx-auto">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold text-bb-text">Herramientas</h1>
                     <p className="text-bb-text-secondary mt-1">Recursos y herramientas útiles para tu vida universitaria</p>
                 </div>
 
-                {isAdmin && (
-                    <button
-                        onClick={() => setShowUploadModal(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
-                        style={{ backgroundColor: colors?.primary }}
-                    >
-                        <Upload className="w-4 h-4" />
-                        Subir Oferta Académica
-                    </button>
-                )}
+                <div className="flex items-center gap-3">
+                    <ReportButton sourceType="tool" sourceId="herramientas" contextLabel="Herramientas universitarias" />
+                    {isAdmin && (
+                        <button
+                            onClick={() => setShowUploadModal(true)}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
+                            style={{ backgroundColor: colors?.primary }}
+                        >
+                            <Upload className="w-4 h-4" />
+                            Subir Oferta Académica
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Tools Grid */}

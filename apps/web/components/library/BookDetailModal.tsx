@@ -21,6 +21,7 @@ import SecureFileModal from '@/components/secure/SecureFileModal';
 import { useProfile } from '@/lib/profile-context';
 import { supabase, LibraryBook } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
+import { ReportButton } from '@/components/ui/ReportButton';
 import styles from './BookDetailModal.module.css';
 
 interface BookDetailModalProps {
@@ -257,6 +258,12 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
                   <BookOpen aria-hidden="true" />
                   <span>{book.pdf_url ? 'Comenzar a leer' : 'Documento no disponible'}</span>
                 </button>
+
+                <ReportButton
+                  sourceType="library"
+                  sourceId={book.id}
+                  contextLabel={book.title}
+                />
 
                 <div className={styles.rating} aria-label={`Calificación: ${rating} de 5`}>
                   <div className={styles.stars} aria-hidden="true">

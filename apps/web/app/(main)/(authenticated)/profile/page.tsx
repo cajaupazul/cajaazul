@@ -154,7 +154,7 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
 
-    if (!inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND) && profile.role === 'user') {
+    if (!isVip && !isAdmin && !inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND)) {
       alert('Debes comprar el permiso "Fondo Personalizado" en la tienda para subir tus propias imágenes.');
       return;
     }
@@ -195,6 +195,12 @@ export default function ProfilePage() {
       return;
     }
 
+    const isAnimated = file.type === 'image/gif' || file.type === 'video/mp4' || file.type === 'video/webm';
+    if (isAnimated && !isVip && !isAdmin) {
+      alert('Los avatares animados (GIF/video) son exclusivos para miembros VIP. ¡Hazte VIP en la tienda!');
+      e.target.value = '';
+      return;
+    }
     setUploadingAvatar(true);
     // ... rest of logic
     try {
@@ -405,6 +411,7 @@ export default function ProfilePage() {
                   {isVip && (
                     <span className={styles.accountBadge}>
                       <img src="/vip-icon.png" alt="" /> VIP
+                      {profile.vip_hasta && <span className="ml-1 text-[10px] font-black text-amber-300">{Math.max(0, Math.ceil((new Date(profile.vip_hasta).getTime() - Date.now()) / 86400000))}d</span>}
                     </span>
                   )}
                 </div>
@@ -628,7 +635,7 @@ export default function ProfilePage() {
                     className={styles.customAvatarButton}
                   >
                     <span className={styles.customAvatarIcon}><Camera aria-hidden="true" /></span>
-                    <span><strong>Subir desde tu equipo</strong><small>{canUseCustomAvatar ? 'PNG, JPG o WEBP' : 'Disponible en la tienda'}</small></span>
+                    <span><strong>Subir desde tu equipo</strong><small>{canUseCustomAvatar ? (isVip || isAdmin ? 'PNG, JPG, WEBP · GIF/video solo VIP' : 'PNG, JPG, WEBP estáticos · GIF requiere VIP') : 'Disponible en la tienda'}</small></span>
                     {!canUseCustomAvatar && (
                       <ExternalLink aria-hidden="true" />
                     )}

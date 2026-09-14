@@ -19,9 +19,11 @@ import {
   Tags,
   Users,
   UserRoundCheck,
+  Flag,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
+import { AdminDownloadsToggle } from '@/components/admin/AdminDownloadsToggle';
 
 type DashboardMetric = {
   label: string;
@@ -51,6 +53,7 @@ const academicModules = [
   { title: 'Biblioteca', description: 'Modera recursos y mantén la colección confiable y ordenada.', href: '/admin/library', icon: Library },
   { title: 'Malla curricular', description: 'Edita flujos, requisitos y rutas académicas.', href: '/admin/flowcharts/new', icon: LayoutGrid },
   { title: 'Calculadoras', description: 'Administra simuladores y herramientas para estudiantes.', href: '/admin/calculators', icon: Calculator },
+  { title: 'Bandeja de reportes', description: 'Revisa y modera reportes enviados por los usuarios.', href: '/admin/reports', icon: Flag },
 ];
 
 export default function AdminDashboardPage() {
@@ -143,6 +146,10 @@ export default function AdminDashboardPage() {
               <p className="mt-1 text-xs text-zinc-500 sm:text-sm">{detail}</p>
             </article>
           ))}
+        </section>
+
+        <section aria-label="Controles de plataforma">
+          <AdminDownloadsToggle />
         </section>
 
         <section>
