@@ -576,20 +576,18 @@ export default function CourseDetailContent({
 
     // Extracted material click handler (shared across render helpers)
     const handleMaterialClick = async (material: any) => {
-        // Download gate: check platform_settings and VIP
-        const isLink = material.tipo?.toLowerCase() === 'enlace' || material.tipo === '🔗 Enlaces Útiles';
-        const userIsAdmin = (currentUser as any)?.role === 'admin' || (currentUser as any)?.role === 'superadmin';
-        const userIsVip = (currentUser as any)?.es_vip === true;
-        if (!isLink && !downloadsEnabled && !userIsVip && !userIsAdmin) {
-            alert('Las descargas están temporalmente desactivadas. Los miembros VIP pueden seguir descargando.');
-            return;
-        }
         if (material.tipo?.toLowerCase() === 'enlace' || material.tipo === '🔗 Enlaces Útiles') {
             window.open(material.url_archivo, '_blank');
             return;
         }
         const isExcel = material.url_archivo.toLowerCase().match(/\.(xls|xlsx|csv)$/i);
         if (isExcel) {
+            const userIsAdmin = (currentUser as any)?.role === 'admin' || (currentUser as any)?.role === 'superadmin';
+            const userIsVip = (currentUser as any)?.es_vip === true;
+            if (!downloadsEnabled && !userIsVip && !userIsAdmin) {
+                alert('Las descargas directas están temporalmente desactivadas. Los miembros VIP pueden seguir descargando.');
+                return;
+            }
             try {
                 const path = extractPathFromUrl(material.url_archivo, 'course-materials');
                 const blob = await getFileFromR2('course-materials', path);

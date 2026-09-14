@@ -8,6 +8,7 @@ import * as docx from 'docx-preview';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import SecurePptxViewer from './SecurePptxViewer';
+import { useProfile } from '@/lib/profile-context';
 
 // V4.2+: Configuración del worker local.
 if (typeof window !== 'undefined') {
@@ -188,6 +189,17 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
     const [zoomLevel, setZoomLevel] = useState(1);
     const [isDownloading, setIsDownloading] = useState(false);
+    const { profile } = useProfile();
+    const [downloadsEnabled, setDownloadsEnabled] = useState(true);
+
+    useEffect(() => {
+        supabase.from('platform_settings').select('downloads_enabled').single()
+            .then(({ data }) => { if (data) setDownloadsEnabled(data.downloads_enabled); });
+    }, []);
+
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
+    const isVip = profile?.es_vip === true;
+    const canDownload = downloadsEnabled || isVip || isAdmin;
     
     // V5 Blackboard UI states
     const [currentPage, setCurrentPage] = useState(1);
@@ -475,6 +487,10 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     };
 
     const handleDownload = async () => {
+        if (!canDownload) {
+            alert('Las descargas de archivos están temporalmente desactivadas. Solo los miembros VIP pueden descargar.');
+            return;
+        }
         if (!blobUrl || isDownloading) return;
         setIsDownloading(true);
         try {
@@ -617,18 +633,26 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                     <div className="relative group">
                         <button
                             onClick={handleDownload}
-                            disabled={!blobUrl || isDownloading}
-                            className={`transition-colors p-1 inline-flex items-center ${
-                                blobUrl && !isDownloading 
-                                    ? 'hover:text-white cursor-pointer' 
-                                    : 'opacity-40 cursor-not-allowed'
+                            disabled={isDownloading || (!blobUrl && canDownload)}
+                            className={`transition-colors p-1.5 rounded-lg inline-flex items-center gap-1.5 ${
+                                !canDownload
+                                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 cursor-pointer'
+                                    : blobUrl && !isDownloading
+                                        ? 'hover:text-white hover:bg-white/10 cursor-pointer'
+                                        : 'opacity-40 cursor-not-allowed'
                             }`}
-                            title={isDownloading ? 'Descargando...' : `Descargar ${fileName}`}
+                            title={!canDownload ? "Descarga exclusiva para miembros VIP" : isDownloading ? "Descargando..." : `Descargar ${fileName}`}
                         >
-                            {isDownloading 
-                                ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                                : <Download className="w-4 h-4 sm:w-5 sm:h-5" />
-                            }
+                            {isDownloading ? (
+                                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                            ) : !canDownload ? (
+                                <>
+                                    <Lock className="w-3.5 h-3.5" />
+                                    <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">VIP</span>
+                                </>
+                            ) : (
+                                <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+                            )}
                         </button>
                     </div>
                     {isFullscreen && (

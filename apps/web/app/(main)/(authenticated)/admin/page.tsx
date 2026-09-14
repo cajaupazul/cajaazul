@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
   BookOpen,
@@ -58,6 +59,16 @@ const academicModules = [
 
 export default function AdminDashboardPage() {
   const { profile, loading: profileLoading } = useProfile();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'reports') {
+        router.replace('/admin/reports');
+      }
+    }
+  }, [router]);
   const [dataLoading, setDataLoading] = useState(true);
   const [metrics, setMetrics] = useState<Record<string, number | null>>({});
   const [audit, setAudit] = useState<AuditEntry[]>([]);
