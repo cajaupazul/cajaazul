@@ -190,10 +190,10 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
 
-    if (!inventory.includes(PERMISSIONS.CUSTOM_AVATAR) && profile.role === 'user') {
-      alert('Debes comprar el permiso "Avatar Personalizado" en la tienda para subir tus propias imágenes.');
-      return;
-    }
+// All users can upload static avatars freely
+
+
+
 
     const isAnimated = file.type === 'image/gif' || file.type === 'video/mp4' || file.type === 'video/webm';
     if (isAnimated && !isVip && !isAdmin) {
@@ -308,8 +308,8 @@ export default function ProfilePage() {
   const memberYear = new Date(profile.created_at).getFullYear();
   const achievements = Math.floor(profile.puntos / 50);
   const instagramUsername = profile.link_instagram?.replace(/.*\//, '').replace('@', '') || '';
-  const canUseCustomBackground = isAdmin || inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND);
-  const canUseCustomAvatar = isAdmin || inventory.includes(PERMISSIONS.CUSTOM_AVATAR);
+  const canUseCustomBackground = isVip || isAdmin || inventory.includes(PERMISSIONS.CUSTOM_BACKGROUND);
+  const canUseCustomAvatar = true;
   const storeIsAvailable = !sidebarVisibility['Tienda'];
 
   return (
@@ -340,20 +340,20 @@ export default function ProfilePage() {
                 </a>
               )}
 
-              {editing && !uploadingBackground && (canUseCustomBackground || storeIsAvailable) && (
+              {editing && !uploadingBackground && (
                 <button
                   type="button"
                   onClick={() => {
                     if (canUseCustomBackground) {
                       bgInputRef.current?.click();
-                    } else if (storeIsAvailable) {
-                      router.push('/dashboard/store');
+                    } else {
+                      alert('La portada personalizada es un beneficio exclusivo para miembros VIP. ¡Hazte VIP en la tienda para personalizar tu fondo!');
                     }
                   }}
                   className={styles.coverButton}
                 >
                   <Camera aria-hidden="true" />
-                  <span>{canUseCustomBackground ? 'Cambiar portada' : 'Obtener en tienda'}</span>
+                  <span>{canUseCustomBackground ? 'Cambiar portada' : 'Cambiar portada (Solo VIP)'}</span>
                   <input ref={bgInputRef} type="file" accept="image/*" onChange={handleBackgroundUpload} hidden />
                 </button>
               )}
@@ -618,30 +618,23 @@ export default function ProfilePage() {
                   );
                 })}
 
-              {/* Only show custom upload if user has permission, is admin, or if store is not hidden for users */}
-              {(canUseCustomAvatar || storeIsAvailable) && (
+
+
+
                 <div className={styles.customAvatarArea}>
                   <p>Avatar personalizado</p>
                   <button
                     type="button"
                     onClick={() => {
-                      if (canUseCustomAvatar) {
-                        avatarInputRef.current?.click();
-                        setIsAvatarSelectorOpen(false);
-                      } else if (storeIsAvailable) {
-                        router.push('/dashboard/store');
-                      }
+                      avatarInputRef.current?.click();
+                      setIsAvatarSelectorOpen(false);
                     }}
                     className={styles.customAvatarButton}
                   >
                     <span className={styles.customAvatarIcon}><Camera aria-hidden="true" /></span>
-                    <span><strong>Subir desde tu equipo</strong><small>{canUseCustomAvatar ? (isVip || isAdmin ? 'PNG, JPG, WEBP · GIF/video solo VIP' : 'PNG, JPG, WEBP estáticos · GIF requiere VIP') : 'Disponible en la tienda'}</small></span>
-                    {!canUseCustomAvatar && (
-                      <ExternalLink aria-hidden="true" />
-                    )}
+                    <span><strong>Subir desde tu equipo</strong><small>{isVip || isAdmin ? 'PNG, JPG, WEBP gratis · GIF/video VIP' : 'PNG, JPG o WEBP gratis (GIF requiere VIP)'}</small></span>
                   </button>
                 </div>
-              )}
             </div>
           </section>
         </div>
