@@ -276,7 +276,7 @@ export default function PaymentModal({
                             <div className="border-b border-[var(--bb-border)] p-3">
                                 <div className="grid grid-cols-2 rounded-xl bg-[var(--bb-darker)] p-1">
                                     <button onClick={() => setMethod('brick')} className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold transition-colors ${method === 'brick' ? 'bg-[#009ee3] text-white' : 'text-[var(--bb-text-secondary)] hover:bg-[var(--bb-hover)] hover:text-[var(--bb-text)]'}`}>
-                                        <CreditCard size={16} /> Tarjetas y saldo
+                                        <CreditCard size={16} /> Tarjeta de débito / crédito
                                     </button>
                                     <button onClick={() => setMethod('yape')} className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold transition-colors ${method === 'yape' ? 'bg-[#6c3fd1] text-white' : 'text-[var(--bb-text-secondary)] hover:bg-[var(--bb-hover)] hover:text-[var(--bb-text)]'}`}>
                                         <img src="/yape-logo.png.png" alt="" className="h-5 w-5 object-contain" /> Yape
@@ -289,15 +289,18 @@ export default function PaymentModal({
                                     {brickError && <div className="mb-3 flex items-start gap-2 rounded-xl border border-red-900 bg-red-950 px-3 py-3 text-xs text-red-200"><AlertCircle size={16} className="mt-0.5 shrink-0" />{brickError}</div>}
                                     <Payment
                                         key={`${brickKey}-${themeMode}`}
-                                        initialization={{ amount: product.price, payer: { email: profile?.email || '' } }}
+                                        initialization={{
+                                            amount: product.price,
+                                            payer: {
+                                                email: profile?.email || '',
+                                                entityType: 'individual',
+                                            },
+                                        }}
                                         customization={{
                                             visual: { style: { theme: themeMode === 'dark' ? 'dark' : 'default' } },
                                             paymentMethods: {
                                                 creditCard: 'all',
                                                 debitCard: 'all',
-                                                mercadoPago: 'all',
-                                                ticket: 'all',
-                                                atm: 'all',
                                             },
                                         }}
                                         onSubmit={handleBrickSubmit}

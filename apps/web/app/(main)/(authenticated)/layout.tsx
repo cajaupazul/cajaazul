@@ -263,7 +263,10 @@ export default function AuthenticatedLayout({
           </Link>
           <button
             type="button"
-            onClick={() => setSidebarOpen(false)}
+            onClick={(e) => {
+              (e.currentTarget as HTMLElement).blur();
+              setSidebarOpen(false);
+            }}
             className={styles.closeButton}
             aria-label="Cerrar panel lateral"
           >
