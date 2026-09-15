@@ -257,6 +257,7 @@ export default function SmartCourseMaterials({
                     item.titulo,
                     item.name,
                     item.tipo,
+                    item.group_title,
                     item.relative_path,
                     item.professors?.nombre,
                     item.profiles?.nombre,
@@ -273,13 +274,32 @@ export default function SmartCourseMaterials({
     }, [category, cycleFiltered, cycleNameById, query]);
 
     const groupedMaterials = useMemo(() => {
-        const groups = new Map<string, { id: string; name: string; materials: any[]; sortKey: number }>();
+        const groups = new Map<string, { id: string; name: string; isGroup?: boolean; materials: any[]; sortKey: number }>();
 
         filtered.forEach((material) => {
             const category = materialCategory(material);
             const shared = !material.cycle_id && ['notes', 'links', 'resources'].includes(category);
-            const id = shared ? 'shared' : (material.cycle_id || 'historical');
-            const cycleName = material.cycle_id ? cycleNameById.get(material.cycle_id) : null;
+            const groupTitle = material.group_title?.trim();
+
+            let id: string;
+            let name: string;
+            let isGroup = false;
+
+            if (shared) {
+                if (groupTitle) {
+                    id = `shared-group-${groupTitle.toLowerCase()}`;
+                    name = groupTitle;
+                    isGroup = true;
+                } else {
+                    id = 'shared';
+                    name = 'Material compartido del curso';
+                }
+            } else {
+                id = material.cycle_id || 'historical';
+                const cycleName = material.cycle_id ? cycleNameById.get(material.cycle_id) : null;
+                name = cycleName ? `Ciclo ${cycleName}` : 'Archivo histórico';
+            }
+
             const existing = groups.get(id);
             if (existing) {
                 existing.materials.push(material);
@@ -287,13 +307,17 @@ export default function SmartCourseMaterials({
             }
             groups.set(id, {
                 id,
-                name: shared ? 'Material compartido del curso' : (cycleName ? `Ciclo ${cycleName}` : 'Archivo histórico'),
+                name,
+                isGroup,
                 materials: [material],
-                sortKey: shared ? 0 : (cycleName ? cycleSortKey(cycleName) : -1),
+                sortKey: shared ? (isGroup ? 1 : 0) : (material.cycle_id ? cycleSortKey(cycleNameById.get(material.cycle_id)) : -1),
             });
         });
 
-        return Array.from(groups.values()).sort((a, b) => b.sortKey - a.sortKey);
+        return Array.from(groups.values()).sort((a, b) => {
+            if (b.sortKey !== a.sortKey) return b.sortKey - a.sortKey;
+            return a.name.localeCompare(b.name, 'es');
+        });
     }, [cycleNameById, filtered]);
 
     const resetFilters = () => {
@@ -446,11 +470,14 @@ export default function SmartCourseMaterials({
                                 <div className="min-w-0 border-l-2 border-blue-500 pl-3">
                                     <h3 className="truncate text-sm font-black text-bb-text">{group.name}</h3>
                                     <p className="mt-0.5 text-[11px] text-bb-text-secondary">
-                                        {group.materials.length} {group.materials.length === 1 ? 'recurso' : 'recursos'} · orden académico
+                                        {group.isGroup
+                                            ? `${group.materials.length} ${group.materials.length === 1 ? 'archivo compartido' : 'archivos compartidos'}`
+                                            : `${group.materials.length} ${group.materials.length === 1 ? 'recurso' : 'recursos'} · orden académico`
+                                        }
                                     </p>
                                 </div>
-                                <span className="shrink-0 rounded-md border border-bb-border px-2 py-1 text-[10px] font-bold text-bb-text-secondary">
-                                    {group.id === 'shared' ? 'Todo el curso' : group.id === 'historical' ? 'Sin clasificar' : 'Periodo académico'}
+                                <span className="shrink-0 rounded-full border border-bb-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-bb-text-secondary">
+                                    {group.isGroup ? 'GRUPO' : group.id === 'shared' ? 'Todo el curso' : group.id === 'historical' ? 'Sin clasificar' : 'Periodo académico'}
                                 </span>
                             </header>
                             <div className="divide-y divide-bb-border">
