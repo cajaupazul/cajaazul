@@ -921,41 +921,43 @@ export default function CourseDetailContent({
                                     <div><span className="text-bb-text/50">Facultad:</span> {course.facultad}</div>
                                     <div><span className="text-bb-text/50">Ciclo:</span> {course.ciclo}</div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        const url = `${window.location.origin}/dashboard/courses/view?id=${course.id}`;
-                                        const title = `${course.nombre} - CampusLink`;
-                                        if (navigator.share) {
-                                            try {
-                                                await navigator.share({ title, text: `Mira este curso en CampusLink: ${course.nombre}`, url });
-                                            } catch (_) { /* user cancelled */ }
-                                        } else {
-                                            await navigator.clipboard.writeText(url);
-                                            setShareCopied(true);
-                                            setTimeout(() => setShareCopied(false), 2000);
-                                        }
-                                    }}
-                                    className="inline-flex items-center gap-2 rounded-xl border border-bb-border bg-bb-card px-3.5 py-1.5 text-xs font-bold text-bb-text transition-all hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-400 active:scale-95 shadow-sm"
-                                    title="Compartir curso"
-                                >
-                                    {shareCopied ? (
-                                        <>
-                                            <Check size={14} className="text-emerald-400" />
-                                            <span className="text-emerald-400 font-bold">¡Enlace copiado!</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Share2 size={14} />
-                                            <span>Compartir</span>
-                                        </>
-                                    )}
-                                </button>
-                                <ReportButton
-                                    sourceType="course"
-                                    sourceId={course.id}
-                                    contextLabel={course.nombre}
-                                />
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            const url = `${window.location.origin}/dashboard/courses/view?id=${course.id}`;
+                                            const title = `${course.nombre} - CampusLink`;
+                                            if (navigator.share) {
+                                                try {
+                                                    await navigator.share({ title, text: `Mira este curso en CampusLink: ${course.nombre}`, url });
+                                                } catch (_) { /* user cancelled */ }
+                                            } else {
+                                                await navigator.clipboard.writeText(url);
+                                                setShareCopied(true);
+                                                setTimeout(() => setShareCopied(false), 2000);
+                                            }
+                                        }}
+                                        className="inline-flex items-center gap-2 rounded-xl border border-bb-border bg-bb-card px-3.5 py-1.5 text-xs font-bold text-bb-text transition-all hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-400 active:scale-95 shadow-sm"
+                                        title="Compartir curso"
+                                    >
+                                        {shareCopied ? (
+                                            <>
+                                                <Check size={14} className="text-emerald-400" />
+                                                <span className="text-emerald-400 font-bold">¡Enlace copiado!</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Share2 size={14} />
+                                                <span>Compartir</span>
+                                            </>
+                                        )}
+                                    </button>
+                                    <ReportButton
+                                        sourceType="course"
+                                        sourceId={course.id}
+                                        contextLabel={course.nombre}
+                                    />
+                                </div>
                             </div>
 
                             <CourseContributors materials={[...materials, ...blackboardContributions]} />

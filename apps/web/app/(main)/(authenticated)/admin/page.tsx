@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -21,6 +21,7 @@ import {
   Users,
   UserRoundCheck,
   Flag,
+  UserPlus,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
@@ -40,6 +41,13 @@ type AuditEntry = {
   created_at: string;
 };
 
+type NewUserDay = {
+  date: string;
+  label: string;
+  count: number;
+  isToday: boolean;
+};
+
 const operationalModules = [
   { title: 'Catálogo', description: 'Publica, edita, pausa o retira artículos digitales.', href: '/admin/shop', icon: ShoppingBag, label: 'Tienda' },
   { title: 'Nuevo artículo', description: 'Crea un artículo con precio, categoría y vista previa.', href: '/admin/shop/new', icon: PackagePlus, label: 'Crear' },
@@ -57,6 +65,25 @@ const academicModules = [
   { title: 'Bandeja de reportes', description: 'Revisa y modera reportes enviados por los usuarios.', href: '/admin/reports', icon: Flag },
 ];
 
+function buildDaySlots(days = 14): NewUserDay[] {
+  const slots: NewUserDay[] = [];
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    let label: string;
+    if (i === 0) label = 'Hoy';
+    else if (i === 1) label = 'Ayer';
+    else {
+      label = d.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric' });
+      label = label.charAt(0).toUpperCase() + label.slice(1);
+    }
+    slots.push({ date: dateStr, label, count: 0, isToday: i === 0 });
+  }
+  return slots;
+}
+
 export default function AdminDashboardPage() {
   const { profile, loading: profileLoading } = useProfile();
   const router = useRouter();
@@ -69,20 +96,28 @@ export default function AdminDashboardPage() {
       }
     }
   }, [router]);
+
   const [dataLoading, setDataLoading] = useState(true);
   const [metrics, setMetrics] = useState<Record<string, number | null>>({});
   const [audit, setAudit] = useState<AuditEntry[]>([]);
+  const [newUserDays, setNewUserDays] = useState<NewUserDay[]>([]);
 
   const canManage = profile?.role === 'admin' || profile?.role === 'superadmin';
 
   const loadOverview = async () => {
     setDataLoading(true);
-    const [users, items, categories, products, auditResult] = await Promise.all([
+
+    const since = new Date();
+    since.setDate(since.getDate() - 13);
+    since.setHours(0, 0, 0, 0);
+
+    const [users, items, categories, products, auditResult, newUsersResult] = await Promise.all([
       supabase.from('profiles').select('id', { count: 'exact', head: true }),
       supabase.from('shop_items').select('id', { count: 'exact', head: true }),
       supabase.from('shop_categories').select('id', { count: 'exact', head: true }),
       supabase.from('store_products').select('id', { count: 'exact', head: true }).eq('active', true),
       supabase.from('admin_audit_logs').select('id, action, entity_type, created_at').order('created_at', { ascending: false }).limit(6),
+      supabase.from('profiles').select('created_at').gte('created_at', since.toISOString()),
     ]);
 
     setMetrics({
@@ -92,6 +127,17 @@ export default function AdminDashboardPage() {
       products: products.count ?? null,
     });
     if (!auditResult.error) setAudit((auditResult.data ?? []) as AuditEntry[]);
+
+    const slots = buildDaySlots(14);
+    if (!newUsersResult.error && newUsersResult.data) {
+      for (const row of newUsersResult.data) {
+        const dayStr = (row.created_at as string).slice(0, 10);
+        const slot = slots.find(s => s.date === dayStr);
+        if (slot) slot.count++;
+      }
+    }
+    setNewUserDays(slots);
+
     setDataLoading(false);
   };
 
@@ -121,6 +167,10 @@ export default function AdminDashboardPage() {
       </main>
     );
   }
+
+  const maxCount = Math.max(1, ...newUserDays.map(d => d.count));
+  const chartDays = newUserDays.slice(-10);
+  const totalNewUsers = newUserDays.reduce((sum, d) => sum + d.count, 0);
 
   return (
     <main className="min-h-screen bg-[#0d0f12] px-4 py-6 text-zinc-100 sm:px-6 lg:px-10 lg:py-10">
@@ -205,22 +255,63 @@ export default function AdminDashboardPage() {
             </div>
           </section>
 
-          <aside>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-500">Trazabilidad</p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight text-white">Actividad reciente</h2>
-            <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-[#14161a]">
-              {audit.length === 0 ? (
-                <p className="p-6 text-sm leading-6 text-zinc-500">Los próximos cambios del catálogo aparecerán aquí.</p>
-              ) : audit.map((entry) => (
-                <div key={entry.id} className="flex items-center gap-3 border-b border-white/10 px-4 py-4 last:border-0">
-                  <span className={`h-2 w-2 rounded-full ${entry.action === 'DELETE' ? 'bg-red-500' : entry.action === 'INSERT' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-zinc-200">{entry.entity_type.replace(/_/g, ' ')}</p>
-                    <p className="mt-0.5 text-xs text-zinc-600">{new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(entry.created_at))}</p>
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-zinc-500">{entry.action}</span>
+          <aside className="space-y-6">
+            <div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-500">Crecimiento</p>
+                  <h2 className="mt-2 text-2xl font-black tracking-tight text-white">Nuevos usuarios</h2>
                 </div>
-              ))}
+                <div className="text-right">
+                  <p className="text-2xl font-black tabular-nums text-white">{dataLoading ? '—' : totalNewUsers}</p>
+                  <p className="text-xs text-zinc-500">últimos 14 días</p>
+                </div>
+              </div>
+
+              <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-[#14161a] p-4">
+                {dataLoading ? (
+                  <div className="flex h-24 items-center justify-center text-sm text-zinc-600">Cargando...</div>
+                ) : (
+                  <>
+                    <div className="flex items-end gap-1 h-24">
+                      {chartDays.map(day => {
+                        const pct = maxCount > 0 ? (day.count / maxCount) * 100 : 0;
+                        return (
+                          <div key={day.date} className="group relative flex flex-1 flex-col items-center justify-end">
+                            <div
+                              className={`w-full rounded-t transition-all ${day.isToday ? 'bg-blue-500' : 'bg-zinc-700 group-hover:bg-zinc-500'}`}
+                              style={{ height: `${Math.max(pct, day.count > 0 ? 8 : 2)}%` }}
+                            />
+                            <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:flex items-center justify-center whitespace-nowrap rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-lg">
+                              {day.count}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[10px] text-zinc-600">
+                      <span>{chartDays[0]?.label}</span>
+                      <span className="text-blue-500 font-bold">Hoy</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-[#14161a]">
+                {dataLoading ? (
+                  <p className="p-5 text-sm text-zinc-600">Cargando...</p>
+                ) : newUserDays.slice(-7).reverse().map(day => (
+                  <div key={day.date} className="flex items-center gap-3 border-b border-white/10 px-4 py-3 last:border-0">
+                    <UserPlus className={`h-4 w-4 shrink-0 ${day.isToday ? 'text-blue-400' : 'text-zinc-600'}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm font-bold ${day.isToday ? 'text-white' : 'text-zinc-400'}`}>{day.label}</p>
+                    </div>
+                    <span className={`text-sm font-black tabular-nums ${day.count > 0 ? 'text-emerald-400' : 'text-zinc-600'}`}>
+                      +{day.count}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </aside>
         </div>
