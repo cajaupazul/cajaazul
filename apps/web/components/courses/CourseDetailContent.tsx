@@ -926,10 +926,10 @@ export default function CourseDetailContent({
                                         type="button"
                                         onClick={async () => {
                                             const url = `${window.location.origin}/dashboard/courses/view?id=${course.id}`;
-                                            const title = `${course.nombre} - CampusLink`;
+                                            const title = `${course.nombre} - CajaAzul`;
                                             if (navigator.share) {
                                                 try {
-                                                    await navigator.share({ title, text: `Mira este curso en CampusLink: ${course.nombre}`, url });
+                                                    await navigator.share({ title, text: `Mira este curso en CajaAzul: ${course.nombre}`, url });
                                                 } catch (_) { /* user cancelled */ }
                                             } else {
                                                 await navigator.clipboard.writeText(url);

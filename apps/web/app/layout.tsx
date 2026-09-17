@@ -1,11 +1,23 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CampusLink | Comunidad académica",
+  title: "CajaAzul | Comunidad académica",
   description: "Materiales, profesores, grupos y herramientas para tomar mejores decisiones académicas.",
   icons: {
     icon: "/favicon.png",
+  },
+  openGraph: {
+    title: "CajaAzul | Comunidad académica",
+    description: "Materiales, profesores, grupos y herramientas para tomar mejores decisiones académicas.",
+    siteName: "CajaAzul",
+    locale: "es_PE",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "CajaAzul | Comunidad académica",
+    description: "Materiales, profesores, grupos y herramientas para tomar mejores decisiones académicas.",
   },
 };
 
