@@ -638,7 +638,7 @@ export default function FullPageUploadForm({
     const bbTotalBytes = bbFiles.reduce((total, entry) => total + entry.file.size, 0);
 
     return (
-        <div className="max-w-5xl mx-auto py-8 px-4 min-h-screen bg-bb-dark">
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 min-h-screen bg-bb-dark">
             <div className="mb-8">
                 <Button
                     variant="ghost"
@@ -1138,7 +1138,7 @@ export default function FullPageUploadForm({
                                 <div key={`file-${key}`} className={`space-y-4 bg-bb-sidebar/30 p-5 rounded-xl border transition-all duration-300 ${currentFiles.length > 0 ? 'border-blue-500/40 bg-blue-500/5 shadow-lg shadow-blue-500/5' : 'border-bb-border'}`}>
                                     <Label className="text-sm font-black text-blue-400 uppercase tracking-widest px-1">{label}</Label>
                                     
-                                    <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${currentFiles.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-bb-border hover:border-blue-500 hover:bg-bb-darker/50'}`}>
+                                    <div className={`border-2 border-dashed rounded-xl transition-all ${currentFiles.length > 0 ? 'border-blue-500/50 bg-blue-500/5 py-2.5 px-4 hover:bg-blue-500/10' : 'border-bb-border hover:border-blue-500 hover:bg-bb-darker/50 p-6 text-center'}`}>
                                         <input
                                             id={`file-${key}`}
                                             type="file"
@@ -1147,20 +1147,24 @@ export default function FullPageUploadForm({
                                             className="hidden"
                                             accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
                                         />
-                                        <label htmlFor={`file-${key}`} className="cursor-pointer flex flex-col items-center justify-center w-full h-full gap-3">
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform active:scale-90 ${currentFiles.length > 0 ? 'bg-blue-600 text-white shadow-lg' : 'bg-bb-darker text-blue-400 border border-bb-border'}`}>
-                                                <Upload className="h-5 w-5" />
+                                        <label htmlFor={`file-${key}`} className={`cursor-pointer flex items-center justify-center w-full h-full gap-3 ${currentFiles.length > 0 ? 'flex-row' : 'flex-col'}`}>
+                                            <div className={`rounded-xl flex items-center justify-center transition-transform active:scale-90 ${currentFiles.length > 0 ? 'w-8 h-8 bg-blue-600 text-white shadow-md' : 'w-12 h-12 bg-bb-darker text-blue-400 border border-bb-border'}`}>
+                                                <Upload className={currentFiles.length > 0 ? "h-4 w-4" : "h-5 w-5"} />
                                             </div>
-                                            <div className="space-y-1">
-                                                <p className="text-sm font-bold text-bb-text">Subir archivos</p>
-                                                {dropzoneKeys.length === 1 && <p className="text-[10px] text-bb-text-secondary">Arrastra o haz clic aquí</p>}
+                                            <div className={currentFiles.length > 0 ? "flex items-center gap-2" : "space-y-1 text-center"}>
+                                                <p className="text-sm font-bold text-bb-text">
+                                                    {currentFiles.length > 0 ? '+ Agregar más archivos a este lote' : 'Subir archivos'}
+                                                </p>
+                                                <p className="text-[10px] text-bb-text-secondary">
+                                                    {currentFiles.length > 0 ? '— Arrastra o haz clic aquí' : 'Arrastra o haz clic aquí'}
+                                                </p>
                                             </div>
                                         </label>
                                     </div>
 
                                     {currentFiles.length > 0 && (
                                         <div className="mt-4 p-4 sm:p-5 rounded-2xl border-2 border-dashed border-blue-400/80 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-500/40">
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-4 max-h-[460px] overflow-y-auto custom-scrollbar p-1">
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4 max-h-[640px] overflow-y-auto custom-scrollbar p-1">
                                                 {currentFiles.map((f, i) => {
                                                     const fk = fileKey(f);
                                                     const ext = (f.name.split('.').pop() || 'FILE').toUpperCase();
@@ -1225,7 +1229,7 @@ export default function FullPageUploadForm({
 
                                                             {/* File Name */}
                                                             <p
-                                                                className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 truncate w-full text-center mt-1.5 px-0.5"
+                                                                className="text-xs font-bold text-white truncate w-full text-center mt-2 px-1"
                                                                 title={f.name}
                                                             >
                                                                 {f.name}
@@ -1235,7 +1239,7 @@ export default function FullPageUploadForm({
                                                             {showFileCategories && (
                                                                 <div className="w-full mt-2 space-y-1.5 pt-1.5 border-t border-bb-border/50">
                                                                     <div>
-                                                                        <span className="text-[9px] font-bold text-bb-text-secondary uppercase tracking-wider block text-left">
+                                                                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-wider block text-left">
                                                                             Categoría
                                                                         </span>
                                                                         <Select
@@ -1247,12 +1251,12 @@ export default function FullPageUploadForm({
                                                                                 return next;
                                                                             })}
                                                                         >
-                                                                            <SelectTrigger className="h-7 w-full text-[10px] font-medium bg-white dark:bg-zinc-900 border-bb-border text-bb-text px-1.5 truncate mt-0.5">
+                                                                            <SelectTrigger className="h-7 w-full text-[10px] font-bold bg-white text-zinc-900 [&>span]:text-zinc-900 [&>span]:truncate border-zinc-300 shadow-sm px-1.5 truncate mt-0.5 focus:ring-1 focus:ring-blue-500">
                                                                                 <SelectValue placeholder="Categoría" />
                                                                             </SelectTrigger>
-                                                                            <SelectContent className="border-bb-border bg-bb-card text-bb-text z-50 max-h-56">
+                                                                            <SelectContent className="border-zinc-200 bg-white text-zinc-900 z-50 max-h-56 shadow-xl">
                                                                                 {MATERIAL_CATEGORY_OPTIONS.map((option) => (
-                                                                                    <SelectItem key={option.value} value={option.value} className="text-xs">
+                                                                                    <SelectItem key={option.value} value={option.value} className="text-xs text-zinc-900 hover:bg-zinc-100 focus:bg-blue-50 focus:text-blue-600">
                                                                                         {option.label}
                                                                                     </SelectItem>
                                                                                 ))}
@@ -1260,7 +1264,7 @@ export default function FullPageUploadForm({
                                                                         </Select>
                                                                     </div>
                                                                     <div>
-                                                                        <span className="text-[9px] font-bold text-bb-text-secondary uppercase tracking-wider block text-left">
+                                                                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-wider block text-left">
                                                                             Ciclo
                                                                         </span>
                                                                         <Select
@@ -1272,16 +1276,16 @@ export default function FullPageUploadForm({
                                                                                 return next;
                                                                             })}
                                                                         >
-                                                                            <SelectTrigger className="h-7 w-full text-[10px] font-medium bg-white dark:bg-zinc-900 border-bb-border text-bb-text px-1.5 truncate mt-0.5">
+                                                                            <SelectTrigger className="h-7 w-full text-[10px] font-bold bg-white text-zinc-900 [&>span]:text-zinc-900 [&>span]:truncate border-zinc-300 shadow-sm px-1.5 truncate mt-0.5 focus:ring-1 focus:ring-blue-500">
                                                                                 <SelectValue placeholder="Ciclo" />
                                                                             </SelectTrigger>
-                                                                            <SelectContent className="border-bb-border bg-bb-card text-bb-text z-50 max-h-56">
+                                                                            <SelectContent className="border-zinc-200 bg-white text-zinc-900 z-50 max-h-56 shadow-xl">
                                                                                 {courseCycles.map((cycle: any) => (
-                                                                                    <SelectItem key={cycle.id} value={cycle.id} className="text-xs">
+                                                                                    <SelectItem key={cycle.id} value={cycle.id} className="text-xs text-zinc-900 hover:bg-zinc-100 focus:bg-blue-50 focus:text-blue-600">
                                                                                         {cycle.ciclo_name}
                                                                                     </SelectItem>
                                                                                 ))}
-                                                                                <SelectItem value="historical" className="text-xs">
+                                                                                <SelectItem value="historical" className="text-xs text-zinc-900 hover:bg-zinc-100 focus:bg-blue-50 focus:text-blue-600">
                                                                                     Sin ciclo / Histórico
                                                                                 </SelectItem>
                                                                             </SelectContent>
