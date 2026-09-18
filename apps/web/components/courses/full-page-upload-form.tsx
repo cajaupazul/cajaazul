@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase, Professor } from '@/lib/supabase';
 import { generateThumbnailFromFile } from '@/lib/thumbnail-generator';
-import { Upload, X, Trash2, UserPlus, ArrowLeft, CheckCircle, FolderUp, Files, Link2, FolderTree, FolderOpen } from 'lucide-react';
+import { Upload, X, Trash2, UserPlus, ArrowLeft, CheckCircle, FolderUp, Files, Link2, FolderTree, FolderOpen, Check } from 'lucide-react';
 import { FileTypeIcon } from '@/components/files/FileTypeIcon';
 import { buildBlackboardStoragePath, buildCourseMaterialPath } from '@/lib/course-storage-paths';
 import {
@@ -63,6 +63,11 @@ const SHARED_BLACKBOARD_CATEGORIES = new Set(['notes', 'links', 'resources']);
 
 const fileKey = (file: File) => `${file.name}:${file.size}:${file.lastModified}`;
 const bbEntryKey = (entry: FileEntry) => `${entry.relativePath}:${fileKey(entry.file)}`;
+const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 const isSharedSubfolder = (value?: string | null) => !!value && SHARED_SUBFOLDERS.has(value);
 const requiresGroupTitle = (value?: string | null) =>
     value === PREDEFINED_SUBFOLDERS[3] || value === PREDEFINED_SUBFOLDERS[5];
@@ -90,7 +95,10 @@ export default function FullPageUploadForm({
     const [selectedSubfolder, setSelectedSubfolder] = useState<string>('');
     const [sharedGroupTitle, setSharedGroupTitle] = useState('');
     const [fileCategoryOverrides, setFileCategoryOverrides] = useState<Record<string, string>>({});
+    const [fileCycleOverrides, setFileCycleOverrides] = useState<Record<string, string>>({});
     const [showFileCategories, setShowFileCategories] = useState(false);
+    const [fileUploadProgress, setFileUploadProgress] = useState<Record<string, number>>({});
+    const [fileUploadStatus, setFileUploadStatus] = useState<Record<string, 'pending' | 'uploading' | 'done' | 'error'>>({});
     
     const [professorId, setProfessorId] = useState<string>(
         allProfessors.length === 1 ? allProfessors[0].id : 'none'
@@ -154,9 +162,25 @@ export default function FullPageUploadForm({
     const removeFile = (key: string, index: number) => {
         const removed = filesMap[key]?.[index];
         if (removed) {
+            const fk = fileKey(removed);
             setFileCategoryOverrides(current => {
                 const next = { ...current };
-                delete next[fileKey(removed)];
+                delete next[fk];
+                return next;
+            });
+            setFileCycleOverrides(current => {
+                const next = { ...current };
+                delete next[fk];
+                return next;
+            });
+            setFileUploadProgress(current => {
+                const next = { ...current };
+                delete next[fk];
+                return next;
+            });
+            setFileUploadStatus(current => {
+                const next = { ...current };
+                delete next[fk];
                 return next;
             });
         }
@@ -453,15 +477,39 @@ export default function FullPageUploadForm({
                     });
                 });
 
-                // 1. Upload all files to R2 in parallel
+                // Inicializar estados de progreso individual
+                const initialProgress: Record<string, number> = {};
+                const initialStatus: Record<string, 'pending' | 'uploading' | 'done' | 'error'> = {};
+                allFiles.forEach(({ file }) => {
+                    const fk = fileKey(file);
+                    initialProgress[fk] = 0;
+                    initialStatus[fk] = 'pending';
+                });
+                setFileUploadProgress(initialProgress);
+                setFileUploadStatus(initialStatus);
+
+                // 1. Upload all files to R2 in parallel with live individual progress
                 const uploadedFilesInfo = await Promise.all(allFiles.map(async ({ file, target }) => {
+                    const fk = fileKey(file);
+                    setFileUploadStatus(prev => ({ ...prev, [fk]: 'uploading' }));
+                    setFileUploadProgress(prev => ({ ...prev, [fk]: 20 }));
+
                     const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
                     const finalSection = target === 'General'
-                        ? (fileCategoryOverrides[fileKey(file)] || selectedSubfolder)
+                        ? (fileCategoryOverrides[fk] || selectedSubfolder)
                         : target;
+
+                    // Ciclo por archivo (si se ajustó) o el del lote
+                    const fileCycle = fileCycleOverrides[fk] !== undefined
+                        ? fileCycleOverrides[fk]
+                        : selectedCycleId;
+                    const finalCycleId = isSharedSubfolder(finalSection)
+                        ? null
+                        : (fileCycle === 'historical' ? null : fileCycle);
+
                     const storagePath = buildCourseMaterialPath({
                         courseId,
-                        cycleId: resolvedCycleId(finalSection),
+                        cycleId: finalCycleId,
                         section: finalSection,
                         fileName: file.name,
                     });
@@ -470,6 +518,8 @@ export default function FullPageUploadForm({
 
                     let thumbnailUrl: string | null = null;
                     const thumbnailBlob = await generateThumbnailFromFile(file);
+                    setFileUploadProgress(prev => ({ ...prev, [fk]: 55 }));
+
                     if (thumbnailBlob) {
                         try {
                             const thumbFileName = `thumb_${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
@@ -491,15 +541,20 @@ export default function FullPageUploadForm({
                         }
                     }
 
+                    setFileUploadProgress(prev => ({ ...prev, [fk]: 85 }));
                     const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
-                    return { file, materialUrl, thumbnailUrl, fileExt, storagePath, finalSection };
+
+                    setFileUploadProgress(prev => ({ ...prev, [fk]: 100 }));
+                    setFileUploadStatus(prev => ({ ...prev, [fk]: 'done' }));
+
+                    return { file, materialUrl, thumbnailUrl, fileExt, storagePath, finalSection, finalCycleId };
                 }));
 
                 // 2. Insert into DB with explicitly staggered timestamps
                 const nowMs = Date.now();
                 for (let i = 0; i < uploadedFilesInfo.length; i++) {
                     const info = uploadedFilesInfo[i];
-                    const { file, materialUrl, thumbnailUrl, fileExt, storagePath, finalSection } = info;
+                    const { file, materialUrl, thumbnailUrl, fileExt, storagePath, finalSection, finalCycleId } = info;
 
                     const fileCreatedAt = new Date(nowMs - i * 1000).toISOString();
                     const finalTipo = finalSection;
@@ -513,7 +568,7 @@ export default function FullPageUploadForm({
                         storage_path: storagePath,
                         tipo: finalTipo,
                         group_title: requiresGroupTitle(finalTipo) ? sharedGroupTitle.trim() : null,
-                        cycle_id: resolvedCycleId(finalSection),
+                        cycle_id: finalCycleId,
                         descargas: 0,
                         thumbnail_url: thumbnailUrl,
                         created_at: fileCreatedAt,
@@ -1005,8 +1060,8 @@ export default function FullPageUploadForm({
                     {uploadMethod === 'file' && hasAnyFilesSelected && (
                         <div className="mb-4 flex flex-col gap-2 rounded-xl border border-bb-border bg-bb-sidebar/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <p className="text-xs font-black text-bb-text">¿El lote mezcla categorías?</p>
-                                <p className="mt-0.5 text-[10px] text-bb-text-secondary">Solo ajusta los archivos que sean una excepción; los demás conservan la categoría del lote.</p>
+                                <p className="text-xs font-black text-bb-text">¿El lote mezcla categorías o ciclos?</p>
+                                <p className="mt-0.5 text-[10px] text-bb-text-secondary">Solo ajusta los archivos que sean una excepción; los demás conservan la categoría y ciclo del lote.</p>
                             </div>
                             <Button
                                 type="button"
@@ -1104,45 +1159,140 @@ export default function FullPageUploadForm({
                                     </div>
 
                                     {currentFiles.length > 0 && (
-                                        <div className="space-y-2 mt-4 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
-                                            {currentFiles.map((f, i) => (
-                                                <div key={i} className="flex items-center justify-between p-2.5 bg-bb-card rounded-lg border border-bb-border group hover:border-blue-500/30 transition-all">
-                                                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                                                        <FileTypeIcon fileName={f.name} mimeType={f.type} size="sm" />
-                                                        <div className="min-w-0 pr-2">
-                                                            <p className="text-[11px] font-bold text-bb-text truncate leading-tight">{f.name}</p>
-                                                            <p className="text-[9px] text-bb-text-secondary mt-0.5">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                                        <div className="mt-4 p-4 sm:p-5 rounded-2xl border-2 border-dashed border-blue-400/80 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-500/40">
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-4 max-h-[460px] overflow-y-auto custom-scrollbar p-1">
+                                                {currentFiles.map((f, i) => {
+                                                    const fk = fileKey(f);
+                                                    const ext = (f.name.split('.').pop() || 'FILE').toUpperCase();
+                                                    const status = fileUploadStatus[fk] || (uploading ? 'uploading' : 'idle');
+                                                    const progress = fileUploadProgress[fk] ?? 0;
+                                                    const isDone = status === 'done';
+                                                    const isUploading = status === 'uploading';
+
+                                                    return (
+                                                        <div key={fk} className="flex flex-col items-center group relative">
+                                                            {/* Red Trash Icon above top-right */}
+                                                            <div className="w-full flex justify-end pr-1 mb-1">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeFile(key, i)}
+                                                                    className="text-red-500 hover:text-red-600 transition-colors p-0.5 rounded hover:bg-red-500/10"
+                                                                    title="Eliminar archivo"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4 stroke-[2]" />
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Visual Card */}
+                                                            <div className="w-full bg-white dark:bg-[#181a20] rounded-2xl border border-zinc-200/80 dark:border-white/10 shadow-sm p-3 flex flex-col items-center justify-between text-center min-h-[120px] transition-all hover:shadow-md">
+                                                                <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 tracking-wider uppercase">
+                                                                    {ext}
+                                                                </span>
+
+                                                                {isDone ? (
+                                                                    <div className="flex flex-col items-center justify-center my-auto py-1">
+                                                                        <Check className="w-6 h-6 text-emerald-500 stroke-[3] my-1" />
+                                                                        <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-medium">
+                                                                            {formatFileSize(f.size)}
+                                                                        </span>
+                                                                    </div>
+                                                                ) : isUploading ? (
+                                                                    <div className="w-full flex flex-col items-center justify-center my-auto py-1">
+                                                                        <div className="w-full h-5 rounded-full bg-amber-100/60 dark:bg-zinc-800 overflow-hidden relative shadow-inner">
+                                                                            <div
+                                                                                className="h-full bg-amber-400 dark:bg-amber-500 rounded-full transition-all duration-300 flex items-center justify-center"
+                                                                                style={{ width: `${Math.max(8, progress)}%` }}
+                                                                            />
+                                                                            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-zinc-800 dark:text-zinc-100 pointer-events-none">
+                                                                                {progress}%
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-medium block mt-1.5">
+                                                                            {formatFileSize(f.size)}
+                                                                        </span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="w-full flex flex-col items-center justify-center my-auto py-1">
+                                                                        <div className="w-full h-5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 flex items-center justify-center text-[11px] text-zinc-400 font-bold tracking-widest">
+                                                                            •••
+                                                                        </div>
+                                                                        <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-medium block mt-1.5">
+                                                                            {formatFileSize(f.size)}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* File Name */}
+                                                            <p
+                                                                className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 truncate w-full text-center mt-1.5 px-0.5"
+                                                                title={f.name}
+                                                            >
+                                                                {f.name}
+                                                            </p>
+
+                                                            {/* Adjustments: Category & Cycle per file */}
+                                                            {showFileCategories && (
+                                                                <div className="w-full mt-2 space-y-1.5 pt-1.5 border-t border-bb-border/50">
+                                                                    <div>
+                                                                        <span className="text-[9px] font-bold text-bb-text-secondary uppercase tracking-wider block text-left">
+                                                                            Categoría
+                                                                        </span>
+                                                                        <Select
+                                                                            value={fileCategoryOverrides[fk] || selectedSubfolder}
+                                                                            onValueChange={(value) => setFileCategoryOverrides((current) => {
+                                                                                const next = { ...current };
+                                                                                if (value === selectedSubfolder) delete next[fk];
+                                                                                else next[fk] = value;
+                                                                                return next;
+                                                                            })}
+                                                                        >
+                                                                            <SelectTrigger className="h-7 w-full text-[10px] font-medium bg-white dark:bg-zinc-900 border-bb-border text-bb-text px-1.5 truncate mt-0.5">
+                                                                                <SelectValue placeholder="Categoría" />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent className="border-bb-border bg-bb-card text-bb-text z-50 max-h-56">
+                                                                                {MATERIAL_CATEGORY_OPTIONS.map((option) => (
+                                                                                    <SelectItem key={option.value} value={option.value} className="text-xs">
+                                                                                        {option.label}
+                                                                                    </SelectItem>
+                                                                                ))}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="text-[9px] font-bold text-bb-text-secondary uppercase tracking-wider block text-left">
+                                                                            Ciclo
+                                                                        </span>
+                                                                        <Select
+                                                                            value={fileCycleOverrides[fk] !== undefined ? fileCycleOverrides[fk] : selectedCycleId}
+                                                                            onValueChange={(value) => setFileCycleOverrides((current) => {
+                                                                                const next = { ...current };
+                                                                                if (value === selectedCycleId) delete next[fk];
+                                                                                else next[fk] = value;
+                                                                                return next;
+                                                                            })}
+                                                                        >
+                                                                            <SelectTrigger className="h-7 w-full text-[10px] font-medium bg-white dark:bg-zinc-900 border-bb-border text-bb-text px-1.5 truncate mt-0.5">
+                                                                                <SelectValue placeholder="Ciclo" />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent className="border-bb-border bg-bb-card text-bb-text z-50 max-h-56">
+                                                                                {courseCycles.map((cycle: any) => (
+                                                                                    <SelectItem key={cycle.id} value={cycle.id} className="text-xs">
+                                                                                        {cycle.ciclo_name}
+                                                                                    </SelectItem>
+                                                                                ))}
+                                                                                <SelectItem value="historical" className="text-xs">
+                                                                                    Sin ciclo / Histórico
+                                                                                </SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    </div>
-                                                    {showFileCategories && (
-                                                        <Select
-                                                            value={fileCategoryOverrides[fileKey(f)] || selectedSubfolder}
-                                                            onValueChange={(value) => setFileCategoryOverrides((current) => {
-                                                                const next = { ...current };
-                                                                if (value === selectedSubfolder) delete next[fileKey(f)];
-                                                                else next[fileKey(f)] = value;
-                                                                return next;
-                                                            })}
-                                                        >
-                                                            <SelectTrigger className="h-8 w-[176px] shrink-0 border-bb-border bg-bb-sidebar px-2 text-[10px] font-bold text-bb-text">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="border-bb-border bg-bb-card text-bb-text">
-                                                                {MATERIAL_CATEGORY_OPTIONS.map((option) => (
-                                                                    <SelectItem key={option.value} value={option.value} className="text-xs">{option.label}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    )}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeFile(key, i)}
-                                                        className="p-1.5 hover:bg-red-500/10 text-bb-text-secondary hover:text-red-500 rounded-md transition-all shrink-0"
-                                                    >
-                                                        <X className="h-3.5 w-3.5" />
-                                                    </button>
-                                                </div>
-                                            ))}
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
