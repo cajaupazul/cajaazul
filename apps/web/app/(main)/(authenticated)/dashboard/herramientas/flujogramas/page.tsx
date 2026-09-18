@@ -1,10 +1,11 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
+import { useProfile } from '@/lib/profile-context';
 import {
-    ChevronLeft, FileText, Search, ArrowRight, Map
+    ChevronLeft, FileText, Search, ArrowRight, Map, Eye, EyeOff, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,18 +74,69 @@ function LazyFlowchartCard({ flow }: { flow: Flowchart }) {
 
 export default function FlowchartsListPage() {
     const { colors } = useTheme();
+    const { profile } = useProfile();
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
+
     const [flowcharts, setFlowcharts] = useState<Flowchart[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [selectedFaculty, setSelectedFaculty] = useState<string | null>(null);
 
-    useEffect(() => { fetchFlowcharts(); }, []);
+    const [interactiveVisible, setInteractiveVisible] = useState(true);
+    const [togglingVisibility, setTogglingVisibility] = useState(false);
+
+    useEffect(() => {
+        fetchFlowcharts();
+        fetchSettings();
+    }, []);
+
+    async function fetchSettings() {
+        try {
+            const { data } = await supabase
+                .from('platform_settings')
+                .select('interactive_flowchart_visible')
+                .eq('id', true)
+                .maybeSingle();
+
+            if (data && typeof data.interactive_flowchart_visible === 'boolean') {
+                setInteractiveVisible(data.interactive_flowchart_visible);
+            }
+        } catch (e) {
+            console.error('Error fetching settings:', e);
+        }
+    }
+
+    async function toggleInteractiveVisibility(e: React.MouseEvent) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isAdmin || togglingVisibility) return;
+        setTogglingVisibility(true);
+        const next = !interactiveVisible;
+        try {
+            const { error } = await supabase
+                .from('platform_settings')
+                .update({
+                    interactive_flowchart_visible: next,
+                    updated_at: new Date().toISOString(),
+                    updated_by: profile?.id,
+                })
+                .eq('id', true);
+
+            if (!error) {
+                setInteractiveVisible(next);
+            }
+        } catch (err) {
+            console.error('Error updating interactive_flowchart_visible:', err);
+        } finally {
+            setTogglingVisibility(false);
+        }
+    }
 
     async function fetchFlowcharts() {
         setLoading(true);
         const { data, error } = await supabase
             .from('flowcharts')
-            .select('id, name, faculty, image_url')  // only fetch needed columns
+            .select('id, name, faculty, image_url')
             .order('name', { ascending: true });
         if (!error && data) setFlowcharts(data);
         setLoading(false);
@@ -137,25 +189,82 @@ export default function FlowchartsListPage() {
                 </div>
 
                 {/* Banner Interactivo BETA */}
-                <Link href="/dashboard/herramientas/flujograma/admin" className="block">
-                    <div className="w-full bg-gradient-to-r from-emerald-900/40 to-blue-900/40 border border-emerald-500/30 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 hover:border-emerald-500/60 transition-colors group cursor-pointer">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-                                <Map className="w-6 h-6 text-emerald-400" />
+                {(interactiveVisible || isAdmin) && (
+                    <div className="relative">
+                        <Link href="/dashboard/herramientas/flujograma/admin" className="block">
+                            <div className={`w-full rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all duration-300 border ${
+                                !interactiveVisible
+                                    ? 'bg-gradient-to-r from-amber-950/40 via-zinc-900/60 to-zinc-900/60 border-amber-500/40 hover:border-amber-500/70'
+                                    : 'bg-gradient-to-r from-emerald-900/40 to-blue-900/40 border-emerald-500/30 hover:border-emerald-500/60'
+                            } group cursor-pointer`}>
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
+                                        !interactiveVisible ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'
+                                    }`}>
+                                        <Map className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white flex items-center gap-2 flex-wrap">
+                                            Nuevo Flujograma Interactivo (Beta)
+                                            {interactiveVisible ? (
+                                                <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] uppercase font-black tracking-wider">
+                                                    Nuevo
+                                                </span>
+                                            ) : (
+                                                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] uppercase font-black tracking-wider flex items-center gap-1">
+                                                    <EyeOff className="w-3 h-3" /> Oculto para usuarios
+                                                </span>
+                                            )}
+                                        </h3>
+                                        <p className="text-bb-text-secondary text-sm mt-0.5">
+                                            {!interactiveVisible && isAdmin
+                                                ? 'Banner OCULTO para usuarios normales. Solo los administradores pueden verlo.'
+                                                : 'Prueba el nuevo sistema con código inteligente para Administración.'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+                                    {isAdmin && (
+                                        <button
+                                            type="button"
+                                            onClick={toggleInteractiveVisibility}
+                                            disabled={togglingVisibility}
+                                            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-colors shadow-sm ${
+                                                interactiveVisible
+                                                    ? 'bg-zinc-800/90 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white'
+                                                    : 'bg-amber-500/20 border-amber-500/50 text-amber-300 hover:bg-amber-500/30'
+                                            }`}
+                                            title={interactiveVisible ? 'Ocultar a usuarios normales' : 'Hacer visible a usuarios normales'}
+                                        >
+                                            {togglingVisibility ? (
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : interactiveVisible ? (
+                                                <>
+                                                    <EyeOff className="w-3.5 h-3.5 text-zinc-400" />
+                                                    <span>Ocultar para usuarios</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Eye className="w-3.5 h-3.5 text-amber-400" />
+                                                    <span>Hacer visible</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
+
+                                    <Button className={`shrink-0 rounded-xl shadow-lg font-bold px-6 ${
+                                        !interactiveVisible
+                                            ? 'bg-zinc-700 hover:bg-zinc-600 text-white shadow-black/20'
+                                            : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20'
+                                    }`}>
+                                        Probar Beta <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                                    </Button>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                    Nuevo Flujograma Interactivo (Beta)
-                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] uppercase font-black">Nuevo</span>
-                                </h3>
-                                <p className="text-bb-text-secondary text-sm">Prueba el nuevo sistema con código inteligente para Administración.</p>
-                            </div>
-                        </div>
-                        <Button className="shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-500/20 font-bold px-6">
-                            Probar Beta <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                        </Button>
+                        </Link>
                     </div>
-                </Link>
+                )}
 
                 {/* Faculty Filters */}
                 {faculties.length > 0 && (
