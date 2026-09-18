@@ -44,40 +44,76 @@ export function NotificationBell() {
   const loadNotifications = useCallback(async () => {
     setLoading(true);
     try {
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUserId = authData?.user?.id;
+      if (!currentUserId) {
+        setNotifications([]);
+        return;
+      }
+
       void supabase.rpc('cleanup_my_expired_notifications');
       const now = new Date().toISOString();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('user_notifications')
         .select('id, kind, title, body, href, read_at, expires_at, created_at')
+        .eq('user_id', currentUserId)
         .or(`expires_at.is.null,expires_at.gt.${now}`)
         .order('created_at', { ascending: false })
         .limit(30);
-      if (data) setNotifications(data as Notification[]);
+
+      if (!error && data) {
+        setNotifications(data as Notification[]);
+      }
+    } catch (err) {
+      console.error('Error loading notifications:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const markAllRead = useCallback(async (notifs: Notification[]) => {
-    const unreadIds = notifs.filter(n => !n.read_at).map(n => n.id);
+  const markAllRead = useCallback(async (notifsToMark?: Notification[]) => {
+    const targetNotifs = notifsToMark || notifications;
+    const unreadIds = targetNotifs.filter(n => !n.read_at).map(n => n.id);
     if (!unreadIds.length) return;
-    await supabase
-      .from('user_notifications')
-      .update({ read_at: new Date().toISOString() })
-      .in('id', unreadIds);
-    setNotifications(prev =>
-      prev.map(n => unreadIds.includes(n.id) ? { ...n, read_at: new Date().toISOString() } : n)
-    );
-  }, []);
 
-  useEffect(() => { void loadNotifications(); }, [loadNotifications]);
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id;
+    if (!currentUserId) return;
+
+    const now = new Date().toISOString();
+
+    // Actualización optimista inmediata en UI
+    setNotifications(prev =>
+      prev.map(n => unreadIds.includes(n.id) ? { ...n, read_at: now } : n)
+    );
+
+    try {
+      const { error } = await supabase
+        .from('user_notifications')
+        .update({ read_at: now })
+        .in('id', unreadIds)
+        .eq('user_id', currentUserId);
+
+      if (error) {
+        console.error('Error marking notifications as read:', error);
+      }
+    } catch (err) {
+      console.error('Failed to update read_at:', err);
+    }
+  }, [notifications]);
 
   useEffect(() => {
-    if (open) void markAllRead(notifications);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    void loadNotifications();
+  }, [loadNotifications]);
 
-  // Close on outside click
+  // Al abrir el modal, marcamos como leídas
+  useEffect(() => {
+    if (open && unread > 0) {
+      void markAllRead();
+    }
+  }, [open, unread, markAllRead]);
+
+  // Cerrar al hacer clic afuera
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -120,17 +156,28 @@ export function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-bb-border px-4 py-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-bb-text-secondary">CampusLink</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">CajaAzul</p>
               <h2 className="text-sm font-bold text-bb-text">Notificaciones</h2>
             </div>
             <div className="flex items-center gap-1">
+              {unread > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void markAllRead()}
+                  className="rounded-lg px-2 py-1 text-[11px] font-semibold text-blue-400 hover:bg-blue-500/10 transition-colors"
+                  title="Marcar todas como leídas"
+                >
+                  Marcar leídas
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => void loadNotifications()}
                 className="rounded-lg p-1.5 text-bb-text-secondary transition-colors hover:bg-white/5 hover:text-bb-text"
                 aria-label="Actualizar notificaciones"
+                title="Actualizar"
               >
-                <RefreshCw size={13} />
+                <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
               </button>
               <button
                 type="button"
@@ -145,7 +192,7 @@ export function NotificationBell() {
 
           {/* Body */}
           <div className="overflow-y-auto" style={{ maxHeight: 'calc(80vh - 60px)' }}>
-            {loading ? (
+            {loading && notifications.length === 0 ? (
               <div className="flex items-center justify-center py-10">
                 <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/10 border-t-blue-400" />
               </div>
@@ -178,7 +225,12 @@ export function NotificationBell() {
                           {n.href && (
                             <Link
                               href={n.href}
-                              onClick={() => setOpen(false)}
+                              onClick={() => {
+                                setOpen(false);
+                                if (!n.read_at) {
+                                  void markAllRead([n]);
+                                }
+                              }}
                               className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-400 transition-colors hover:text-blue-300"
                             >
                               Ver <ExternalLink size={10} />
