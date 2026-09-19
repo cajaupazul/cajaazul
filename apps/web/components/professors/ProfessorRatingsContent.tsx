@@ -1323,34 +1323,7 @@ export default function ProfessorRatingsContent({
                                                                 window.open(material.url_archivo, '_blank');
                                                                 return;
                                                             }
-
-                                                            const isExcel = material.url_archivo.toLowerCase().match(/\.(xls|xlsx|csv)$/i);
-                                                            if (isExcel) {
-                                                                try {
-                                                                    // Start download process
-                                                                    const path = extractPathFromUrl(material.url_archivo, 'course-materials');
-                                                                    const blob = await getFileFromR2('course-materials', path);
-                                                                    
-                                                                    const url = window.URL.createObjectURL(blob);
-                                                                    const a = document.createElement('a');
-                                                                    const extension = material.url_archivo.split('.').pop();
-                                                                    a.href = url;
-                                                                    a.download = `${material.titulo}.${extension}`;
-                                                                    document.body.appendChild(a);
-                                                                    a.click();
-                                                                    
-                                                                    // Cleanup
-                                                                    setTimeout(() => {
-                                                                        window.URL.revokeObjectURL(url);
-                                                                        document.body.removeChild(a);
-                                                                    }, 100);
-                                                                } catch (err: any) {
-                                                                    console.error('Error al descargar Excel:', err);
-                                                                    alert('Error al descargar el archivo: ' + err.message);
-                                                                }
-                                                                return;
-                                                            }
-
+                                                            // Excel / CSV → open in secure in-browser viewer (download only for VIP/Admin)
                                                             setViewingFile({ path: material.url_archivo, name: material.titulo });
                                                         }}
                                                         canDelete={

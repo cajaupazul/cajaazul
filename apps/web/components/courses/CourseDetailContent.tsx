@@ -580,31 +580,7 @@ export default function CourseDetailContent({
             window.open(material.url_archivo, '_blank');
             return;
         }
-        const isExcel = material.url_archivo.toLowerCase().match(/\.(xls|xlsx|csv)$/i);
-        if (isExcel) {
-            const userIsAdmin = (currentUser as any)?.role === 'admin' || (currentUser as any)?.role === 'superadmin';
-            const userIsVip = (currentUser as any)?.es_vip === true;
-            if (!downloadsEnabled && !userIsVip && !userIsAdmin) {
-                alert('Las descargas directas están temporalmente desactivadas. Los miembros VIP pueden seguir descargando.');
-                return;
-            }
-            try {
-                const path = extractPathFromUrl(material.url_archivo, 'course-materials');
-                const blob = await getFileFromR2('course-materials', path);
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                const extension = material.url_archivo.split('.').pop();
-                a.href = url;
-                a.download = `${material.titulo}.${extension}`;
-                document.body.appendChild(a);
-                a.click();
-                setTimeout(() => { window.URL.revokeObjectURL(url); document.body.removeChild(a); }, 100);
-            } catch (err: any) {
-                console.error('Error al descargar Excel:', err);
-                alert('Error al descargar el archivo: ' + err.message);
-            }
-            return;
-        }
+        // Excel / CSV files → open in secure in-browser viewer (download only for VIP/Admin)
         setViewingFile({ path: material.url_archivo, name: material.titulo, useAdvanced: material.use_advanced_viewer });
     };
 

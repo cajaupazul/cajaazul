@@ -5,9 +5,9 @@ import { Loader2, AlertCircle, Download, Lock, Maximize, Minimize, ChevronLeft, 
 import { supabase } from '@/lib/supabase';
 import { Document, Page, pdfjs } from 'react-pdf';
 import * as docx from 'docx-preview';
-import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import SecurePptxViewer from './SecurePptxViewer';
+import SecureExcelViewer from './SecureExcelViewer';
 import { useProfile } from '@/lib/profile-context';
 
 // V4.2+: Configuración del worker local.
@@ -205,8 +205,9 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const [currentPage, setCurrentPage] = useState(1);
     const [pageInput, setPageInput] = useState('1');
 
+    const [excelBlob, setExcelBlob] = useState<Blob | null>(null);
+
     const docxContainerRef = useRef<HTMLDivElement>(null);
-    const xlsxContainerRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // V4.6+: Inteligencia de navegación basada en tamaño
@@ -469,14 +470,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             }
 
             if (resolvedType === 'xlsx') {
-                setTimeout(async () => {
-                    try {
-                        const buffer = await blob.arrayBuffer();
-                        const wb = XLSX.read(buffer);
-                        const html = XLSX.utils.sheet_to_html(wb.Sheets[wb.SheetNames[0]]);
-                        if (xlsxContainerRef.current) xlsxContainerRef.current.innerHTML = html;
-                    } catch { setUseExternalViewer(true); loadContent(true); }
-                }, 100);
+                setExcelBlob(blob);
             }
 
         } catch (err: any) {
@@ -613,11 +607,12 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
                 {/* Center Control Group: Zoom & Fullscreen */}
                 <div className="flex items-center gap-4 sm:gap-6 justify-center flex-1">
-                    {(fileType === 'pdf' || fileType === 'docx') && (
+                    {(fileType === 'pdf' || fileType === 'docx' || fileType === 'xlsx') && (
                         <>
                             <button onClick={handleZoomOut} className="hover:text-white transition-colors" title="Alejar">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 sm:w-4 sm:h-4"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                             </button>
+                            <span className="text-[10px] font-mono text-zinc-400 hidden sm:inline">{Math.round(zoomLevel * 100)}%</span>
                             <button onClick={handleZoomIn} className="hover:text-white transition-colors" title="Acercar">
                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 sm:w-4 sm:h-4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                             </button>
@@ -729,7 +724,14 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                     </div>
                 )}
                 {fileType === 'xlsx' && !useExternalViewer && (
-                    <div className="h-full overflow-auto bg-white shadow-inner"><div ref={xlsxContainerRef} className="excel-viewer p-6" /></div>
+                    <div className="h-full w-full overflow-hidden">
+                        <SecureExcelViewer 
+                            blob={excelBlob} 
+                            fileName={fileName} 
+                            zoomLevel={zoomLevel} 
+                            userWatermark={profile?.nombre || profile?.email || 'CampusLink'} 
+                        />
+                    </div>
                 )}
                 {fileType === 'image' && blobUrl && (
                     <div className="h-full flex items-center justify-center p-12 overflow-auto bg-zinc-900 shadow-inner">
