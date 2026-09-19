@@ -130,7 +130,7 @@ export default function CompleteProfilePage() {
 
     const nombre = formData.nombre.trim();
     if (nombre.length < 2) {
-      setError('Tu nombre visible debe tener al menos 2 caracteres.');
+      setError('Tu nombre visible o apodo debe tener al menos 2 caracteres.');
       return;
     }
     if (!formData.carrera) {
@@ -229,7 +229,7 @@ export default function CompleteProfilePage() {
                   <AvatarFallback className="bg-white font-black">{initials(formData.nombre)}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="truncate text-lg font-black">{formData.nombre || 'Tu nombre visible'}</p>
+                  <p className="truncate text-lg font-black">{formData.nombre || 'Tu nombre o apodo'}</p>
                   <p className="mt-1 truncate text-xs text-white/70">{formData.carrera || 'Facultad pendiente'}</p>
                 </div>
               </div>
@@ -261,8 +261,8 @@ export default function CompleteProfilePage() {
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               {error && <div role="alert" className="border-l-4 border-[#b42318] bg-[#fef3f2] px-4 py-3 text-sm font-bold text-[#912018]">{error}</div>}
 
-              <Field label="Nombre visible" htmlFor="nombre" icon={<UserRound className="h-4 w-4" />}>
-                <Input id="nombre" value={formData.nombre} onChange={(event) => setFormData((current) => ({ ...current, nombre: event.target.value }))} maxLength={60} placeholder="Ej.: Alexis UP" autoComplete="name" className="h-12 rounded-none border-[#cfd5d1] bg-white px-4 font-semibold text-[#102a25] focus-visible:ring-[#155eef]" />
+              <Field label='Nombre visible o "apodo"' htmlFor="nombre" icon={<UserRound className="h-4 w-4" />}>
+                <Input id="nombre" value={formData.nombre} onChange={(event) => setFormData((current) => ({ ...current, nombre: event.target.value }))} maxLength={60} placeholder='"apodo"' autoComplete="name" className="h-12 rounded-none border-[#cfd5d1] bg-white px-4 font-semibold text-[#102a25] focus-visible:ring-[#155eef]" />
               </Field>
 
               <Field label="Facultad" htmlFor="carrera" icon={<School className="h-4 w-4" />} required>

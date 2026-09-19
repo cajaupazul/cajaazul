@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Search, Plus, Trash2, Eye, Star, ArrowRight } from 'lucide-react';
 import { supabase, Course, Profile } from '@/lib/supabase';
+import { NewMaterialBadge } from '@/components/courses/NewMaterialBadge';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import { useProfile } from '@/lib/profile-context';
 import { deleteFileFromR2WithRetry, extractPathFromUrl } from '@/lib/r2-storage';
@@ -50,6 +51,7 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
     const [selectedCycle, setSelectedCycle] = useState('todos');
     const [selectedFaculty, setSelectedFaculty] = useState('todos');
     const [savedCourses, setSavedCourses] = useState<string[]>([]);
+    const [recentCourseIds, setRecentCourseIds] = useState<Set<string>>(new Set());
     const [itemsPerPage] = useState(24);
     const [currentPage, setCurrentPage] = useState(1);
     const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
@@ -102,6 +104,39 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
                                 : c
                         )
                     );
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
+    // Fetch courses with materials added in the last 24 hours (1 day)
+    useEffect(() => {
+        const fetchRecentMaterials = async () => {
+            const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            const { data } = await supabase
+                .from('materials')
+                .select('course_id')
+                .gte('created_at', oneDayAgo);
+            if (data) {
+                const ids = new Set<string>(data.map(m => m.course_id).filter(Boolean) as string[]);
+                setRecentCourseIds(ids);
+            }
+        };
+        fetchRecentMaterials();
+
+        const channel = supabase
+            .channel('public:materials:recent-badge')
+            .on('postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'materials' },
+                (payload) => {
+                    const courseId = (payload.new as any)?.course_id;
+                    if (courseId) {
+                        setRecentCourseIds(prev => new Set([...prev, courseId]));
+                    }
                 }
             )
             .subscribe();
@@ -344,9 +379,16 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
                                             {course.nombre}
                                         </h3>
 
-                                        <div className="mt-1.5 block space-y-0.5 text-[10px] text-bb-text-secondary md:mt-2 md:space-y-1 md:text-xs">
+                                        <div className="mt-1.5 flex items-center justify-between gap-2 md:mt-2">
+                                            <div className="min-w-0 flex-1 space-y-0.5 text-[10px] text-bb-text-secondary md:space-y-1 md:text-xs">
                                             <div className="truncate">{course.facultad || 'Sin Facultad'}</div>
                                             <div>Ciclo {course.ciclo}</div>
+                                            </div>
+                                            {recentCourseIds.has(course.id) && (
+                                                <div className="shrink-0 flex items-center justify-center pl-1" title="¡Nuevo material agregado recientemente!">
+                                                    <NewMaterialBadge className="h-7 w-7 md:h-8 md:w-8 drop-shadow" />
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="mt-auto flex items-center justify-between gap-2 border-t border-bb-border pt-2 md:pt-3">

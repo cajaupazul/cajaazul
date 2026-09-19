@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import CourseDetailClient from './CourseDetailClient';
@@ -37,7 +37,9 @@ export async function generateMetadata({
         'Materiales, profesores y apuntes en CajaAzul',
       ].filter(Boolean).join(' · ');
 
-      const imageUrl = course.imagen_url || undefined;
+      const rawImageUrl = course.imagen_url ? course.imagen_url.trim().replace(/[\r\n\s]+/g, '') : undefined;
+      const imageUrl = rawImageUrl || 'https://cajaazul.pages.dev/favicon.png';
+      const pageUrl = `https://cajaazul.pages.dev/dashboard/courses/view?id=${id}`;
 
       return {
         title,
@@ -45,24 +47,24 @@ export async function generateMetadata({
         openGraph: {
           title,
           description: descDetails,
+          url: pageUrl,
           siteName: 'CajaAzul',
           type: 'website',
-          images: imageUrl
-            ? [
-                {
-                  url: imageUrl,
-                  width: 1200,
-                  height: 630,
-                  alt: course.nombre,
-                },
-              ]
-            : undefined,
+          images: [
+            {
+              url: imageUrl,
+              secureUrl: imageUrl,
+              width: 1200,
+              height: 630,
+              alt: course.nombre,
+            },
+          ],
         },
         twitter: {
-          card: imageUrl ? 'summary_large_image' : 'summary',
+          card: 'summary_large_image',
           title,
           description: descDetails,
-          images: imageUrl ? [imageUrl] : undefined,
+          images: [imageUrl],
         },
       };
     }

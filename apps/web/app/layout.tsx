@@ -1,7 +1,8 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://cajaazul.pages.dev'),
   title: "CajaAzul | Comunidad académica",
   description: "Materiales, profesores, grupos y herramientas para tomar mejores decisiones académicas.",
   icons: {

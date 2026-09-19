@@ -87,6 +87,14 @@ export async function updateSession(request: NextRequest) {
         return redirectWithSession(dashboardUrl);
     }
 
+    // Allow social media crawlers (WhatsApp, Facebook, Telegram, Twitter, Discord, etc.)
+    // to access course detail pages so they can read Open Graph metadata (title, image, description)
+    const userAgent = request.headers.get('user-agent') || '';
+    const isSocialCrawler = /facebookexternalhit|WhatsApp|Twitterbot|TelegramBot|Discordbot|LinkedInBot|Slackbot|SkypeUriPreview|Applebot|Googlebot|bingbot/i.test(userAgent);
+    if (isSocialCrawler && path.startsWith('/dashboard/courses/view')) {
+        return supabaseResponse;
+    }
+
     // Block anonymous (guest) users from protected routes — they must log in
     if ((!user || user.is_anonymous) && isProtectedRoute) {
         const loginUrl = request.nextUrl.clone();
