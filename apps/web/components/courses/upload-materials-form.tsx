@@ -76,9 +76,9 @@ export default function UploadMaterialsForm({
             return;
         }
 
-        // Validate professor selection for types other than 'enlace' and 'otro'
-        if (materialType !== 'enlace' && materialType !== 'otro' && professorId === 'none') {
-            alert('Para este tipo de material, debes seleccionar un profesor específico.');
+        // Solo las clases y diapositivas deben vincularse obligatoriamente.
+        if (materialType === 'ppt' && professorId === 'none') {
+            alert('Las clases y diapositivas deben vincularse a un profesor.');
             return;
         }
 
@@ -196,10 +196,12 @@ export default function UploadMaterialsForm({
                         </Select>
                     </div>
 
-                    {/* Profesor (Opcional) */}
+                    {/* Profesor */}
                     <div>
                         <div className="flex items-center justify-between mb-2">
-                            <Label htmlFor="professor" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 px-1">Profesor (Opcional)</Label>
+                            <Label htmlFor="professor" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 px-1">
+                                Profesor {materialType === 'ppt' ? '*' : '(Opcional)'}
+                            </Label>
                             <Link
                                 href="/dashboard/professors"
                                 className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider flex items-center gap-1 hover:underline"
@@ -214,7 +216,7 @@ export default function UploadMaterialsForm({
                                 <SelectValue placeholder="Seleccionar profesor..." />
                             </SelectTrigger>
                             <SelectContent className="bg-bb-card border-bb-border text-white rounded-xl">
-                                <SelectItem value="none" className="focus:bg-blue-600 focus:text-white rounded-lg italic opacity-70">Ninguno / General</SelectItem>
+                                <SelectItem value="none" disabled={materialType === 'ppt'} className="focus:bg-blue-600 focus:text-white rounded-lg italic opacity-70">Ninguno / General</SelectItem>
                                 {allProfessors.map((prof) => (
                                     <SelectItem key={prof.id} value={prof.id} className="focus:bg-blue-600 focus:text-white rounded-lg">
                                         {prof.nombre}
@@ -222,8 +224,10 @@ export default function UploadMaterialsForm({
                                 ))}
                             </SelectContent>
                         </Select>
-                        <p className="text-[9px] text-blue-400 mt-2 font-bold uppercase tracking-tighter">
-                            * Si el profesor no se encuentra en la lista, deberías agregar uno nuevo.
+                        <p className={`text-[9px] mt-2 font-bold uppercase tracking-tighter ${materialType === 'ppt' ? 'text-amber-400' : 'text-blue-400'}`}>
+                            {materialType === 'ppt'
+                                ? '* Las clases y diapositivas requieren un profesor.'
+                                : 'La asociación con un profesor es opcional para este material.'}
                         </p>
                         {allProfessors.length === 0 && (
                             <p className="text-[9px] text-bb-text-secondary mt-1 italic font-medium">

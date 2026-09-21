@@ -60,6 +60,8 @@ const BLACKBOARD_CATEGORY_OPTIONS = [
 ];
 
 const SHARED_BLACKBOARD_CATEGORIES = new Set(['notes', 'links', 'resources']);
+const PROFESSOR_REQUIRED_SUBFOLDERS = new Set([PREDEFINED_SUBFOLDERS[2]]);
+const PROFESSOR_REQUIRED_BLACKBOARD_CATEGORIES = new Set(['classes']);
 
 const fileKey = (file: File) => `${file.name}:${file.size}:${file.lastModified}`;
 const bbEntryKey = (entry: FileEntry) => `${entry.relativePath}:${fileKey(entry.file)}`;
@@ -69,6 +71,10 @@ const formatFileSize = (bytes: number) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 const isSharedSubfolder = (value?: string | null) => !!value && SHARED_SUBFOLDERS.has(value);
+const requiresProfessorForSubfolder = (value?: string | null) =>
+    !!value && PROFESSOR_REQUIRED_SUBFOLDERS.has(value);
+const requiresProfessorForBlackboardCategory = (value?: string | null) =>
+    !!value && PROFESSOR_REQUIRED_BLACKBOARD_CATEGORIES.has(value);
 const requiresGroupTitle = (value?: string | null) =>
     value === PREDEFINED_SUBFOLDERS[3] || value === PREDEFINED_SUBFOLDERS[5];
 
@@ -121,6 +127,27 @@ export default function FullPageUploadForm({
     const [linksMap, setLinksMap] = useState<Record<string, { titulo: string; url: string }[]>>({
         'General': [{ titulo: '', url: '' }]
     });
+
+    const fileUploadRequiresProfessor = Object.entries(filesMap).some(([target, files]) =>
+        files.some((file) => requiresProfessorForSubfolder(
+            target === 'General'
+                ? (fileCategoryOverrides[fileKey(file)] || selectedSubfolder)
+                : target
+        ))
+    ) || (!Object.values(filesMap).some((files) => files.length > 0)
+        && requiresProfessorForSubfolder(selectedSubfolder));
+
+    const bbUploadRequiresProfessor = bbFiles.length > 0
+        ? bbFiles.some((entry) => requiresProfessorForBlackboardCategory(
+            bbCategoryOverrides[bbEntryKey(entry)] || bbDefaultCategory
+        ))
+        : requiresProfessorForBlackboardCategory(bbDefaultCategory);
+
+    const currentUploadRequiresProfessor = uploadMethod === 'file'
+        ? fileUploadRequiresProfessor
+        : uploadMethod === 'bb-folder'
+            ? bbUploadRequiresProfessor
+            : false;
 
     const addLinkRow = (key: string) => {
         setLinksMap(prev => {
@@ -265,7 +292,7 @@ export default function FullPageUploadForm({
             const storagePath = buildBlackboardStoragePath({
                 courseId,
                 cycleId,
-                professorId,
+                professorId: professorId === 'none' ? null : professorId,
                 setId,
                 relativePath: entry.relativePath,
             });
@@ -317,16 +344,16 @@ export default function FullPageUploadForm({
         e.preventDefault();
 
         if (uploadMethod === 'bb-folder') {
-            if (professorId === 'none') {
-                alert('Por favor selecciona un profesor para asociar la carpeta.');
-                return;
-            }
             if (bbFiles.length === 0) {
                 alert('Por favor selecciona una carpeta para subir.');
                 return;
             }
             if (!bbDefaultCategory) {
                 alert('Elige una categoría para esta importación. Si mezcla tipos, podrás ajustar archivos concretos antes de subir.');
+                return;
+            }
+            if (bbUploadRequiresProfessor && professorId === 'none') {
+                alert('Las clases y diapositivas deben vincularse a un profesor. Selecciona uno antes de continuar.');
                 return;
             }
             if (!SHARED_BLACKBOARD_CATEGORIES.has(bbDefaultCategory) && selectedCycleId === 'historical') {
@@ -342,14 +369,18 @@ export default function FullPageUploadForm({
                     if (cy) cicloName = cy.ciclo_name;
                 }
 
-                const { data: existing } = await supabase
+                let existingQuery = supabase
                     .from('bb_material_sets')
                     .select('id')
                     .eq('course_id', courseId)
-                    .eq('professor_id', professorId)
                     .eq('course_name', bbRootName)
-                    .eq('ciclo', cicloName)
-                    .maybeSingle();
+                    .eq('ciclo', cicloName);
+
+                existingQuery = professorId === 'none'
+                    ? existingQuery.is('professor_id', null)
+                    : existingQuery.eq('professor_id', professorId);
+
+                const { data: existing } = await existingQuery.maybeSingle();
 
                 let setId = existing?.id;
                 if (existing) {
@@ -360,7 +391,7 @@ export default function FullPageUploadForm({
                     const existingPaths = new Set((existingFiles || []).map((f: any) => f.relative_path).filter(Boolean));
                     const newFiles = bbFiles.filter(f => !existingPaths.has(f.relativePath));
                     if (newFiles.length === 0) {
-                        alert('Todos los archivos de esta carpeta ya existen en este ciclo para este profesor.');
+                        alert('Todos los archivos de esta carpeta ya existen en este destino y ciclo.');
                         setUploading(false);
                         return;
                     }
@@ -369,7 +400,7 @@ export default function FullPageUploadForm({
                     const { data: newSet, error: setErr } = await supabase
                         .from('bb_material_sets')
                         .insert({
-                            professor_id: professorId,
+                            professor_id: professorId === 'none' ? null : professorId,
                             course_id: courseId,
                             course_name: bbRootName,
                             ciclo: cicloName,
@@ -394,6 +425,10 @@ export default function FullPageUploadForm({
 
         if (uploadMethod === 'file' && !selectedSubfolder) {
             alert('Por favor elige la categoría del material antes de subirlo.');
+            return;
+        }
+        if (uploadMethod === 'file' && fileUploadRequiresProfessor && professorId === 'none') {
+            alert('Las clases y diapositivas deben vincularse a un profesor. Selecciona uno antes de continuar.');
             return;
         }
         if (uploadMethod === 'file' && requiresGroupTitle(selectedSubfolder) && !sharedGroupTitle.trim()) {
@@ -622,11 +657,18 @@ export default function FullPageUploadForm({
     const hasAnyLinksEntered = Object.values(linksMap).some(arr => arr.some(l => l.url));
     const isReadyForFiles = uploadMethod === 'link' ? hasAnyLinksEntered : hasAnyFilesSelected;
 
-    const isReadyForBbFolder = uploadMethod === 'bb-folder' && bbFiles.length > 0 && professorId !== 'none' && !!bbDefaultCategory;
+    const professorRequirementSatisfied = !currentUploadRequiresProfessor || professorId !== 'none';
+    const isReadyForBbFolder = uploadMethod === 'bb-folder'
+        && bbFiles.length > 0
+        && !!bbDefaultCategory
+        && professorRequirementSatisfied;
     const isReadyToSubmit = uploadMethod === 'bb-folder'
         ? isReadyForBbFolder
         : uploadMethod === 'file'
-            ? isReadyForFiles && !!selectedSubfolder && (!requiresGroupTitle(selectedSubfolder) || !!sharedGroupTitle.trim())
+            ? isReadyForFiles
+                && !!selectedSubfolder
+                && (!requiresGroupTitle(selectedSubfolder) || !!sharedGroupTitle.trim())
+                && professorRequirementSatisfied
             : isReadyForFiles;
     const selectedCycle = courseCycles.find((cycle: any) => cycle.id === selectedCycleId);
     const selectedProfessor = allProfessors.find((professor: any) => professor.id === professorId);
@@ -810,7 +852,9 @@ export default function FullPageUploadForm({
 
                         <div className="p-5 bg-bb-sidebar/50 rounded-xl border border-bb-border">
                             <div className="flex items-center justify-between mb-3">
-                                <Label htmlFor="professor" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 px-1">Profesor del curso</Label>
+                                <Label htmlFor="professor" className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 px-1">
+                                    Profesor del curso {currentUploadRequiresProfessor ? '*' : '(opcional)'}
+                                </Label>
                                 <Link
                                     href="/dashboard/professors"
                                     className="text-[10px] font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 hover:underline uppercase tracking-wider"
@@ -826,7 +870,7 @@ export default function FullPageUploadForm({
                                     <SelectValue placeholder="Seleccionar profesor..." />
                                 </SelectTrigger>
                                 <SelectContent className="bg-bb-card border-bb-border text-bb-text rounded-xl max-h-[300px] overflow-y-auto z-[9999]">
-                                    <SelectItem value="none" className="focus:bg-blue-600 focus:text-white rounded-lg">
+                                    <SelectItem value="none" disabled={currentUploadRequiresProfessor} className="focus:bg-blue-600 focus:text-white rounded-lg">
                                         <span className="text-bb-text-secondary italic font-bold text-blue-400">Todo / Material General</span>
                                     </SelectItem>
                                     {allProfessors.map((prof: any) => (
@@ -842,8 +886,10 @@ export default function FullPageUploadForm({
                                 </SelectContent>
                             </Select>
 
-                            <p className="text-[10px] text-bb-text-secondary mt-4 leading-relaxed italic font-medium">
-                                Si el material corresponde a una clase específica de un profesor, selecciónalo aquí. Esto ayudará a otros a buscarlo.
+                            <p className={`text-[10px] mt-4 leading-relaxed italic font-medium ${currentUploadRequiresProfessor ? 'text-amber-400' : 'text-bb-text-secondary'}`}>
+                                {currentUploadRequiresProfessor
+                                    ? 'Las clases y diapositivas deben vincularse a un profesor.'
+                                    : 'Para esta categoría el profesor es opcional. Selecciónalo solo si el material corresponde a uno en particular.'}
                             </p>
                         </div>
                     </div>
@@ -895,9 +941,9 @@ export default function FullPageUploadForm({
                                 <FolderTree className="mt-0.5 h-5 w-5 text-blue-400" />
                                 <div className="text-sm leading-relaxed text-bb-text-secondary">
                                     <p className="font-bold text-bb-text">Importar carpeta descargada de Blackboard</p>
-                                    <p className="mt-1">Se conservarán sus subcarpetas y cada archivo quedará atribuido a tu usuario, al ciclo y al profesor seleccionados.</p>
+                                    <p className="mt-1">Se conservarán sus subcarpetas y cada archivo quedará atribuido a tu usuario, al ciclo y, cuando corresponda, al profesor seleccionado.</p>
                                     <p className="mt-2 text-xs font-bold text-blue-400">
-                                        Destino: {selectedCycle ? `Ciclo ${selectedCycle.ciclo_name}` : 'Sin ciclo'} · {selectedProfessor?.nombre || 'Selecciona un profesor'}
+                                        Destino: {selectedCycle ? `Ciclo ${selectedCycle.ciclo_name}` : 'Sin ciclo'} · {selectedProfessor?.nombre || 'Material general'}
                                     </p>
                                 </div>
                             </div>

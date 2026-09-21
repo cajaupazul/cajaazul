@@ -58,7 +58,7 @@ export function buildBlackboardStoragePath({
 }: {
     courseId: string;
     cycleId: string | null;
-    professorId: string;
+    professorId: string | null;
     setId: string;
     relativePath: string;
 }): string {
@@ -71,10 +71,9 @@ export function buildBlackboardStoragePath({
         'cycles',
         cycleSegment,
         'professors',
-        normalizeSegment(professorId, 'unknown-professor'),
+        professorId ? normalizeSegment(professorId, 'general') : 'general',
         'blackboard',
         normalizeSegment(setId, 'unknown-import'),
         safeRelativePath,
     ].join('/');
 }
-
