@@ -97,6 +97,7 @@ const MAX_RENDER_ROWS = 10000;
 const MAX_RENDER_COLS = 256;
 const MIN_EXCEL_ZOOM = 0.1;
 const MAX_EXCEL_ZOOM = 20;
+const EMU_PER_CSS_PIXEL = 9525;
 
 function horizontalAlignment(value?: string): CellStyle['align'] {
     if (value === 'center' || value === 'centerContinuous' || value === 'distributed') return 'center';
@@ -319,13 +320,28 @@ function firstVisibleCell(rows: ParsedCell[][]): ParsedCell | null {
     return rows[0]?.find(candidate => !candidate.skip) || null;
 }
 
-function axisOffset(position: number, sizes: number[]): number {
-    const safePosition = Math.max(0, position || 0);
-    const whole = Math.floor(safePosition);
-    const fraction = safePosition - whole;
+function anchorOffset(
+    anchor: any,
+    sizes: number[],
+    axis: 'col' | 'row',
+): number {
+    const nativeIndexKey = axis === 'col' ? 'nativeCol' : 'nativeRow';
+    const nativeOffsetKey = axis === 'col' ? 'nativeColOff' : 'nativeRowOff';
+    const fallbackPosition = Number(anchor?.[axis]) || 0;
+    const nativeIndex = Number(anchor?.[nativeIndexKey]);
+    const whole = Math.max(
+        0,
+        Number.isFinite(nativeIndex) ? Math.floor(nativeIndex) : Math.floor(fallbackPosition),
+    );
     let offset = 0;
     for (let index = 0; index < Math.min(whole, sizes.length); index++) offset += sizes[index];
-    if (whole < sizes.length) offset += sizes[whole] * fraction;
+
+    const nativeOffset = Number(anchor?.[nativeOffsetKey]);
+    if (Number.isFinite(nativeOffset) && nativeOffset >= 0) {
+        offset += nativeOffset / EMU_PER_CSS_PIXEL;
+    } else if (whole < sizes.length) {
+        offset += sizes[whole] * Math.max(0, fallbackPosition - whole);
+    }
     return offset;
 }
 
@@ -356,6 +372,7 @@ export default function SecureExcelViewer({
     const [showSearch, setShowSearch] = useState(false);
     const [searchQ, setSearchQ] = useState('');
     const [viewerZoom, setViewerZoom] = useState(() => clampExcelZoom(zoomLevel));
+    const viewerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const [scrollTop, setScrollTop] = useState(0);
     const [viewHeight, setViewHeight] = useState(600);
@@ -519,14 +536,16 @@ export default function SecureExcelViewer({
             const colWidths = Array.from({ length: totalCols }, (_, col) => (
                 hiddenCols[col] ? 0 : columnWidthToPixels(worksheet.getColumn(col + 1).width)
             ));
-            const defaultRowHeight = worksheet.properties.defaultRowHeight || 15;
-            const rowHeights = Array.from({ length: totalRows }, (_, row) => (
-                pointsToPixels(worksheet.getRow(row + 1).height, defaultRowHeight)
-            ));
             const hiddenRows = Array.from(
                 { length: totalRows },
                 (_, row) => Boolean(worksheet.getRow(row + 1).hidden),
             );
+            const defaultRowHeight = worksheet.properties.defaultRowHeight || 15;
+            const rowHeights = Array.from({ length: totalRows }, (_, row) => (
+                hiddenRows[row]
+                    ? 0
+                    : pointsToPixels(worksheet.getRow(row + 1).height, defaultRowHeight)
+            ));
             const images: SheetImage[] = [];
             for (const imagePlacement of worksheetImages) {
                 const range = imagePlacement.range as any;
@@ -543,10 +562,16 @@ export default function SecureExcelViewer({
                 }
                 if (!src || !range?.tl) continue;
 
-                const left = axisOffset(range.tl.col, colWidths);
-                const top = axisOffset(range.tl.row, rowHeights);
-                const right = range.br ? axisOffset(range.br.col, colWidths) : left + (range.ext?.width || 1);
-                const bottom = range.br ? axisOffset(range.br.row, rowHeights) : top + (range.ext?.height || 1);
+                // DrawingML stores offsets in EMU. Reading those native values avoids
+                // the drift caused by treating them as a percentage of each cell.
+                const left = anchorOffset(range.tl, colWidths, 'col');
+                const top = anchorOffset(range.tl, rowHeights, 'row');
+                const right = range.br
+                    ? anchorOffset(range.br, colWidths, 'col')
+                    : left + Math.max(1, Number(range.ext?.width) || 1);
+                const bottom = range.br
+                    ? anchorOffset(range.br, rowHeights, 'row')
+                    : top + Math.max(1, Number(range.ext?.height) || 1);
                 images.push({
                     id: String(imagePlacement.imageId) + '-' + images.length,
                     src,
@@ -628,11 +653,12 @@ export default function SecureExcelViewer({
         observer.observe(element);
         setViewHeight(element.clientHeight || 600);
         return () => observer.disconnect();
-    }, []);
+    }, [loading, sheetData?.sheetName]);
 
     useEffect(() => {
         const element = scrollRef.current;
-        if (!element) return;
+        const viewer = viewerRef.current;
+        if (!element || !viewer) return;
 
         const viewportPoint = (first: Touch, second: Touch) => {
             const rect = element.getBoundingClientRect();
@@ -679,32 +705,39 @@ export default function SecureExcelViewer({
         const handleWheelZoom = (event: WheelEvent) => {
             if (!event.ctrlKey && !event.metaKey) return;
             event.preventDefault();
+            event.stopPropagation();
             const rect = element.getBoundingClientRect();
-            const viewportX = event.clientX - rect.left;
-            const viewportY = event.clientY - rect.top;
+            const viewportX = Math.max(0, Math.min(element.clientWidth, event.clientX - rect.left));
+            const viewportY = Math.max(0, Math.min(element.clientHeight, event.clientY - rect.top));
             const zoom = zoomRef.current;
+            const normalizedDelta = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+                ? event.deltaY * 16
+                : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+                    ? event.deltaY * Math.max(1, element.clientHeight)
+                    : event.deltaY;
+            const limitedDelta = Math.max(-240, Math.min(240, normalizedDelta));
             zoomAnchorRef.current = {
                 viewportX,
                 viewportY,
                 contentX: (element.scrollLeft + viewportX) / zoom,
                 contentY: (element.scrollTop + viewportY) / zoom,
             };
-            requestZoom(zoom * Math.exp(-event.deltaY * 0.003));
+            requestZoom(zoom * Math.exp(-limitedDelta * 0.003));
         };
 
         element.addEventListener('touchstart', handleTouchStart, { passive: false });
         element.addEventListener('touchmove', handleTouchMove, { passive: false });
         element.addEventListener('touchend', handleTouchEnd, { passive: true });
         element.addEventListener('touchcancel', handleTouchEnd, { passive: true });
-        element.addEventListener('wheel', handleWheelZoom, { passive: false });
+        viewer.addEventListener('wheel', handleWheelZoom, { passive: false, capture: true });
         return () => {
             element.removeEventListener('touchstart', handleTouchStart);
             element.removeEventListener('touchmove', handleTouchMove);
             element.removeEventListener('touchend', handleTouchEnd);
             element.removeEventListener('touchcancel', handleTouchEnd);
-            element.removeEventListener('wheel', handleWheelZoom);
+            viewer.removeEventListener('wheel', handleWheelZoom, true);
         };
-    }, [requestZoom]);
+    }, [loading, requestZoom, sheetData?.sheetName]);
 
     useEffect(() => {
         zoomRef.current = viewerZoom;
@@ -748,7 +781,7 @@ export default function SecureExcelViewer({
 
     const scaledRowHeights = useMemo(() => (
         sheetData?.rowHeights.map((height, index) => (
-            sheetData.hiddenRows[index] ? 0 : Math.max(2, Math.round(height * viewerZoom))
+            sheetData.hiddenRows[index] ? 0 : Math.max(0.5, height * viewerZoom)
         )) || []
     ), [sheetData, viewerZoom]);
 
@@ -891,6 +924,7 @@ export default function SecureExcelViewer({
 
     return (
         <div
+            ref={viewerRef}
             className="w-full h-full flex flex-col bg-white overflow-hidden select-none text-black"
             aria-label={'Visor de Excel: ' + fileName}
             tabIndex={0}
@@ -1014,8 +1048,8 @@ export default function SecureExcelViewer({
                                 <col
                                     key={colLetters[index]}
                                     style={{
-                                        width: hiddenCols[index] ? 0 : Math.max(1, Math.round(width * viewerZoom)),
-                                        minWidth: hiddenCols[index] ? 0 : Math.max(1, Math.round(width * viewerZoom)),
+                                        width: hiddenCols[index] ? 0 : Math.max(0.5, width * viewerZoom),
+                                        minWidth: hiddenCols[index] ? 0 : Math.max(0.5, width * viewerZoom),
                                         display: hiddenCols[index] ? 'none' : undefined,
                                     }}
                                 />
@@ -1109,7 +1143,7 @@ export default function SecureExcelViewer({
                                             const cellStyle: React.CSSProperties = {
                                                 display: hiddenCols[col] ? 'none' : undefined,
                                                 height: rowHeight,
-                                                minWidth: cell.colSpan ? undefined : Math.max(1, Math.round(colWidths[col] * viewerZoom)),
+                                                minWidth: cell.colSpan ? undefined : Math.max(0.5, colWidths[col] * viewerZoom),
                                                 paddingTop: 0,
                                                 paddingBottom: 0,
                                                 paddingLeft: Math.max(0.5, (3 + (style?.indent || 0) * 8) * viewerZoom),
@@ -1191,7 +1225,7 @@ export default function SecureExcelViewer({
                             loading="lazy"
                             decoding="async"
                             draggable={false}
-                            className="absolute z-[15] pointer-events-none select-none object-contain"
+                            className="absolute z-[15] pointer-events-none select-none object-fill"
                             style={{
                                 left: ROW_NUMBER_WIDTH + image.left * viewerZoom,
                                 top: headerHeight + image.top * viewerZoom,

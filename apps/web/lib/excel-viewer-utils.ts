@@ -107,7 +107,7 @@ export function columnWidthToPixels(width?: number): number {
 }
 
 export function pointsToPixels(points?: number, fallback = 15): number {
-    return Math.max(2, Math.round((points && points > 0 ? points : fallback) * (96 / 72)));
+    return Math.max(2, (points && points > 0 ? points : fallback) * (96 / 72));
 }
 
 export function columnNameToIndex(name: string): number {
