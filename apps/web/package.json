@@ -38,6 +38,7 @@
     "date-fns": "^4.1.0",
     "docx-preview": "^0.3.7",
     "dotenv": "^17.2.4",
+    "exceljs": "4.4.0",
     "framer-motion": "11.15.0",
     "lucide-react": "^0.446.0",
     "mammoth": "^1.11.0",
