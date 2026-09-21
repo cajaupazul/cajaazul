@@ -53,9 +53,11 @@ interface SheetImage {
     id: string;
     src: string;
     left: number;
+    right: number;
     top: number;
     width: number;
     height: number;
+    editAs: 'absolute' | 'oneCell' | 'twoCell';
 }
 
 interface MergedRowRange {
@@ -104,6 +106,8 @@ const MAX_RENDER_COLS = 256;
 const MIN_EXCEL_ZOOM = 0.1;
 const MAX_EXCEL_ZOOM = 20;
 const EMU_PER_CSS_PIXEL = 9525;
+const MAX_AUTOFIT_COLUMN_WIDTH = 900;
+const MAX_AUTOFIT_CANDIDATES = 32;
 
 function horizontalAlignment(value?: string): CellStyle['align'] {
     if (value === 'center' || value === 'centerContinuous' || value === 'distributed') return 'center';
@@ -351,6 +355,20 @@ function anchorOffset(
     return offset;
 }
 
+function remapAxisOffset(position: number, originalSizes: number[], nextSizes: number[]): number {
+    let originalOffset = 0;
+    let nextOffset = 0;
+    for (let index = 0; index < originalSizes.length; index++) {
+        const originalSize = originalSizes[index] || 0;
+        if (position < originalOffset + originalSize || index === originalSizes.length - 1) {
+            return nextOffset + Math.max(0, position - originalOffset);
+        }
+        originalOffset += originalSize;
+        nextOffset += nextSizes[index] || 0;
+    }
+    return nextOffset;
+}
+
 function touchDistance(first: Touch, second: Touch): number {
     return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
 }
@@ -378,8 +396,13 @@ export default function SecureExcelViewer({
     const [showSearch, setShowSearch] = useState(false);
     const [searchQ, setSearchQ] = useState('');
     const [viewerZoom, setViewerZoom] = useState(() => clampExcelZoom(zoomLevel));
+    const [columnWidthOverrides, setColumnWidthOverrides] = useState<Record<number, number>>({});
     const viewerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const measurementCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const lastDoubleActionRef = useRef<{ addr: string; at: number } | null>(null);
+    const lastTouchTapRef = useRef<{ addr: string; at: number } | null>(null);
+    const touchStartRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
     const [scrollTop, setScrollTop] = useState(0);
     const [viewHeight, setViewHeight] = useState(600);
     const rafRef = useRef<number | null>(null);
@@ -603,9 +626,13 @@ export default function SecureExcelViewer({
                     id: String(imagePlacement.imageId) + '-' + images.length,
                     src,
                     left,
+                    right,
                     top,
                     width: Math.max(1, right - left),
                     height: Math.max(1, bottom - top),
+                    editAs: range.editAs === 'absolute' || range.editAs === 'twoCell'
+                        ? range.editAs
+                        : 'oneCell',
                 });
             }
             const date1904 = Boolean(workbook.properties.date1904);
@@ -662,6 +689,7 @@ export default function SecureExcelViewer({
             };
 
             setSheetData(nextSheetData);
+            setColumnWidthOverrides({});
             setSelectedCell(firstVisibleCell(rows));
             setSearchQ('');
             setScrollTop(0);
@@ -813,11 +841,33 @@ export default function SecureExcelViewer({
         )) || []
     ), [sheetData, viewerZoom]);
 
-    const scaledColWidths = useMemo(() => (
+    const effectiveColWidths = useMemo(() => (
         sheetData?.colWidths.map((width, index) => (
-            sheetData.hiddenCols[index] ? 0 : Math.max(0.5, width * viewerZoom)
+            sheetData.hiddenCols[index] ? 0 : (columnWidthOverrides[index] ?? width)
         )) || []
-    ), [sheetData, viewerZoom]);
+    ), [columnWidthOverrides, sheetData]);
+
+    const scaledColWidths = useMemo(() => (
+        effectiveColWidths.map((width, index) => (
+            sheetData?.hiddenCols[index] ? 0 : Math.max(0.5, width * viewerZoom)
+        ))
+    ), [effectiveColWidths, sheetData, viewerZoom]);
+
+    const effectiveImages = useMemo(() => {
+        if (!sheetData) return [];
+        return sheetData.images.map(image => {
+            if (image.editAs === 'absolute') return image;
+            const left = remapAxisOffset(image.left, sheetData.colWidths, effectiveColWidths);
+            if (image.editAs !== 'twoCell') return { ...image, left };
+            const right = remapAxisOffset(image.right, sheetData.colWidths, effectiveColWidths);
+            return {
+                ...image,
+                left,
+                right,
+                width: Math.max(1, right - left),
+            };
+        });
+    }, [effectiveColWidths, sheetData]);
 
     const tableWidth = useMemo(
         () => ROW_NUMBER_WIDTH + scaledColWidths.reduce((sum, width) => sum + width, 0),
@@ -907,10 +957,64 @@ export default function SecureExcelViewer({
         }
     }, [formulaTrace, sheetData?.sheetName]);
 
+    const autoFitColumn = useCallback((col: number) => {
+        if (!sheetData || sheetData.hiddenCols[col]) return;
+
+        const candidates: Array<{ cell: ParsedCell; score: number }> = [];
+        for (const row of sheetData.rows) {
+            const cell = row[col];
+            if (!cell || cell.skip || !cell.text || (cell.colSpan || 1) > 1 || cell.style?.wrapText) continue;
+            const score = Array.from(cell.text).length
+                * (cell.style?.fontSize || 11)
+                * (cell.style?.bold ? 1.12 : 1);
+            if (candidates.length < MAX_AUTOFIT_CANDIDATES) {
+                candidates.push({ cell, score });
+                continue;
+            }
+            let smallestIndex = 0;
+            for (let index = 1; index < candidates.length; index++) {
+                if (candidates[index].score < candidates[smallestIndex].score) smallestIndex = index;
+            }
+            if (score > candidates[smallestIndex].score) candidates[smallestIndex] = { cell, score };
+        }
+
+        if (!candidates.length) return;
+        if (!measurementCanvasRef.current) measurementCanvasRef.current = document.createElement('canvas');
+        const context = measurementCanvasRef.current.getContext('2d');
+        let requiredWidth = sheetData.colWidths[col];
+
+        for (const { cell } of candidates) {
+            const style = cell.style;
+            const fontSize = (style?.fontSize || 11) * (96 / 72);
+            let textWidth = Array.from(cell.text).length * fontSize * 0.55;
+            if (context) {
+                context.font = [
+                    style?.italic ? 'italic' : '',
+                    style?.bold ? '700' : '400',
+                    fontSize + 'px',
+                    style?.fontFamily || 'Calibri, Aptos, Segoe UI, sans-serif',
+                ].filter(Boolean).join(' ');
+                textWidth = context.measureText(cell.text.replace(/\r?\n/g, ' ')).width;
+            }
+            const horizontalPadding = 10 + (style?.indent || 0) * 8;
+            requiredWidth = Math.max(requiredWidth, textWidth + horizontalPadding);
+        }
+
+        const nextWidth = Math.min(MAX_AUTOFIT_COLUMN_WIDTH, Math.ceil(requiredWidth));
+        setColumnWidthOverrides(current => (
+            current[col] === nextWidth ? current : { ...current, [col]: nextWidth }
+        ));
+    }, [sheetData]);
+
     const handleCellDoubleClick = useCallback((cell: ParsedCell) => {
+        const now = performance.now();
+        const previous = lastDoubleActionRef.current;
+        if (previous?.addr === cell.addr && now - previous.at < 250) return;
+        lastDoubleActionRef.current = { addr: cell.addr, at: now };
         setSelectedCell(cell);
         if (!cell.formula || !sheetData) {
             setFormulaTrace(null);
+            autoFitColumn(cell.col);
             return;
         }
         const references = extractFormulaReferences(cell.formula, sheetData.sheetName);
@@ -919,7 +1023,44 @@ export default function SecureExcelViewer({
             sourceSheet: sheetData.sheetName,
             references,
         } : null);
-    }, [sheetData]);
+    }, [autoFitColumn, sheetData]);
+
+    const handleCellPointerDown = useCallback((event: React.PointerEvent) => {
+        if (event.pointerType !== 'touch') return;
+        touchStartRef.current = {
+            pointerId: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+        };
+    }, []);
+
+    const handleCellPointerCancel = useCallback(() => {
+        touchStartRef.current = null;
+        lastTouchTapRef.current = null;
+    }, []);
+
+    const handleCellPointerUp = useCallback((event: React.PointerEvent, cell: ParsedCell) => {
+        if (event.pointerType !== 'touch') return;
+        const start = touchStartRef.current;
+        touchStartRef.current = null;
+        if (
+            !start
+            || start.pointerId !== event.pointerId
+            || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10
+        ) {
+            lastTouchTapRef.current = null;
+            return;
+        }
+        const now = performance.now();
+        const previous = lastTouchTapRef.current;
+        if (previous?.addr === cell.addr && now - previous.at <= 360) {
+            event.preventDefault();
+            lastTouchTapRef.current = null;
+            handleCellDoubleClick(cell);
+            return;
+        }
+        lastTouchTapRef.current = { addr: cell.addr, at: now };
+    }, [handleCellDoubleClick]);
 
     const focusReference = useCallback((reference: FormulaReference) => {
         const sheetIndex = sheetNames.findIndex(
@@ -1142,6 +1283,8 @@ export default function SecureExcelViewer({
                                                 color: selected ? '#107c41' : '#333333',
                                                 borderBottomColor: selected ? '#107c41' : '#c8c8c8',
                                             }}
+                                            onDoubleClick={() => autoFitColumn(col)}
+                                            title={letter + ' · Doble clic para autoajustar la columna'}
                                         >
                                             {letter}
                                         </th>
@@ -1233,7 +1376,7 @@ export default function SecureExcelViewer({
                                                 borderLeft: style?.borderLeft || gridBorder,
                                                 borderRight: style?.borderRight || gridBorder,
                                                 whiteSpace: style?.wrapText ? 'pre-wrap' : 'nowrap',
-                                                overflow: style?.wrapText ? 'hidden' : 'visible',
+                                                overflow: 'hidden',
                                                 wordBreak: style?.wrapText ? 'break-word' : undefined,
                                                 cursor: cell.formula ? 'crosshair' : 'cell',
                                                 boxShadow,
@@ -1251,10 +1394,13 @@ export default function SecureExcelViewer({
                                                     style={cellStyle}
                                                     onClick={() => handleCellClick(cell)}
                                                     onDoubleClick={() => handleCellDoubleClick(cell)}
+                                                    onPointerDown={handleCellPointerDown}
+                                                    onPointerUp={event => handleCellPointerUp(event, cell)}
+                                                    onPointerCancel={handleCellPointerCancel}
                                                     title={
                                                         cell.formula
                                                             ? cell.addr + ': ' + cell.formula + ' · Doble clic para rastrear'
-                                                            : cell.addr + ': ' + (cell.text || '(vacía)')
+                                                            : cell.addr + ': ' + (cell.text || '(vacía)') + ' · Doble clic o doble toque para autoajustar la columna'
                                                     }
                                                 >
                                                     <span
@@ -1284,7 +1430,7 @@ export default function SecureExcelViewer({
                         </tbody>
                     </table>
 
-                    {images.map(image => (
+                    {effectiveImages.map(image => (
                         <img
                             key={image.id}
                             src={image.src}
