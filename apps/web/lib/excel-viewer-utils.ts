@@ -24,10 +24,10 @@ export const FORMULA_TRACE_COLORS = [
 ] as const;
 
 const OFFICE_THEME = [
-    '#000000',
     '#ffffff',
-    '#1f497d',
+    '#000000',
     '#eeece1',
+    '#1f497d',
     '#4f81bd',
     '#c0504d',
     '#9bbb59',

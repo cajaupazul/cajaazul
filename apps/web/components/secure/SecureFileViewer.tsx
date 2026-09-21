@@ -237,8 +237,16 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
     const estimatedPageHeight = Math.round(pdfPageWidth * 1.414);
 
-    const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.25, 4));
-    const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
+    const handleZoomIn = () => setZoomLevel(prev => {
+        const maxZoom = fileType === 'xlsx' ? 20 : 4;
+        const step = fileType === 'xlsx' && prev >= 4 ? 1 : prev >= 2 ? 0.5 : 0.25;
+        return Math.min(prev + step, maxZoom);
+    });
+    const handleZoomOut = () => setZoomLevel(prev => {
+        const minZoom = fileType === 'xlsx' ? 0.1 : 0.5;
+        const step = fileType === 'xlsx' && prev > 4 ? 1 : prev > 2 ? 0.5 : 0.25;
+        return Math.max(prev - step, minZoom);
+    });
 
     useEffect(() => {
         setPageInput(currentPage.toString());
@@ -612,7 +620,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                             <button onClick={handleZoomOut} className="hover:text-white transition-colors" title="Alejar">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 sm:w-4 sm:h-4"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                             </button>
-                            <span className="text-[10px] font-mono text-zinc-400 hidden sm:inline">{Math.round(zoomLevel * 100)}%</span>
+                            <span className="text-[10px] font-mono text-zinc-400 min-w-[38px] text-center">{Math.round(zoomLevel * 100)}%</span>
                             <button onClick={handleZoomIn} className="hover:text-white transition-colors" title="Acercar">
                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 sm:w-4 sm:h-4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                             </button>
@@ -729,6 +737,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                             blob={excelBlob} 
                             fileName={fileName} 
                             zoomLevel={zoomLevel} 
+                            onZoomChange={setZoomLevel}
                             userWatermark={profile?.nombre || profile?.email || 'CampusLink'} 
                         />
                     </div>
