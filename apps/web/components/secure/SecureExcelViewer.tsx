@@ -58,6 +58,11 @@ interface SheetImage {
     height: number;
 }
 
+interface MergedRowRange {
+    startRow: number;
+    endRow: number;
+}
+
 interface SheetData {
     sheetName: string;
     colLetters: string[];
@@ -67,6 +72,7 @@ interface SheetData {
     hiddenRows: boolean[];
     rows: ParsedCell[][];
     images: SheetImage[];
+    mergedRowRanges: MergedRowRange[];
     totalRows: number;
     totalCols: number;
     showGridLines: boolean;
@@ -492,6 +498,8 @@ export default function SecureExcelViewer({
             for (const url of imageUrlsRef.current) URL.revokeObjectURL(url);
             imageUrlsRef.current = [];
             const worksheetImages = worksheet.getImages?.() || [];
+            const mergeAddresses = ((worksheet.model as any).merges || []) as string[];
+            const decodedMergeRanges = mergeAddresses.map(address => XLSX.utils.decode_range(address));
             const imageEndRow = worksheetImages.reduce(
                 (max, image) => {
                     const range = image.range as any;
@@ -506,21 +514,40 @@ export default function SecureExcelViewer({
                 },
                 0,
             );
-            const totalRows = Math.min(MAX_RENDER_ROWS, Math.max(1, worksheet.rowCount, imageEndRow));
-            const totalCols = Math.min(MAX_RENDER_COLS, Math.max(1, worksheet.columnCount, imageEndCol));
+            const mergeEndRow = decodedMergeRanges.reduce(
+                (max, range) => Math.max(max, range.e.r + 1),
+                0,
+            );
+            const mergeEndCol = decodedMergeRanges.reduce(
+                (max, range) => Math.max(max, range.e.c + 1),
+                0,
+            );
+            const totalRows = Math.min(
+                MAX_RENDER_ROWS,
+                Math.max(1, worksheet.rowCount, imageEndRow, mergeEndRow),
+            );
+            const totalCols = Math.min(
+                MAX_RENDER_COLS,
+                Math.max(1, worksheet.columnCount, imageEndCol, mergeEndCol),
+            );
             const mergeOrigins = new Map<string, { colSpan: number; rowSpan: number }>();
             const mergeCovered = new Set<string>();
-            const mergeRanges = ((worksheet.model as any).merges || []) as string[];
+            const mergedRowRanges: MergedRowRange[] = [];
 
-            for (const mergeAddress of mergeRanges) {
-                const range = XLSX.utils.decode_range(mergeAddress);
+            for (const range of decodedMergeRanges) {
+                if (range.s.r >= totalRows || range.s.c >= totalCols) continue;
+                const endRow = Math.min(range.e.r, totalRows - 1);
+                const endCol = Math.min(range.e.c, totalCols - 1);
                 const origin = XLSX.utils.encode_cell(range.s);
                 mergeOrigins.set(origin, {
-                    colSpan: range.e.c - range.s.c + 1,
-                    rowSpan: range.e.r - range.s.r + 1,
+                    colSpan: endCol - range.s.c + 1,
+                    rowSpan: endRow - range.s.r + 1,
                 });
-                for (let row = range.s.r; row <= range.e.r; row++) {
-                    for (let col = range.s.c; col <= range.e.c; col++) {
+                if (endRow > range.s.r) {
+                    mergedRowRanges.push({ startRow: range.s.r, endRow });
+                }
+                for (let row = range.s.r; row <= endRow; row++) {
+                    for (let col = range.s.c; col <= endCol; col++) {
                         if (row !== range.s.r || col !== range.s.c) {
                             mergeCovered.add(XLSX.utils.encode_cell({ r: row, c: col }));
                         }
@@ -628,6 +655,7 @@ export default function SecureExcelViewer({
                 hiddenRows,
                 rows,
                 images,
+                mergedRowRanges,
                 totalRows,
                 totalCols,
                 showGridLines: view?.showGridLines !== false,
@@ -785,6 +813,17 @@ export default function SecureExcelViewer({
         )) || []
     ), [sheetData, viewerZoom]);
 
+    const scaledColWidths = useMemo(() => (
+        sheetData?.colWidths.map((width, index) => (
+            sheetData.hiddenCols[index] ? 0 : Math.max(0.5, width * viewerZoom)
+        )) || []
+    ), [sheetData, viewerZoom]);
+
+    const tableWidth = useMemo(
+        () => ROW_NUMBER_WIDTH + scaledColWidths.reduce((sum, width) => sum + width, 0),
+        [scaledColWidths],
+    );
+
     const rowOffsets = useMemo(() => {
         const offsets = [0];
         for (const height of scaledRowHeights) {
@@ -816,8 +855,29 @@ export default function SecureExcelViewer({
         };
 
         const buffer = 12;
-        const visStart = Math.max(0, findRow(scrollTop) - buffer);
-        const visEnd = Math.min(sheetData.totalRows, findRow(scrollTop + viewHeight) + buffer);
+        let visStart = Math.max(0, findRow(scrollTop) - buffer);
+        let visEnd = Math.min(sheetData.totalRows, findRow(scrollTop + viewHeight) + buffer);
+
+        // A merged cell must keep its origin and every row covered by its rowspan
+        // mounted together. Otherwise the browser recalculates the table when its
+        // origin leaves the virtual window, producing width jumps while scrolling.
+        let changed = true;
+        let passes = 0;
+        while (changed && passes <= sheetData.mergedRowRanges.length) {
+            changed = false;
+            passes += 1;
+            for (const merge of sheetData.mergedRowRanges) {
+                if (merge.startRow < visStart && merge.endRow >= visStart) {
+                    visStart = merge.startRow;
+                    changed = true;
+                }
+                if (merge.startRow < visEnd && merge.endRow + 1 > visEnd) {
+                    visEnd = Math.min(sheetData.totalRows, merge.endRow + 1);
+                    changed = true;
+                }
+            }
+        }
+
         return {
             visStart,
             visEnd,
@@ -1040,16 +1100,21 @@ export default function SecureExcelViewer({
                 <div className="inline-block min-w-fit align-top relative z-10">
                     <table
                         className="border-collapse table-fixed bg-white"
-                        style={{ fontFamily: 'Calibri, Aptos, Segoe UI, sans-serif' }}
+                        style={{
+                            fontFamily: 'Calibri, Aptos, Segoe UI, sans-serif',
+                            tableLayout: 'fixed',
+                            width: tableWidth,
+                            minWidth: tableWidth,
+                        }}
                     >
                         <colgroup>
                             <col style={{ width: ROW_NUMBER_WIDTH, minWidth: ROW_NUMBER_WIDTH }} />
-                            {colWidths.map((width, index) => (
+                            {colWidths.map((_, index) => (
                                 <col
                                     key={colLetters[index]}
                                     style={{
-                                        width: hiddenCols[index] ? 0 : Math.max(0.5, width * viewerZoom),
-                                        minWidth: hiddenCols[index] ? 0 : Math.max(0.5, width * viewerZoom),
+                                        width: scaledColWidths[index],
+                                        minWidth: scaledColWidths[index],
                                         display: hiddenCols[index] ? 'none' : undefined,
                                     }}
                                 />
@@ -1143,7 +1208,9 @@ export default function SecureExcelViewer({
                                             const cellStyle: React.CSSProperties = {
                                                 display: hiddenCols[col] ? 'none' : undefined,
                                                 height: rowHeight,
-                                                minWidth: cell.colSpan ? undefined : Math.max(0.5, colWidths[col] * viewerZoom),
+                                                width: cell.colSpan ? undefined : scaledColWidths[col],
+                                                minWidth: cell.colSpan ? undefined : scaledColWidths[col],
+                                                maxWidth: cell.colSpan ? undefined : scaledColWidths[col],
                                                 paddingTop: 0,
                                                 paddingBottom: 0,
                                                 paddingLeft: Math.max(0.5, (3 + (style?.indent || 0) * 8) * viewerZoom),
