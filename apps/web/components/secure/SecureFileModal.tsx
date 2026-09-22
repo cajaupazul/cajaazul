@@ -21,6 +21,7 @@ interface SecureFileModalProps {
     fileName: string | null;
     useAdvancedViewer?: boolean;
     bucket?: string;
+    downloadsEnabled?: boolean;
 }
 
 /**
@@ -28,7 +29,7 @@ interface SecureFileModalProps {
  * anclado al borde izquierdo de la pantalla con altura considerable.
  * Se actualiza automáticamente cuando la sidebar se abre o cierra.
  */
-function useSidebarOffset() {
+function useSidebarOffset(enabled: boolean) {
     const [offset, setOffset] = useState(0);
 
     const measure = useCallback(() => {
@@ -61,6 +62,11 @@ function useSidebarOffset() {
     }, []);
 
     useEffect(() => {
+        if (!enabled) {
+            setOffset(0);
+            return;
+        }
+
         measure();
 
         const ro = new ResizeObserver(measure);
@@ -90,7 +96,7 @@ function useSidebarOffset() {
             mo.disconnect();
             window.removeEventListener('resize', measure);
         };
-    }, [measure]);
+    }, [enabled, measure]);
 
     return offset;
 }
@@ -102,10 +108,11 @@ export default function SecureFileModal({
     fileName,
     useAdvancedViewer,
     bucket,
+    downloadsEnabled,
 }: SecureFileModalProps) {
     const [mounted, setMounted] = useState(false);
     const [visible, setVisible] = useState(false);
-    const sidebarOffset = useSidebarOffset();
+    const sidebarOffset = useSidebarOffset(mounted);
 
     // Montar el portal cuando isOpen cambia a true
     useEffect(() => {
@@ -225,6 +232,7 @@ export default function SecureFileModal({
                     useAdvancedViewer={useAdvancedViewer}
                     onClose={handleClose}
                     bucket={bucket}
+                    downloadsEnabled={downloadsEnabled}
                 />
             </div>
         </>,

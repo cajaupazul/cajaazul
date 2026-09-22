@@ -1,11 +1,27 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
+import { cache, Suspense } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import type { Course } from '@/lib/supabase';
 import CourseDetailClient from './CourseDetailClient';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const getCourse = cache(async (id: string): Promise<Course | null> => {
+  const { data, error } = await supabase
+    .from('courses')
+    .select('id, nombre, codigo, facultad, carrera, ciclo, descripcion, imagen_url, syllabus_url, views, created_at, catalog_course_id')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error loading course:', error);
+    return null;
+  }
+
+  return data as Course | null;
+});
 
 export async function generateMetadata({
   searchParams,
@@ -23,11 +39,7 @@ export async function generateMetadata({
   }
 
   try {
-    const { data: course } = await supabase
-      .from('courses')
-      .select('nombre, facultad, ciclo, codigo, imagen_url')
-      .eq('id', id)
-      .maybeSingle();
+    const course = await getCourse(id);
 
     if (course) {
       const title = `${course.nombre} | CajaAzul`;
@@ -85,6 +97,7 @@ export default async function CourseDetailPage({
 }) {
   const params = await searchParams;
   const id = typeof params?.id === 'string' ? params.id : undefined;
+  const initialCourse = id ? await getCourse(id) : null;
 
   return (
     <Suspense
@@ -94,7 +107,7 @@ export default async function CourseDetailPage({
         </div>
       }
     >
-      <CourseDetailClient initialCourseId={id} />
+      <CourseDetailClient initialCourseId={id} initialCourse={initialCourse} />
     </Suspense>
   );
 }

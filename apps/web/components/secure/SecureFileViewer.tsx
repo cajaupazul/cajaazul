@@ -1,14 +1,22 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { Loader2, AlertCircle, Download, Lock, Maximize, Minimize, ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Document, Page, pdfjs } from 'react-pdf';
-import * as docx from 'docx-preview';
 import { Button } from '@/components/ui/button';
-import SecurePptxViewer from './SecurePptxViewer';
-import SecureExcelViewer from './SecureExcelViewer';
 import { useProfile } from '@/lib/profile-context';
+
+const SecurePptxViewer = dynamic(() => import('./SecurePptxViewer'), { ssr: false });
+const SecureExcelViewer = dynamic(() => import('./SecureExcelViewer'), {
+    ssr: false,
+    loading: () => (
+        <div className="h-full w-full flex items-center justify-center bg-white">
+            <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        </div>
+    ),
+});
 
 // V4.2+: Configuración del worker local.
 if (typeof window !== 'undefined') {
@@ -21,6 +29,7 @@ interface SecureFileViewerProps {
     useAdvancedViewer?: boolean;
     onClose?: (open: false) => void;
     bucket?: string;
+    downloadsEnabled?: boolean;
 }
 
 // ─── Virtualized Lazy PDF Page ────────────────────────────────────────────────
@@ -31,6 +40,14 @@ interface VirtualizedPageProps {
     estimatedHeight: number;
     pdfReady: boolean;
     isMobile: boolean;
+}
+
+function getPdfPixelRatio(isMobile: boolean) {
+    if (typeof window === 'undefined') return 1;
+    const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+    const lowMemoryMobile = isMobile && deviceMemory !== undefined && deviceMemory <= 4;
+    const cap = lowMemoryMobile ? 1.5 : isMobile ? 2 : 2.5;
+    return Math.min(window.devicePixelRatio || 1, cap);
 }
 
 function VirtualizedLazyPage({ pageNumber, pageWidth, scale, estimatedHeight, pdfReady, isMobile }: VirtualizedPageProps) {
@@ -56,7 +73,7 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, scale, estimatedHeight, pd
 
         observer.observe(el);
         return () => observer.disconnect();
-    }, [pdfReady]);
+    }, [pdfReady, isMobile]);
 
     return (
         <div
@@ -77,7 +94,7 @@ function VirtualizedLazyPage({ pageNumber, pageWidth, scale, estimatedHeight, pd
                         renderAnnotationLayer={false}
                         renderForms={false}
                         // V5.8: Calidad Cristalina (Fin de píxeles)
-                        devicePixelRatio={typeof window !== 'undefined' ? window.devicePixelRatio : 2}
+                        devicePixelRatio={getPdfPixelRatio(isMobile)}
                         onRenderSuccess={(page) => {
                             setActualHeight(page.originalHeight * (pageWidth / page.originalWidth));
                         }}
@@ -126,7 +143,7 @@ function MobilePdfNavigator({ numPages, pageWidth, scale, estimatedHeight }: Mob
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
                         renderForms={false}
-                        devicePixelRatio={typeof window !== 'undefined' ? window.devicePixelRatio : 2}
+                        devicePixelRatio={getPdfPixelRatio(true)}
                         width={pageWidth}
                         scale={scale}
                         loading={
@@ -169,7 +186,7 @@ function MobilePdfNavigator({ numPages, pageWidth, scale, estimatedHeight }: Mob
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer = false, onClose, bucket: initialBucket }: SecureFileViewerProps) {
+export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer = false, onClose, bucket: initialBucket, downloadsEnabled: initialDownloadsEnabled }: SecureFileViewerProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [fileType, setFileType] = useState<'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'other'>('other');
@@ -190,12 +207,16 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const [zoomLevel, setZoomLevel] = useState(1);
     const [isDownloading, setIsDownloading] = useState(false);
     const { profile } = useProfile();
-    const [downloadsEnabled, setDownloadsEnabled] = useState(true);
+    const [downloadsEnabled, setDownloadsEnabled] = useState(initialDownloadsEnabled ?? true);
 
     useEffect(() => {
+        if (initialDownloadsEnabled !== undefined) {
+            setDownloadsEnabled(initialDownloadsEnabled);
+            return;
+        }
         supabase.from('platform_settings').select('downloads_enabled').single()
             .then(({ data }) => { if (data) setDownloadsEnabled(data.downloads_enabled); });
-    }, []);
+    }, [initialDownloadsEnabled]);
 
     const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
     const isVip = profile?.es_vip === true;
@@ -209,6 +230,18 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
     const docxContainerRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const ownedBlobUrlRef = useRef<string | null>(null);
+    const pdfScrollFrameRef = useRef<number | null>(null);
+
+    useEffect(() => () => {
+        if (pdfScrollFrameRef.current !== null) {
+            cancelAnimationFrame(pdfScrollFrameRef.current);
+        }
+        if (ownedBlobUrlRef.current) {
+            URL.revokeObjectURL(ownedBlobUrlRef.current);
+            ownedBlobUrlRef.current = null;
+        }
+    }, []);
 
     // V4.6+: Inteligencia de navegación basada en tamaño
     // PDFs < 5MB = Scroll continuo | >= 5MB = Página por página (Móvil)
@@ -253,21 +286,23 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     }, [currentPage]);
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        if (!containerRef.current) return;
         const container = e.currentTarget;
-        const elements = container.getElementsByClassName('pdf-page-container');
-        const containerRect = container.getBoundingClientRect();
-        
-        for (let i = 0; i < elements.length; i++) {
-            const rect = elements[i].getBoundingClientRect();
-            const containerCenter = containerRect.top + containerRect.height / 2;
-            if (rect.top <= containerCenter && rect.bottom >= containerCenter) {
-                if (currentPage !== i + 1) {
-                    setCurrentPage(i + 1);
+        if (pdfScrollFrameRef.current !== null) return;
+
+        pdfScrollFrameRef.current = requestAnimationFrame(() => {
+            pdfScrollFrameRef.current = null;
+            const elements = container.getElementsByClassName('pdf-page-container');
+            const containerRect = container.getBoundingClientRect();
+
+            for (let i = 0; i < elements.length; i++) {
+                const rect = elements[i].getBoundingClientRect();
+                const containerCenter = containerRect.top + containerRect.height / 2;
+                if (rect.top <= containerCenter && rect.bottom >= containerCenter) {
+                    setCurrentPage(page => page === i + 1 ? page : i + 1);
+                    break;
                 }
-                break;
             }
-        }
+        });
     };
 
     const scrollToPage = (pageNumber: number) => {
@@ -315,9 +350,6 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
         setNumPages(null);
         setSessionToken(null);
         loadContent();
-        return () => {
-            if (blobUrl && blobUrl.startsWith('blob:')) URL.revokeObjectURL(blobUrl);
-        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filePath, showAdvanced, isMobileDevice]);
 
@@ -372,6 +404,10 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const loadContent = async (forceExternal = false, forceFileType?: 'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'other') => {
         setLoading(true);
         setError(null);
+        if (ownedBlobUrlRef.current) {
+            URL.revokeObjectURL(ownedBlobUrlRef.current);
+            ownedBlobUrlRef.current = null;
+        }
         setBlobUrl(null);
         setPdfReady(false);
         if (!forceExternal) setUseExternalViewer(false);
@@ -439,17 +475,20 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
             const secureUrl = `${baseUrl}/storage/secure-url?path=${encodeURIComponent(cleanPath)}&bucket=${effectiveBucket}`;
 
-            // V4.6+: Obtener tamaño real del archivo vía HEAD
-            try {
-                const headRes = await fetch(secureUrl, {
-                    method: 'HEAD',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const length = headRes.headers.get('Content-Length');
-                if (length) setFileSize(parseInt(length));
-            } catch (e) { console.warn("Falló detección de tamaño, usando modo seguro (Páginas)"); setFileSize(10 * 1024 * 1024); }
-
             if (resolvedType === 'pdf') {
+                // El tamaño solo cambia la estrategia de PDF; Word y Excel evitan este viaje extra.
+                try {
+                    const headRes = await fetch(secureUrl, {
+                        method: 'HEAD',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const length = headRes.headers.get('Content-Length');
+                    if (length) setFileSize(parseInt(length));
+                } catch (e) {
+                    console.warn("Falló detección de tamaño, usando modo seguro (Páginas)");
+                    setFileSize(10 * 1024 * 1024);
+                }
+
                 // FORZAR SIEMPRE EL MODO AVANZADO (PRO)
                 // Es la única forma de aislar el visor y prevenir la descarga/clic derecho en el iframe nativo del navegador.
                 setBlobUrl(secureUrl);
@@ -461,12 +500,14 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             if (!blobRes.ok) throw new Error(`Status ${blobRes.status}: Error al obtener archivo`);
             const blob = await blobRes.blob();
             const objUrl = URL.createObjectURL(blob);
+            ownedBlobUrlRef.current = objUrl;
             setBlobUrl(objUrl);
 
             if (resolvedType === 'docx') {
                 setTimeout(async () => {
                     if (docxContainerRef.current) {
                         try {
+                            const docx = await import('docx-preview');
                             await docx.renderAsync(blob, docxContainerRef.current, undefined, {
                                 className: 'docx-viewer',
                                 ignoreLastRenderedPageBreak: false

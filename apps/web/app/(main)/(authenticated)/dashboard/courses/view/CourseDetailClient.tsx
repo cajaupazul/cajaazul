@@ -3,22 +3,43 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import type { Course } from '@/lib/supabase';
 import CourseDetailContent from '@/components/courses/CourseDetailContent';
 
-export default function CourseDetailClient({ initialCourseId }: { initialCourseId?: string }) {
+interface CourseDetailClientProps {
+  initialCourseId?: string;
+  initialCourse?: Course | null;
+}
+
+const MATERIAL_SELECT = `
+  id, course_id, user_id, professor_id, titulo, descripcion, url_archivo, tipo,
+  descargas, thumbnail_url, use_advanced_viewer, created_at, cycle_id, group_title,
+  storage_path,
+  professors(nombre),
+  profiles(id, nombre, avatar_url, background_url, active_frame_key, role, es_vip,
+    created_at, bio, link_instagram, puntos)
+`;
+
+const UPLOADER_PROFILE_SELECT = `
+  id, nombre, avatar_url, background_url, active_frame_key, role, es_vip,
+  created_at, bio, link_instagram, puntos
+`;
+
+export default function CourseDetailClient({ initialCourseId, initialCourse = null }: CourseDetailClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const courseId = initialCourseId || searchParams.get('id');
-  const [course, setCourse] = useState<any>(null);
+  const [course, setCourse] = useState<Course | null>(initialCourse);
   const [materials, setMaterials] = useState<any[]>([]);
   const [blackboardContributions, setBlackboardContributions] = useState<any[]>([]);
   const [allProfessors, setAllProfessors] = useState<any[]>([]);
   const [topProfessor, setTopProfessor] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loading, setLoading] = useState(!initialCourse);
   const [courseCycles, setCourseCycles] = useState<any[]>([]);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!courseId) {
       setLoading(false);
       return;
@@ -27,18 +48,24 @@ export default function CourseDetailClient({ initialCourseId }: { initialCourseI
     async function fetchData() {
       try {
         setLoading(true);
-        // 1. Fetch course data
-        const { data: courseData, error: courseError } = await supabase
-          .from('courses')
-          .select('*')
-          .eq('id', courseId)
-          .maybeSingle();
+        let courseData = initialCourse?.id === courseId ? initialCourse : null;
 
-        if (courseError || !courseData) {
-          console.error('Course not found');
-          setLoading(false);
-          return;
+        if (!courseData) {
+          const { data, error: courseError } = await supabase
+            .from('courses')
+            .select('id, nombre, codigo, facultad, carrera, ciclo, descripcion, imagen_url, syllabus_url, views, created_at, catalog_course_id')
+            .eq('id', courseId)
+            .maybeSingle();
+
+          if (courseError || !data) {
+            console.error('Course not found');
+            if (!cancelled) setLoading(false);
+            return;
+          }
+          courseData = data as Course;
         }
+
+        if (cancelled) return;
         setCourse(courseData);
 
         // 2. Parallel fetch for associated data
@@ -47,12 +74,11 @@ export default function CourseDetailClient({ initialCourseId }: { initialCourseI
         const [
           { data: materialsData },
           { data: linkedData },
-          { data: sessionData },
           { data: cyclesData },
           { data: blackboardSets }
         ] = await Promise.all([
           supabase.from('materials')
-            .select('*, professors(nombre), profiles(*)')
+            .select(MATERIAL_SELECT)
             .eq('course_id', courseId)
             .order('created_at', { ascending: false }),
           catalogCourseId
@@ -60,15 +86,14 @@ export default function CourseDetailClient({ initialCourseId }: { initialCourseI
                 .select(`
                   professor_id,
                   professors (
-                    *,
+                    id, nombre, avatar_url,
                     professor_ratings (puntuacion, catalog_course_id)
                   )
                 `)
                 .eq('catalog_course_id', catalogCourseId)
             : Promise.resolve({ data: [] }),
-          supabase.auth.getUser(),
           supabase.from('course_cycles')
-            .select('*')
+            .select('id, course_id, ciclo_name, active_subfolders, created_at')
             .eq('course_id', courseId)
             .order('ciclo_name', { ascending: false }),
           supabase.from('bb_material_sets')
@@ -76,66 +101,9 @@ export default function CourseDetailClient({ initialCourseId }: { initialCourseI
             .eq('course_id', courseId)
         ]);
 
+        if (cancelled) return;
         setMaterials(materialsData || []);
         setCourseCycles(cyclesData || []);
-
-        const setIds = (blackboardSets || []).map((set: any) => set.id);
-        if (setIds.length > 0) {
-          const { data: bbFilesData } = await supabase
-            .from('bb_files')
-            .select('id, set_id, folder_id, name, storage_path, size_bytes, mime_type, uploaded_by, created_at, relative_path, material_category')
-            .in('set_id', setIds);
-
-          const setById = new Map((blackboardSets || []).map((set: any) => [set.id, set]));
-          const uploaderIds = Array.from(new Set(
-            (bbFilesData || [])
-              .map((file: any) => file.uploaded_by || setById.get(file.set_id)?.uploaded_by)
-              .filter(Boolean)
-          ));
-
-          const { data: uploaderProfiles } = uploaderIds.length > 0
-            ? await supabase.from('profiles').select('*').in('id', uploaderIds)
-            : { data: [] as any[] };
-          const profileById = new Map((uploaderProfiles || []).map((profile: any) => [profile.id, profile]));
-
-          setBlackboardContributions((bbFilesData || []).map((file: any) => {
-            const set = setById.get(file.set_id);
-            const userId = file.uploaded_by || set?.uploaded_by;
-            return {
-              id: `bb-${file.id}`,
-              bb_file_id: file.id,
-              bb_set_id: file.set_id,
-              source: 'blackboard',
-              titulo: file.name,
-              name: file.name,
-              url_archivo: file.storage_path,
-              storage_path: file.storage_path,
-              size_bytes: file.size_bytes,
-              mime_type: file.mime_type,
-              relative_path: file.relative_path,
-              material_category: file.material_category,
-              cycle_id: set?.cycle_id || null,
-              professor_id: set?.professor_id || null,
-              professors: set?.professors || null,
-              user_id: userId,
-              created_at: file.created_at || set?.created_at,
-              profiles: userId ? profileById.get(userId) : null,
-            };
-          }));
-        } else {
-          setBlackboardContributions([]);
-        }
-
-        // 3. Handle User Permissions - ONLY if not guest
-        const isGuest = !sessionData?.user || !!sessionData?.user?.is_anonymous;
-        if (sessionData?.user && !isGuest) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, role')
-            .eq('id', sessionData.user.id)
-            .maybeSingle();
-          setCurrentUser(profile);
-        }
 
         // 4. Unified Professor Merging
         const professorsMap = new Map();
@@ -181,15 +149,70 @@ export default function CourseDetailClient({ initialCourseId }: { initialCourseI
           setTopProfessor(null);
         }
 
-      } catch (err) {
-        console.error('Error fetching course detail:', err);
-      } finally {
+        // Blackboard can contain dozens of files and uploader profiles. It is
+        // useful in the unified list, but it must not block the first course paint.
         setLoading(false);
+
+        const setIds = (blackboardSets || []).map((set: any) => set.id);
+        if (setIds.length === 0) {
+          setBlackboardContributions([]);
+          return;
+        }
+
+        const { data: bbFilesData } = await supabase
+          .from('bb_files')
+          .select('id, set_id, folder_id, name, storage_path, size_bytes, mime_type, uploaded_by, created_at, relative_path, material_category')
+          .in('set_id', setIds);
+
+        if (cancelled) return;
+        const setById = new Map((blackboardSets || []).map((set: any) => [set.id, set]));
+        const uploaderIds = Array.from(new Set<string>(
+          (bbFilesData || [])
+            .map((file: any) => file.uploaded_by || (setById.get(file.set_id) as any)?.uploaded_by)
+            .filter((id): id is string => Boolean(id))
+        ));
+
+        const { data: uploaderProfiles } = uploaderIds.length > 0
+          ? await supabase.from('profiles').select(UPLOADER_PROFILE_SELECT).in('id', uploaderIds)
+          : { data: [] as any[] };
+        if (cancelled) return;
+
+        const profileById = new Map((uploaderProfiles || []).map((profile: any) => [profile.id, profile]));
+        setBlackboardContributions((bbFilesData || []).map((file: any) => {
+          const set = setById.get(file.set_id) as any;
+          const userId = file.uploaded_by || set?.uploaded_by;
+          return {
+            id: `bb-${file.id}`,
+            bb_file_id: file.id,
+            bb_set_id: file.set_id,
+            source: 'blackboard',
+            titulo: file.name,
+            name: file.name,
+            url_archivo: file.storage_path,
+            storage_path: file.storage_path,
+            size_bytes: file.size_bytes,
+            mime_type: file.mime_type,
+            relative_path: file.relative_path,
+            material_category: file.material_category,
+            cycle_id: set?.cycle_id || null,
+            professor_id: set?.professor_id || null,
+            professors: set?.professors || null,
+            user_id: userId,
+            created_at: file.created_at || set?.created_at,
+            profiles: userId ? profileById.get(userId) : null,
+          };
+        }));
+
+      } catch (err) {
+        if (!cancelled) console.error('Error fetching course detail:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchData();
-  }, [courseId]);
+    return () => { cancelled = true; };
+  }, [courseId, initialCourse]);
 
   if (loading) {
     return (
@@ -220,7 +243,6 @@ export default function CourseDetailClient({ initialCourseId }: { initialCourseI
       allProfessors={allProfessors}
       initialMaterials={materials}
       initialBlackboardContributions={blackboardContributions}
-      currentUser={currentUser}
       initialCourseCycles={courseCycles}
     />
   );

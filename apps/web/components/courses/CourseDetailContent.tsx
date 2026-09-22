@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -9,7 +10,6 @@ import { ArrowLeft, Star, Mail, LayoutPanelLeft, FolderRoot, Folder, FolderOpen,
 import { motion, AnimatePresence } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
 import { extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
-import AdminMaterialManager from './AdminMaterialManager';
 import { useProfile } from '@/lib/profile-context';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import { PLACEHOLDERS } from '@/lib/constants';
@@ -18,12 +18,14 @@ import MaterialCard from './MaterialCard';
 import { Accordion, AccordionItem } from '@/components/ui/accordion';
 import { Autocomplete } from '@/components/ui/Autocomplete';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import StudentGradeCalculator from './StudentGradeCalculator';
-import AdminGradingFormulaEditor from './AdminGradingFormulaEditor';
 import CourseContributors from './CourseContributors';
 import { ReportButton } from '@/components/ui/ReportButton';
 import { FileTypeIcon } from '@/components/files/FileTypeIcon';
 import SmartCourseMaterials from './SmartCourseMaterials';
+
+const AdminMaterialManager = dynamic(() => import('./AdminMaterialManager'));
+const StudentGradeCalculator = dynamic(() => import('./StudentGradeCalculator'));
+const AdminGradingFormulaEditor = dynamic(() => import('./AdminGradingFormulaEditor'));
 
 const PREDEFINED_SUBFOLDERS = [
     '📖 Sílabo y Cronograma',
@@ -52,7 +54,6 @@ interface CourseDetailContentProps {
     allProfessors: any[];
     initialMaterials: any[];
     initialBlackboardContributions: any[];
-    currentUser: any | null;
     initialCourseCycles: any[];
 }
 
@@ -133,6 +134,10 @@ export default function CourseDetailContent({
     useEffect(() => {
         setBlackboardContributions(initialBlackboardContributions);
     }, [initialBlackboardContributions]);
+
+    useEffect(() => {
+        setCourseCycles(initialCourseCycles);
+    }, [initialCourseCycles]);
 
     // Track view once per session
     useEffect(() => {
@@ -1786,6 +1791,7 @@ export default function CourseDetailContent({
                 filePath={viewingFile?.path || null}
                 fileName={viewingFile?.name || null}
                 useAdvancedViewer={viewingFile?.useAdvanced}
+                downloadsEnabled={downloadsEnabled}
             />
             {/* Admin Manager Modal */}
             {showAdminManager && (
