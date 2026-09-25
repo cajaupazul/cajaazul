@@ -92,6 +92,18 @@ interface PendingFocus {
     col: number;
 }
 
+interface ColumnResizeSession {
+    col: number;
+    pointerId: number;
+    pointerType: string;
+    startClientX: number;
+    startWidth: number;
+    currentWidth: number;
+    moved: boolean;
+    previousCursor: string;
+    previousUserSelect: string;
+}
+
 interface SecureExcelViewerProps {
     blob: Blob | null;
     fileName: string;
@@ -108,6 +120,8 @@ const MAX_EXCEL_ZOOM = 20;
 const EMU_PER_CSS_PIXEL = 9525;
 const MAX_AUTOFIT_COLUMN_WIDTH = 900;
 const MAX_AUTOFIT_CANDIDATES = 32;
+const MIN_MANUAL_COLUMN_WIDTH = 24;
+const MAX_MANUAL_COLUMN_WIDTH = 1600;
 
 function horizontalAlignment(value?: string): CellStyle['align'] {
     if (value === 'center' || value === 'centerContinuous' || value === 'distributed') return 'center';
@@ -397,12 +411,16 @@ export default function SecureExcelViewer({
     const [searchQ, setSearchQ] = useState('');
     const [viewerZoom, setViewerZoom] = useState(() => clampExcelZoom(zoomLevel));
     const [columnWidthOverrides, setColumnWidthOverrides] = useState<Record<number, number>>({});
+    const [resizingColumn, setResizingColumn] = useState<number | null>(null);
     const viewerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const tableRef = useRef<HTMLTableElement>(null);
     const measurementCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const lastDoubleActionRef = useRef<{ addr: string; at: number } | null>(null);
     const lastTouchTapRef = useRef<{ addr: string; at: number } | null>(null);
     const touchStartRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+    const columnResizeRef = useRef<ColumnResizeSession | null>(null);
+    const lastColumnTouchTapRef = useRef<{ col: number; at: number } | null>(null);
     const [scrollTop, setScrollTop] = useState(0);
     const [viewHeight, setViewHeight] = useState(600);
     const rafRef = useRef<number | null>(null);
@@ -444,6 +462,11 @@ export default function SecureExcelViewer({
 
     useEffect(() => () => {
         if (zoomFrameRef.current !== null) cancelAnimationFrame(zoomFrameRef.current);
+        const resize = columnResizeRef.current;
+        if (resize) {
+            document.body.style.cursor = resize.previousCursor;
+            document.body.style.userSelect = resize.previousUserSelect;
+        }
         for (const url of imageUrlsRef.current) URL.revokeObjectURL(url);
         imageUrlsRef.current = [];
     }, []);
@@ -981,7 +1004,7 @@ export default function SecureExcelViewer({
         if (!candidates.length) return;
         if (!measurementCanvasRef.current) measurementCanvasRef.current = document.createElement('canvas');
         const context = measurementCanvasRef.current.getContext('2d');
-        let requiredWidth = sheetData.colWidths[col];
+        let requiredWidth = MIN_MANUAL_COLUMN_WIDTH;
 
         for (const { cell } of candidates) {
             const style = cell.style;
@@ -1005,6 +1028,107 @@ export default function SecureExcelViewer({
             current[col] === nextWidth ? current : { ...current, [col]: nextWidth }
         ));
     }, [sheetData]);
+
+    const clearColumnResizePreview = useCallback((col: number) => {
+        const table = tableRef.current;
+        if (!table) return;
+        table.style.removeProperty(`--excel-col-${col}-width`);
+        table.style.removeProperty('--excel-table-width');
+    }, []);
+
+    const handleColumnResizeStart = useCallback((event: React.PointerEvent<HTMLButtonElement>, col: number) => {
+        if (!sheetData || sheetData.hiddenCols[col]) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.setPointerCapture(event.pointerId);
+
+        const startWidth = effectiveColWidths[col] || sheetData.colWidths[col] || MIN_MANUAL_COLUMN_WIDTH;
+        columnResizeRef.current = {
+            col,
+            pointerId: event.pointerId,
+            pointerType: event.pointerType,
+            startClientX: event.clientX,
+            startWidth,
+            currentWidth: startWidth,
+            moved: false,
+            previousCursor: document.body.style.cursor,
+            previousUserSelect: document.body.style.userSelect,
+        };
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        setResizingColumn(col);
+    }, [effectiveColWidths, sheetData]);
+
+    const handleColumnResizeMove = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+        const resize = columnResizeRef.current;
+        if (!resize || resize.pointerId !== event.pointerId) return;
+        event.preventDefault();
+
+        const delta = (event.clientX - resize.startClientX) / Math.max(viewerZoom, 0.01);
+        const nextWidth = Math.min(
+            MAX_MANUAL_COLUMN_WIDTH,
+            Math.max(MIN_MANUAL_COLUMN_WIDTH, resize.startWidth + delta),
+        );
+        resize.currentWidth = Math.round(nextWidth);
+        resize.moved = resize.moved || Math.abs(event.clientX - resize.startClientX) > 2;
+
+        const table = tableRef.current;
+        if (!table) return;
+        table.style.setProperty(`--excel-col-${resize.col}-width`, `${resize.currentWidth * viewerZoom}px`);
+        const currentWidth = effectiveColWidths[resize.col] || resize.startWidth;
+        const previewTableWidth = tableWidth + (resize.currentWidth - currentWidth) * viewerZoom;
+        table.style.setProperty('--excel-table-width', `${Math.max(ROW_NUMBER_WIDTH, previewTableWidth)}px`);
+    }, [effectiveColWidths, tableWidth, viewerZoom]);
+
+    const finishColumnResize = useCallback((event: React.PointerEvent<HTMLButtonElement>, commit: boolean) => {
+        const resize = columnResizeRef.current;
+        if (!resize || resize.pointerId !== event.pointerId) return;
+        event.preventDefault();
+        event.stopPropagation();
+
+        document.body.style.cursor = resize.previousCursor;
+        document.body.style.userSelect = resize.previousUserSelect;
+        columnResizeRef.current = null;
+        setResizingColumn(null);
+
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+
+        let shouldAutoFit = false;
+        if (commit && resize.pointerType === 'touch' && !resize.moved) {
+            const now = performance.now();
+            const previous = lastColumnTouchTapRef.current;
+            shouldAutoFit = previous?.col === resize.col && now - previous.at <= 360;
+            lastColumnTouchTapRef.current = shouldAutoFit ? null : { col: resize.col, at: now };
+        }
+
+        if (shouldAutoFit) {
+            autoFitColumn(resize.col);
+        } else if (commit && resize.moved) {
+            setColumnWidthOverrides(current => ({ ...current, [resize.col]: resize.currentWidth }));
+        }
+
+        if (commit && (resize.moved || shouldAutoFit)) {
+            requestAnimationFrame(() => clearColumnResizePreview(resize.col));
+        } else {
+            clearColumnResizePreview(resize.col);
+        }
+    }, [autoFitColumn, clearColumnResizePreview]);
+
+    const handleColumnResizeKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>, col: number) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        event.stopPropagation();
+        const currentWidth = effectiveColWidths[col] || MIN_MANUAL_COLUMN_WIDTH;
+        const screenStep = event.shiftKey ? 24 : 8;
+        const direction = event.key === 'ArrowRight' ? 1 : -1;
+        const nextWidth = Math.min(
+            MAX_MANUAL_COLUMN_WIDTH,
+            Math.max(MIN_MANUAL_COLUMN_WIDTH, currentWidth + direction * screenStep / Math.max(viewerZoom, 0.01)),
+        );
+        setColumnWidthOverrides(current => ({ ...current, [col]: Math.round(nextWidth) }));
+    }, [effectiveColWidths, viewerZoom]);
 
     const handleCellDoubleClick = useCallback((cell: ParsedCell) => {
         const now = performance.now();
@@ -1240,12 +1364,13 @@ export default function SecureExcelViewer({
 
                 <div className="inline-block min-w-fit align-top relative z-10">
                     <table
+                        ref={tableRef}
                         className="border-collapse table-fixed bg-white"
                         style={{
                             fontFamily: 'Calibri, Aptos, Segoe UI, sans-serif',
                             tableLayout: 'fixed',
-                            width: tableWidth,
-                            minWidth: tableWidth,
+                            width: `var(--excel-table-width, ${tableWidth}px)`,
+                            minWidth: `var(--excel-table-width, ${tableWidth}px)`,
                         }}
                     >
                         <colgroup>
@@ -1254,8 +1379,8 @@ export default function SecureExcelViewer({
                                 <col
                                     key={colLetters[index]}
                                     style={{
-                                        width: scaledColWidths[index],
-                                        minWidth: scaledColWidths[index],
+                                        width: `var(--excel-col-${index}-width, ${scaledColWidths[index]}px)`,
+                                        minWidth: `var(--excel-col-${index}-width, ${scaledColWidths[index]}px)`,
                                         display: hiddenCols[index] ? 'none' : undefined,
                                     }}
                                 />
@@ -1275,7 +1400,7 @@ export default function SecureExcelViewer({
                                     return (
                                         <th
                                             key={letter}
-                                            className="border-r border-b border-[#c8c8c8] text-center text-[12px] font-normal select-none"
+                                            className="relative border-r border-b border-[#c8c8c8] text-center text-[12px] font-normal select-none"
                                             style={{
                                                 display: hiddenCols[col] ? 'none' : undefined,
                                                 height: headerHeight,
@@ -1287,6 +1412,32 @@ export default function SecureExcelViewer({
                                             title={letter + ' · Doble clic para autoajustar la columna'}
                                         >
                                             {letter}
+                                            <button
+                                                type="button"
+                                                className="group absolute -right-2 top-0 z-30 h-full w-4 cursor-col-resize touch-none focus-visible:outline-none"
+                                                style={{ touchAction: 'none' }}
+                                                aria-label={`Cambiar ancho de la columna ${letter}`}
+                                                title={`Arrastra para cambiar el ancho de ${letter}. Doble clic o doble toque para autoajustar.`}
+                                                onPointerDown={event => handleColumnResizeStart(event, col)}
+                                                onPointerMove={handleColumnResizeMove}
+                                                onPointerUp={event => finishColumnResize(event, true)}
+                                                onPointerCancel={event => finishColumnResize(event, false)}
+                                                onLostPointerCapture={event => finishColumnResize(event, false)}
+                                                onDoubleClick={event => {
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+                                                    autoFitColumn(col);
+                                                }}
+                                                onKeyDown={event => handleColumnResizeKeyDown(event, col)}
+                                            >
+                                                <span
+                                                    className={`absolute bottom-0 left-1/2 top-0 w-px -translate-x-1/2 transition-colors ${
+                                                        resizingColumn === col
+                                                            ? 'bg-[#107c41]'
+                                                            : 'bg-transparent group-hover:bg-[#107c41] group-focus-visible:bg-[#107c41]'
+                                                    }`}
+                                                />
+                                            </button>
                                         </th>
                                     );
                                 })}
@@ -1351,9 +1502,9 @@ export default function SecureExcelViewer({
                                             const cellStyle: React.CSSProperties = {
                                                 display: hiddenCols[col] ? 'none' : undefined,
                                                 height: rowHeight,
-                                                width: cell.colSpan ? undefined : scaledColWidths[col],
-                                                minWidth: cell.colSpan ? undefined : scaledColWidths[col],
-                                                maxWidth: cell.colSpan ? undefined : scaledColWidths[col],
+                                                width: cell.colSpan ? undefined : `var(--excel-col-${col}-width, ${scaledColWidths[col]}px)`,
+                                                minWidth: cell.colSpan ? undefined : `var(--excel-col-${col}-width, ${scaledColWidths[col]}px)`,
+                                                maxWidth: cell.colSpan ? undefined : `var(--excel-col-${col}-width, ${scaledColWidths[col]}px)`,
                                                 paddingTop: 0,
                                                 paddingBottom: 0,
                                                 paddingLeft: Math.max(0.5, (3 + (style?.indent || 0) * 8) * viewerZoom),
@@ -1482,6 +1633,8 @@ export default function SecureExcelViewer({
                 </div>
 
                 <div className="px-3 shrink-0 text-slate-500 text-[11px] font-mono gap-2 hidden sm:flex border-l border-[#d5dadd]">
+                    <span className="hidden lg:inline">Arrastra el borde de una columna para ajustar</span>
+                    <span className="hidden lg:inline">•</span>
                     <span>{totalRows} filas</span>
                     <span>•</span>
                     <span>{totalCols} columnas</span>
