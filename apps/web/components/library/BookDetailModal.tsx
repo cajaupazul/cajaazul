@@ -22,6 +22,7 @@ import { useProfile } from '@/lib/profile-context';
 import { supabase, LibraryBook } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme-context';
 import { ReportButton } from '@/components/ui/ReportButton';
+import { ImageWithLoader } from '@/components/ui/image-with-loader';
 import styles from './BookDetailModal.module.css';
 
 interface BookDetailModalProps {
@@ -170,7 +171,9 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
 
       <main className={styles.main}>
         <div className={styles.ambientCover} aria-hidden="true">
-          {book.cover_url && <img src={book.cover_url} alt="" />}
+          {book.cover_url && (
+            <ImageWithLoader src={book.cover_url} alt="" sizes="100vw" />
+          )}
           <span />
         </div>
 
@@ -178,7 +181,11 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
           <aside className={styles.sidebar} aria-label="Portada y ficha del libro">
             <div className={styles.cover}>
               {book.cover_url ? (
-                <img src={book.cover_url} alt={`Portada de ${book.title}`} />
+                <ImageWithLoader
+                  src={book.cover_url}
+                  alt={`Portada de ${book.title}`}
+                  sizes="(max-width: 760px) 180px, 280px"
+                />
               ) : (
                 <div className={styles.coverFallback}>
                   <BookOpen aria-hidden="true" />

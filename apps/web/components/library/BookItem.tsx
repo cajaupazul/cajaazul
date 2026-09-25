@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { LibraryBook } from '@/lib/supabase';
+import { ImageWithLoader } from '@/components/ui/image-with-loader';
 
 interface BookItemProps {
   book: LibraryBook;
@@ -28,12 +29,11 @@ export const BookItem: React.FC<BookItemProps> = ({ book, onClick }) => {
       {/* Book Cover */}
       <div className="relative w-32 h-48 sm:w-40 sm:h-60 rounded-r-lg shadow-2xl overflow-hidden border-l-4 border-black/20 bg-bb-card">
         {book.cover_url ? (
-          <img 
+          <ImageWithLoader
             src={book.cover_url} 
             alt={book.title} 
-            className="w-full h-full object-cover"
-            loading="lazy"
-            decoding="async"
+            sizes="(max-width: 640px) 128px, 160px"
+            className="object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-bb-card to-bb-hover p-4 text-center">

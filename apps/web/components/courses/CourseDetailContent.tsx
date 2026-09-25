@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import CourseContributors from './CourseContributors';
 import { ReportButton } from '@/components/ui/ReportButton';
 import { FileTypeIcon } from '@/components/files/FileTypeIcon';
+import { ImageWithLoader } from '@/components/ui/image-with-loader';
 import SmartCourseMaterials from './SmartCourseMaterials';
 
 const AdminMaterialManager = dynamic(() => import('./AdminMaterialManager'));
@@ -854,7 +855,12 @@ export default function CourseDetailContent({
         <div className="flex-1 overflow-auto bg-bb-dark">
             <div className="relative h-40 md:h-64 bg-bb-darker border-b border-bb-border">
                 {course.imagen_url ? (
-                    <img src={course.imagen_url} alt={course.nombre} className="w-full h-full object-cover" />
+                    <ImageWithLoader
+                        src={course.imagen_url}
+                        alt={course.nombre}
+                        sizes="100vw"
+                        className="object-cover"
+                    />
                 ) : (
                     <div className="w-full h-full bg-gradient-to-br from-blue-600/20 via-bb-darker to-teal-600/20" />
                 )}

@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Cell, Workbook, Worksheet } from 'exceljs';
 import * as XLSX from 'xlsx';
-import { AlertCircle, FileSpreadsheet, Loader2, Search, X } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, Search, X } from 'lucide-react';
 import {
     columnIndexToName,
     columnWidthToPixels,
@@ -104,6 +104,12 @@ interface ColumnResizeSession {
     previousUserSelect: string;
 }
 
+interface TextSpillMetrics {
+    width: number;
+    offset: number;
+    align: 'left' | 'right';
+}
+
 interface SecureExcelViewerProps {
     blob: Blob | null;
     fileName: string;
@@ -122,6 +128,56 @@ const MAX_AUTOFIT_COLUMN_WIDTH = 900;
 const MAX_AUTOFIT_CANDIDATES = 32;
 const MIN_MANUAL_COLUMN_WIDTH = 24;
 const MAX_MANUAL_COLUMN_WIDTH = 1600;
+
+function textSpillMetrics(
+    cell: ParsedCell,
+    row: ParsedCell[],
+    widths: number[],
+    hiddenCols: boolean[],
+): TextSpillMetrics | null {
+    const align = cell.style?.align || (cell.isNum ? 'right' : 'left');
+    if (
+        !cell.text
+        || cell.isNum
+        || cell.style?.wrapText
+        || cell.style?.rotation
+        || (cell.colSpan || 1) > 1
+        || (cell.rowSpan || 1) > 1
+        || (align !== 'left' && align !== 'right')
+    ) return null;
+
+    const isEmpty = (candidate: ParsedCell | undefined) => Boolean(
+        candidate
+        && !candidate.skip
+        && !candidate.text
+        && !candidate.formula
+        && (candidate.colSpan || 1) === 1
+        && (candidate.rowSpan || 1) === 1,
+    );
+
+    let start = cell.col;
+    let end = cell.col;
+    if (align === 'right') {
+        for (let col = cell.col - 1; col >= 0; col--) {
+            if (hiddenCols[col]) continue;
+            if (!isEmpty(row[col])) break;
+            start = col;
+        }
+    } else {
+        for (let col = cell.col + 1; col < row.length; col++) {
+            if (hiddenCols[col]) continue;
+            if (!isEmpty(row[col])) break;
+            end = col;
+        }
+    }
+
+    if (start === end) return null;
+    let width = 0;
+    for (let col = start; col <= end; col++) width += widths[col] || 0;
+    let offset = 0;
+    for (let col = start; col < cell.col; col++) offset += widths[col] || 0;
+    return { width, offset, align };
+}
 
 function horizontalAlignment(value?: string): CellStyle['align'] {
     if (value === 'center' || value === 'centerContinuous' || value === 'distributed') return 'center';
@@ -415,6 +471,8 @@ export default function SecureExcelViewer({
     const viewerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const tableRef = useRef<HTMLTableElement>(null);
+    const sheetTabsRef = useRef<HTMLDivElement>(null);
+    const sheetTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
     const measurementCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const lastDoubleActionRef = useRef<{ addr: string; at: number } | null>(null);
     const lastTouchTapRef = useRef<{ addr: string; at: number } | null>(null);
@@ -829,6 +887,20 @@ export default function SecureExcelViewer({
     }, [viewerZoom]);
 
     useEffect(() => {
+        const strip = sheetTabsRef.current;
+        const tab = sheetTabRefs.current[activeIdx];
+        if (!strip || !tab) return;
+
+        const stripRect = strip.getBoundingClientRect();
+        const tabRect = tab.getBoundingClientRect();
+        if (tabRect.left < stripRect.left) {
+            strip.scrollBy({ left: tabRect.left - stripRect.left, behavior: 'smooth' });
+        } else if (tabRect.right > stripRect.right) {
+            strip.scrollBy({ left: tabRect.right - stripRect.right, behavior: 'smooth' });
+        }
+    }, [activeIdx, sheetNames]);
+
+    useEffect(() => {
         if (!pendingFocus || !sheetData) return;
         if (pendingFocus.sheetName.toLowerCase() !== sheetData.sheetName.toLowerCase()) return;
         const cell = sheetData.rows[pendingFocus.row]?.[pendingFocus.col];
@@ -843,7 +915,7 @@ export default function SecureExcelViewer({
             .reduce((sum, height, index) => sum + (sheetData.hiddenRows[index] ? 0 : height * viewerZoom), 0);
         const left = sheetData.colWidths
             .slice(0, pendingFocus.col)
-            .reduce((sum, width) => sum + width * viewerZoom, ROW_NUMBER_WIDTH);
+            .reduce((sum, width) => sum + width * viewerZoom, Math.max(18, ROW_NUMBER_WIDTH * viewerZoom));
         scrollRef.current?.scrollTo({
             top: Math.max(0, top - 60),
             left: Math.max(0, left - 80),
@@ -892,9 +964,10 @@ export default function SecureExcelViewer({
         });
     }, [effectiveColWidths, sheetData]);
 
+    const rowHeaderWidth = Math.max(18, ROW_NUMBER_WIDTH * viewerZoom);
     const tableWidth = useMemo(
-        () => ROW_NUMBER_WIDTH + scaledColWidths.reduce((sum, width) => sum + width, 0),
-        [scaledColWidths],
+        () => rowHeaderWidth + scaledColWidths.reduce((sum, width) => sum + width, 0),
+        [rowHeaderWidth, scaledColWidths],
     );
 
     const rowOffsets = useMemo(() => {
@@ -1077,8 +1150,8 @@ export default function SecureExcelViewer({
         table.style.setProperty(`--excel-col-${resize.col}-width`, `${resize.currentWidth * viewerZoom}px`);
         const currentWidth = effectiveColWidths[resize.col] || resize.startWidth;
         const previewTableWidth = tableWidth + (resize.currentWidth - currentWidth) * viewerZoom;
-        table.style.setProperty('--excel-table-width', `${Math.max(ROW_NUMBER_WIDTH, previewTableWidth)}px`);
-    }, [effectiveColWidths, tableWidth, viewerZoom]);
+        table.style.setProperty('--excel-table-width', `${Math.max(rowHeaderWidth, previewTableWidth)}px`);
+    }, [effectiveColWidths, rowHeaderWidth, tableWidth, viewerZoom]);
 
     const finishColumnResize = useCallback((event: React.PointerEvent<HTMLButtonElement>, commit: boolean) => {
         const resize = columnResizeRef.current;
@@ -1199,6 +1272,22 @@ export default function SecureExcelViewer({
         if (sheetIndex !== activeIdx) setActiveIdx(sheetIndex);
     }, [activeIdx, sheetNames]);
 
+    const selectSheet = useCallback((index: number) => {
+        if (index < 0 || index >= sheetNames.length) return;
+        setFormulaTrace(null);
+        setPendingFocus(null);
+        setActiveIdx(index);
+    }, [sheetNames.length]);
+
+    const scrollSheetTabs = useCallback((direction: -1 | 1) => {
+        const strip = sheetTabsRef.current;
+        if (!strip) return;
+        strip.scrollBy({
+            left: direction * Math.max(160, strip.clientWidth * 0.7),
+            behavior: 'smooth',
+        });
+    }, []);
+
     if (loading) {
         return (
             <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50">
@@ -1243,7 +1332,8 @@ export default function SecureExcelViewer({
     } = sheetData;
     const { visStart, visEnd, topPad, bottomPad } = visibleWindow;
     const visibleRows = rows.slice(visStart, visEnd);
-    const headerHeight = Math.max(20, Math.round(24 * viewerZoom));
+    const headerHeight = Math.max(12, 24 * viewerZoom);
+    const headerFontSize = Math.max(7, 12 * viewerZoom);
     const query = searchQ.trim().toLocaleLowerCase();
     const gridBorder = showGridLines ? '1px solid #d9d9d9' : 'none';
 
@@ -1374,7 +1464,7 @@ export default function SecureExcelViewer({
                         }}
                     >
                         <colgroup>
-                            <col style={{ width: ROW_NUMBER_WIDTH, minWidth: ROW_NUMBER_WIDTH }} />
+                            <col style={{ width: rowHeaderWidth, minWidth: rowHeaderWidth }} />
                             {colWidths.map((_, index) => (
                                 <col
                                     key={colLetters[index]}
@@ -1391,9 +1481,16 @@ export default function SecureExcelViewer({
                             <tr style={{ height: headerHeight }}>
                                 <th
                                     className="sticky left-0 z-30 bg-[#f3f3f3] border-r border-b border-[#c8c8c8] select-none"
-                                    style={{ width: ROW_NUMBER_WIDTH, minWidth: ROW_NUMBER_WIDTH }}
+                                    style={{ width: rowHeaderWidth, minWidth: rowHeaderWidth }}
                                 >
-                                    <span className="block w-0 h-0 border-l-[7px] border-l-transparent border-t-[7px] border-t-slate-400 m-1" />
+                                    <span
+                                        className="block w-0 h-0 border-l-transparent border-t-slate-400"
+                                        style={{
+                                            borderLeftWidth: Math.max(3, 7 * viewerZoom),
+                                            borderTopWidth: Math.max(3, 7 * viewerZoom),
+                                            margin: Math.max(1, 4 * viewerZoom),
+                                        }}
+                                    />
                                 </th>
                                 {colLetters.map((letter, col) => {
                                     const selected = selectedCell?.col === col;
@@ -1404,6 +1501,7 @@ export default function SecureExcelViewer({
                                             style={{
                                                 display: hiddenCols[col] ? 'none' : undefined,
                                                 height: headerHeight,
+                                                fontSize: headerFontSize,
                                                 backgroundColor: selected ? '#e2f0e8' : '#f3f3f3',
                                                 color: selected ? '#107c41' : '#333333',
                                                 borderBottomColor: selected ? '#107c41' : '#c8c8c8',
@@ -1468,8 +1566,9 @@ export default function SecureExcelViewer({
                                         <td
                                             className="sticky left-0 z-10 border-r border-b border-[#c8c8c8] text-center text-[11px] font-normal select-none"
                                             style={{
-                                                width: ROW_NUMBER_WIDTH,
-                                                minWidth: ROW_NUMBER_WIDTH,
+                                                width: rowHeaderWidth,
+                                                minWidth: rowHeaderWidth,
+                                                fontSize: Math.max(6, 11 * viewerZoom),
                                                 backgroundColor: selectedRow ? '#e2f0e8' : '#f3f3f3',
                                                 color: selectedRow ? '#107c41' : '#444444',
                                                 borderRightColor: selectedRow ? '#107c41' : '#c8c8c8',
@@ -1499,6 +1598,12 @@ export default function SecureExcelViewer({
                                             const backgroundImage = tracedReference
                                                 ? 'linear-gradient(' + tracedReference.tint + ', ' + tracedReference.tint + ')'
                                                 : undefined;
+                                            const spill = textSpillMetrics(
+                                                cell,
+                                                rowCells,
+                                                scaledColWidths,
+                                                hiddenCols,
+                                            );
                                             const cellStyle: React.CSSProperties = {
                                                 display: hiddenCols[col] ? 'none' : undefined,
                                                 height: rowHeight,
@@ -1527,11 +1632,12 @@ export default function SecureExcelViewer({
                                                 borderLeft: style?.borderLeft || gridBorder,
                                                 borderRight: style?.borderRight || gridBorder,
                                                 whiteSpace: style?.wrapText ? 'pre-wrap' : 'nowrap',
-                                                overflow: 'hidden',
+                                                overflow: spill ? 'visible' : 'hidden',
                                                 wordBreak: style?.wrapText ? 'break-word' : undefined,
                                                 cursor: cell.formula ? 'crosshair' : 'cell',
                                                 boxShadow,
                                                 position: 'relative',
+                                                zIndex: isSelected ? 4 : spill ? 2 : undefined,
                                                 transform: style?.rotation
                                                     ? 'rotate(' + (style.rotation > 90 ? 90 - style.rotation : -style.rotation) + 'deg)'
                                                     : undefined,
@@ -1558,10 +1664,19 @@ export default function SecureExcelViewer({
                                                         className="relative block pointer-events-none"
                                                         style={{
                                                             zIndex: cell.text ? 1 : undefined,
-                                                            width: style?.wrapText ? 'auto' : 'max-content',
-                                                            marginLeft: (style?.align || (cell.isNum ? 'right' : 'left')) === 'right'
-                                                                ? 'auto'
+                                                            width: spill
+                                                                ? Math.max(1, spill.width - 6 * viewerZoom)
+                                                                : style?.wrapText ? 'auto' : 'max-content',
+                                                            maxWidth: spill
+                                                                ? Math.max(1, spill.width - 6 * viewerZoom)
                                                                 : undefined,
+                                                            marginLeft: spill?.align === 'right'
+                                                                ? -spill.offset
+                                                                : (style?.align || (cell.isNum ? 'right' : 'left')) === 'right'
+                                                                    ? 'auto'
+                                                                    : undefined,
+                                                            overflow: spill ? 'hidden' : undefined,
+                                                            textAlign: spill?.align,
                                                         }}
                                                     >
                                                         {cell.text || '\u00A0'}
@@ -1591,7 +1706,7 @@ export default function SecureExcelViewer({
                             draggable={false}
                             className="absolute z-[15] pointer-events-none select-none object-fill"
                             style={{
-                                left: ROW_NUMBER_WIDTH + image.left * viewerZoom,
+                                left: rowHeaderWidth + image.left * viewerZoom,
                                 top: headerHeight + image.top * viewerZoom,
                                 width: image.width * viewerZoom,
                                 height: image.height * viewerZoom,
@@ -1602,23 +1717,58 @@ export default function SecureExcelViewer({
             </div>
 
             <div className="h-10 bg-[#eef3f6] border-t border-[#c8c8c8] flex items-center shrink-0 overflow-hidden">
-                <div className="px-3 shrink-0 flex items-center gap-1.5 text-slate-600">
+                <div className="pl-2 pr-1 shrink-0 flex items-center gap-1 text-slate-600">
                     <FileSpreadsheet className="w-4 h-4 text-[#107c41]" />
                     <span className="text-[10px] uppercase font-bold tracking-wider hidden sm:inline">Hojas</span>
                 </div>
 
-                <div className="flex items-end overflow-x-auto scrollbar-none flex-1 h-full gap-0">
+                <button
+                    type="button"
+                    onClick={() => scrollSheetTabs(-1)}
+                    disabled={sheetNames.length <= 1}
+                    className="grid h-8 w-7 shrink-0 place-items-center text-slate-600 hover:bg-white disabled:opacity-30"
+                    aria-label="Desplazar hojas hacia la izquierda"
+                    title="Hojas anteriores"
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => scrollSheetTabs(1)}
+                    disabled={sheetNames.length <= 1}
+                    className="grid h-8 w-7 shrink-0 place-items-center text-slate-600 hover:bg-white disabled:opacity-30"
+                    aria-label="Desplazar hojas hacia la derecha"
+                    title="Hojas siguientes"
+                >
+                    <ChevronRight className="h-4 w-4" />
+                </button>
+
+                <label className="relative mr-1 shrink-0" title="Mostrar todas las hojas">
+                    <span className="sr-only">Ir a una hoja</span>
+                    <select
+                        value={activeIdx}
+                        onChange={event => selectSheet(Number(event.target.value))}
+                        className="h-7 max-w-[112px] rounded border border-[#c8c8c8] bg-white px-1 text-[11px] text-slate-700 outline-none focus:border-[#107c41] sm:max-w-[150px]"
+                        aria-label="Seleccionar cualquier hoja del libro"
+                    >
+                        {sheetNames.map((name, index) => (
+                            <option key={name} value={index}>{index + 1}. {name}</option>
+                        ))}
+                    </select>
+                </label>
+
+                <div
+                    ref={sheetTabsRef}
+                    className="flex items-end overflow-x-auto scrollbar-none flex-1 h-full min-w-0 gap-0"
+                >
                     {sheetNames.map((name, index) => {
                         const active = index === activeIdx;
                         return (
                             <button
                                 key={name}
+                                ref={element => { sheetTabRefs.current[index] = element; }}
                                 type="button"
-                                onClick={() => {
-                                    setFormulaTrace(null);
-                                    setPendingFocus(null);
-                                    setActiveIdx(index);
-                                }}
+                                onClick={() => selectSheet(index)}
                                 className={
                                     'h-full px-4 text-xs whitespace-nowrap shrink-0 border-r border-[#d5dadd] border-b-2 transition-colors ' +
                                     (active
@@ -1632,7 +1782,7 @@ export default function SecureExcelViewer({
                     })}
                 </div>
 
-                <div className="px-3 shrink-0 text-slate-500 text-[11px] font-mono gap-2 hidden sm:flex border-l border-[#d5dadd]">
+                <div className="px-3 shrink-0 text-slate-500 text-[11px] font-mono gap-2 hidden 2xl:flex border-l border-[#d5dadd]">
                     <span className="hidden lg:inline">Arrastra el borde de una columna para ajustar</span>
                     <span className="hidden lg:inline">•</span>
                     <span>{totalRows} filas</span>

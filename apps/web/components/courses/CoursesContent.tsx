@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { ImageWithLoader } from '@/components/ui/image-with-loader';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -320,12 +320,11 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
                                 >
                                     <div className="relative h-28 md:h-40 overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0">
                                         {course.imagen_url ? (
-                                            <Image
+                                            <ImageWithLoader
                                                 src={course.imagen_url}
                                                 alt={course.nombre}
-                                                fill
                                                 sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                                                className="object-cover transition-transform group-hover:scale-105"
+                                                className="object-cover group-hover:scale-105"
                                             />
                                         ) : (
                                             <div className="h-full w-full bg-gradient-to-br from-blue-400 via-blue-500 to-teal-600 transition-transform group-hover:scale-105" />
