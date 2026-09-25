@@ -29,7 +29,7 @@ interface SecureFileViewerProps {
     useAdvancedViewer?: boolean;
     onClose?: (open: false) => void;
     bucket?: string;
-    downloadsEnabled?: boolean;
+    excelDownloadsEnabled?: boolean;
 }
 
 // ─── Virtualized Lazy PDF Page ────────────────────────────────────────────────
@@ -186,7 +186,7 @@ function MobilePdfNavigator({ numPages, pageWidth, scale, estimatedHeight }: Mob
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer = false, onClose, bucket: initialBucket, downloadsEnabled: initialDownloadsEnabled }: SecureFileViewerProps) {
+export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer = false, onClose, bucket: initialBucket, excelDownloadsEnabled: initialExcelDownloadsEnabled }: SecureFileViewerProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [fileType, setFileType] = useState<'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'other'>('other');
@@ -207,20 +207,22 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const [zoomLevel, setZoomLevel] = useState(1);
     const [isDownloading, setIsDownloading] = useState(false);
     const { profile } = useProfile();
-    const [downloadsEnabled, setDownloadsEnabled] = useState(initialDownloadsEnabled ?? true);
+    const [excelDownloadsEnabled, setExcelDownloadsEnabled] = useState(initialExcelDownloadsEnabled ?? false);
 
     useEffect(() => {
-        if (initialDownloadsEnabled !== undefined) {
-            setDownloadsEnabled(initialDownloadsEnabled);
+        if (initialExcelDownloadsEnabled !== undefined) {
+            setExcelDownloadsEnabled(initialExcelDownloadsEnabled);
             return;
         }
-        supabase.from('platform_settings').select('downloads_enabled').single()
-            .then(({ data }) => { if (data) setDownloadsEnabled(data.downloads_enabled); });
-    }, [initialDownloadsEnabled]);
+        supabase.from('platform_settings').select('excel_downloads_enabled').single()
+            .then(({ data }) => { if (data) setExcelDownloadsEnabled(data.excel_downloads_enabled); });
+    }, [initialExcelDownloadsEnabled]);
 
     const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
-    const isVip = profile?.es_vip === true;
-    const canDownload = downloadsEnabled || isVip || isAdmin;
+    const vipExpiry = profile?.vip_hasta ? new Date(profile.vip_hasta).getTime() : null;
+    const isVip = profile?.es_vip === true && (vipExpiry === null || vipExpiry > Date.now());
+    const isExcelFile = fileType === 'xlsx';
+    const canDownload = !isExcelFile || excelDownloadsEnabled || isVip || isAdmin;
     
     // V5 Blackboard UI states
     const [currentPage, setCurrentPage] = useState(1);
@@ -531,7 +533,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
     const handleDownload = async () => {
         if (!canDownload) {
-            alert('Las descargas de archivos están temporalmente desactivadas. Solo los miembros VIP pueden descargar.');
+            alert('La descarga de archivos Excel está desactivada para usuarios normales. Los miembros VIP mantienen el acceso.');
             return;
         }
         if (!blobUrl || isDownloading) return;
@@ -542,10 +544,31 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             const token = session?.access_token;
             if (!token) throw new Error('Sesión expirada');
 
-            const res = await fetch(blobUrl, {
+            let downloadUrl = blobUrl;
+            if (isExcelFile) {
+                let effectiveBucket = initialBucket || 'course-materials';
+                let cleanPath = filePath;
+                try {
+                    if (filePath.includes('path=')) {
+                        const urlObj = new URL(filePath, 'http://dummy.com');
+                        cleanPath = urlObj.searchParams.get('path') || cleanPath;
+                        effectiveBucket = urlObj.searchParams.get('bucket') || effectiveBucket;
+                    }
+                    cleanPath = decodeURIComponent(cleanPath);
+                } catch {
+                    // The value is already a decoded object key.
+                }
+                const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev';
+                downloadUrl = `${baseUrl}/storage/download?path=${encodeURIComponent(cleanPath)}&bucket=${encodeURIComponent(effectiveBucket)}`;
+            }
+
+            const res = await fetch(downloadUrl, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!res.ok) throw new Error(`Error ${res.status}`);
+            if (!res.ok) {
+                const payload = await res.json().catch(() => null) as { error?: string } | null;
+                throw new Error(payload?.error || `Error ${res.status}`);
+            }
             const blob = await res.blob();
             const localUrl = URL.createObjectURL(blob);
 
@@ -685,7 +708,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                                         ? 'hover:text-white hover:bg-white/10 cursor-pointer'
                                         : 'opacity-40 cursor-not-allowed'
                             }`}
-                            title={!canDownload ? "Descarga exclusiva para miembros VIP" : isDownloading ? "Descargando..." : `Descargar ${fileName}`}
+                            title={!canDownload ? "Descarga de Excel disponible para miembros VIP" : isDownloading ? "Descargando..." : `Descargar ${fileName}`}
                         >
                             {isDownloading ? (
                                 <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />

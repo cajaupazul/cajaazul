@@ -98,12 +98,12 @@ export default function CourseDetailContent({
     const [showCalculatorModal, setShowCalculatorModal] = useState(false);
     const [showAdminCalculatorModal, setShowAdminCalculatorModal] = useState(false);
     const [shareCopied, setShareCopied] = useState(false);
-    const [downloadsEnabled, setDownloadsEnabled] = useState(true);
+    const [excelDownloadsEnabled, setExcelDownloadsEnabled] = useState(false);
 
-    // Fetch platform download settings
+    // Fetch the Excel-only download setting once for this course view.
     useEffect(() => {
-        supabase.from('platform_settings').select('downloads_enabled').single()
-            .then(({ data }) => { if (data) setDownloadsEnabled(data.downloads_enabled); });
+        supabase.from('platform_settings').select('excel_downloads_enabled').single()
+            .then(({ data }) => { if (data) setExcelDownloadsEnabled(data.excel_downloads_enabled); });
     }, []);
     // Mass Move State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -1791,7 +1791,7 @@ export default function CourseDetailContent({
                 filePath={viewingFile?.path || null}
                 fileName={viewingFile?.name || null}
                 useAdvancedViewer={viewingFile?.useAdvanced}
-                downloadsEnabled={downloadsEnabled}
+                excelDownloadsEnabled={excelDownloadsEnabled}
             />
             {/* Admin Manager Modal */}
             {showAdminManager && (

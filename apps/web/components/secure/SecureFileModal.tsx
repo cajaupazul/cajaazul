@@ -21,7 +21,7 @@ interface SecureFileModalProps {
     fileName: string | null;
     useAdvancedViewer?: boolean;
     bucket?: string;
-    downloadsEnabled?: boolean;
+    excelDownloadsEnabled?: boolean;
 }
 
 /**
@@ -108,7 +108,7 @@ export default function SecureFileModal({
     fileName,
     useAdvancedViewer,
     bucket,
-    downloadsEnabled,
+    excelDownloadsEnabled,
 }: SecureFileModalProps) {
     const [mounted, setMounted] = useState(false);
     const [visible, setVisible] = useState(false);
@@ -232,7 +232,7 @@ export default function SecureFileModal({
                     useAdvancedViewer={useAdvancedViewer}
                     onClose={handleClose}
                     bucket={bucket}
-                    downloadsEnabled={downloadsEnabled}
+                    excelDownloadsEnabled={excelDownloadsEnabled}
                 />
             </div>
         </>,

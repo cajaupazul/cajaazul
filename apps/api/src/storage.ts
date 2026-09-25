@@ -48,6 +48,11 @@ const privateAuthMiddleware = async (c: any, next: any) => {
     const bucketName = c.req.query('bucket') || 'course-materials'
     const method = c.req.method
 
+    // Explicit downloads always require a verified user, regardless of bucket.
+    if (c.req.path.endsWith('/download')) {
+        return authMiddleware(c, next)
+    }
+
     // Mutations always require a session. Catalog media is admin-only.
     if (method === 'PUT' || method === 'DELETE' || method === 'PATCH') {
         return authMiddleware(c, async () => {
@@ -422,6 +427,90 @@ storageRouter.get('/public-stream', async (c) => {
         console.error("Stream Error:", e)
         return c.json({ error: 'Token inválido o expirado' }, 400)
     }
+})
+
+
+// GET /storage/download?bucket=...&path=...
+// Sends an attachment. Excel downloads additionally honor the platform switch;
+// active VIP members and administrators always retain access.
+storageRouter.get('/download', async (c) => {
+    const requestedPath = c.req.query('path')
+    const bucketName = c.req.query('bucket') || 'course-materials'
+
+    if (!requestedPath) return c.json({ error: 'Falta path' }, 400)
+
+    const cleanPath = normalizeObjectPath(requestedPath)
+    if (!cleanPath) return c.json({ error: 'Ruta de archivo inválida' }, 400)
+
+    const normalizedBucket = bucketName.replace(/_/g, '-')
+    const isExcel = /\.(xlsx|xls)$/i.test(cleanPath.split('?')[0])
+
+    if (isExcel) {
+        const service = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY, {
+            auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+        })
+        const { data: settings, error: settingsError } = await service
+            .from('platform_settings')
+            .select('excel_downloads_enabled')
+            .eq('id', true)
+            .maybeSingle()
+
+        if (settingsError || !settings) {
+            console.error('[EXCEL_DOWNLOAD_SETTINGS]', settingsError?.code, settingsError?.message)
+            return c.json({ error: 'No se pudo verificar el permiso de descarga.' }, 503)
+        }
+
+        if (!settings.excel_downloads_enabled) {
+            const user = (c as any).get('user')
+            const { data: profile, error: profileError } = await service
+                .from('profiles')
+                .select('role, es_vip, vip_hasta')
+                .eq('id', user.id)
+                .maybeSingle()
+
+            if (profileError || !profile) {
+                console.error('[EXCEL_DOWNLOAD_PROFILE]', profileError?.code, profileError?.message)
+                return c.json({ error: 'No se pudo verificar la membresía.' }, 503)
+            }
+
+            const isAdmin = profile.role === 'admin' || profile.role === 'superadmin'
+            const vipExpiry = profile.vip_hasta ? new Date(profile.vip_hasta).getTime() : null
+            const isActiveVip = profile.es_vip === true && (vipExpiry === null || vipExpiry > Date.now())
+
+            if (!isAdmin && !isActiveVip) {
+                return c.json({ error: 'La descarga de Excel está disponible solo para miembros VIP.' }, 403)
+            }
+        }
+    }
+
+    let bucket: R2Bucket | undefined
+    switch (normalizedBucket) {
+        case 'course-materials': bucket = c.env.COURSE_MATERIALS; break
+        case 'course-images': bucket = c.env.COURSE_IMAGES; break
+        case 'profile-avatars': bucket = c.env.PROFILE_AVATARS; break
+        case 'profile-frames': bucket = c.env.PROFILE_FRAMES; break
+        case 'grupos': bucket = c.env.GRUPOS; break
+        case 'thumbnails': bucket = c.env.THUMBNAILS; break
+        case 'announcements': bucket = c.env.ANNOUNCEMENTS; break
+        case 'library': bucket = c.env.LIBRARY; break
+        default: return c.json({ error: `Bucket inválido: ${bucketName}` }, 400)
+    }
+
+    if (!bucket) return c.json({ error: 'Bucket no configurado' }, 500)
+
+    const object = await bucket.get(cleanPath)
+    if (!object) return c.json({ error: 'Archivo no encontrado' }, 404)
+
+    const originalName = cleanPath.split('/').pop() || 'archivo'
+    const asciiName = originalName.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_')
+    const headers = new Headers()
+    object.writeHttpMetadata(headers)
+    headers.set('etag', object.httpEtag)
+    headers.set('Cache-Control', 'private, no-store')
+    headers.set('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(originalName)}`)
+    headers.set('X-Content-Type-Options', 'nosniff')
+
+    return new Response(object.body, { headers })
 })
 
 
