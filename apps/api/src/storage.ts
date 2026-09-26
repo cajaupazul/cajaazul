@@ -21,6 +21,44 @@ type Bindings = {
 
 const storageRouter = new Hono<{ Bindings: Bindings }>()
 
+type DownloadSettingColumn =
+    | 'pdf_downloads_enabled'
+    | 'excel_downloads_enabled'
+    | 'powerpoint_downloads_enabled'
+    | 'word_downloads_enabled'
+    | 'image_downloads_enabled'
+    | 'archive_downloads_enabled'
+    | 'other_downloads_enabled'
+
+const DOWNLOAD_SETTINGS_SELECT = [
+    'pdf_downloads_enabled',
+    'excel_downloads_enabled',
+    'powerpoint_downloads_enabled',
+    'word_downloads_enabled',
+    'image_downloads_enabled',
+    'archive_downloads_enabled',
+    'other_downloads_enabled',
+].join(', ')
+
+const DOWNLOAD_EXTENSION_GROUPS: ReadonlyArray<{
+    setting: DownloadSettingColumn
+    extensions: ReadonlySet<string>
+}> = [
+    { setting: 'pdf_downloads_enabled', extensions: new Set(['pdf']) },
+    { setting: 'excel_downloads_enabled', extensions: new Set(['xls', 'xlsx', 'xlsm', 'xlsb', 'xlt', 'xltx', 'xltm', 'csv', 'ods']) },
+    { setting: 'powerpoint_downloads_enabled', extensions: new Set(['ppt', 'pptx', 'pptm', 'pps', 'ppsx', 'ppsm', 'pot', 'potx', 'potm', 'odp']) },
+    { setting: 'word_downloads_enabled', extensions: new Set(['doc', 'docx', 'docm', 'dot', 'dotx', 'dotm', 'odt', 'rtf', 'txt']) },
+    { setting: 'image_downloads_enabled', extensions: new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg', 'tif', 'tiff', 'heic', 'heif', 'avif']) },
+    { setting: 'archive_downloads_enabled', extensions: new Set(['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz']) },
+]
+
+function downloadSettingForPath(path: string): DownloadSettingColumn {
+    const fileName = path.replace(/\\/g, '/').split('/').pop() || ''
+    const extension = fileName.toLowerCase().match(/\.([a-z0-9]{1,10})$/)?.[1] || ''
+    return DOWNLOAD_EXTENSION_GROUPS.find((group) => group.extensions.has(extension))?.setting
+        || 'other_downloads_enabled'
+}
+
 function normalizeObjectPath(value: string) {
     const cleanPath = value.trim().replace(/^\/+/, '')
     const segments = cleanPath.split('/')
@@ -431,7 +469,7 @@ storageRouter.get('/public-stream', async (c) => {
 
 
 // GET /storage/download?bucket=...&path=...
-// Sends an attachment. Excel downloads additionally honor the platform switch;
+// Sends an attachment. Each file family honors its own platform switch;
 // active VIP members and administrators always retain access.
 storageRouter.get('/download', async (c) => {
     const requestedPath = c.req.query('path')
@@ -443,43 +481,42 @@ storageRouter.get('/download', async (c) => {
     if (!cleanPath) return c.json({ error: 'Ruta de archivo inválida' }, 400)
 
     const normalizedBucket = bucketName.replace(/_/g, '-')
-    const isExcel = /\.(xlsx|xls)$/i.test(cleanPath.split('?')[0])
+    const requiredSetting = downloadSettingForPath(cleanPath)
+    const service = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    })
+    const { data: settings, error: settingsError } = await service
+        .from('platform_settings')
+        .select(DOWNLOAD_SETTINGS_SELECT)
+        .eq('id', true)
+        .maybeSingle()
 
-    if (isExcel) {
-        const service = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY, {
-            auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-        })
-        const { data: settings, error: settingsError } = await service
-            .from('platform_settings')
-            .select('excel_downloads_enabled')
-            .eq('id', true)
+    const typedSettings = settings as unknown as Partial<Record<DownloadSettingColumn, boolean>> | null
+    const isEnabledForEveryone = typedSettings?.[requiredSetting] === true
+
+    if (!isEnabledForEveryone) {
+        const user = (c as any).get('user')
+        const { data: profile, error: profileError } = await service
+            .from('profiles')
+            .select('role, es_vip, vip_hasta')
+            .eq('id', user.id)
             .maybeSingle()
 
-        if (settingsError || !settings) {
-            console.error('[EXCEL_DOWNLOAD_SETTINGS]', settingsError?.code, settingsError?.message)
-            return c.json({ error: 'No se pudo verificar el permiso de descarga.' }, 503)
+        if (profileError || !profile) {
+            console.error('[FILE_DOWNLOAD_PROFILE]', profileError?.code, profileError?.message)
+            return c.json({ error: 'No se pudo verificar la membresía.' }, 503)
         }
 
-        if (!settings.excel_downloads_enabled) {
-            const user = (c as any).get('user')
-            const { data: profile, error: profileError } = await service
-                .from('profiles')
-                .select('role, es_vip, vip_hasta')
-                .eq('id', user.id)
-                .maybeSingle()
+        const isAdmin = profile.role === 'admin' || profile.role === 'superadmin'
+        const vipExpiry = profile.vip_hasta ? new Date(profile.vip_hasta).getTime() : null
+        const isActiveVip = profile.es_vip === true && (vipExpiry === null || vipExpiry > Date.now())
 
-            if (profileError || !profile) {
-                console.error('[EXCEL_DOWNLOAD_PROFILE]', profileError?.code, profileError?.message)
-                return c.json({ error: 'No se pudo verificar la membresía.' }, 503)
+        if (!isAdmin && !isActiveVip) {
+            if (settingsError || !typedSettings) {
+                console.error('[FILE_DOWNLOAD_SETTINGS]', settingsError?.code, settingsError?.message)
+                return c.json({ error: 'No se pudo verificar el permiso de descarga.' }, 503)
             }
-
-            const isAdmin = profile.role === 'admin' || profile.role === 'superadmin'
-            const vipExpiry = profile.vip_hasta ? new Date(profile.vip_hasta).getTime() : null
-            const isActiveVip = profile.es_vip === true && (vipExpiry === null || vipExpiry > Date.now())
-
-            if (!isAdmin && !isActiveVip) {
-                return c.json({ error: 'La descarga de Excel está disponible solo para miembros VIP.' }, 403)
-            }
+            return c.json({ error: 'La descarga de este tipo de archivo está disponible solo para miembros VIP.' }, 403)
         }
     }
 

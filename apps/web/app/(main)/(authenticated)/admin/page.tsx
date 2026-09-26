@@ -238,11 +238,6 @@ export default function AdminDashboardPage() {
           ))}
         </section>
 
-        {/* Controles de plataforma */}
-        <section aria-label="Controles de plataforma">
-          <AdminDownloadsToggle />
-        </section>
-
         {/* Operación comercial */}
         <section>
           <div className="mb-5 flex items-end justify-between gap-4">
@@ -287,6 +282,7 @@ export default function AdminDashboardPage() {
                   </Link>
                 ))}
               </div>
+              <AdminDownloadsToggle />
             </section>
 
             {/* SECCIÓN NUEVA: Usuarios registrados con foto, nombre, correo y fecha de creación */}

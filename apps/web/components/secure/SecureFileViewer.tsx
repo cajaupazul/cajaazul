@@ -7,6 +7,13 @@ import { supabase } from '@/lib/supabase';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Button } from '@/components/ui/button';
 import { useProfile } from '@/lib/profile-context';
+import {
+    CLOSED_DOWNLOAD_SETTINGS,
+    DOWNLOAD_SETTINGS_SELECT,
+    downloadFamilyLabel,
+    downloadSettingForFile,
+    type DownloadSettings,
+} from '@/lib/download-settings';
 
 const SecurePptxViewer = dynamic(() => import('./SecurePptxViewer'), { ssr: false });
 const SecureExcelViewer = dynamic(() => import('./SecureExcelViewer'), {
@@ -29,7 +36,6 @@ interface SecureFileViewerProps {
     useAdvancedViewer?: boolean;
     onClose?: (open: false) => void;
     bucket?: string;
-    excelDownloadsEnabled?: boolean;
 }
 
 // ─── Virtualized Lazy PDF Page ────────────────────────────────────────────────
@@ -186,7 +192,7 @@ function MobilePdfNavigator({ numPages, pageWidth, scale, estimatedHeight }: Mob
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer = false, onClose, bucket: initialBucket, excelDownloadsEnabled: initialExcelDownloadsEnabled }: SecureFileViewerProps) {
+export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer = false, onClose, bucket: initialBucket }: SecureFileViewerProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [fileType, setFileType] = useState<'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'other'>('other');
@@ -207,22 +213,40 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const [zoomLevel, setZoomLevel] = useState(1);
     const [isDownloading, setIsDownloading] = useState(false);
     const { profile } = useProfile();
-    const [excelDownloadsEnabled, setExcelDownloadsEnabled] = useState(initialExcelDownloadsEnabled ?? false);
+    const [downloadSettings, setDownloadSettings] = useState<DownloadSettings>(CLOSED_DOWNLOAD_SETTINGS);
+    const [downloadSettingsLoading, setDownloadSettingsLoading] = useState(true);
 
     useEffect(() => {
-        if (initialExcelDownloadsEnabled !== undefined) {
-            setExcelDownloadsEnabled(initialExcelDownloadsEnabled);
-            return;
-        }
-        supabase.from('platform_settings').select('excel_downloads_enabled').single()
-            .then(({ data }) => { if (data) setExcelDownloadsEnabled(data.excel_downloads_enabled); });
-    }, [initialExcelDownloadsEnabled]);
+        let cancelled = false;
+        setDownloadSettingsLoading(true);
+        supabase
+            .from('platform_settings')
+            .select(DOWNLOAD_SETTINGS_SELECT)
+            .eq('id', true)
+            .single()
+            .then(({ data, error }) => {
+                if (cancelled) return;
+                if (error || !data) {
+                    console.error('[DOWNLOAD_SETTINGS_VIEWER]', error?.code, error?.message);
+                    setDownloadSettings(CLOSED_DOWNLOAD_SETTINGS);
+                } else {
+                    setDownloadSettings(data as DownloadSettings);
+                }
+                setDownloadSettingsLoading(false);
+            });
+        return () => { cancelled = true; };
+    }, []);
 
     const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
     const vipExpiry = profile?.vip_hasta ? new Date(profile.vip_hasta).getTime() : null;
     const isVip = profile?.es_vip === true && (vipExpiry === null || vipExpiry > Date.now());
-    const isExcelFile = fileType === 'xlsx';
-    const canDownload = !isExcelFile || excelDownloadsEnabled || isVip || isAdmin;
+    const downloadSettingKey = useMemo(
+        () => downloadSettingForFile(filePath, fileName),
+        [fileName, filePath],
+    );
+    const downloadFamily = downloadFamilyLabel(downloadSettingKey);
+    const canDownload = isVip || isAdmin || downloadSettings[downloadSettingKey] === true;
+    const downloadPermissionPending = downloadSettingsLoading && !isVip && !isAdmin;
     
     // V5 Blackboard UI states
     const [currentPage, setCurrentPage] = useState(1);
@@ -533,7 +557,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
     const handleDownload = async () => {
         if (!canDownload) {
-            alert('La descarga de archivos Excel está desactivada para usuarios normales. Los miembros VIP mantienen el acceso.');
+            alert(`La descarga de ${downloadFamily} está desactivada para usuarios normales. Los miembros VIP activos y administradores mantienen el acceso.`);
             return;
         }
         if (!blobUrl || isDownloading) return;
@@ -544,23 +568,20 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
             const token = session?.access_token;
             if (!token) throw new Error('Sesión expirada');
 
-            let downloadUrl = blobUrl;
-            if (isExcelFile) {
-                let effectiveBucket = initialBucket || 'course-materials';
-                let cleanPath = filePath;
-                try {
-                    if (filePath.includes('path=')) {
-                        const urlObj = new URL(filePath, 'http://dummy.com');
-                        cleanPath = urlObj.searchParams.get('path') || cleanPath;
-                        effectiveBucket = urlObj.searchParams.get('bucket') || effectiveBucket;
-                    }
-                    cleanPath = decodeURIComponent(cleanPath);
-                } catch {
-                    // The value is already a decoded object key.
+            let effectiveBucket = initialBucket || 'course-materials';
+            let cleanPath = filePath;
+            try {
+                if (filePath.includes('path=')) {
+                    const urlObj = new URL(filePath, 'http://dummy.com');
+                    cleanPath = urlObj.searchParams.get('path') || cleanPath;
+                    effectiveBucket = urlObj.searchParams.get('bucket') || effectiveBucket;
                 }
-                const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev';
-                downloadUrl = `${baseUrl}/storage/download?path=${encodeURIComponent(cleanPath)}&bucket=${encodeURIComponent(effectiveBucket)}`;
+                cleanPath = decodeURIComponent(cleanPath);
+            } catch {
+                // The value is already a decoded object key.
             }
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev';
+            const downloadUrl = `${baseUrl}/storage/download?path=${encodeURIComponent(cleanPath)}&bucket=${encodeURIComponent(effectiveBucket)}`;
 
             const res = await fetch(downloadUrl, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -700,7 +721,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                     <div className="relative group">
                         <button
                             onClick={handleDownload}
-                            disabled={isDownloading || (!blobUrl && canDownload)}
+                            disabled={downloadPermissionPending || isDownloading || (!blobUrl && canDownload)}
                             className={`transition-colors p-1.5 rounded-lg inline-flex items-center gap-1.5 ${
                                 !canDownload
                                     ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 cursor-pointer'
@@ -708,9 +729,15 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                                         ? 'hover:text-white hover:bg-white/10 cursor-pointer'
                                         : 'opacity-40 cursor-not-allowed'
                             }`}
-                            title={!canDownload ? "Descarga de Excel disponible para miembros VIP" : isDownloading ? "Descargando..." : `Descargar ${fileName}`}
+                            title={downloadPermissionPending
+                                ? 'Verificando permiso de descarga…'
+                                : !canDownload
+                                    ? `Descarga de ${downloadFamily} disponible para miembros VIP activos`
+                                    : isDownloading
+                                        ? 'Descargando…'
+                                        : `Descargar ${fileName}`}
                         >
-                            {isDownloading ? (
+                            {downloadPermissionPending || isDownloading ? (
                                 <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                             ) : !canDownload ? (
                                 <>
@@ -818,7 +845,17 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                     <div className="h-full flex flex-col items-center justify-center p-12 text-center text-zinc-500">
                         <Lock className="w-16 h-16 mb-4 opacity-20" />
                         <h3 className="font-bold text-xl text-zinc-900 mb-2">Vista previa no disponible</h3>
-                        <Button onClick={handleDownload} className="mt-8 bg-zinc-900 text-white px-12 h-14 rounded-2xl">Descargar Archivo</Button>
+                        <Button
+                            onClick={handleDownload}
+                            disabled={downloadPermissionPending || isDownloading || (!blobUrl && canDownload)}
+                            className="mt-8 bg-zinc-900 text-white px-12 h-14 rounded-2xl disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {downloadPermissionPending || isDownloading
+                                ? 'Verificando…'
+                                : canDownload
+                                    ? 'Descargar archivo'
+                                    : 'Descarga sólo VIP'}
+                        </Button>
                     </div>
                 )}
             </div>
