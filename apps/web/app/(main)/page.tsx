@@ -245,17 +245,22 @@ export default function HomePage() {
             <div className={`${styles.heroContent} max-w-3xl`}>
               <div className="mb-6 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-[#ff9a7f] sm:text-sm">
                 <span className="h-px w-10 bg-[#ff6b4a]" />
-                Hecho para estudiantes
+                Repositorio estudiantil independiente
               </div>
 
               <h1 className="max-w-4xl text-[clamp(3rem,8vw,6.8rem)] font-semibold leading-[0.92] tracking-[-0.055em] text-white">
-                Tu universidad,
-                <span className="block text-[#ff7858]">mejor conectada.</span>
+                Recursos para la
+                <span className="block text-[#ff7858]">comunidad UP.</span>
               </h1>
 
               <p className="mt-7 max-w-xl text-base leading-7 text-white/75 sm:text-lg sm:leading-8">
-                Materiales, profesores, grupos y herramientas en un espacio claro,
-                construido para ayudarte a tomar mejores decisiones académicas.
+                Encuentra materiales por curso, referencias sobre profesores, grupos de estudio
+                y herramientas creadas para la comunidad de la Universidad del Pacífico.
+              </p>
+
+              <p className="mt-4 max-w-xl text-xs leading-5 text-white/55 sm:text-sm sm:leading-6">
+                CampusLink es un proyecto independiente creado por estudiantes. No es un servicio
+                oficial ni está afiliado a la Universidad del Pacífico.
               </p>
 
               <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -276,7 +281,7 @@ export default function HomePage() {
 
 
               <div className="mt-11 grid max-w-2xl grid-cols-1 gap-3 border-t border-white/20 pt-6 sm:grid-cols-3 sm:gap-6">
-                {['Recursos organizados', 'Opiniones de estudiantes', 'Acceso desde cualquier dispositivo'].map((item) => (
+                {['Materiales organizados por curso', 'Experiencias de estudiantes', 'Enfocado en la comunidad UP'].map((item) => (
                   <div key={item} className="flex items-center gap-2.5 text-sm font-medium text-white/70">
                     <span className="grid size-5 shrink-0 place-items-center rounded-full bg-white/10 text-[#ff9a7f]">
                       <Check size={12} strokeWidth={3} />
@@ -311,8 +316,8 @@ export default function HomePage() {
                 </h2>
               </div>
               <p className="max-w-2xl text-base leading-7 text-[#56635f] lg:justify-self-end lg:text-lg lg:leading-8">
-                Una portada debe orientarte, no distraerte. Accede directamente a cada
-                área de CampusLink con rutas claras y contenido pensado para tu día a día.
+                Explora materiales, referencias, grupos y herramientas académicas desde rutas
+                claras, con contenido organizado para el día a día de los estudiantes de la UP.
               </p>
             </div>
 
@@ -377,7 +382,7 @@ export default function HomePage() {
               </h2>
               <p className="mt-6 max-w-xl text-base leading-7 text-white/70 sm:text-lg sm:leading-8">
                 Comparte materiales, encuentra grupos de estudio y aprende de la experiencia
-                de estudiantes que ya llevaron tus cursos.
+                de estudiantes que ya llevaron cursos en la UP.
               </p>
               <Link
                 href="/dashboard/community"
@@ -442,7 +447,7 @@ export default function HomePage() {
         <section className="px-5 py-20 sm:px-8 sm:py-28 lg:px-12">
           <div className={`${styles.cta} mx-auto max-w-[1320px] overflow-hidden rounded-[32px] bg-[#ff6848] px-7 py-14 text-white sm:px-12 sm:py-16 lg:flex lg:items-end lg:justify-between lg:px-16`}>
             <div className="relative z-10 max-w-3xl">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/75">Tu próximo ciclo empieza aquí</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/75">Tu próximo ciclo en la UP</p>
               <h2 className="mt-4 text-4xl font-semibold leading-[1.02] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
                 Lleva tu vida académica con más claridad.
               </h2>
@@ -467,7 +472,7 @@ export default function HomePage() {
             </div>
             <div>
               <p className="font-semibold">CampusLink</p>
-              <p className="mt-1 text-sm text-white/50">Hecho por y para estudiantes.</p>
+              <p className="mt-1 text-sm text-white/50">Repositorio independiente para la comunidad estudiantil UP.</p>
             </div>
           </div>
 
@@ -509,7 +514,12 @@ export default function HomePage() {
                 Libro de reclamaciones
               </button>
             </nav>
-            <p className="text-sm text-white/40">© {new Date().getFullYear()} CampusLink</p>
+            <div className="text-sm text-white/40 lg:text-right">
+              <p>© {new Date().getFullYear()} CampusLink</p>
+              <p className="mt-1 max-w-sm text-xs leading-5 text-white/30">
+                Proyecto no oficial y no afiliado a la Universidad del Pacífico.
+              </p>
+            </div>
           </div>
         </div>
       </footer>

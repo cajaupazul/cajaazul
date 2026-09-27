@@ -18,10 +18,10 @@ const content = {
   login: {
     eyebrow: 'Qué bueno tenerte aquí',
     visualTitle: 'Todo sigue aquí.',
-    formLabel: 'Acceso a CampusLink',
+    formLabel: 'Acceso para estudiantes UP',
     title: 'Qué bueno verte de nuevo.',
-    description: 'Continúa con Google para entrar de forma rápida y segura.',
-    button: 'Continuar con Google',
+    description: 'Inicia sesión con tu correo institucional de la Universidad del Pacífico.',
+    button: 'Iniciar sesión con Google',
     switchPrompt: '¿Primera vez por aquí?',
     switchLabel: 'Crear una cuenta',
     imageAlt: 'Mascota de CampusLink dando la bienvenida',
@@ -29,9 +29,9 @@ const content = {
   register: {
     eyebrow: 'Tu espacio empieza aquí',
     visualTitle: 'Crea. Comparte. Avanza.',
-    formLabel: 'Nueva cuenta',
+    formLabel: 'Registro para estudiantes UP',
     title: 'Haz espacio para lo que viene.',
-    description: 'Únete con Google. Solo tomará un momento y no tendrás que recordar otra contraseña.',
+    description: 'Crea tu cuenta con tu correo institucional de la Universidad del Pacífico.',
     button: 'Crear cuenta con Google',
     switchPrompt: '¿Ya tienes una cuenta?',
     switchLabel: 'Iniciar sesión',
@@ -214,8 +214,8 @@ function AuthForm({ mode, error, active, onSwitch }: AuthFormProps) {
         <div className={styles.securityNote}>
           <LockKeyhole size={17} aria-hidden="true" />
           <p>
-            <strong>Acceso protegido.</strong>
-            <span> CampusLink nunca recibe tu contraseña de Google.</span>
+            <strong>Correo institucional UP.</strong>
+            <span> Usa tu cuenta @alum.up.edu.pe. Las cuentas externas requieren autorización previa.</span>
           </p>
         </div>
 

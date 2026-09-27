@@ -3,22 +3,22 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://cajaazul.pages.dev'),
-  title: "CajaAzul | Comunidad académica",
-  description: "Materiales, profesores, grupos y herramientas para tomar mejores decisiones académicas.",
+  title: "CampusLink | Repositorio estudiantil para la comunidad UP",
+  description: "Repositorio estudiantil independiente con materiales, referencias, grupos y herramientas para la comunidad de la Universidad del Pacífico.",
   icons: {
     icon: "/favicon.png",
   },
   openGraph: {
-    title: "CajaAzul | Comunidad académica",
-    description: "Materiales, profesores, grupos y herramientas para tomar mejores decisiones académicas.",
-    siteName: "CajaAzul",
+    title: "CampusLink | Repositorio estudiantil para la comunidad UP",
+    description: "Repositorio estudiantil independiente con materiales, referencias, grupos y herramientas para la comunidad de la Universidad del Pacífico.",
+    siteName: "CampusLink",
     locale: "es_PE",
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "CajaAzul | Comunidad académica",
-    description: "Materiales, profesores, grupos y herramientas para tomar mejores decisiones académicas.",
+    title: "CampusLink | Repositorio estudiantil para la comunidad UP",
+    description: "Repositorio estudiantil independiente con materiales, referencias, grupos y herramientas para la comunidad de la Universidad del Pacífico.",
   },
 };
 
