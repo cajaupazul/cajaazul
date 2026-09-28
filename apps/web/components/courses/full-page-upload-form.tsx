@@ -11,9 +11,7 @@ import { Upload, X, Trash2, UserPlus, ArrowLeft, CheckCircle, FolderUp, Files, L
 import { FileTypeIcon } from '@/components/files/FileTypeIcon';
 import { buildBlackboardStoragePath, buildCourseMaterialPath } from '@/lib/course-storage-paths';
 import {
-    evaluationMaterialType,
     extractAcademicPeriod,
-    extractEvaluationType,
     formatAcademicPeriod,
     normalizeAcademicPeriod,
 } from '@/lib/evaluation-metadata';
@@ -441,45 +439,6 @@ export default function FullPageUploadForm({
             }
         }
 
-        const cycleById = new Map<string, any>(
-            [...courseCycles, ...Array.from(cycleByPeriod.values())]
-                .filter((cycle: any) => cycle?.id)
-                .map((cycle: any) => [cycle.id, cycle])
-        );
-        const foldersByCycle = new Map<string, Set<string>>();
-
-        allFiles.forEach(({ file, target }) => {
-            const fk = fileKey(file);
-            const requestedSection = target === 'General'
-                ? (fileCategoryOverrides[fk] || selectedSubfolder)
-                : target;
-            if (requestedSection !== PREDEFINED_SUBFOLDERS[1]) return;
-            const detectedType = extractEvaluationType(fileSourceName(file));
-            if (!detectedType) return;
-            const folder = evaluationMaterialType(detectedType);
-            const detectedPeriod = extractAcademicPeriod(fileSourceName(file));
-            const cycleId = fileCycleOverrides[fk]
-                || (detectedPeriod ? cycleByPeriod.get(detectedPeriod)?.id : null)
-                || selectedCycleId;
-            if (!cycleId) return;
-            const folders = foldersByCycle.get(cycleId) || new Set<string>();
-            folders.add(folder);
-            foldersByCycle.set(cycleId, folders);
-        });
-
-        for (const [cycleId, folders] of foldersByCycle) {
-            const cycle = cycleById.get(cycleId);
-            const currentFolders: string[] = cycle?.active_subfolders || [];
-            const nextFolders = Array.from(new Set([...currentFolders, ...folders]));
-            if (nextFolders.length === currentFolders.length) continue;
-            const { error } = await supabase
-                .from('course_cycles')
-                .update({ active_subfolders: nextFolders })
-                .eq('id', cycleId);
-            if (error) throw error;
-            if (cycle) cycle.active_subfolders = nextFolders;
-        }
-
         return cycleByPeriod;
     };
 
@@ -688,13 +647,7 @@ export default function FullPageUploadForm({
                     const requestedSection = target === 'General'
                         ? (fileCategoryOverrides[fk] || selectedSubfolder)
                         : target;
-                    const isEvaluation = requestedSection === PREDEFINED_SUBFOLDERS[1];
-                    const detectedEvaluationType = isEvaluation
-                        ? extractEvaluationType(fileSourceName(file))
-                        : null;
-                    const finalSection = isEvaluation
-                        ? evaluationMaterialType(detectedEvaluationType)
-                        : requestedSection;
+                    const finalSection = requestedSection;
                     const detectedPeriod = extractAcademicPeriod(fileSourceName(file));
 
                     const finalCycleId = isSharedSubfolder(finalSection)
@@ -752,7 +705,6 @@ export default function FullPageUploadForm({
                         finalSection,
                         finalCycleId,
                         materialScope: 'standard',
-                        evaluationType: detectedEvaluationType,
                         academicPeriod: detectedPeriod,
                     };
                 }));
@@ -770,7 +722,6 @@ export default function FullPageUploadForm({
                         finalSection,
                         finalCycleId,
                         materialScope,
-                        evaluationType: normalizedEvaluationType,
                         academicPeriod,
                     } = info;
 
@@ -788,7 +739,7 @@ export default function FullPageUploadForm({
                         group_title: requiresGroupTitle(finalTipo) ? sharedGroupTitle.trim() : null,
                         cycle_id: finalCycleId,
                         material_scope: materialScope,
-                        evaluation_type: normalizedEvaluationType || null,
+                        evaluation_type: null,
                         academic_period: academicPeriod,
                         descargas: 0,
                         thumbnail_url: thumbnailUrl,
@@ -996,11 +947,11 @@ export default function FullPageUploadForm({
                                     </SelectContent>
                                 </Select>
                                 <p className="mt-2 px-1 text-[10px] font-medium leading-relaxed text-bb-text-secondary">
-                                    Elige una categoría para el lote. En evaluaciones, CampusLink reconoce automáticamente el ciclo y la carpeta (PC 1 a PC 5, parcial, final o sustitutorio) cuando aparecen en el nombre.
+                                    Elige una categoría para el lote. CampusLink reconoce automáticamente el ciclo cuando aparece en el nombre del archivo.
                                 </p>
                                 {selectedSubfolder === PREDEFINED_SUBFOLDERS[1] && (
                                     <p className="mt-3 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-[11px] font-medium leading-relaxed text-blue-200">
-                                        Ejemplo: “PC1_2019-I_solucionario” se guardará en Ciclo 2019-1 → PC 1. Si el ciclo todavía no existe, te preguntaremos si deseas crearlo.
+                                        Ejemplo: “Examen_2019-I_solucionario” se guardará en Ciclo 2019-1 → Evaluaciones. Si el ciclo todavía no existe, te preguntaremos si deseas crearlo.
                                     </p>
                                 )}
                                 {isSharedSubfolder(selectedSubfolder) && (
@@ -1405,11 +1356,7 @@ export default function FullPageUploadForm({
                                                     const progress = fileUploadProgress[fk] ?? 0;
                                                     const isDone = status === 'done';
                                                     const isUploading = status === 'uploading';
-                                                    const effectiveCategory = fileCategoryOverrides[fk] || selectedSubfolder;
                                                     const detectedPeriod = extractAcademicPeriod(fileSourceName(f));
-                                                    const detectedType = effectiveCategory === PREDEFINED_SUBFOLDERS[1]
-                                                        ? extractEvaluationType(fileSourceName(f))
-                                                        : null;
 
                                                     return (
                                                         <div key={fk} className="flex flex-col items-center group relative">
@@ -1473,18 +1420,11 @@ export default function FullPageUploadForm({
                                                                 {f.name}
                                                             </p>
 
-                                                            {(detectedPeriod || detectedType) && (
+                                                            {detectedPeriod && (
                                                                 <div className="mt-2 flex w-full flex-wrap justify-center gap-1">
-                                                                    {detectedPeriod && (
-                                                                        <span className="rounded bg-teal-500/15 px-1.5 py-0.5 text-[9px] font-black text-teal-300">
-                                                                            {formatAcademicPeriod(detectedPeriod)}
-                                                                        </span>
-                                                                    )}
-                                                                    {detectedType && (
-                                                                        <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-black text-blue-300">
-                                                                            {evaluationMaterialType(detectedType)}
-                                                                        </span>
-                                                                    )}
+                                                                    <span className="rounded bg-teal-500/15 px-1.5 py-0.5 text-[9px] font-black text-teal-300">
+                                                                        {formatAcademicPeriod(detectedPeriod)}
+                                                                    </span>
                                                                 </div>
                                                             )}
 
