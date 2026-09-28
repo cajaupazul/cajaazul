@@ -14,7 +14,7 @@ interface CourseDetailClientProps {
 const MATERIAL_SELECT = `
   id, course_id, user_id, professor_id, titulo, descripcion, url_archivo, tipo,
   descargas, thumbnail_url, use_advanced_viewer, created_at, cycle_id, group_title,
-  storage_path,
+  storage_path, material_scope, evaluation_type, academic_period,
   professors(nombre),
   profiles(id, nombre, avatar_url, background_url, active_frame_key, role, es_vip,
     created_at, bio, link_instagram, puntos)

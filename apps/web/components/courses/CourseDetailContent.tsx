@@ -549,6 +549,10 @@ export default function CourseDetailContent({
                 return;
             }
 
+            if (material.material_scope === 'course_bank') {
+                throw new Error('Los archivos del banco histórico conservan su tipo y periodo. Elimínalo y vuelve a subirlo si necesitas reclasificarlo.');
+            }
+
             const desiredCycleId = isSharedSubfolder(value) ? null : destinationCycleId;
             if (!isSharedSubfolder(value) && !desiredCycleId) {
                 throw new Error('Elige un ciclo para las evaluaciones, clases y sílabos.');
@@ -684,7 +688,7 @@ export default function CourseDetailContent({
     }, [materialsForCounts]);
 
     const historicalMaterials = useMemo(() => {
-        return materialsForCounts.filter(m => !m.cycle_id && !isSharedSubfolder(m.tipo) && !GENERAL_TIPOS.includes(m.tipo) && m.tipo?.toLowerCase() !== 'enlace');
+        return materialsForCounts.filter(m => !m.cycle_id && m.material_scope !== 'course_bank' && !isSharedSubfolder(m.tipo) && !GENERAL_TIPOS.includes(m.tipo) && m.tipo?.toLowerCase() !== 'enlace');
     }, [materialsForCounts]);
 
     const historicalCategories = useMemo(() => {

@@ -18,6 +18,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileTypeIcon } from '@/components/files/FileTypeIcon';
 import { UserHoverCard } from '@/components/ui/UserHoverCard';
+import { evaluationTypeLabel, formatAcademicPeriod } from '@/lib/evaluation-metadata';
 
 type MaterialCategory = 'all' | 'evaluations' | 'classes' | 'notes' | 'syllabus' | 'links' | 'resources';
 
@@ -75,6 +76,7 @@ const NORMAL_LOCATION_OPTIONS = [
 
 const SHARED_LOCATIONS = new Set(['📚 Apuntes y Recursos', '🔗 Enlaces Útiles', '📦 Otros Recursos']);
 const isSharedLocation = (value?: string | null) => !!value && SHARED_LOCATIONS.has(value);
+const isEvaluationBank = (material: any) => material.material_scope === 'course_bank';
 
 function normalize(value?: string | null) {
     return (value || '')
@@ -184,6 +186,9 @@ function materialSortKey(material: any) {
     return {
         category: categoryOrder[category],
         evaluation: category === 'evaluations' ? evaluationSortKey(material) : 0,
+        period: isEvaluationBank(material)
+            ? Number((material.academic_period || '').replace('-', '')) || 0
+            : 0,
         date: new Date(material.created_at || 0).getTime(),
     };
 }
@@ -233,8 +238,9 @@ export default function SmartCourseMaterials({
     const cycleFiltered = useMemo(() => {
         if (cycleId === 'all') return professorFiltered;
         if (cycleId === 'shared') return professorFiltered.filter((item) => !item.cycle_id && ['notes', 'links', 'resources'].includes(materialCategory(item)));
-        if (cycleId === 'historical') return professorFiltered.filter((item) => !item.cycle_id && !['notes', 'links', 'resources'].includes(materialCategory(item)));
-        return professorFiltered.filter((item) => item.cycle_id === cycleId);
+        if (cycleId === 'evaluation-bank') return professorFiltered.filter(isEvaluationBank);
+        if (cycleId === 'historical') return professorFiltered.filter((item) => !item.cycle_id && !isEvaluationBank(item) && !['notes', 'links', 'resources'].includes(materialCategory(item)));
+        return professorFiltered.filter((item) => item.cycle_id === cycleId || isEvaluationBank(item));
     }, [professorFiltered, cycleId]);
 
     const counts = useMemo(() => {
@@ -261,6 +267,9 @@ export default function SmartCourseMaterials({
                     item.relative_path,
                     item.professors?.nombre,
                     item.profiles?.nombre,
+                    item.academic_period,
+                    formatAcademicPeriod(item.academic_period),
+                    evaluationTypeLabel(item.evaluation_type),
                     cycleName,
                 ].filter(Boolean).join(' ')).includes(normalizedQuery);
             })
@@ -269,12 +278,13 @@ export default function SmartCourseMaterials({
                 const bKey = materialSortKey(b);
                 if (aKey.category !== bKey.category) return aKey.category - bKey.category;
                 if (aKey.evaluation !== bKey.evaluation) return aKey.evaluation - bKey.evaluation;
+                if (aKey.period !== bKey.period) return bKey.period - aKey.period;
                 return bKey.date - aKey.date;
             });
     }, [category, cycleFiltered, cycleNameById, query]);
 
     const groupedMaterials = useMemo(() => {
-        const groups = new Map<string, { id: string; name: string; isGroup?: boolean; materials: any[]; sortKey: number }>();
+        const groups = new Map<string, { id: string; name: string; isGroup?: boolean; isEvaluationBank?: boolean; materials: any[]; sortKey: number }>();
 
         filtered.forEach((material) => {
             const category = materialCategory(material);
@@ -285,7 +295,10 @@ export default function SmartCourseMaterials({
             let name: string;
             let isGroup = false;
 
-            if (shared) {
+            if (isEvaluationBank(material)) {
+                id = `evaluation-bank-${material.evaluation_type || 'other'}`;
+                name = `Banco histórico · ${evaluationTypeLabel(material.evaluation_type)}`;
+            } else if (shared) {
                 if (groupTitle) {
                     id = `shared-group-${groupTitle.toLowerCase()}`;
                     name = groupTitle;
@@ -309,8 +322,13 @@ export default function SmartCourseMaterials({
                 id,
                 name,
                 isGroup,
+                isEvaluationBank: isEvaluationBank(material),
                 materials: [material],
-                sortKey: shared ? (isGroup ? 1 : 0) : (material.cycle_id ? cycleSortKey(cycleNameById.get(material.cycle_id)) : -1),
+                sortKey: isEvaluationBank(material)
+                    ? -0.5
+                    : shared
+                        ? (isGroup ? 1 : 0)
+                        : (material.cycle_id ? cycleSortKey(cycleNameById.get(material.cycle_id)) : -1),
             });
         });
 
@@ -384,6 +402,7 @@ export default function SmartCourseMaterials({
                         {cycles.map((cycle) => (
                             <SelectItem key={cycle.id} value={cycle.id}>Ciclo {cycle.ciclo_name}</SelectItem>
                         ))}
+                        <SelectItem value="evaluation-bank">Banco histórico de evaluaciones</SelectItem>
                         <SelectItem value="shared">Material compartido</SelectItem>
                         <SelectItem value="historical">Archivo histórico / sin clasificar</SelectItem>
                     </SelectContent>
@@ -477,7 +496,7 @@ export default function SmartCourseMaterials({
                                     </p>
                                 </div>
                                 <span className="shrink-0 rounded-full border border-bb-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-bb-text-secondary">
-                                    {group.isGroup ? 'GRUPO' : group.id === 'shared' ? 'Todo el curso' : group.id === 'historical' ? 'Sin clasificar' : 'Periodo académico'}
+                                    {group.isEvaluationBank ? 'Banco histórico' : group.isGroup ? 'GRUPO' : group.id === 'shared' ? 'Todo el curso' : group.id === 'historical' ? 'Sin clasificar' : 'Periodo académico'}
                                 </span>
                             </header>
                             <div className="divide-y divide-bb-border">
@@ -490,7 +509,7 @@ export default function SmartCourseMaterials({
 
                         return (
                             <div key={material.id} className={`group flex min-w-0 gap-3 px-3 py-3 transition-colors hover:bg-bb-hover sm:px-4 ${organizeMode ? 'flex-wrap' : 'items-center'}`}>
-                                {isSelectionMode && !isBlackboard && (
+                                {isSelectionMode && !isBlackboard && !isEvaluationBank(material) && (
                                     <button
                                         type="button"
                                         onClick={() => onToggleSelect(material.id)}
@@ -507,6 +526,11 @@ export default function SmartCourseMaterials({
                                         <span className="block truncate text-sm font-bold text-bb-text transition-colors group-hover:text-blue-400">{title}</span>
                                         <span className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-bb-text-secondary">
                                             <span className="font-bold text-blue-400">{categoryLabel || 'Recurso'}</span>
+                                            {isEvaluationBank(material) && material.academic_period && (
+                                                <span className="rounded bg-teal-500/10 px-1.5 py-0.5 font-black text-teal-400">
+                                                    {formatAcademicPeriod(material.academic_period)}
+                                                </span>
+                                            )}
                                             {material.professors?.nombre && <span className="max-w-[220px] truncate">{material.professors.nombre}</span>}
                                             <UserHoverCard profile={material.profiles || {
                                                 id: material.user_id || material.uploaded_by,
@@ -524,7 +548,7 @@ export default function SmartCourseMaterials({
                                     <ChevronRight className="h-4 w-4 shrink-0 text-bb-text-secondary transition-transform group-hover:translate-x-0.5 group-hover:text-blue-400" />
                                 </button>
 
-                                {isAdmin && organizeMode && onReclassify && (
+                                {isAdmin && organizeMode && onReclassify && !isEvaluationBank(material) && (
                                     <div className="grid w-full shrink-0 gap-2 sm:ml-auto sm:w-[430px] sm:grid-cols-2">
                                         <Select
                                             value={isBlackboard ? material.material_category || 'resources' : material.tipo || '📦 Otros Recursos'}
