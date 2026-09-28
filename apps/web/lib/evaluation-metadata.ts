@@ -87,6 +87,22 @@ export function evaluationMaterialType(value?: string | null) {
     return optionByType.get(value as EvaluationType)?.materialType || '📝 Exámenes';
 }
 
+/** Detects the evaluation folder from a filename or relative folder path. */
+export function extractEvaluationType(value?: string | null): EvaluationType | null {
+    if (!value) return null;
+    const text = value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+    const pc = text.match(/(?:^|[^a-z0-9])(?:p\s*[._-]*c|practica\s+calificada)\s*[._-]*([1-5])(?=$|[^a-z0-9])/i);
+    if (pc) return `pc${pc[1]}` as EvaluationType;
+    if (/parcial|(?:^|[^a-z0-9])e\s*[._-]*p(?=$|[^a-z0-9])/i.test(text)) return 'midterm';
+    if (/sustitutorio|susti|rezagado/i.test(text)) return 'makeup';
+    if (/examen\s+final|(?:^|[^a-z0-9])final(?=$|[^a-z0-9])|(?:^|[^a-z0-9])e\s*[._-]*f(?=$|[^a-z0-9])/i.test(text)) return 'final';
+    return null;
+}
+
 export function isEvaluationMaterialType(value?: string | null) {
     const normalized = (value || '')
         .toLowerCase()

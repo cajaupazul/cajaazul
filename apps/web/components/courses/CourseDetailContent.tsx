@@ -359,11 +359,11 @@ export default function CourseDetailContent({
         }
     };
 
-    // Generates cycles from 2020 up to current year
+    // Generates the complete historical range supported by the repository.
     const availableCycleOptions = useMemo(() => {
         const options = [];
         const currentYear = new Date().getFullYear();
-        for (let year = 2020; year <= currentYear; year++) {
+        for (let year = 2010; year <= currentYear; year++) {
             for (let period = 0; period <= 2; period++) {
                 options.push(`${year}-${period}`);
             }

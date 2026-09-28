@@ -212,6 +212,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
     const [zoomLevel, setZoomLevel] = useState(1);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [showDownloadNotice, setShowDownloadNotice] = useState(false);
     const { profile } = useProfile();
     const [downloadSettings, setDownloadSettings] = useState<DownloadSettings>(CLOSED_DOWNLOAD_SETTINGS);
     const [downloadSettingsLoading, setDownloadSettingsLoading] = useState(true);
@@ -258,6 +259,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
     const containerRef = useRef<HTMLDivElement>(null);
     const ownedBlobUrlRef = useRef<string | null>(null);
     const pdfScrollFrameRef = useRef<number | null>(null);
+    const downloadNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => () => {
         if (pdfScrollFrameRef.current !== null) {
@@ -266,6 +268,9 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
         if (ownedBlobUrlRef.current) {
             URL.revokeObjectURL(ownedBlobUrlRef.current);
             ownedBlobUrlRef.current = null;
+        }
+        if (downloadNoticeTimerRef.current) {
+            clearTimeout(downloadNoticeTimerRef.current);
         }
     }, []);
 
@@ -557,7 +562,9 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
 
     const handleDownload = async () => {
         if (!canDownload) {
-            alert(`La descarga de ${downloadFamily} está desactivada para usuarios normales. Los miembros VIP activos y administradores mantienen el acceso.`);
+            setShowDownloadNotice(true);
+            if (downloadNoticeTimerRef.current) clearTimeout(downloadNoticeTimerRef.current);
+            downloadNoticeTimerRef.current = setTimeout(() => setShowDownloadNotice(false), 2800);
             return;
         }
         if (!blobUrl || isDownloading) return;
@@ -721,10 +728,11 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                     <div className="relative group">
                         <button
                             onClick={handleDownload}
+                            aria-disabled={!canDownload}
                             disabled={downloadPermissionPending || isDownloading || (!blobUrl && canDownload)}
                             className={`transition-colors p-1.5 rounded-lg inline-flex items-center gap-1.5 ${
                                 !canDownload
-                                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 cursor-pointer'
+                                    ? 'border border-white/10 bg-white/5 text-zinc-400 opacity-55 hover:opacity-70 cursor-pointer'
                                     : blobUrl && !isDownloading
                                         ? 'hover:text-white hover:bg-white/10 cursor-pointer'
                                         : 'opacity-40 cursor-not-allowed'
@@ -732,7 +740,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                             title={downloadPermissionPending
                                 ? 'Verificando permiso de descarga…'
                                 : !canDownload
-                                    ? `Descarga de ${downloadFamily} disponible para miembros VIP activos`
+                                    ? `Descarga VIP de ${downloadFamily} disponible próximamente`
                                     : isDownloading
                                         ? 'Descargando…'
                                         : `Descargar ${fileName}`}
@@ -741,8 +749,8 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                                 <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                             ) : !canDownload ? (
                                 <>
-                                    <Lock className="w-3.5 h-3.5" />
-                                    <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">VIP</span>
+                                    <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+                                    <span className="hidden text-[10px] font-bold sm:inline">Descarga</span>
                                 </>
                             ) : (
                                 <Download className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -756,6 +764,16 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                     )}
                 </div>
             </div>
+
+            {showDownloadNotice && (
+                <div
+                    role="status"
+                    aria-live="polite"
+                    className={`pointer-events-none absolute right-3 z-[130] max-w-[calc(100%-1.5rem)] rounded-lg border border-zinc-600 bg-zinc-900/95 px-3 py-2 text-xs font-semibold text-zinc-100 shadow-xl sm:right-6 ${isFullscreen ? 'top-14' : 'top-28'}`}
+                >
+                    Descarga VIP de {downloadFamily} disponible próximamente.
+                </div>
+            )}
 
             <div className={`flex-1 overflow-hidden relative bg-[#e8e8e8]`}>
                 {fileType === 'pdf' && (
@@ -854,7 +872,7 @@ export default function SecureFileViewer({ filePath, fileName, useAdvancedViewer
                                 ? 'Verificando…'
                                 : canDownload
                                     ? 'Descargar archivo'
-                                    : 'Descarga sólo VIP'}
+                                    : 'Descarga VIP disponible próximamente'}
                         </Button>
                     </div>
                 )}
