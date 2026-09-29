@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Star, Mail, LayoutPanelLeft, FolderRoot, Folder, FolderOpen, Users, Filter, Trash2, Pencil, Upload, List, Calculator, CheckSquare, X, Compass, Folders, Share2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Course, Professor, getStorageUrl, supabase } from '@/lib/supabase';
-import { extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
+import { adminDeleteCourseMaterials, extractPathFromUrl, getFileFromR2 } from '@/lib/r2-storage';
 import { useProfile } from '@/lib/profile-context';
 import { useDashboardData } from '@/lib/dashboard-data-context';
 import { PLACEHOLDERS } from '@/lib/constants';
@@ -106,6 +106,7 @@ export default function CourseDetailContent({
     const [targetCycleId, setTargetCycleId] = useState<string | null>('historical');
     const [targetSubfolder, setTargetSubfolder] = useState<string>('');
     const [isMovingFiles, setIsMovingFiles] = useState(false);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
     // Blackboard folder sets state
     const [bbSets, setBbSets] = useState<any[]>([]);
@@ -526,7 +527,73 @@ export default function CourseDetailContent({
         return isAdmin || (material.user_id === currentUser.id && within24Hours);
     };
 
+    const handleAdminBulkDelete = async (explicitMaterials?: any[]) => {
+        const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+        if (!isAdmin) {
+            alert('Se requieren permisos de administrador.');
+            return;
+        }
+
+        const selectedIdSet = new Set(selectedMaterialIds);
+        const requestedMaterials = explicitMaterials || smartMaterials.filter((material) => selectedIdSet.has(material.id));
+        if (requestedMaterials.length === 0) {
+            alert('Selecciona al menos un archivo.');
+            return;
+        }
+
+        const message = requestedMaterials.length === 1
+            ? `¿Eliminar permanentemente "${requestedMaterials[0].titulo || requestedMaterials[0].name || 'este archivo'}"? Se borrará de R2 y de la base de datos.`
+            : `¿Eliminar permanentemente ${requestedMaterials.length} archivos? Se borrarán de R2 y de la base de datos. Esta acción no se puede deshacer.`;
+        if (!confirm(message)) return;
+
+        let deletedCount = 0;
+        try {
+            setIsBulkDeleting(true);
+            for (let offset = 0; offset < requestedMaterials.length; offset += 500) {
+                const batch = requestedMaterials.slice(offset, offset + 500);
+                const result = await adminDeleteCourseMaterials(
+                    course.id,
+                    batch.map((material) => ({
+                        source: material.source === 'blackboard' ? 'blackboard' as const : 'material' as const,
+                        id: material.source === 'blackboard'
+                            ? (material.bb_file_id || String(material.id || '').replace(/^bb-/, ''))
+                            : material.id,
+                    }))
+                );
+
+                const deletedMaterialIds = new Set(result.materialIds);
+                const deletedBlackboardIds = new Set(result.blackboardFileIds);
+                const deletedSetIds = new Set(result.blackboardSetIds);
+                setMaterials((previous) => previous.filter((material) => !deletedMaterialIds.has(material.id)));
+                setBlackboardContributions((previous) => previous.filter((material) => !deletedBlackboardIds.has(material.bb_file_id)));
+                setBbFolderFiles((previous) => previous.filter((file) => !deletedBlackboardIds.has(file.id)));
+                setBbSets((previous) => previous.filter((set) => !deletedSetIds.has(set.id)));
+                setSelectedMaterialIds((previous) => previous.filter((id) => {
+                    if (deletedMaterialIds.has(id)) return false;
+                    return !deletedBlackboardIds.has(String(id).replace(/^bb-/, ''));
+                }));
+                deletedCount += result.materialIds.length + result.blackboardFileIds.length;
+            }
+
+            setSelectedMaterialIds([]);
+            setIsSelectionMode(false);
+            alert(`${deletedCount} ${deletedCount === 1 ? 'archivo eliminado' : 'archivos eliminados'} de R2 y de la base de datos.`);
+        } catch (error: unknown) {
+            console.error('Error deleting course materials as admin:', error);
+            const detail = error instanceof Error ? error.message : 'Error desconocido';
+            const partial = deletedCount > 0 ? ` Se eliminaron ${deletedCount} antes del error.` : '';
+            alert(`No se pudo completar la eliminación.${partial} ${detail}`);
+        } finally {
+            setIsBulkDeleting(false);
+        }
+    };
+
     const handleDeleteSmartMaterial = (material: any) => {
+        const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+        if (isAdmin) {
+            void handleAdminBulkDelete([material]);
+            return;
+        }
         if (material.source === 'blackboard') {
             void handleDeleteBbFile(material);
             return;
@@ -1088,9 +1155,13 @@ export default function CourseDetailContent({
                                     isSelectionMode={isSelectionMode}
                                     selectedMaterialIds={selectedMaterialIds}
                                     onToggleSelect={handleToggleSelect}
+                                    onReplaceSelection={setSelectedMaterialIds}
+                                    onSelectionModeChange={setIsSelectionMode}
                                     onOpen={handleMaterialClick}
                                     canDelete={canDeleteSmartMaterial}
                                     onDelete={handleDeleteSmartMaterial}
+                                    onBulkDelete={() => void handleAdminBulkDelete()}
+                                    isBulkDeleting={isBulkDeleting}
                                     isAdmin={currentUser?.role === 'admin' || currentUser?.role === 'superadmin'}
                                     onReclassify={handleReclassifySmartMaterial}
                                 />
@@ -1937,7 +2008,7 @@ export default function CourseDetailContent({
 
             {/* V6.0: Floating Selection Action Bar */}
             <AnimatePresence>
-                {isSelectionMode && selectedMaterialIds.length > 0 && (
+                {libraryMode === 'folders' && isSelectionMode && selectedMaterialIds.length > 0 && (
                     <motion.div
                         initial={{ y: 100, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}

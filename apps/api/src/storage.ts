@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { authMiddleware } from './auth'
+import { authMiddleware, type AuthVariables } from './auth'
 import { createClient } from '@supabase/supabase-js'
 
 type Bindings = {
@@ -19,7 +19,15 @@ type Bindings = {
     // NO R2_ACCESS_KEYS required (Native Bindings)
 }
 
-const storageRouter = new Hono<{ Bindings: Bindings }>()
+const storageRouter = new Hono<{ Bindings: Bindings; Variables: AuthVariables }>()
+
+type AdminDeleteItem = {
+    source: 'material' | 'blackboard'
+    id: string
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const MAX_ADMIN_DELETE_ITEMS = 500
 
 type DownloadSettingColumn =
     | 'pdf_downloads_enabled'
@@ -75,6 +83,36 @@ function normalizeObjectPath(value: string) {
     return cleanPath
 }
 
+function objectPathFromStoredValue(value: unknown, bucketName: string) {
+    if (typeof value !== 'string' || !value.trim()) return null
+    const storedValue = value.trim()
+    if (!/^https?:\/\//i.test(storedValue)) return normalizeObjectPath(storedValue)
+
+    try {
+        const url = new URL(storedValue)
+        const queryPath = url.searchParams.get('path')
+        if (queryPath) return normalizeObjectPath(queryPath)
+
+        const normalizedBucket = bucketName.replace(/_/g, '-')
+        const bucketMarker = `/${normalizedBucket}/`
+        const markerIndex = url.pathname.indexOf(bucketMarker)
+        if (markerIndex < 0) return null
+        return normalizeObjectPath(decodeURIComponent(url.pathname.slice(markerIndex + bucketMarker.length)))
+    } catch {
+        return null
+    }
+}
+
+function uniqueStrings(values: Array<string | null>) {
+    return Array.from(new Set(values.filter((value): value is string => Boolean(value))))
+}
+
+async function deleteR2Keys(bucket: R2Bucket, keys: string[]) {
+    for (let offset = 0; offset < keys.length; offset += 1000) {
+        await bucket.delete(keys.slice(offset, offset + 1000))
+    }
+}
+
 // Middleware de autenticación solo para buckets privados
 const privateAuthMiddleware = async (c: any, next: any) => {
     // EXCEPTION: Public stream endpoint validates its own token
@@ -92,7 +130,7 @@ const privateAuthMiddleware = async (c: any, next: any) => {
     }
 
     // Mutations always require a session. Catalog media is admin-only.
-    if (method === 'PUT' || method === 'DELETE' || method === 'PATCH') {
+    if (method === 'POST' || method === 'PUT' || method === 'DELETE' || method === 'PATCH') {
         return authMiddleware(c, async () => {
             if (bucketName.replace(/_/g, '-') === 'profile-frames') {
                 const user = c.get('user')
@@ -464,6 +502,198 @@ storageRouter.get('/public-stream', async (c) => {
     } catch (e: any) {
         console.error("Stream Error:", e)
         return c.json({ error: 'Token inválido o expirado' }, 400)
+    }
+})
+
+// POST /storage/admin-delete-course-materials
+// Admin-only coordinated deletion. R2 objects are removed before their database
+// rows so a failed storage operation never leaves an inaccessible orphan behind.
+storageRouter.post('/admin-delete-course-materials', async (c) => {
+    const user = c.get('user')
+    const service = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    })
+
+    const { data: profile, error: profileError } = await service
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+    if (profileError) {
+        console.error(JSON.stringify({ event: 'admin_delete_profile_lookup_failed', userId: user.id, error: profileError.message }))
+        return c.json({ error: 'No se pudo verificar el permiso de administrador.' }, 503)
+    }
+    if (!profile || !['admin', 'superadmin'].includes(profile.role)) {
+        return c.json({ error: 'Se requieren permisos de administrador.' }, 403)
+    }
+
+    let body: { courseId?: unknown; items?: unknown }
+    try {
+        body = await c.req.json()
+    } catch {
+        return c.json({ error: 'La solicitud no contiene un JSON válido.' }, 400)
+    }
+
+    if (typeof body.courseId !== 'string' || !UUID_PATTERN.test(body.courseId)) {
+        return c.json({ error: 'El curso indicado no es válido.' }, 400)
+    }
+    if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > MAX_ADMIN_DELETE_ITEMS) {
+        return c.json({ error: `Selecciona entre 1 y ${MAX_ADMIN_DELETE_ITEMS} archivos por operación.` }, 400)
+    }
+
+    const deduplicatedItems = new Map<string, AdminDeleteItem>()
+    for (const candidate of body.items) {
+        if (
+            !candidate ||
+            typeof candidate !== 'object' ||
+            !('source' in candidate) ||
+            !('id' in candidate) ||
+            (candidate.source !== 'material' && candidate.source !== 'blackboard') ||
+            typeof candidate.id !== 'string' ||
+            !UUID_PATTERN.test(candidate.id)
+        ) {
+            return c.json({ error: 'La selección contiene un archivo no válido.' }, 400)
+        }
+        deduplicatedItems.set(`${candidate.source}:${candidate.id}`, {
+            source: candidate.source,
+            id: candidate.id,
+        })
+    }
+
+    const items = Array.from(deduplicatedItems.values())
+    const requestedMaterialIds = items.filter((item) => item.source === 'material').map((item) => item.id)
+    const requestedBlackboardIds = items.filter((item) => item.source === 'blackboard').map((item) => item.id)
+
+    const { data: materialRows, error: materialLookupError } = requestedMaterialIds.length > 0
+        ? await service
+            .from('materials')
+            .select('id, storage_path, url_archivo, thumbnail_url')
+            .eq('course_id', body.courseId)
+            .in('id', requestedMaterialIds)
+        : { data: [], error: null }
+
+    if (materialLookupError) {
+        console.error(JSON.stringify({ event: 'admin_delete_material_lookup_failed', courseId: body.courseId, error: materialLookupError.message }))
+        return c.json({ error: 'No se pudieron localizar los materiales seleccionados.' }, 500)
+    }
+
+    const { data: courseSets, error: setLookupError } = requestedBlackboardIds.length > 0
+        ? await service.from('bb_material_sets').select('id').eq('course_id', body.courseId)
+        : { data: [], error: null }
+
+    if (setLookupError) {
+        console.error(JSON.stringify({ event: 'admin_delete_set_lookup_failed', courseId: body.courseId, error: setLookupError.message }))
+        return c.json({ error: 'No se pudieron verificar los archivos importados.' }, 500)
+    }
+
+    const courseSetIds = (courseSets || []).map((set) => set.id)
+    const { data: blackboardRows, error: blackboardLookupError } = requestedBlackboardIds.length > 0 && courseSetIds.length > 0
+        ? await service
+            .from('bb_files')
+            .select('id, set_id, storage_path')
+            .in('set_id', courseSetIds)
+            .in('id', requestedBlackboardIds)
+        : { data: [], error: null }
+
+    if (blackboardLookupError) {
+        console.error(JSON.stringify({ event: 'admin_delete_bb_lookup_failed', courseId: body.courseId, error: blackboardLookupError.message }))
+        return c.json({ error: 'No se pudieron localizar los archivos importados.' }, 500)
+    }
+
+    const foundMaterialIds = (materialRows || []).map((row) => row.id)
+    const foundBlackboardIds = (blackboardRows || []).map((row) => row.id)
+
+    const courseMaterialKeys = uniqueStrings([
+        ...(materialRows || []).map((row) => objectPathFromStoredValue(row.storage_path || row.url_archivo, 'course-materials')),
+        ...(blackboardRows || []).map((row) => objectPathFromStoredValue(row.storage_path, 'course-materials')),
+    ])
+    const thumbnailKeys = uniqueStrings(
+        (materialRows || []).map((row) => objectPathFromStoredValue(row.thumbnail_url, 'thumbnails'))
+    )
+
+    try {
+        await deleteR2Keys(c.env.COURSE_MATERIALS, courseMaterialKeys)
+        await deleteR2Keys(c.env.THUMBNAILS, thumbnailKeys)
+
+        if (courseMaterialKeys.length > 0) {
+            const { error: cancellationError } = await service
+                .from('conversion_jobs')
+                .update({
+                    status: 'cancelled',
+                    completed_at: new Date().toISOString(),
+                    last_error: 'Source object deleted by a CampusLink administrator',
+                    locked_at: null,
+                    locked_by: null,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('bucket', 'course-materials')
+                .in('source_key', courseMaterialKeys)
+                .in('status', ['pending', 'processing'])
+            if (cancellationError) {
+                console.warn(JSON.stringify({ event: 'admin_delete_conversion_cancel_failed', error: cancellationError.message }))
+            }
+        }
+
+        if (foundMaterialIds.length > 0) {
+            const { error } = await service
+                .from('materials')
+                .delete()
+                .eq('course_id', body.courseId)
+                .in('id', foundMaterialIds)
+            if (error) throw error
+        }
+
+        if (foundBlackboardIds.length > 0) {
+            const { error } = await service.from('bb_files').delete().in('id', foundBlackboardIds)
+            if (error) throw error
+        }
+
+        const affectedSetIds = uniqueStrings((blackboardRows || []).map((row) => row.set_id))
+        let removedSetIds: string[] = []
+        if (affectedSetIds.length > 0) {
+            const { data: remainingFiles, error: remainingError } = await service
+                .from('bb_files')
+                .select('set_id')
+                .in('set_id', affectedSetIds)
+            if (remainingError) throw remainingError
+
+            const nonEmptySetIds = new Set((remainingFiles || []).map((row) => row.set_id))
+            removedSetIds = affectedSetIds.filter((setId) => !nonEmptySetIds.has(setId))
+            if (removedSetIds.length > 0) {
+                const { error } = await service
+                    .from('bb_material_sets')
+                    .delete()
+                    .eq('course_id', body.courseId)
+                    .in('id', removedSetIds)
+                if (error) throw error
+            }
+        }
+
+        console.log(JSON.stringify({
+            event: 'admin_course_materials_deleted',
+            adminUserId: user.id,
+            courseId: body.courseId,
+            materials: foundMaterialIds.length,
+            blackboardFiles: foundBlackboardIds.length,
+            r2Objects: courseMaterialKeys.length + thumbnailKeys.length,
+        }))
+
+        return c.json({
+            success: true,
+            deleted: {
+                // Returning every validated requested id makes retries idempotent:
+                // a row removed during an earlier partial attempt is considered done.
+                materialIds: requestedMaterialIds,
+                blackboardFileIds: requestedBlackboardIds,
+                blackboardSetIds: removedSetIds,
+                r2Objects: courseMaterialKeys.length + thumbnailKeys.length,
+            },
+        })
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown deletion error'
+        console.error(JSON.stringify({ event: 'admin_course_materials_delete_failed', courseId: body.courseId, error: message }))
+        return c.json({ error: 'No se pudo completar la eliminación. Vuelve a intentarlo; la operación es segura para reintentar.' }, 500)
     }
 })
 

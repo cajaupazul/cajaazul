@@ -31,9 +31,13 @@ type SmartCourseMaterialsProps = {
     isSelectionMode: boolean;
     selectedMaterialIds: string[];
     onToggleSelect: (id: string) => void;
+    onReplaceSelection: (ids: string[]) => void;
+    onSelectionModeChange: (enabled: boolean) => void;
     onOpen: (material: any) => void;
     canDelete: (material: any) => boolean;
     onDelete: (material: any) => void;
+    onBulkDelete: () => void;
+    isBulkDeleting?: boolean;
     isAdmin?: boolean;
     onReclassify?: (material: any, value: string, cycleId?: string) => Promise<void>;
 };
@@ -211,9 +215,13 @@ export default function SmartCourseMaterials({
     isSelectionMode,
     selectedMaterialIds,
     onToggleSelect,
+    onReplaceSelection,
+    onSelectionModeChange,
     onOpen,
     canDelete,
     onDelete,
+    onBulkDelete,
+    isBulkDeleting = false,
     isAdmin = false,
     onReclassify,
 }: SmartCourseMaterialsProps) {
@@ -346,6 +354,15 @@ export default function SmartCourseMaterials({
     };
 
     const hasFilters = Boolean(query) || category !== 'all' || cycleId !== 'all' || selectedProfessorId !== 'all';
+    const visibleIds = useMemo(() => filtered.map((material) => material.id), [filtered]);
+    const visibleEvaluationIds = useMemo(
+        () => filtered.filter((material) => materialCategory(material) === 'evaluations').map((material) => material.id),
+        [filtered]
+    );
+    const selectedVisibleCount = useMemo(() => {
+        const visibleIdSet = new Set(visibleIds);
+        return selectedMaterialIds.filter((id) => visibleIdSet.has(id)).length;
+    }, [selectedMaterialIds, visibleIds]);
 
     const handleReclassify = async (material: any, value: string, destinationCycleId?: string) => {
         if (!onReclassify) return;
@@ -417,21 +434,87 @@ export default function SmartCourseMaterials({
                 >
                     Todos <span className={category === 'all' ? 'text-blue-100' : 'text-bb-text-secondary'}>{counts.get('all') || 0}</span>
                 </button>
-                {isAdmin && onReclassify && (
-                    <button
-                        type="button"
-                        onClick={() => setOrganizeMode((current) => !current)}
-                        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${organizeMode ? 'border-blue-500 bg-blue-600 text-white' : 'border-bb-border bg-bb-card text-bb-text-secondary hover:border-blue-500/60 hover:text-bb-text'}`}
-                    >
-                        <PencilLine className="h-3.5 w-3.5" />
-                        {organizeMode ? 'Terminar organización' : 'Organizar archivos'}
-                    </button>
+                {isAdmin && (
+                    <div className="flex flex-wrap items-center gap-2">
+                        {onReclassify && (
+                            <button
+                                type="button"
+                                onClick={() => setOrganizeMode((current) => !current)}
+                                disabled={isSelectionMode}
+                                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${organizeMode ? 'border-blue-500 bg-blue-600 text-white' : 'border-bb-border bg-bb-card text-bb-text-secondary hover:border-blue-500/60 hover:text-bb-text'}`}
+                            >
+                                <PencilLine className="h-3.5 w-3.5" />
+                                {organizeMode ? 'Terminar organización' : 'Organizar archivos'}
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const nextValue = !isSelectionMode;
+                                setOrganizeMode(false);
+                                onReplaceSelection([]);
+                                onSelectionModeChange(nextValue);
+                            }}
+                            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${isSelectionMode ? 'border-red-500 bg-red-500/15 text-red-300' : 'border-bb-border bg-bb-card text-bb-text-secondary hover:border-red-500/60 hover:text-red-300'}`}
+                        >
+                            {isSelectionMode ? <X className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
+                            {isSelectionMode ? 'Cancelar selección' : 'Gestionar eliminaciones'}
+                        </button>
+                    </div>
                 )}
             </div>
 
             {organizeMode && (
                 <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-xs text-bb-text-secondary">
                     <span className="font-black text-blue-400">Modo de organización.</span> Elige la ubicación exacta de cada archivo. Las PC conservan su número; las carpetas Blackboard mantienen su estructura y reciben una categoría manual.
+                </div>
+            )}
+
+            {isAdmin && isSelectionMode && (
+                <div className="sticky bottom-4 z-30 rounded-xl border border-red-500/40 bg-bb-card/95 p-3 shadow-2xl backdrop-blur-md">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p className="text-xs font-black text-bb-text">Eliminación administrativa</p>
+                            <p className="mt-0.5 text-[10px] text-bb-text-secondary">
+                                {selectedMaterialIds.length} seleccionados · {selectedVisibleCount} visibles. Los filtros limitan qué archivos se marcan.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => onReplaceSelection(visibleIds)}
+                                disabled={visibleIds.length === 0 || isBulkDeleting}
+                                className="rounded-lg border border-bb-border px-3 py-2 text-[11px] font-bold text-bb-text transition-colors hover:border-blue-500/60 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                Marcar todo ({visibleIds.length})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onReplaceSelection(visibleEvaluationIds)}
+                                disabled={visibleEvaluationIds.length === 0 || isBulkDeleting}
+                                className="rounded-lg border border-bb-border px-3 py-2 text-[11px] font-bold text-bb-text transition-colors hover:border-blue-500/60 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                Marcar evaluaciones ({visibleEvaluationIds.length})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onReplaceSelection([])}
+                                disabled={selectedMaterialIds.length === 0 || isBulkDeleting}
+                                className="rounded-lg border border-bb-border px-3 py-2 text-[11px] font-bold text-bb-text-secondary transition-colors hover:text-bb-text disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                Desmarcar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onBulkDelete}
+                                disabled={selectedMaterialIds.length === 0 || isBulkDeleting}
+                                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-[11px] font-black text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                {isBulkDeleting ? 'Eliminando…' : `Eliminar (${selectedMaterialIds.length})`}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -509,7 +592,7 @@ export default function SmartCourseMaterials({
 
                         return (
                             <div key={material.id} className={`group flex min-w-0 gap-3 px-3 py-3 transition-colors hover:bg-bb-hover sm:px-4 ${organizeMode ? 'flex-wrap' : 'items-center'}`}>
-                                {isSelectionMode && !isBlackboard && !isEvaluationBank(material) && (
+                                {isSelectionMode && isAdmin && (
                                     <button
                                         type="button"
                                         onClick={() => onToggleSelect(material.id)}
@@ -520,7 +603,11 @@ export default function SmartCourseMaterials({
                                     </button>
                                 )}
 
-                                <button type="button" onClick={() => onOpen(material)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                                <button
+                                    type="button"
+                                    onClick={() => isSelectionMode && isAdmin ? onToggleSelect(material.id) : onOpen(material)}
+                                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                                >
                                     <FileTypeIcon fileName={fileNameForIcon(material, title)} mimeType={material.mime_type} size="md" />
                                     <span className="min-w-0 flex-1">
                                         <span className="block truncate text-sm font-bold text-bb-text transition-colors group-hover:text-blue-400">{title}</span>
@@ -590,7 +677,7 @@ export default function SmartCourseMaterials({
                                     </div>
                                 )}
 
-                                {canDelete(material) && (
+                                {!isSelectionMode && canDelete(material) && (
                                     <button
                                         type="button"
                                         onClick={() => onDelete(material)}

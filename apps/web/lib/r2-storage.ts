@@ -2,6 +2,18 @@ import { createBrowserClient } from '@supabase/ssr'
 
 const WORKER_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://campuslink-api.cajaupazul.workers.dev').trim()
 
+export type AdminCourseMaterialDeleteItem = {
+    source: 'material' | 'blackboard'
+    id: string
+}
+
+export type AdminCourseMaterialDeleteResult = {
+    materialIds: string[]
+    blackboardFileIds: string[]
+    blackboardSetIds: string[]
+    r2Objects: number
+}
+
 /**
  * Generates a secure URL for accessing a file in R2 via the Cloudflare Worker proxy.
  * This URL expects the request to include a valid Authorization header if the bucket is private.
@@ -222,4 +234,41 @@ export async function deleteFileFromR2WithRetry(bucket: string, path: string, at
         }
     }
     throw lastError instanceof Error ? lastError : new Error('No se pudo limpiar el objeto de almacenamiento.');
+}
+
+/**
+ * Deletes course files as one administrator operation. The Worker verifies the
+ * administrator again and coordinates R2 cleanup with the database deletion.
+ */
+export async function adminDeleteCourseMaterials(
+    courseId: string,
+    items: AdminCourseMaterialDeleteItem[]
+): Promise<AdminCourseMaterialDeleteResult> {
+    if (!courseId || items.length === 0) throw new Error('No hay archivos seleccionados.');
+
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Tu sesión expiró. Inicia sesión nuevamente.');
+
+    const response = await fetch(`${WORKER_URL}/storage/admin-delete-course-materials`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ courseId, items }),
+    })
+
+    const payload = await response.json().catch(() => ({})) as {
+        error?: string
+        deleted?: AdminCourseMaterialDeleteResult
+    }
+    if (!response.ok || !payload.deleted) {
+        throw new Error(payload.error || `No se pudo completar la eliminación (${response.status}).`)
+    }
+
+    return payload.deleted
 }
