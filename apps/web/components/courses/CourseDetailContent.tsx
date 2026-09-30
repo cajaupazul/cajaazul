@@ -971,6 +971,9 @@ export default function CourseDetailContent({
                                 <div className="flex flex-wrap gap-x-6 gap-y-2">
                                     <div><span className="text-bb-text/50">Facultad:</span> {course.facultad}</div>
                                     <div><span className="text-bb-text/50">Ciclo:</span> {course.ciclo}</div>
+                                    {course.creditos != null && (
+                                        <div><span className="text-bb-text/50">Créditos:</span> {course.creditos}</div>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button

@@ -110,6 +110,7 @@ export type Course = {
   id: string;
   nombre: string;
   codigo: string | null;
+  creditos?: number | null;
   facultad: string | null;
   carrera: string | null;
   ciclo: number | null;
@@ -120,6 +121,18 @@ export type Course = {
   created_at: string;
   catalog_course_id: string | null;
 };
+
+export function normalizeCourseCredits(row: any): Course {
+  const { catalog_courses: relationValue, ...course } = row || {};
+  const relation = Array.isArray(relationValue)
+    ? relationValue[0]
+    : relationValue;
+
+  return {
+    ...course,
+    creditos: typeof relation?.creditos === 'number' ? relation.creditos : null,
+  } as Course;
+}
 
 export type CourseProfessor = {
   id: string;

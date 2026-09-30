@@ -40,11 +40,17 @@ export default function NewCourseForm() {
     const [imagePreview, setImagePreview] = useState<string>('');
 
     const [catalogItems, setCatalogItems] = useState<string[]>([]);
-    const [catalogCourses, setCatalogCourses] = useState<{ id: string; nombre: string; codigo: string | null }[]>([]);
+    const [catalogCourses, setCatalogCourses] = useState<{
+        id: string;
+        nombre: string;
+        codigo: string | null;
+        creditos: number | null;
+    }[]>([]);
 
     const [formData, setFormData] = useState({
         nombre: '',
         codigo: '',
+        creditos: null as number | null,
         facultad: '',
         ciclo: '',
         descripcion: '',
@@ -57,7 +63,7 @@ export default function NewCourseForm() {
         const fetchCatalog = async () => {
             const { data } = await supabase
                 .from('catalog_courses')
-                .select('id, nombre, codigo')
+                .select('id, nombre, codigo, creditos')
                 .order('nombre');
 
             if (data && data.length > 0) {
@@ -75,7 +81,7 @@ export default function NewCourseForm() {
             try {
                 const { data, error } = await supabase
                     .from('courses')
-                    .select('*')
+                    .select('*, catalog_courses(creditos)')
                     .eq('id', courseId)
                     .single();
 
@@ -84,6 +90,9 @@ export default function NewCourseForm() {
                     setFormData({
                         nombre: data.nombre,
                         codigo: data.codigo || '',
+                        creditos: Array.isArray(data.catalog_courses)
+                            ? data.catalog_courses[0]?.creditos ?? null
+                            : data.catalog_courses?.creditos ?? null,
                         facultad: data.facultad || '',
                         ciclo: data.ciclo?.toString() || '',
                         descripcion: data.descripcion || '',
@@ -124,6 +133,11 @@ export default function NewCourseForm() {
 
         if (!formData.nombre.trim() || !formData.facultad || !formData.ciclo) {
             alert('Por favor completa los campos requeridos (Nombre, Facultad y Ciclo)');
+            return;
+        }
+
+        if (!formData.catalog_course_id || !formData.codigo) {
+            alert('Selecciona un curso válido del catálogo institucional.');
             return;
         }
 
@@ -182,7 +196,7 @@ export default function NewCourseForm() {
 
                 if (error) throw error;
                 databaseSaved = true;
-                if (data) addCourse(data);
+                if (data) addCourse({ ...data, creditos: formData.creditos });
                 alert('¡Curso creado exitosamente!');
             }
 
@@ -239,22 +253,36 @@ export default function NewCourseForm() {
                                         setFormData((prev) => ({
                                             ...prev,
                                             nombre: val,
-                                            codigo: match?.codigo || prev.codigo,
+                                            codigo: match?.codigo || '',
+                                            creditos: match?.creditos ?? null,
                                             catalog_course_id: match?.id || null,
                                         }));
                                     }}
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="codigo" className="text-bb-text font-bold">Código Oficial del Curso</Label>
-                                <Input
-                                    id="codigo"
-                                    value={formData.codigo}
-                                    readOnly
-                                    placeholder="Selecciona un curso del catálogo"
-                                    className="bg-bb-darker border-bb-border text-blue-400 h-12 font-mono text-xl tracking-widest cursor-not-allowed"
-                                />
+                            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
+                                <div className="space-y-2">
+                                    <Label htmlFor="codigo" className="text-bb-text font-bold">Código Oficial del Curso</Label>
+                                    <Input
+                                        id="codigo"
+                                        value={formData.codigo}
+                                        readOnly
+                                        placeholder="Selecciona un curso del catálogo"
+                                        className="bg-bb-darker border-bb-border text-blue-400 h-12 font-mono text-xl tracking-widest cursor-not-allowed"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="creditos" className="text-bb-text font-bold">Créditos</Label>
+                                    <Input
+                                        id="creditos"
+                                        value={formData.creditos ?? ''}
+                                        readOnly
+                                        placeholder="Pendiente"
+                                        aria-label="Créditos oficiales del curso"
+                                        className="bg-bb-darker border-bb-border text-blue-400 h-12 text-center font-mono text-xl cursor-not-allowed"
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -345,7 +373,7 @@ export default function NewCourseForm() {
                                 <div>
                                     <p className="text-sm text-bb-text font-medium">Revisión de Seguridad</p>
                                     <p className="text-[11px] text-bb-text-secondary leading-relaxed mt-1">
-                                        Al crear este curso, el código oficial se asigna automáticamente desde el catálogo institucional para garantizar integridad referencial.
+                                        Al crear este curso, el código y los créditos oficiales se asignan automáticamente desde el catálogo institucional para garantizar integridad referencial.
                                     </p>
                                 </div>
                             </div>

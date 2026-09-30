@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { normalizeCourseCredits, supabase } from '@/lib/supabase';
 import type { Course } from '@/lib/supabase';
 import CourseDetailContent from '@/components/courses/CourseDetailContent';
 
@@ -53,7 +53,7 @@ export default function CourseDetailClient({ initialCourseId, initialCourse = nu
         if (!courseData) {
           const { data, error: courseError } = await supabase
             .from('courses')
-            .select('id, nombre, codigo, facultad, carrera, ciclo, descripcion, imagen_url, syllabus_url, views, created_at, catalog_course_id')
+            .select('id, nombre, codigo, facultad, carrera, ciclo, descripcion, imagen_url, syllabus_url, views, created_at, catalog_course_id, catalog_courses(creditos)')
             .eq('id', courseId)
             .maybeSingle();
 
@@ -62,7 +62,7 @@ export default function CourseDetailClient({ initialCourseId, initialCourse = nu
             if (!cancelled) setLoading(false);
             return;
           }
-          courseData = data as Course;
+          courseData = normalizeCourseCredits(data);
         }
 
         if (cancelled) return;

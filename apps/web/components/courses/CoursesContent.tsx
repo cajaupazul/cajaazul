@@ -380,8 +380,13 @@ export default function CoursesContent({ initialCourses, profile }: CoursesConte
 
                                         <div className="mt-1.5 flex items-center justify-between gap-2 md:mt-2">
                                             <div className="min-w-0 flex-1 space-y-0.5 text-[10px] text-bb-text-secondary md:space-y-1 md:text-xs">
-                                            <div className="truncate">{course.facultad || 'Sin Facultad'}</div>
-                                            <div>Ciclo {course.ciclo}</div>
+                                                <div className="truncate">{course.facultad || 'Sin Facultad'}</div>
+                                                <div className="flex flex-wrap items-center gap-x-1.5">
+                                                    <span>Ciclo {course.ciclo}</span>
+                                                    {course.creditos != null && (
+                                                        <span aria-label={`${course.creditos} créditos`}>· {course.creditos} cr.</span>
+                                                    )}
+                                                </div>
                                             </div>
                                             {recentCourseIds.has(course.id) && (
                                                 <div className="shrink-0 flex items-center justify-center pl-1" title="¡Nuevo material agregado recientemente!">

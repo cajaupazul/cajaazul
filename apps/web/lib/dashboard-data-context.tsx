@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { supabase, Course, Professor } from '@/lib/supabase';
+import { supabase, Course, Professor, normalizeCourseCredits } from '@/lib/supabase';
 import { useProfile } from './profile-context';
 
 interface DashboardDataContextType {
@@ -62,11 +62,11 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         try {
             const { data, error } = await supabase
                 .from('courses')
-                .select('*')
+                .select('*, catalog_courses(creditos)')
                 .order('nombre', { ascending: true });
 
             if (!error && data) {
-                setCourses(data);
+                setCourses(data.map(normalizeCourseCredits));
             }
         } finally {
             setLoading(prev => ({ ...prev, courses: false }));

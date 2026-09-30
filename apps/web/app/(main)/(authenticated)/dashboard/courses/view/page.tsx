@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { cache, Suspense } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import type { Course } from '@/lib/supabase';
+import { normalizeCourseCredits, type Course } from '@/lib/supabase';
 import CourseDetailClient from './CourseDetailClient';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -11,7 +11,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const getCourse = cache(async (id: string): Promise<Course | null> => {
   const { data, error } = await supabase
     .from('courses')
-    .select('id, nombre, codigo, facultad, carrera, ciclo, descripcion, imagen_url, syllabus_url, views, created_at, catalog_course_id')
+    .select('id, nombre, codigo, facultad, carrera, ciclo, descripcion, imagen_url, syllabus_url, views, created_at, catalog_course_id, catalog_courses(creditos)')
     .eq('id', id)
     .maybeSingle();
 
@@ -20,7 +20,7 @@ const getCourse = cache(async (id: string): Promise<Course | null> => {
     return null;
   }
 
-  return data as Course | null;
+  return data ? normalizeCourseCredits(data) : null;
 });
 
 export async function generateMetadata({
@@ -46,6 +46,7 @@ export async function generateMetadata({
       const descDetails = [
         course.facultad ? `Facultad: ${course.facultad}` : null,
         course.ciclo ? `Ciclo: ${course.ciclo}` : null,
+        course.creditos != null ? `${course.creditos} créditos` : null,
         'Materiales, profesores y apuntes en CajaAzul',
       ].filter(Boolean).join(' · ');
 
