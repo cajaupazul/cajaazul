@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Upload, FileText, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, Upload, FileText, AlertTriangle, CheckCircle2, Loader2, Rocket, Trash2 } from 'lucide-react';
 import { parseOfertaFile, parseOfertaText, ParsedOferta } from '@/lib/pdf-schedule-parser';
 import { debugExcel } from '@/lib/excel-debug';
-import { supabase } from '@/lib/supabase';
+import { supabase, AcademicOfferingVersion } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
 import { useTheme } from '@/lib/theme-context';
 
@@ -12,6 +12,13 @@ type Props = {
     open: boolean;
     onClose: () => void;
     onSuccess: () => void;
+};
+
+const normalizeAcademicPeriod = (value: string) => {
+    const upper = value.trim().toUpperCase();
+    const match = upper.match(/(20\d{2})\s*[-_/]\s*(II|I|2|1)(?:\D|$)/);
+    if (!match) return upper;
+    return `${match[1]}-${match[2] === 'II' || match[2] === '2' ? 'II' : 'I'}`;
 };
 
 export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
@@ -26,8 +33,9 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
     const [pastedText, setPastedText] = useState('');
     const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload');
     const [showManagePeriodos, setShowManagePeriodos] = useState(false);
-    const [periodos, setPeriodos] = useState<string[]>([]);
+    const [versions, setVersions] = useState<AcademicOfferingVersion[]>([]);
     const [loadingPeriodos, setLoadingPeriodos] = useState(false);
+    const [createdVersionNumber, setCreatedVersionNumber] = useState<number | null>(null);
 
     const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         const f = e.target.files?.[0];
@@ -73,56 +81,60 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
         }
     }, [pastedText]);
 
-    const handleClearPeriod = async () => {
-        const periodo = periodoOverride || parsedData?.periodo;
-        if (!periodo) return;
-
-        if (!confirm(`¿Estás SEGURO de que quieres BORRAR TODA la oferta del periodo ${periodo}? Esta acción es irreversible.`)) {
-            return;
-        }
-
-        setUploading(true);
-        try {
-            await supabase.from('oferta_academica').delete().eq('periodo', periodo);
-            const { error } = await supabase.from('sche_sections').delete().eq('periodo', periodo);
-            if (error) throw error;
-            alert(`Toda la oferta del periodo ${periodo} ha sido borrada.`);
-            onSuccess();
-        } catch (err: any) {
-            console.error('[OFERTA_UPLOAD] Clear error:', err);
-            alert('Error al borrar: ' + err.message);
-        } finally {
-            setUploading(false);
-        }
-    };
-
     const handleLoadPeriodos = async () => {
         if (showManagePeriodos) { setShowManagePeriodos(false); return; }
         setLoadingPeriodos(true);
         try {
-            const { data } = await supabase
-                .from('sche_sections')
-                .select('periodo')
-                .order('periodo', { ascending: false });
-            const unique = Array.from(new Set((data || []).map((r: any) => r.periodo).filter(Boolean)));
-            setPeriodos(unique);
+            const { data, error } = await supabase
+                .from('academic_offering_versions')
+                .select('*')
+                .order('academic_period', { ascending: false })
+                .order('version_number', { ascending: false });
+            if (error) throw error;
+            setVersions((data || []) as AcademicOfferingVersion[]);
             setShowManagePeriodos(true);
+        } catch (err: any) {
+            alert('No se pudieron cargar las versiones: ' + err.message);
         } finally {
             setLoadingPeriodos(false);
         }
     };
 
-    const handleDeletePeriodo = async (per: string) => {
-        if (!confirm(`¿Eliminar toda la oferta del periodo "${per}"? Esta acción no se puede deshacer.`)) return;
+    const refreshVersions = async () => {
+        const { data, error } = await supabase
+            .from('academic_offering_versions')
+            .select('*')
+            .order('academic_period', { ascending: false })
+            .order('version_number', { ascending: false });
+        if (error) throw error;
+        setVersions((data || []) as AcademicOfferingVersion[]);
+    };
+
+    const handlePublishVersion = async (version: AcademicOfferingVersion) => {
+        if (!confirm(`¿Publicar ${version.academic_period} · versión ${version.version_number}? La versión vigente anterior quedará archivada.`)) return;
         setUploading(true);
         try {
-            await supabase.from('oferta_academica').delete().eq('periodo', per);
-            const { error } = await supabase.from('sche_sections').delete().eq('periodo', per);
+            const { error } = await supabase.rpc('publish_academic_offering_version', { p_version_id: version.id });
             if (error) throw error;
-            setPeriodos(prev => prev.filter(p => p !== per));
+            await refreshVersions();
             onSuccess();
         } catch (err: any) {
-            alert('Error al eliminar: ' + err.message);
+            alert('No se pudo publicar: ' + err.message);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleDeleteVersion = async (version: AcademicOfferingVersion) => {
+        if (!confirm(`¿Eliminar ${version.academic_period} · versión ${version.version_number}? Solo se permite si no está publicada ni tiene horarios guardados.`)) return;
+        setUploading(true);
+        try {
+            const { error } = await supabase.rpc('delete_academic_offering_version', { p_version_id: version.id });
+            if (error) throw error;
+            await refreshVersions();
+            onSuccess();
+        } catch (err: any) {
+            alert('No se pudo eliminar: ' + err.message);
         } finally {
             setUploading(false);
         }
@@ -133,45 +145,41 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
         setUploading(true);
 
         try {
-            const periodo = periodoOverride || parsedData.periodo;
+            const periodo = normalizeAcademicPeriod(periodoOverride || parsedData.periodo);
+            if (!/^20\d{2}-(I|II)$/.test(periodo)) {
+                throw new Error('El ciclo debe tener el formato AAAA-I o AAAA-II (por ejemplo, 2026-II).');
+            }
 
-            // 1. Extract Unique Courses (Normalized)
             const coursesMap = new Map<string, any>();
             parsedData.ofertas.forEach(o => {
                 if (!coursesMap.has(o.codigo_curso)) {
                     coursesMap.set(o.codigo_curso, {
-                        id: o.codigo_curso,
-                        name: o.nombre_curso,
-                        credits: o.creditos
+                        course_code: o.codigo_curso,
+                        course_name: o.nombre_curso,
+                        credits: Number(o.creditos ?? 0),
                     });
                 }
             });
-            const courseRows = Array.from(coursesMap.values());
 
-            // 2. Extract Unique Sections (Normalized)
             const sectionsMap = new Map<string, any>();
             parsedData.ofertas.forEach(o => {
-                const section_id = `${periodo}-${o.codigo_curso}-${o.seccion}`;
-                if (!sectionsMap.has(section_id)) {
-                    sectionsMap.set(section_id, {
-                        id: section_id,
-                        course_id: o.codigo_curso,
+                const sectionKey = `${o.codigo_curso}::${o.seccion}`;
+                if (!sectionsMap.has(sectionKey)) {
+                    sectionsMap.set(sectionKey, {
+                        course_code: o.codigo_curso,
                         letter: o.seccion,
                         teacher: o.profesor || 'Sin profesor',
-                        periodo: periodo
                     });
                 }
             });
-            const sectionRows = Array.from(sectionsMap.values());
 
-            // 3. Extract Schedule Blocks (Deduplicated)
             const blockRowsMap = new Map<string, any>();
             parsedData.ofertas.forEach(o => {
-                const section_id = `${periodo}-${o.codigo_curso}-${o.seccion}`;
-                const key = `${section_id}-${o.tipo}-${o.dia}-${o.hora_inicio}-${o.hora_fin}`;
+                const key = `${o.codigo_curso}-${o.seccion}-${o.tipo}-${o.dia}-${o.hora_inicio}-${o.hora_fin}`;
                 if (!blockRowsMap.has(key)) {
                     blockRowsMap.set(key, {
-                        section_id,
+                        course_code: o.codigo_curso,
+                        letter: o.seccion,
                         type: o.tipo,
                         day: o.dia,
                         start_time: o.hora_inicio,
@@ -180,33 +188,27 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                     });
                 }
             });
-            const blockRows = Array.from(blockRowsMap.values());
 
-            // PERSISTENCE (The Shield)
-            // A. Upsert Courses
-            const { error: cErr } = await supabase.from('sche_courses').upsert(courseRows);
-            if (cErr) throw cErr;
+            // A single database function performs the import atomically. If any
+            // row is invalid, PostgreSQL rolls the whole version back.
+            const { data: versionRows, error: importError } = await supabase.rpc(
+                'import_academic_offering_version',
+                {
+                    p_academic_period: periodo,
+                    p_source_label: parsedData.periodo || periodoOverride || periodo,
+                    p_source_filename: file?.name || (isPasteMode ? 'Texto pegado' : null),
+                    p_courses: Array.from(coursesMap.values()),
+                    p_sections: Array.from(sectionsMap.values()),
+                    p_blocks: Array.from(blockRowsMap.values()),
+                }
+            );
+            if (importError) throw importError;
 
-            // B. Clean current periodo for sections (cascades to blocks)
-            // We do this to ensure we don't have stale sections if the PDF changed
-            const { error: dErr } = await supabase.from('sche_sections').delete().eq('periodo', periodo);
-            if (dErr) throw dErr;
+            const version = Array.isArray(versionRows) ? versionRows[0] : versionRows;
+            if (!version?.id) throw new Error('No se pudo crear la nueva versión de la oferta.');
 
-            // Also clean legacy table to avoid user confusion in Supabase Studio
-            await supabase.from('oferta_academica').delete().eq('periodo', periodo);
-
-            // C. Insert Sections
-            const { error: sErr } = await supabase.from('sche_sections').insert(sectionRows);
-            if (sErr) throw sErr;
-
-            // D. Insert Blocks (Batched)
-            const batchSize = 500;
-            for (let i = 0; i < blockRows.length; i += batchSize) {
-                const batch = blockRows.slice(i, i + batchSize);
-                const { error: bErr } = await supabase.from('sche_schedule_blocks').insert(batch);
-                if (bErr) throw bErr;
-            }
-
+            setCreatedVersionNumber(Number(version.version_number));
+            await refreshVersions();
             setStep('done');
             setTimeout(() => {
                 onSuccess();
@@ -225,6 +227,7 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
         setPastedText('');
         setParsedData(null);
         setPeriodoOverride('');
+        setCreatedVersionNumber(null);
         setStep('upload');
         setIsPasteMode(false);
         onClose();
@@ -330,28 +333,51 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                                                 <button
                                                     onClick={handleLoadPeriodos}
                                                     disabled={uploading || loadingPeriodos}
-                                                    className="flex items-center gap-2 w-full justify-center px-4 py-2 rounded-lg text-xs font-semibold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                                    className="flex items-center gap-2 w-full justify-center px-4 py-2 rounded-lg text-xs font-semibold text-bb-text-secondary border border-bb-border hover:bg-bb-hover transition-colors disabled:opacity-50"
                                                 >
                                                     {loadingPeriodos ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-                                                    {showManagePeriodos ? 'Ocultar administrador de periodos' : 'Administrar / eliminar oferta anterior'}
+                                                    {showManagePeriodos ? 'Ocultar versiones' : 'Administrar versiones de la oferta'}
                                                 </button>
 
                                                 {showManagePeriodos && (
-                                                    <div className="mt-2 rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
-                                                        <p className="text-xs text-red-400 font-semibold">Periodos guardados en la base de datos:</p>
-                                                        {periodos.length === 0 ? (
-                                                            <p className="text-xs text-bb-text-secondary">No hay periodos guardados.</p>
+                                                    <div className="mt-2 rounded-xl border border-bb-border bg-bb-hover/30 p-3 space-y-2 max-h-64 overflow-y-auto">
+                                                        <p className="text-xs text-bb-text font-semibold">Versiones guardadas:</p>
+                                                        {versions.length === 0 ? (
+                                                            <p className="text-xs text-bb-text-secondary">No hay versiones guardadas.</p>
                                                         ) : (
-                                                            periodos.map(per => (
-                                                                <div key={per} className="flex items-center justify-between bg-bb-card rounded-lg px-3 py-2">
-                                                                    <span className="text-sm text-bb-text font-medium">{per}</span>
-                                                                    <button
-                                                                        onClick={() => handleDeletePeriodo(per)}
-                                                                        disabled={uploading}
-                                                                        className="text-xs text-red-400 hover:text-red-300 font-semibold px-2 py-1 rounded hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                                                                    >
-                                                                        Eliminar
-                                                                    </button>
+                                                            versions.map(version => (
+                                                                <div key={version.id} className="flex items-center justify-between gap-3 bg-bb-card rounded-lg px-3 py-2">
+                                                                    <div className="min-w-0">
+                                                                        <p className="text-sm text-bb-text font-medium">
+                                                                            {version.academic_period} · v{version.version_number}
+                                                                        </p>
+                                                                        <p className="text-[10px] text-bb-text-secondary truncate">
+                                                                            {version.status === 'published' ? 'Vigente' : version.status === 'draft' ? 'Borrador' : 'Histórica'}
+                                                                            {version.source_filename ? ` · ${version.source_filename}` : ''}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1 shrink-0">
+                                                                        {version.status !== 'published' && (
+                                                                            <button
+                                                                                onClick={() => handlePublishVersion(version)}
+                                                                                disabled={uploading}
+                                                                                className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 rounded transition-colors disabled:opacity-50"
+                                                                                title="Publicar como oferta vigente"
+                                                                            >
+                                                                                <Rocket className="w-4 h-4" />
+                                                                            </button>
+                                                                        )}
+                                                                        {version.status !== 'published' && (
+                                                                            <button
+                                                                                onClick={() => handleDeleteVersion(version)}
+                                                                                disabled={uploading}
+                                                                                className="p-1.5 text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
+                                                                                title="Eliminar versión"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             ))
                                                         )}
@@ -403,8 +429,11 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                                     onChange={e => setPeriodoOverride(e.target.value)}
                                     className="w-full bg-bb-dark border border-bb-border rounded-xl px-4 py-2.5 text-bb-text text-sm focus:outline-none focus:ring-2"
                                     style={{ focusRingColor: colors?.primary } as any}
-                                    placeholder="ej: 2026-I PERIODO-PRE"
+                                    placeholder="ej: 2026-II"
                                 />
+                                <p className="mt-2 text-xs text-bb-text-secondary">
+                                    Se creará una versión nueva en borrador. La oferta vigente no se reemplaza hasta que publiques esta versión.
+                                </p>
                             </div>
 
                             {/* Preview table */}
@@ -457,7 +486,10 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                     {step === 'done' && (
                         <div className="flex flex-col items-center gap-4 py-10">
                             <CheckCircle2 className="w-16 h-16 text-green-500" />
-                            <p className="text-lg font-semibold text-bb-text">¡Oferta subida exitosamente!</p>
+                            <p className="text-lg font-semibold text-bb-text">Oferta cargada como borrador</p>
+                            <p className="text-sm text-bb-text-secondary text-center">
+                                Se creó la versión {createdVersionNumber}. Publícala desde “Administrar versiones” cuando hayas verificado los datos.
+                            </p>
                         </div>
                     )}
                 </div>
@@ -465,16 +497,7 @@ export default function UploadOfertaModal({ open, onClose, onSuccess }: Props) {
                 {/* Footer */}
                 {step === 'preview' && parsedData && parsedData.ofertas.length > 0 && (
                     <div className="px-6 py-4">
-                        <div className="flex items-center justify-between gap-3 pt-4 border-t border-bb-border">
-                            <button
-                                onClick={handleClearPeriod}
-                                disabled={uploading}
-                                className="px-6 py-2.5 rounded-xl font-semibold border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-all flex items-center gap-2"
-                            >
-                                <AlertTriangle className="w-4 h-4" />
-                                Limpiar Base de Datos
-                            </button>
-
+                        <div className="flex items-center justify-end gap-3 pt-4 border-t border-bb-border">
                             <div className="flex gap-3">
                                 <button
                                     onClick={handleReset}

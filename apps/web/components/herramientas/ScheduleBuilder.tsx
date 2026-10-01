@@ -5,7 +5,7 @@ import {
     GraduationCap, Clock, CalendarDays, Save, Plus, Trash2, Loader2,
     FileText, ChevronDown, Edit2
 } from 'lucide-react';
-import { supabase, OfertaAcademica, UserSchedule } from '@/lib/supabase';
+import { supabase, OfertaAcademica, UserSchedule, AcademicOfferingVersion } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
 import { useTheme } from '@/lib/theme-context';
 import CourseSelector from './CourseSelector';
@@ -24,8 +24,8 @@ export default function ScheduleBuilder() {
     // Data
     const [ofertas, setOfertas] = useState<OfertaAcademica[]>([]);
     const [loading, setLoading] = useState(true);
-    const [periodos, setPeriodos] = useState<string[]>([]);
-    const [selectedPeriodo, setSelectedPeriodo] = useState('');
+    const [versions, setVersions] = useState<AcademicOfferingVersion[]>([]);
+    const [selectedVersionId, setSelectedVersionId] = useState('');
 
     // Schedule state
     const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set());
@@ -43,54 +43,85 @@ export default function ScheduleBuilder() {
     const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
     const [editingScheduleName, setEditingScheduleName] = useState('');
 
-    // Fetch periodos
-    useEffect(() => {
-        const fetchPeriodos = async () => {
-            const { data } = await supabase
-                .from('sche_sections')
-                .select('periodo')
-                .order('periodo', { ascending: false });
+    const selectedVersion = useMemo(
+        () => versions.find(version => version.id === selectedVersionId) || null,
+        [versions, selectedVersionId]
+    );
 
-            if (data) {
-                const unique = [...new Set(data.map(d => d.periodo))];
-                setPeriodos(unique);
-                if (unique.length > 0) setSelectedPeriodo(unique[0]);
+    // Fetch immutable offering versions. Students see published and historical
+    // versions; drafts stay visible only to administrators.
+    useEffect(() => {
+        const fetchVersions = async () => {
+            const { data, error } = await supabase
+                .from('academic_offering_versions')
+                .select('*')
+                .order('academic_period', { ascending: false })
+                .order('version_number', { ascending: false });
+
+            if (error) {
+                console.error('[SCHEDULE] Error loading offering versions:', error);
+                setLoading(false);
+                return;
             }
+
+            const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
+            const visible = ((data || []) as AcademicOfferingVersion[])
+                .filter(version => isAdmin || version.status !== 'draft');
+            setVersions(visible);
+            setSelectedVersionId(current => {
+                if (current && visible.some(version => version.id === current)) return current;
+                return visible.find(version => version.status === 'published')?.id || visible[0]?.id || '';
+            });
             setLoading(false);
         };
-        fetchPeriodos();
-    }, []);
+        fetchVersions();
+    }, [profile?.role]);
 
-    // Fetch ofertas for selected periodo (Normalized Join)
+    // Fetch one exact version. Course names and credits come from the canonical
+    // institutional catalog, with the import snapshot as a historical fallback.
     useEffect(() => {
-        if (!selectedPeriodo) return;
+        if (!selectedVersionId || !selectedVersion) return;
         const fetchOfertas = async () => {
             setLoading(true);
-
-            // 1. Fetch courses
-            const { data: courses } = await supabase.from('sche_courses').select('*');
-            // 2. Fetch sections and their schedule blocks
-            const { data: sections } = await supabase
+            const { data: sections, error } = await supabase
                 .from('sche_sections')
-                .select('*, sche_schedule_blocks(*)')
-                .eq('periodo', selectedPeriodo);
+                .select(`
+                    id,
+                    letter,
+                    teacher,
+                    academic_offering_courses!sche_sections_offering_course_id_fkey (
+                        course_code,
+                        course_name_snapshot,
+                        credits_snapshot,
+                        catalog_courses (nombre, creditos)
+                    ),
+                    sche_schedule_blocks (*)
+                `)
+                .eq('offering_version_id', selectedVersionId);
 
-            if (sections) {
-                // Flatten to maintain compatibility with existing UI components
+            if (error) {
+                console.error('[SCHEDULE] Error loading offering:', error);
+                setOfertas([]);
+            } else if (sections) {
                 const flat: OfertaAcademica[] = [];
-                sections.forEach(sec => {
-                    const course = courses?.find(c => c.id === sec.course_id);
+                sections.forEach((sec: any) => {
+                    const offeringCourse = Array.isArray(sec.academic_offering_courses)
+                        ? sec.academic_offering_courses[0]
+                        : sec.academic_offering_courses;
+                    const catalogCourse = Array.isArray(offeringCourse?.catalog_courses)
+                        ? offeringCourse.catalog_courses[0]
+                        : offeringCourse?.catalog_courses;
                     const blocks = (sec as any).sche_schedule_blocks || [];
 
                     blocks.forEach((block: any) => {
                         flat.push({
                             id: block.id,
-                            periodo: sec.periodo,
-                            codigo_curso: sec.course_id,
-                            nombre_curso: course?.name || 'Curso Desconocido',
+                            periodo: selectedVersion.academic_period,
+                            codigo_curso: offeringCourse?.course_code || 'SIN-CODIGO',
+                            nombre_curso: catalogCourse?.nombre || offeringCourse?.course_name_snapshot || 'Curso desconocido',
                             seccion: sec.letter,
                             profesor: sec.teacher,
-                            creditos: Number(course?.credits || 0),
+                            creditos: Number(catalogCourse?.creditos ?? offeringCourse?.credits_snapshot ?? 0),
                             tipo: block.type,
                             dia: block.day,
                             hora_inicio: block.start_time,
@@ -108,28 +139,35 @@ export default function ScheduleBuilder() {
             setLoading(false);
         };
         fetchOfertas();
-    }, [selectedPeriodo]);
+    }, [selectedVersionId, selectedVersion]);
 
     // Fetch user schedules
     useEffect(() => {
-        if (!profile?.id || !selectedPeriodo) return;
+        if (!profile?.id || !selectedVersionId) return;
         const fetchSchedules = async () => {
             const { data } = await supabase
                 .from('user_schedules')
                 .select('*')
                 .eq('user_id', profile.id)
-                .eq('periodo', selectedPeriodo)
+                .eq('offering_version_id', selectedVersionId)
                 .order('created_at');
 
             if (data) {
-                setSavedSchedules(data);
-                if (data.length > 0 && !activeScheduleId) {
-                    loadSchedule(data[0]);
-                }
+                setSavedSchedules(data as UserSchedule[]);
+                setActiveScheduleId(null);
+                setSelectedCourses(new Set());
+                setSelectedSections(new Map());
+                setActiveCourse(null);
             }
         };
         fetchSchedules();
-    }, [profile?.id, selectedPeriodo]);
+    }, [profile?.id, selectedVersionId]);
+
+    useEffect(() => {
+        if (ofertas.length > 0 && savedSchedules.length > 0 && !activeScheduleId) {
+            loadSchedule(savedSchedules[0]);
+        }
+    }, [ofertas, savedSchedules, activeScheduleId]);
 
     const loadSchedule = (schedule: UserSchedule) => {
         setActiveScheduleId(schedule.id);
@@ -246,7 +284,11 @@ export default function ScheduleBuilder() {
     }, []);
 
     const handleSaveSchedule = async () => {
-        if (!profile?.id) return;
+        if (!profile?.id || !selectedVersion) return;
+        if (!activeScheduleId && selectedVersion.status !== 'published') {
+            alert('Las versiones históricas son de consulta. Elige la oferta vigente para crear un horario nuevo.');
+            return;
+        }
         setSaving(true);
 
         try {
@@ -269,7 +311,8 @@ export default function ScheduleBuilder() {
                     .from('user_schedules')
                     .insert({
                         user_id: profile.id,
-                        periodo: selectedPeriodo,
+                        periodo: selectedVersion.academic_period,
+                        offering_version_id: selectedVersion.id,
                         nombre,
                         secciones: sectionIds,
                     })
@@ -289,7 +332,7 @@ export default function ScheduleBuilder() {
     };
 
     const handleNewSchedule = async () => {
-        if (!profile?.id) return;
+        if (!profile?.id || !selectedVersion || selectedVersion.status !== 'published') return;
         if (savedSchedules.length >= 3) return; // MAX 3 LIMIT
 
         const nombre = `Horario ${savedSchedules.length + 1}`;
@@ -297,7 +340,8 @@ export default function ScheduleBuilder() {
             .from('user_schedules')
             .insert({
                 user_id: profile.id,
-                periodo: selectedPeriodo,
+                periodo: selectedVersion.academic_period,
+                offering_version_id: selectedVersion.id,
                 nombre,
                 secciones: [],
             })
@@ -345,7 +389,7 @@ export default function ScheduleBuilder() {
         );
     }
 
-    if (periodos.length === 0) {
+    if (versions.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <FileText className="w-12 h-12 text-bb-text-secondary mb-4" />
@@ -460,7 +504,7 @@ export default function ScheduleBuilder() {
                                         )}
                                     </div>
                                 ))}
-                                {savedSchedules.length < 3 && (
+                                {savedSchedules.length < 3 && selectedVersion?.status === 'published' && (
                                     <button
                                         onClick={handleNewSchedule}
                                         className="w-full flex items-center gap-2 px-4 py-3 sm:py-2.5 text-sm font-bold border-t border-bb-border hover:bg-bb-hover transition-all justify-center"
@@ -481,9 +525,10 @@ export default function ScheduleBuilder() {
                     {/* Save button */}
                     <button
                         onClick={handleSaveSchedule}
-                        disabled={saving}
+                        disabled={saving || (!activeScheduleId && selectedVersion?.status !== 'published')}
                         className="flex items-center justify-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-50 shrink-0"
                         style={{ backgroundColor: colors?.primary }}
+                        title={selectedVersion?.status === 'published' ? 'Guardar horario' : 'Las ofertas históricas son de consulta'}
                     >
                         {saving ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
@@ -516,18 +561,29 @@ export default function ScheduleBuilder() {
                     </button>
                 </div>
 
-                {periodos.length > 1 && (
+                {versions.length > 0 && (
                     <select
-                        value={selectedPeriodo}
-                        onChange={e => setSelectedPeriodo(e.target.value)}
+                        value={selectedVersionId}
+                        onChange={e => setSelectedVersionId(e.target.value)}
                         className="bg-bb-card border border-bb-border rounded-xl px-4 py-2 text-sm text-bb-text"
+                        aria-label="Versión de la oferta académica"
                     >
-                        {periodos.map(p => (
-                            <option key={p} value={p}>{p}</option>
+                        {versions.map(version => (
+                            <option key={version.id} value={version.id}>
+                                {version.academic_period} · v{version.version_number}
+                                {version.status === 'published' ? ' · vigente' : version.status === 'draft' ? ' · borrador' : ' · histórica'}
+                            </option>
                         ))}
                     </select>
                 )}
             </div>
+
+            {selectedVersion?.status !== 'published' && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                    Estás viendo una versión {selectedVersion?.status === 'draft' ? 'en borrador' : 'histórica'} de la oferta.
+                    Puedes consultar horarios guardados en ella, pero los horarios nuevos se crean sobre la versión vigente.
+                </div>
+            )}
 
             {/* Main 2-column layout: Course selector + Section list */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-4">

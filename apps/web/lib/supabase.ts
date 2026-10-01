@@ -245,10 +245,23 @@ export type UserSchedule = {
   id: string;
   user_id: string;
   periodo: string;
+  offering_version_id: string | null;
   nombre: string;
   secciones: string[];
   created_at: string;
   updated_at: string;
+};
+
+export type AcademicOfferingVersion = {
+  id: string;
+  academic_period: string;
+  version_number: number;
+  status: 'draft' | 'published' | 'archived';
+  source_label: string | null;
+  source_filename: string | null;
+  created_by: string | null;
+  created_at: string;
+  published_at: string | null;
 };
 
 export type LibraryBook = {
