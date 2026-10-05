@@ -195,8 +195,8 @@
   inset: 0;
   z-index: -1;
   background:
-    linear-gradient(90deg, rgba(2, 6, 14, 0.96) 0%, rgba(2, 6, 14, 0.88) 36%, rgba(2, 6, 14, 0.52) 64%, rgba(2, 6, 14, 0.15) 86%, transparent 100%),
-    linear-gradient(0deg, rgba(2, 6, 14, 0.65) 0%, transparent 45%);
+    linear-gradient(90deg, rgba(2, 6, 14, 0.94) 0%, rgba(2, 6, 14, 0.82) 38%, rgba(2, 6, 14, 0.42) 65%, rgba(2, 6, 14, 0.1) 85%, transparent 100%),
+    linear-gradient(0deg, rgba(2, 6, 14, 0.6) 0%, transparent 40%);
 }
 
 .heroInner {
@@ -213,80 +213,81 @@
 .heroKicker {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  color: #60a5fa;
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  gap: 0.6rem;
+  color: #93c5fd;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  margin-bottom: 1.2rem;
+  margin-bottom: 1.1rem;
 }
 
 .heroKicker::before {
   content: "";
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #0066FF;
-  box-shadow: 0 0 10px #0066FF;
+  box-shadow: 0 0 8px #0066FF;
 }
 
 .heroDivider {
-  width: 56px;
-  height: 3.5px;
+  width: 44px;
+  height: 3px;
   background: #0066FF;
   border-radius: 2px;
-  margin-top: 1.35rem;
+  margin-top: 1.25rem;
 }
 
 .heroContent {
-  width: min(780px, 72vw);
+  width: min(680px, 65vw);
   animation: heroEnter 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .heroContent h1 {
-  max-width: 740px;
+  max-width: 660px;
   margin: 0;
-  color: var(--white);
-  font-size: clamp(3.4rem, 6.2vw, 5.8rem);
+  color: #ffffff;
+  font-size: clamp(2.35rem, 4.4vw, 3.85rem);
   font-weight: 800;
-  letter-spacing: -0.035em;
-  line-height: 0.98;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
   text-wrap: balance;
 }
 
 .heroContent h1 span {
-  color: #38bdf8;
-  background: linear-gradient(135deg, #60a5fa 0%, #38bdf8 100%);
+  color: #60a5fa;
+  background: linear-gradient(135deg, #ffffff 0%, #93c5fd 60%, #38bdf8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .heroContent > p:not(.guestError) {
-  max-width: 580px;
-  margin-top: 1.35rem;
-  color: rgb(255 254 250 / 84%);
-  font-size: clamp(1.05rem, 1.35vw, 1.22rem);
+  max-width: 520px;
+  margin-top: 1.25rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: clamp(0.96rem, 1.15vw, 1.1rem);
   line-height: 1.65;
+  font-weight: 450;
 }
 
 .heroActions {
   display: flex;
   align-items: center;
-  gap: 0.95rem;
-  margin-top: 2.25rem;
+  gap: 0.85rem;
+  margin-top: 2rem;
 }
 
 .primaryButton {
-  padding: 0.95rem 1.75rem;
-  border-radius: 8px;
+  padding: 0.85rem 1.65rem;
+  border-radius: 6px;
   background: #0066FF;
   color: var(--white);
-  font-size: 0.95rem;
-  font-weight: 800;
+  font-size: 0.92rem;
+  font-weight: 750;
   letter-spacing: 0.01em;
-  box-shadow: 0 14px 32px rgba(0, 102, 255, 0.42);
+  box-shadow: 0 10px 26px rgba(0, 102, 255, 0.38);
   transition: background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
 }
 
@@ -298,14 +299,14 @@
 }
 
 .secondaryButton {
-  min-height: 48px;
-  padding: 0.9rem 1.45rem;
-  border: 1.5px solid rgba(255, 255, 255, 0.32);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
+  min-height: 46px;
+  padding: 0.85rem 1.45rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
   color: var(--white);
-  font-size: 0.92rem;
-  font-weight: 700;
+  font-size: 0.9rem;
+  font-weight: 650;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
@@ -432,16 +433,99 @@
   grid-column: span 4;
 }
 
+/* --- TONOS POR FACULTAD DE LA UP --- */
+.toneblue {
+  background: linear-gradient(145deg, #f0f7ff 0%, #e0effe 100%);
+  border: 1.5px solid rgba(0, 102, 255, 0.22);
+}
+
+.toneblue .resourceIcon {
+  background: #0066FF;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(0, 102, 255, 0.32);
+}
+
+.toneblue .resourceLink {
+  color: #0066FF;
+}
+
+.toneyellow {
+  background: linear-gradient(145deg, #fffdf2 0%, #fef9c3 100%);
+  border: 1.5px solid rgba(217, 119, 6, 0.25);
+}
+
+.toneyellow .resourceIcon {
+  background: #D97706;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(217, 119, 6, 0.3);
+}
+
+.toneyellow .resourceLink {
+  color: #b45309;
+}
+
+.tonegreen {
+  background: linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1.5px solid rgba(22, 163, 74, 0.22);
+}
+
+.tonegreen .resourceIcon {
+  background: #16A34A;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.3);
+}
+
+.tonegreen .resourceLink {
+  color: #15803d;
+}
+
+.tonered {
+  background: linear-gradient(145deg, #fff1f2 0%, #ffe4e6 100%);
+  border: 1.5px solid rgba(225, 29, 72, 0.22);
+}
+
+.tonered .resourceIcon {
+  background: #E11D48;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(225, 29, 72, 0.3);
+}
+
+.tonered .resourceLink {
+  color: #be123c;
+}
+
+.tonecyan {
+  background: linear-gradient(145deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1.5px solid rgba(2, 132, 199, 0.22);
+}
+
+.tonecyan .resourceIcon {
+  background: #0284C7;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.3);
+}
+
+.tonecyan .resourceLink {
+  color: #0369a1;
+}
+
+.tonepurple {
+  background: linear-gradient(145deg, #faf5ff 0%, #f3e8ff 100%);
+  border: 1.5px solid rgba(124, 58, 237, 0.22);
+}
+
+.tonepurple .resourceIcon {
+  background: #7C3AED;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+}
+
+.tonepurple .resourceLink {
+  color: #6d28d9;
+}
+
 .tonemint {
   background: var(--mint-pale);
-}
-
-.toneblue {
-  background: var(--blue-pale);
-}
-
-.tonecoral {
-  background: #d5e7f3;
 }
 
 .tonepaper {
@@ -449,14 +533,41 @@
   background: var(--white);
 }
 
+/*
+ * Círculo decorativo con los 4 colores oficiales de las facultades UP:
+ * Azul (Empresariales), Rojo (Derecho), Amarillo (Ingeniería) y Verde (Economía)
+ */
 .resourceCard1::after {
   position: absolute;
-  right: -7rem;
-  bottom: -9rem;
-  width: 25rem;
-  height: 25rem;
-  border: 6rem solid rgb(21 82 127 / 8%);
+  right: -7.5rem;
+  bottom: -8.5rem;
+  width: 27rem;
+  height: 27rem;
   border-radius: 50%;
+  background: conic-gradient(
+    from 195deg at 50% 50%,
+    #0066FF 0deg,
+    #EF4444 85deg,
+    #F59E0B 170deg,
+    #10B981 255deg,
+    #0066FF 360deg
+  );
+  opacity: 0.35;
+  -webkit-mask: radial-gradient(circle, transparent 58%, black 60%);
+  mask: radial-gradient(circle, transparent 58%, black 60%);
+  pointer-events: none;
+  content: "";
+}
+
+.resourceCard1::before {
+  position: absolute;
+  right: -3.5rem;
+  bottom: -4.5rem;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 50%;
+  border: 3px dashed rgba(0, 102, 255, 0.3);
+  pointer-events: none;
   content: "";
 }
 
@@ -472,16 +583,7 @@
   border-radius: 0.9rem;
   background: var(--forest);
   color: var(--white);
-  transition: transform 180ms ease, background-color 180ms ease;
-}
-
-.tonemint .resourceIcon,
-.toneblue .resourceIcon {
-  background: var(--coral-dark);
-}
-
-.tonecoral .resourceIcon {
-  background: #0f6a9f;
+  transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
 }
 
 .resourceCard > div {
@@ -930,6 +1032,36 @@
   .resourceCard:hover {
     transform: translateY(-5px);
     box-shadow: 0 22px 44px rgb(16 57 88 / 12%);
+  }
+
+  .toneblue:hover {
+    border-color: #0066FF;
+    box-shadow: 0 18px 40px rgba(0, 102, 255, 0.18);
+  }
+
+  .toneyellow:hover {
+    border-color: #D97706;
+    box-shadow: 0 18px 40px rgba(217, 119, 6, 0.18);
+  }
+
+  .tonegreen:hover {
+    border-color: #16A34A;
+    box-shadow: 0 18px 40px rgba(22, 163, 74, 0.18);
+  }
+
+  .tonered:hover {
+    border-color: #E11D48;
+    box-shadow: 0 18px 40px rgba(225, 29, 72, 0.18);
+  }
+
+  .tonecyan:hover {
+    border-color: #0284C7;
+    box-shadow: 0 18px 40px rgba(2, 132, 199, 0.18);
+  }
+
+  .tonepurple:hover {
+    border-color: #7C3AED;
+    box-shadow: 0 18px 40px rgba(124, 58, 237, 0.18);
   }
 
   .resourceCard:hover .resourceIcon {

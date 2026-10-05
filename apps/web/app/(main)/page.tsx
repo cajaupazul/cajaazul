@@ -37,7 +37,7 @@ const resources = [
     href: '/dashboard/courses',
     linkLabel: 'Explorar cursos',
     icon: BookOpen,
-    tone: 'mint',
+    tone: 'blue',
   },
   {
     title: 'Profesores',
@@ -45,7 +45,7 @@ const resources = [
     href: '/dashboard/professors',
     linkLabel: 'Ver profesores',
     icon: Star,
-    tone: 'paper',
+    tone: 'yellow',
   },
   {
     title: 'Biblioteca',
@@ -53,7 +53,7 @@ const resources = [
     href: '/dashboard/library',
     linkLabel: 'Abrir biblioteca',
     icon: Library,
-    tone: 'blue',
+    tone: 'green',
   },
   {
     title: 'Comunidad',
@@ -61,7 +61,7 @@ const resources = [
     href: '/dashboard/community',
     linkLabel: 'Ir a comunidad',
     icon: Users,
-    tone: 'paper',
+    tone: 'red',
   },
   {
     title: 'Herramientas',
@@ -69,7 +69,7 @@ const resources = [
     href: '/dashboard/herramientas',
     linkLabel: 'Ver herramientas',
     icon: Wrench,
-    tone: 'coral',
+    tone: 'cyan',
   },
   {
     title: 'Grupos de estudio',
@@ -77,7 +77,7 @@ const resources = [
     href: '/dashboard/grupos',
     linkLabel: 'Encontrar grupos',
     icon: Network,
-    tone: 'paper',
+    tone: 'purple',
   },
 ] as const;
 
