@@ -15,13 +15,23 @@
   overflow-x: clip;
   background: var(--paper);
   color: var(--ink);
-  color-scheme: light;
+  /* Force light mode regardless of any global data-theme="dark" */
+  color-scheme: only light;
   font-family: "Manrope Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
 }
 
 .page ::selection {
   background: var(--coral-dark);
   color: var(--white);
+}
+
+/*
+ * Explicit link reset — prevents ThemeProvider dark-mode variable bleed
+ * and ensures links never show browser-default blue regardless of globals.css load order.
+ */
+.page a {
+  color: inherit;
+  text-decoration: none;
 }
 
 .page a,
