@@ -99,29 +99,6 @@ const steps = [
   },
 ];
 
-const heroShortcuts = [
-  {
-    label: 'Cursos',
-    detail: 'Materiales por curso',
-    href: '/dashboard/courses',
-    icon: BookOpen,
-    position: 'shortcutCourses',
-  },
-  {
-    label: 'Comunidad',
-    detail: 'Conecta y comparte',
-    href: '/dashboard/community',
-    icon: Users,
-    position: 'shortcutCommunity',
-  },
-  {
-    label: 'Herramientas',
-    detail: 'Organiza tu ciclo',
-    href: '/dashboard/herramientas',
-    icon: Wrench,
-    position: 'shortcutTools',
-  },
-] as const;
 
 const socialLinks = [
   {
@@ -313,12 +290,14 @@ export default function HomePage() {
 
           <div className={styles.heroInner}>
             <div className={styles.heroContent}>
+              <span className={styles.heroKicker}>Comunidad Estudiantil UP</span>
               <h1>
                 Tu vida académica,
                 <span> más clara.</span>
               </h1>
+              <div className={styles.heroDivider} aria-hidden="true" />
               <p>
-                Materiales, profesores, grupos y herramientas creadas por estudiantes para la comunidad UP.
+                Materiales, evaluaciones pasadas, profesores y herramientas creadas por estudiantes para resolver tu ciclo.
               </p>
               <div className={styles.heroActions}>
                 <Link href="/auth/register" className={styles.primaryButton}>
@@ -341,31 +320,6 @@ export default function HomePage() {
               )}
             </div>
           </div>
-
-          <nav className={styles.heroOrbit} aria-label="Accesos rápidos de CampusLink">
-            <span className={styles.heroOrbitRing} aria-hidden="true" />
-            <div className={styles.heroOrbitCore} aria-hidden="true">
-              <Sparkles size={22} />
-              <span>Todo conectado</span>
-            </div>
-            {heroShortcuts.map((shortcut) => {
-              const Icon = shortcut.icon;
-              return (
-                <div key={shortcut.label} className={`${styles.shortcutAnchor} ${styles[shortcut.position]}`}>
-                  <Link href={shortcut.href} className={styles.heroShortcut}>
-                    <span className={styles.heroShortcutIcon}>
-                      <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
-                    </span>
-                    <span>
-                      <strong>{shortcut.label}</strong>
-                      <small>{shortcut.detail}</small>
-                    </span>
-                    <ArrowRight size={16} aria-hidden="true" />
-                  </Link>
-                </div>
-              );
-            })}
-          </nav>
         </section>
 
         <aside className={styles.disclaimer} aria-label="Información sobre CampusLink">
@@ -376,20 +330,6 @@ export default function HomePage() {
             </p>
           </div>
         </aside>
-
-        <nav className={styles.mobileQuickLinks} aria-label="Accesos rápidos">
-          {heroShortcuts.map((shortcut) => {
-            const Icon = shortcut.icon;
-            return (
-              <Link key={shortcut.label} href={shortcut.href}>
-                <span>
-                  <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
-                </span>
-                {shortcut.label}
-              </Link>
-            );
-          })}
-        </nav>
 
         <section id="recursos" className={styles.section}>
           <div className={styles.sectionIntro}>

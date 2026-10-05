@@ -147,9 +147,13 @@
 }
 
 .headerCta {
-  padding: 0.72rem 1.25rem;
-  background: var(--forest);
+  padding: 0.72rem 1.35rem;
+  border-radius: 8px;
+  background: #0066FF;
   color: var(--white);
+  font-weight: 750;
+  box-shadow: 0 4px 16px rgba(0, 102, 255, 0.28);
+  transition: background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
 }
 
 .menuButton {
@@ -174,15 +178,15 @@
   isolation: isolate;
   min-height: min(740px, calc(100svh - 74px));
   overflow: hidden;
-  background: var(--forest);
+  background: #030812;
   color: var(--white);
 }
 
 .heroImage {
   z-index: -2;
   object-fit: cover;
-  object-position: 64% center;
-  filter: saturate(0.82) contrast(1.04);
+  object-position: 68% center;
+  filter: saturate(0.92) contrast(1.04);
   transform: scale(1.015);
 }
 
@@ -191,8 +195,8 @@
   inset: 0;
   z-index: -1;
   background:
-    linear-gradient(90deg, rgb(4 18 32 / 98%) 0%, rgb(4 18 32 / 90%) 38%, rgb(4 18 32 / 48%) 65%, rgb(4 18 32 / 12%) 100%),
-    linear-gradient(0deg, rgb(4 18 32 / 48%) 0%, transparent 42%);
+    linear-gradient(90deg, rgba(2, 6, 14, 0.96) 0%, rgba(2, 6, 14, 0.88) 36%, rgba(2, 6, 14, 0.52) 64%, rgba(2, 6, 14, 0.15) 86%, transparent 100%),
+    linear-gradient(0deg, rgba(2, 6, 14, 0.65) 0%, transparent 45%);
 }
 
 .heroInner {
@@ -206,195 +210,83 @@
   padding-block: 4rem;
 }
 
-.heroOrbit {
-  position: absolute;
-  top: 50%;
-  right: max(3rem, calc((100% - 1360px) / 2));
-  z-index: 3;
-  width: 420px;
-  height: 460px;
-  pointer-events: none;
-  transform: translateY(-50%);
-  animation: orbitEnter 760ms 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+.heroKicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #60a5fa;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 1.2rem;
 }
 
-.heroOrbitRing {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 300px;
-  height: 300px;
-  border: 1px solid rgb(131 195 236 / 28%);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.heroOrbitRing::before,
-.heroOrbitRing::after {
-  position: absolute;
-  border-radius: 50%;
-  background: #83c3ec;
-  box-shadow: 0 0 0 6px rgb(131 195 236 / 12%);
+.heroKicker::before {
   content: "";
-}
-
-.heroOrbitRing::before {
-  top: 28px;
-  left: 26px;
+  display: inline-block;
   width: 8px;
   height: 8px;
-}
-
-.heroOrbitRing::after {
-  right: 18px;
-  bottom: 64px;
-  width: 6px;
-  height: 6px;
-}
-
-.heroOrbitCore {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: flex;
-  width: 112px;
-  height: 112px;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 0.45rem;
-  border: 1px solid rgb(255 255 255 / 28%);
   border-radius: 50%;
-  background: rgb(8 31 51 / 82%);
-  color: #ffffff;
-  box-shadow: 0 18px 44px rgb(0 12 24 / 28%);
-  transform: translate(-50%, -50%);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: #0066FF;
+  box-shadow: 0 0 10px #0066FF;
 }
 
-.heroOrbitCore svg {
-  color: #83c3ec;
-}
-
-.heroOrbitCore span {
-  font-size: 0.7rem;
-  font-weight: 750;
-}
-
-.shortcutAnchor {
-  position: absolute;
-  pointer-events: none;
-  animation: shortcutFloat 6s cubic-bezier(0.77, 0, 0.175, 1) infinite alternate;
-}
-
-.shortcutCourses {
-  top: 18px;
-  right: 4px;
-}
-
-.shortcutCommunity {
-  top: 210px;
-  left: -8px;
-  animation-delay: -2s;
-}
-
-.shortcutTools {
-  right: 0;
-  bottom: 12px;
-  animation-delay: -4s;
-}
-
-.heroShortcut {
-  display: grid;
-  grid-template-columns: 42px 1fr auto;
-  gap: 0.75rem;
-  align-items: center;
-  min-width: 202px;
-  padding: 0.75rem;
-  border: 1px solid rgb(255 255 255 / 34%);
-  border-radius: 1rem;
-  background: rgb(248 250 252 / 92%);
-  color: var(--ink);
-  box-shadow: 0 16px 38px rgb(0 12 24 / 20%);
-  pointer-events: auto;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
-}
-
-.heroShortcutIcon {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border-radius: 0.75rem;
-  background: var(--coral-dark);
-  color: #ffffff;
-}
-
-.heroShortcut strong,
-.heroShortcut small {
-  display: block;
-}
-
-.heroShortcut strong {
-  font-size: 0.86rem;
-  font-weight: 780;
-}
-
-.heroShortcut small {
-  margin-top: 0.12rem;
-  color: var(--ink-soft);
-  font-size: 0.68rem;
-  font-weight: 580;
-}
-
-.heroShortcut > svg {
-  color: var(--coral-dark);
-  transition: transform 160ms ease;
+.heroDivider {
+  width: 56px;
+  height: 3.5px;
+  background: #0066FF;
+  border-radius: 2px;
+  margin-top: 1.35rem;
 }
 
 .heroContent {
-  width: min(720px, 63vw);
+  width: min(780px, 72vw);
   animation: heroEnter 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .heroContent h1 {
-  max-width: 700px;
+  max-width: 740px;
   margin: 0;
   color: var(--white);
-  font-size: clamp(3.6rem, 6.7vw, 6rem);
-  font-weight: 720;
-  letter-spacing: -0.04em;
-  line-height: 0.96;
+  font-size: clamp(3.4rem, 6.2vw, 5.8rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
   text-wrap: balance;
 }
 
 .heroContent h1 span {
-  color: #83c3ec;
+  color: #38bdf8;
+  background: linear-gradient(135deg, #60a5fa 0%, #38bdf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .heroContent > p:not(.guestError) {
-  max-width: 560px;
-  margin-top: 1.7rem;
-  color: rgb(255 254 250 / 78%);
-  font-size: clamp(1.05rem, 1.4vw, 1.25rem);
+  max-width: 580px;
+  margin-top: 1.35rem;
+  color: rgb(255 254 250 / 84%);
+  font-size: clamp(1.05rem, 1.35vw, 1.22rem);
   line-height: 1.65;
 }
 
 .heroActions {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.95rem;
   margin-top: 2.25rem;
 }
 
 .primaryButton {
-  padding: 0.9rem 1.45rem;
-  background: var(--coral-dark);
+  padding: 0.95rem 1.75rem;
+  border-radius: 8px;
+  background: #0066FF;
   color: var(--white);
-  box-shadow: 0 16px 32px rgb(4 35 60 / 24%);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow: 0 14px 32px rgba(0, 102, 255, 0.42);
   transition: background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
 }
 
@@ -407,15 +299,15 @@
 
 .secondaryButton {
   min-height: 48px;
-  padding: 0.85rem 1.35rem;
-  border: 1px solid rgb(255 254 250 / 34%);
-  border-radius: 999px;
-  background: rgb(255 254 250 / 9%);
+  padding: 0.9rem 1.45rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.32);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
   color: var(--white);
-  font-size: 0.9rem;
-  font-weight: 720;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  font-size: 0.92rem;
+  font-weight: 700;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
 }
 
@@ -995,26 +887,6 @@
   }
 }
 
-@keyframes orbitEnter {
-  from {
-    opacity: 0;
-    transform: translate3d(24px, -50%, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, -50%, 0);
-  }
-}
-
-@keyframes shortcutFloat {
-  from {
-    transform: translate3d(0, -4px, 0);
-  }
-  to {
-    transform: translate3d(0, 4px, 0);
-  }
-}
-
 @media (hover: hover) and (pointer: fine) {
   .desktopNav a:hover::after {
     transform: scaleX(1);
@@ -1025,15 +897,20 @@
     color: var(--coral-dark);
   }
 
-  .headerCta:hover,
+  .headerCta:hover {
+    background: #0052d9;
+    box-shadow: 0 8px 24px rgba(0, 102, 255, 0.48);
+    transform: translateY(-2px);
+  }
+
   .darkButton:hover {
     background: #103d60;
     transform: translateY(-2px);
   }
 
   .primaryButton:hover {
-    background: #0f4168;
-    box-shadow: 0 20px 38px rgb(4 35 60 / 30%);
+    background: #0052d9;
+    box-shadow: 0 18px 40px rgba(0, 102, 255, 0.55);
     transform: translateY(-2px);
   }
 
@@ -1045,19 +922,9 @@
   }
 
   .secondaryButton:hover {
-    border-color: rgb(255 254 250 / 58%);
-    background: rgb(255 254 250 / 15%);
+    border-color: rgba(255, 254, 250, 0.7);
+    background: rgba(255, 254, 250, 0.16);
     transform: translateY(-2px);
-  }
-
-  .heroShortcut:hover {
-    background: #ffffff;
-    box-shadow: 0 22px 48px rgb(0 12 24 / 28%);
-    transform: translateY(-3px);
-  }
-
-  .heroShortcut:hover > svg {
-    transform: translateX(3px);
   }
 
   .resourceCard:hover {
@@ -1088,12 +955,6 @@
   .modalClose:hover,
   .modalActions button:hover {
     background: rgb(9 13 18 / 6%);
-  }
-}
-
-@media (max-width: 1199px) {
-  .heroOrbit {
-    display: none;
   }
 }
 
@@ -1179,59 +1040,13 @@
   }
 
   .mobileActions a:last-child {
-    border-color: var(--forest);
-    background: var(--forest);
+    border-color: #0066FF;
+    background: #0066FF;
     color: var(--white);
   }
 
   .heroContent {
-    width: min(700px, 75vw);
-  }
-
-  .heroOrbit {
-    display: none;
-  }
-
-  .mobileQuickLinks {
-    display: flex;
-    gap: 0.7rem;
-    width: min(100% - 3rem, 1280px);
-    margin: 1rem auto 0;
-    overflow-x: auto;
-    padding-bottom: 0.35rem;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-  }
-
-  .mobileQuickLinks::-webkit-scrollbar {
-    display: none;
-  }
-
-  .mobileQuickLinks a {
-    display: inline-flex;
-    flex: 1 0 170px;
-    min-height: 54px;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.55rem 0.8rem;
-    border: 1px solid rgb(9 13 18 / 10%);
-    border-radius: 1rem;
-    background: #ffffff;
-    color: var(--ink);
-    font-size: 0.82rem;
-    font-weight: 720;
-    scroll-snap-align: start;
-  }
-
-  .mobileQuickLinks a span {
-    display: grid;
-    width: 38px;
-    height: 38px;
-    flex: none;
-    place-items: center;
-    border-radius: 0.7rem;
-    background: var(--mint-pale);
-    color: var(--coral-dark);
+    width: 100%;
   }
 
   .resourceCard1 {
@@ -1550,9 +1365,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .heroContent,
-  .modal,
-  .heroOrbit,
-  .shortcutAnchor {
+  .modal {
     animation: none;
   }
 
@@ -1573,18 +1386,6 @@
 
   .secondaryButton {
     background: var(--forest);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-
-  .heroOrbitCore {
-    background: var(--forest);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-
-  .heroShortcut {
-    background: var(--paper);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
