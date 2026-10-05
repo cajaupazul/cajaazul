@@ -24,6 +24,7 @@ import {
   Eye,
   EyeOff,
   Library,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { CoinCounter } from '@/components/ui/coin-counter';
@@ -31,11 +32,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import AnnouncementPopup from '@/components/announcements/AnnouncementPopup';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import styles from './AuthenticatedLayout.module.css';
@@ -53,8 +51,11 @@ export default function AuthenticatedLayout({
   const { profile, session, loading: profileLoading, isGuest, clearProfile } = useProfile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [equippedFrame, setEquippedFrame] = useState<ShopItem | null>(null);
+  const [resolvedFrameKey, setResolvedFrameKey] = useState<string | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   // Visibility settings for sidebar sections
   const [visibilitySettings, setVisibilitySettings] = useState<Record<string, boolean>>({});
@@ -143,14 +144,20 @@ export default function AuthenticatedLayout({
     const fetchEquippedFrame = async () => {
       if (!isAuthReady || !profile?.active_frame_key) {
         setEquippedFrame(null);
+        setResolvedFrameKey(null);
         return;
       }
+
+      const frameKey = profile.active_frame_key;
+      setEquippedFrame(null);
       const { data } = await supabase
         .from('shop_items')
         .select('*')
-        .eq('frame_key', profile.active_frame_key)
-        .single();
-      if (data) setEquippedFrame(data);
+        .eq('frame_key', frameKey)
+        .maybeSingle();
+
+      setEquippedFrame(data || null);
+      setResolvedFrameKey(frameKey);
     };
     fetchEquippedFrame();
   }, [isAuthReady, profile?.active_frame_key]);
@@ -164,16 +171,38 @@ export default function AuthenticatedLayout({
       router.refresh();
       return;
     }
+    setLogoutError(null);
+    if (window.innerWidth < 768) setSidebarOpen(false);
     setShowLogoutConfirm(true);
   };
 
   const handleLogoutConfirm = async () => {
-    setShowLogoutConfirm(false);
-    await supabase.auth.signOut();
-    clearProfile();
-    router.replace('/auth/login');
-    router.refresh();
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+    setLogoutError(null);
+
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      clearProfile();
+      setShowLogoutConfirm(false);
+      router.replace('/auth/login');
+      router.refresh();
+    } catch (error) {
+      console.error('[LOGOUT] No se pudo cerrar la sesión:', error);
+      setLogoutError('No pudimos cerrar tu sesión. Revisa tu conexión e inténtalo nuevamente.');
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
+
+  const frameSourcePending = Boolean(profile?.active_frame_key)
+    && resolvedFrameKey !== profile?.active_frame_key;
+  const activeFrame = profile?.active_frame_key && !frameSourcePending
+    ? equippedFrame
+    : null;
 
   const isActive = (href: string) => {
     if (href === '/dashboard' || href === '/inventory') {
@@ -278,11 +307,12 @@ export default function AuthenticatedLayout({
           <AvatarWithFrame
             size={48}
             avatarUrl={getStorageUrl(profile?.avatar_url)}
-            frameUrl={equippedFrame?.image_url}
-            frameScale={equippedFrame?.frame_settings?.card?.scale}
-            offsetX={equippedFrame?.frame_settings?.card?.x}
-            offsetY={equippedFrame?.frame_settings?.card?.y}
+            frameUrl={activeFrame?.image_url}
+            frameScale={activeFrame?.frame_settings?.card?.scale}
+            offsetX={activeFrame?.frame_settings?.card?.x}
+            offsetY={activeFrame?.frame_settings?.card?.y}
             name={profile?.nombre}
+            sourcePending={frameSourcePending}
           />
           <span className={styles.profileCopy}>
             <span className={styles.profileName}>
@@ -376,11 +406,12 @@ export default function AuthenticatedLayout({
                 <AvatarWithFrame
                   size={38}
                   avatarUrl={getStorageUrl(profile?.avatar_url)}
-                  frameUrl={equippedFrame?.image_url}
-                  frameScale={equippedFrame?.frame_settings?.navbar?.scale}
-                  offsetX={equippedFrame?.frame_settings?.navbar?.x}
-                  offsetY={equippedFrame?.frame_settings?.navbar?.y}
+                  frameUrl={activeFrame?.image_url}
+                  frameScale={activeFrame?.frame_settings?.navbar?.scale}
+                  offsetX={activeFrame?.frame_settings?.navbar?.x}
+                  offsetY={activeFrame?.frame_settings?.navbar?.y}
                   name={profile?.nombre}
+                  sourcePending={frameSourcePending}
                 />
               </Link>
             </div>
@@ -393,32 +424,67 @@ export default function AuthenticatedLayout({
       </div>
 
       {/* LOGOUT CONFIRMATION DIALOG */}
-      <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
-        <DialogContent className="bg-bb-card border-bb-border w-[95vw] max-w-md sm:w-full z-[200] rounded-xl">
-          <DialogHeader>
-            <DialogTitle className="text-bb-text flex items-center gap-2">
-              <LogOut className="w-5 h-5 text-red-500" />
-              Confirmar Cierre de Sesión
-            </DialogTitle>
-            <DialogDescription className="text-bb-text-secondary">
-              ¿Estás seguro de que deseas cerrar tu sesión actual?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowLogoutConfirm(false)}
-              className="border-bb-border text-bb-text hover:bg-bb-hover"
-            >
-              Cancelar
-            </Button>
-            <Button
+      <Dialog
+        open={showLogoutConfirm}
+        onOpenChange={(open) => {
+          if (isLoggingOut) return;
+          setShowLogoutConfirm(open);
+          if (!open) setLogoutError(null);
+        }}
+      >
+        <DialogContent className={styles.logoutDialogContent}>
+          <div className={styles.logoutDialogHeader}>
+            <span className={styles.logoutDialogIcon} aria-hidden="true">
+              <LogOut />
+            </span>
+            <div>
+              <DialogTitle className={styles.logoutDialogTitle}>
+                ¿Cerrar sesión?
+              </DialogTitle>
+              <DialogDescription className={styles.logoutDialogDescription}>
+                Tendrás que volver a ingresar con tu correo institucional para acceder a CampusLink.
+              </DialogDescription>
+            </div>
+          </div>
+
+          <div className={styles.logoutDialogNotice}>
+            Tu cuenta, monedas y materiales permanecerán guardados.
+          </div>
+
+          {logoutError && (
+            <p className={styles.logoutDialogError} role="alert">
+              {logoutError}
+            </p>
+          )}
+
+          <div className={styles.logoutDialogActions}>
+            <button
+              type="button"
               onClick={handleLogoutConfirm}
-              className="bg-red-500 hover:bg-red-600 text-white border-0"
+              disabled={isLoggingOut}
+              className={styles.logoutConfirmButton}
             >
-              Sí, Cerrar Sesión
-            </Button>
-          </DialogFooter>
+              {isLoggingOut ? (
+                <>
+                  <Loader2 className={styles.logoutSpinner} aria-hidden="true" />
+                  Cerrando sesión…
+                </>
+              ) : (
+                <>
+                  <LogOut aria-hidden="true" />
+                  Sí, cerrar sesión
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowLogoutConfirm(false)}
+              disabled={isLoggingOut}
+              className={styles.logoutCancelButton}
+            >
+              Permanecer aquí
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
 
