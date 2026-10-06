@@ -272,16 +272,18 @@ export default function HomePage() {
 
       <main id="contenido">
         <section className={styles.hero}>
-          <Image
-            src="/carrusel/visiting-students.jpg"
-            alt="Campus de la Universidad del Pacífico al anochecer"
-            fill
-            priority
-            sizes="100vw"
-            quality={86}
-            className={styles.heroImage}
-          />
-          <div className={styles.heroOverlay} aria-hidden="true" />
+          <div className={styles.heroMedia}>
+            <Image
+              src="/carrusel/visiting-students.jpg"
+              alt="Campus de la Universidad del Pacífico al anochecer"
+              fill
+              priority
+              sizes="(max-width: 820px) 100vw, calc(100vw - 56px)"
+              quality={86}
+              className={styles.heroImage}
+            />
+            <div className={styles.heroOverlay} aria-hidden="true" />
+          </div>
 
           <div className={styles.heroInner}>
             <div className={styles.heroContent}>
@@ -297,6 +299,27 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+
+          <aside className={styles.socialRail} aria-label="Redes sociales de CampusLink">
+            <span className={styles.socialRailLabel}>Síguenos</span>
+            <nav>
+              {socialLinks.map((social) => {
+                const Icon = social.icon;
+                return (
+                  <a
+                    key={social.label}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Abrir ${social.label}`}
+                    title={social.label}
+                  >
+                    <Icon size={20} strokeWidth={1.9} aria-hidden="true" />
+                  </a>
+                );
+              })}
+            </nav>
+          </aside>
         </section>
 
         <aside className={styles.disclaimer} aria-label="Información sobre CampusLink">
@@ -432,24 +455,6 @@ export default function HomePage() {
               <Image src="/logo/logo-campuslink-v2.png" alt="" width={88} height={48} className="h-10 w-auto object-contain" />
             </div>
             <p>Un repositorio independiente para la comunidad estudiantil UP.</p>
-          </div>
-
-          <div className={styles.socials}>
-            {socialLinks.map((social) => {
-              const Icon = social.icon;
-              return (
-                <a
-                  key={social.label}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Abrir ${social.label}`}
-                  title={social.label}
-                >
-                  <Icon size={19} strokeWidth={1.8} />
-                </a>
-              );
-            })}
           </div>
 
           <div className={styles.footerLinks}>

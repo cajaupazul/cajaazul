@@ -20,6 +20,12 @@
   font-family: "Manrope Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
 }
 
+@media (min-width: 1024px) {
+  .page {
+    padding-left: 56px;
+  }
+}
+
 .page ::selection {
   background: var(--coral-dark);
   color: var(--white);
@@ -182,8 +188,15 @@
   color: var(--white);
 }
 
-.heroImage {
+.heroMedia {
+  position: absolute;
+  inset: 0;
   z-index: -2;
+  overflow: hidden;
+  background: #071522;
+}
+
+.heroImage {
   object-fit: cover;
   object-position: 64% 54%;
   filter: saturate(0.9) contrast(1.03);
@@ -192,7 +205,6 @@
 .heroOverlay {
   position: absolute;
   inset: 0;
-  z-index: -1;
   background:
     linear-gradient(90deg, rgb(3 5 8 / 98%) 0%, rgb(3 5 8 / 94%) 24%, rgb(3 5 8 / 78%) 39%, rgb(3 5 8 / 35%) 55%, rgb(3 5 8 / 7%) 72%, transparent 84%),
     linear-gradient(0deg, rgb(3 5 8 / 24%) 0%, transparent 34%);
@@ -247,6 +259,57 @@
   display: flex;
   align-items: center;
   margin-top: 1.55rem;
+}
+
+.socialRail {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 60;
+  display: flex;
+  width: 56px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: max(1.1rem, env(safe-area-inset-top, 0px)) 0 calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  background:
+    radial-gradient(circle at 50% 14%, rgb(84 180 255 / 64%) 0, transparent 24%),
+    linear-gradient(180deg, #0878ff 0%, #0764e7 48%, #0047b7 100%);
+  color: var(--white);
+  box-shadow: 8px 0 28px rgb(0 56 145 / 18%);
+}
+
+.socialRail::before {
+  width: 1px;
+  height: clamp(48px, 9vh, 88px);
+  background: rgb(255 255 255 / 40%);
+  content: "";
+}
+
+.socialRailLabel {
+  color: rgb(255 255 255 / 82%);
+  font-size: 0.66rem;
+  font-weight: 760;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.socialRail nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.socialRail a {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  color: rgb(255 255 255 / 90%);
+  transition: background-color 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .primaryButton {
@@ -846,7 +909,7 @@
 
 .footerInner {
   display: grid;
-  grid-template-columns: 1.2fr auto 1fr;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   gap: 3rem;
   align-items: start;
 }
@@ -870,22 +933,6 @@
   color: rgb(255 254 250 / 55%);
   font-size: 0.85rem;
   line-height: 1.6;
-}
-
-.socials {
-  display: flex;
-  gap: 0.6rem;
-}
-
-.socials a {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border: 1px solid rgb(255 254 250 / 16%);
-  border-radius: 50%;
-  color: rgb(255 254 250 / 72%);
-  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
 .footerLinks {
@@ -1122,11 +1169,10 @@
     transform: scale(1.025);
   }
 
-  .socials a:hover {
-    border-color: var(--coral-dark);
-    background: var(--coral-dark);
+  .socialRail a:hover {
+    background: rgb(255 255 255 / 18%);
     color: var(--white);
-    transform: translateY(-2px);
+    transform: scale(1.08);
   }
 
   .footerLinks a:hover,
@@ -1144,7 +1190,7 @@
 .primaryButton:active,
 .darkButton:active,
 .resourceCard:active,
-.socials a:active,
+.socialRail a:active,
 .menuButton:active {
   transform: scale(0.98);
 }
@@ -1267,17 +1313,72 @@
     flex-direction: column;
   }
 
+  .socialRail {
+    position: absolute;
+    inset: auto 0 0;
+    width: 100%;
+    height: 64px;
+    flex-direction: row;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0 max(1rem, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(1rem, env(safe-area-inset-left, 0px));
+    box-shadow: 0 -10px 30px rgb(0 42 110 / 20%);
+  }
+
+  .socialRail::before {
+    width: clamp(38px, 8vw, 72px);
+    height: 1px;
+  }
+
+  .socialRailLabel {
+    writing-mode: initial;
+    transform: none;
+  }
+
+  .socialRail nav {
+    flex-direction: row;
+  }
+
   .footerInner {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 820px) {
+  .hero {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    background: #050b12;
   }
 
-  .footerLinks {
-    grid-column: 1 / -1;
-    text-align: left;
+  .heroMedia {
+    position: relative;
+    inset: auto;
+    z-index: 0;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    flex: none;
   }
 
-  .footerLinks nav {
-    justify-content: flex-start;
+  .heroImage {
+    object-fit: contain;
+    object-position: center;
+    filter: saturate(0.96) contrast(1.02);
+  }
+
+  .heroOverlay {
+    background: linear-gradient(0deg, rgb(5 11 18 / 58%) 0%, transparent 46%);
+  }
+
+  .heroInner {
+    min-height: 0;
+    align-items: flex-start;
+    padding: 2.5rem 1.5rem 6.5rem;
+  }
+
+  .heroContent {
+    width: min(100%, 430px);
   }
 }
 
@@ -1362,24 +1463,8 @@
     color: var(--white);
   }
 
-  .hero,
   .heroInner {
-    min-height: calc(100svh - 66px);
-  }
-
-  .heroImage {
-    object-position: 63% center;
-  }
-
-  .heroOverlay {
-    background:
-      linear-gradient(90deg, rgb(3 5 8 / 98%) 0%, rgb(3 5 8 / 91%) 46%, rgb(3 5 8 / 58%) 76%, rgb(3 5 8 / 34%) 100%),
-      linear-gradient(0deg, rgb(3 5 8 / 42%) 0%, transparent 54%);
-  }
-
-  .heroInner {
-    align-items: center;
-    padding: 3rem 1.5rem;
+    padding: 2rem 1.25rem 6rem;
   }
 
   .heroContent {
@@ -1511,13 +1596,13 @@
     gap: 2rem;
   }
 
-  .socials,
-  .footerLinks {
-    grid-column: auto;
-  }
-
   .footerLinks nav {
     gap: 0.85rem 1rem;
+    justify-content: flex-start;
+  }
+
+  .footerLinks {
+    text-align: left;
   }
 
   .modalBackdrop {
@@ -1550,6 +1635,7 @@
   .decorIcon,
   .decorDot,
   .communityImage,
+  .socialRail a,
   .mobileNav,
   .mobileNav > nav {
     transition: none;
