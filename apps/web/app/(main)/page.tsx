@@ -3,22 +3,31 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
+  BookMarked,
   BookOpen,
+  CalendarDays,
   FileText,
+  Files,
+  GraduationCap,
+  HeartHandshake,
   Instagram,
   Library,
   Menu,
   MessageCircle,
+  MessagesSquare,
   Music2,
   Network,
+  Quote,
   Search,
   ShieldCheck,
   Sparkles,
   Star,
+  Target,
+  UserRoundSearch,
   Users,
+  Workflow,
   Wrench,
   X,
 } from 'lucide-react';
@@ -37,6 +46,7 @@ const resources = [
     href: '/dashboard/courses',
     linkLabel: 'Explorar cursos',
     icon: BookOpen,
+    accentIcons: [GraduationCap, Files],
     tone: 'blue',
   },
   {
@@ -45,6 +55,7 @@ const resources = [
     href: '/dashboard/professors',
     linkLabel: 'Ver profesores',
     icon: Star,
+    accentIcons: [Quote, UserRoundSearch],
     tone: 'yellow',
   },
   {
@@ -53,6 +64,7 @@ const resources = [
     href: '/dashboard/library',
     linkLabel: 'Abrir biblioteca',
     icon: Library,
+    accentIcons: [BookMarked, Files],
     tone: 'green',
   },
   {
@@ -61,6 +73,7 @@ const resources = [
     href: '/dashboard/community',
     linkLabel: 'Ir a comunidad',
     icon: Users,
+    accentIcons: [MessagesSquare, HeartHandshake],
     tone: 'red',
   },
   {
@@ -69,6 +82,7 @@ const resources = [
     href: '/dashboard/herramientas',
     linkLabel: 'Ver herramientas',
     icon: Wrench,
+    accentIcons: [CalendarDays, Workflow],
     tone: 'cyan',
   },
   {
@@ -77,6 +91,7 @@ const resources = [
     href: '/dashboard/grupos',
     linkLabel: 'Encontrar grupos',
     icon: Network,
+    accentIcons: [Target, HeartHandshake],
     tone: 'purple',
   },
 ] as const;
@@ -119,10 +134,7 @@ const socialLinks = [
 ];
 
 export default function HomePage() {
-  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isGuestLoading, setIsGuestLoading] = useState(false);
-  const [guestError, setGuestError] = useState('');
   const [complaintOpen, setComplaintOpen] = useState(false);
   const modalRef = useRef<HTMLElement>(null);
   const modalCloseRef = useRef<HTMLButtonElement>(null);
@@ -188,23 +200,6 @@ export default function HomePage() {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
     closeMenu();
-  };
-
-  const handleGuestLogin = async () => {
-    try {
-      setGuestError('');
-      setIsGuestLoading(true);
-      const { supabase } = await import('@/lib/supabase');
-      await supabase.auth.signOut();
-      const { error } = await supabase.auth.signInAnonymously();
-      if (error) throw error;
-      router.push('/dashboard');
-    } catch (error) {
-      console.error('[GUEST_LOGIN] Error:', error);
-      setGuestError('No pudimos abrir el modo invitado. Inténtalo nuevamente.');
-    } finally {
-      setIsGuestLoading(false);
-    }
   };
 
   return (
@@ -304,20 +299,7 @@ export default function HomePage() {
                   Crear mi cuenta
                   <ArrowRight size={18} aria-hidden="true" />
                 </Link>
-                <button
-                  type="button"
-                  onClick={handleGuestLogin}
-                  disabled={isGuestLoading}
-                  className={styles.secondaryButton}
-                >
-                  {isGuestLoading ? 'Abriendo CampusLink...' : 'Explorar como invitado'}
-                </button>
               </div>
-              {guestError && (
-                <p role="alert" className={styles.guestError}>
-                  {guestError}
-                </p>
-              )}
             </div>
           </div>
         </section>
@@ -342,6 +324,7 @@ export default function HomePage() {
           <div className={styles.resourceGrid}>
             {resources.map((resource, index) => {
               const Icon = resource.icon;
+              const [AccentIcon, DetailIcon] = resource.accentIcons;
               return (
                 <Link
                   key={resource.title}
@@ -350,6 +333,21 @@ export default function HomePage() {
                 >
                   <span className={styles.resourceIcon}>
                     <Icon size={23} strokeWidth={1.8} aria-hidden="true" />
+                  </span>
+                  <span className={styles.resourceDecor} aria-hidden="true">
+                    <svg className={styles.resourcePath} viewBox="0 0 260 150" fill="none">
+                      <path d="M18 112C65 62 100 142 145 83C174 45 205 42 243 18" pathLength="1" />
+                      <circle cx="18" cy="112" r="4" />
+                      <circle cx="145" cy="83" r="4" />
+                      <circle cx="243" cy="18" r="4" />
+                    </svg>
+                    <span className={`${styles.decorIcon} ${styles.decorIconPrimary}`}>
+                      <AccentIcon size={22} strokeWidth={1.65} />
+                    </span>
+                    <span className={`${styles.decorIcon} ${styles.decorIconSecondary}`}>
+                      <DetailIcon size={18} strokeWidth={1.75} />
+                    </span>
+                    <span className={styles.decorDot} />
                   </span>
                   <div>
                     <h3>{resource.title}</h3>
