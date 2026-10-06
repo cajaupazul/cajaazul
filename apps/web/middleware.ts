@@ -80,11 +80,17 @@ export async function updateSession(request: NextRequest) {
         return redirectWithSession(onboardingUrl);
     }
 
-    if (user && isAuthEntryRoute) {
+    if (user && !user.is_anonymous && isAuthEntryRoute) {
         const dashboardUrl = request.nextUrl.clone();
         dashboardUrl.pathname = '/dashboard';
         dashboardUrl.search = '';
         return redirectWithSession(dashboardUrl);
+    }
+
+    // Clean up any stale anonymous (guest) session when accessing login or register
+    // to prevent any redirect bounce between /dashboard and /auth/login
+    if (user && user.is_anonymous && isAuthEntryRoute) {
+        await supabase.auth.signOut();
     }
 
     // Allow social media crawlers (WhatsApp, Facebook, Telegram, Twitter, Discord, etc.)
