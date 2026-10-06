@@ -176,18 +176,17 @@
 .hero {
   position: relative;
   isolation: isolate;
-  min-height: min(740px, calc(100svh - 74px));
+  min-height: calc(100svh - 74px);
   overflow: hidden;
-  background: #030812;
+  background: #07090c;
   color: var(--white);
 }
 
 .heroImage {
   z-index: -2;
   object-fit: cover;
-  object-position: 68% center;
-  filter: saturate(0.92) contrast(1.04);
-  transform: scale(1.015);
+  object-position: 64% 54%;
+  filter: saturate(0.9) contrast(1.03);
 }
 
 .heroOverlay {
@@ -195,8 +194,8 @@
   inset: 0;
   z-index: -1;
   background:
-    linear-gradient(90deg, rgba(2, 6, 14, 0.94) 0%, rgba(2, 6, 14, 0.82) 38%, rgba(2, 6, 14, 0.42) 65%, rgba(2, 6, 14, 0.1) 85%, transparent 100%),
-    linear-gradient(0deg, rgba(2, 6, 14, 0.6) 0%, transparent 40%);
+    linear-gradient(90deg, rgb(3 5 8 / 98%) 0%, rgb(3 5 8 / 94%) 24%, rgb(3 5 8 / 78%) 39%, rgb(3 5 8 / 35%) 55%, rgb(3 5 8 / 7%) 72%, transparent 84%),
+    linear-gradient(0deg, rgb(3 5 8 / 24%) 0%, transparent 34%);
 }
 
 .heroInner {
@@ -204,91 +203,65 @@
   z-index: 2;
   display: flex;
   align-items: center;
-  width: min(100% - 3rem, 1360px);
-  min-height: min(740px, calc(100svh - 74px));
-  margin-inline: auto;
-  padding-block: 4rem;
+  min-height: calc(100svh - 74px);
+  padding: 3.5rem clamp(3.5rem, 5.25vw, 6.25rem);
 }
 
 .heroKicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  color: #93c5fd;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  width: 100%;
+  margin: 0;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid rgb(255 255 255 / 86%);
+  color: #f8fafc;
+  font-size: clamp(0.68rem, 0.74vw, 0.82rem);
+  font-weight: 760;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
   text-transform: uppercase;
-  margin-bottom: 1.1rem;
-}
-
-.heroKicker::before {
-  content: "";
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #0066FF;
-  box-shadow: 0 0 8px #0066FF;
-}
-
-.heroDivider {
-  width: 44px;
-  height: 3px;
-  background: #0066FF;
-  border-radius: 2px;
-  margin-top: 1.25rem;
 }
 
 .heroContent {
-  width: min(680px, 65vw);
-  animation: heroEnter 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  width: min(100%, 372px);
 }
 
 .heroContent h1 {
-  max-width: 660px;
   margin: 0;
-  color: #ffffff;
-  font-size: clamp(2.35rem, 4.4vw, 3.85rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  text-wrap: balance;
+  padding-block: 0.9rem 1rem;
+  border-bottom: 1px solid rgb(255 255 255 / 86%);
+  color: #f8fafc;
+  font-family: "Arial Narrow", "Aptos Narrow", "Manrope Variable", sans-serif;
+  font-size: clamp(1.65rem, 1.85vw, 2.05rem);
+  font-stretch: condensed;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+  line-height: 1.18;
+  text-transform: uppercase;
 }
 
 .heroContent h1 span {
-  color: #60a5fa;
-  background: linear-gradient(135deg, #ffffff 0%, #93c5fd 60%, #38bdf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.heroContent > p {
-  max-width: 520px;
-  margin-top: 1.25rem;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: clamp(0.96rem, 1.15vw, 1.1rem);
-  line-height: 1.65;
-  font-weight: 450;
+  display: block;
+  color: inherit;
 }
 
 .heroActions {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  margin-top: 2rem;
+  margin-top: 1.55rem;
 }
 
 .primaryButton {
-  padding: 0.85rem 1.65rem;
-  border-radius: 6px;
-  background: #0066FF;
+  min-width: 225px;
+  min-height: 70px;
+  padding: 1rem 1.5rem;
+  border-radius: 0;
+  background: #0667ed;
   color: var(--white);
-  font-size: 0.92rem;
-  font-weight: 750;
-  letter-spacing: 0.01em;
-  box-shadow: 0 10px 26px rgba(0, 102, 255, 0.38);
-  transition: background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+  font-size: 0.88rem;
+  font-weight: 780;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  box-shadow: none;
+  transition: background-color 150ms ease, transform 150ms ease;
 }
 
 .primaryButton svg,
@@ -1047,19 +1020,6 @@
   outline-offset: 4px;
 }
 
-@keyframes heroEnter {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-    filter: blur(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
-  }
-}
-
 @keyframes modalEnter {
   from {
     opacity: 0;
@@ -1094,11 +1054,8 @@
 
   .primaryButton:hover {
     background: #0052d9;
-    box-shadow: 0 18px 40px rgba(0, 102, 255, 0.55);
-    transform: translateY(-2px);
   }
 
-  .primaryButton:hover svg,
   .darkButton:hover svg,
   .resourceCard:hover .resourceLink svg,
   .textLink:hover svg {
@@ -1270,7 +1227,7 @@
   }
 
   .heroContent {
-    width: 100%;
+    width: min(100%, 372px);
   }
 
   .resourceCard1 {
@@ -1411,46 +1368,35 @@
   }
 
   .heroImage {
-    object-position: 68% center;
+    object-position: 63% center;
   }
 
   .heroOverlay {
     background:
-      linear-gradient(90deg, rgb(4 18 32 / 97%) 0%, rgb(4 18 32 / 86%) 58%, rgb(4 18 32 / 58%) 100%),
-      linear-gradient(0deg, rgb(4 18 32 / 65%) 0%, transparent 60%);
+      linear-gradient(90deg, rgb(3 5 8 / 98%) 0%, rgb(3 5 8 / 91%) 46%, rgb(3 5 8 / 58%) 76%, rgb(3 5 8 / 34%) 100%),
+      linear-gradient(0deg, rgb(3 5 8 / 42%) 0%, transparent 54%);
   }
 
   .heroInner {
-    width: min(100% - 2rem, 1360px);
-    align-items: end;
-    padding-block: 4.5rem 3rem;
+    align-items: center;
+    padding: 3rem 1.5rem;
   }
 
   .heroContent {
-    width: 100%;
+    width: min(100%, 340px);
   }
 
   .heroContent h1 {
-    max-width: 590px;
-    font-size: clamp(3rem, 14vw, 4.75rem);
-  }
-
-  .heroContent > p {
-    max-width: 500px;
-    margin-top: 1.4rem;
-    font-size: 1rem;
-    line-height: 1.6;
+    font-size: clamp(1.65rem, 8vw, 2.1rem);
   }
 
   .heroActions {
-    align-items: stretch;
-    flex-direction: column;
-    margin-top: 1.8rem;
+    margin-top: 1.5rem;
   }
 
   .primaryButton {
-    width: 100%;
-    min-height: 50px;
+    width: min(100%, 225px);
+    min-height: 64px;
   }
 
   .disclaimer {
@@ -1595,7 +1541,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .heroContent,
   .modal {
     animation: none;
   }

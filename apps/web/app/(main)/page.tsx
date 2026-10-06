@@ -285,19 +285,14 @@ export default function HomePage() {
 
           <div className={styles.heroInner}>
             <div className={styles.heroContent}>
-              <span className={styles.heroKicker}>Comunidad Estudiantil UP</span>
+              <p className={styles.heroKicker}>Materiales, profesores y herramientas</p>
               <h1>
-                Tu vida académica,
-                <span> más clara.</span>
+                Tu vida académica
+                <span>Más clara</span>
               </h1>
-              <div className={styles.heroDivider} aria-hidden="true" />
-              <p>
-                Materiales, evaluaciones pasadas, profesores y herramientas creadas por estudiantes para resolver tu ciclo.
-              </p>
               <div className={styles.heroActions}>
                 <Link href="/auth/register" className={styles.primaryButton}>
                   Crear mi cuenta
-                  <ArrowRight size={18} aria-hidden="true" />
                 </Link>
               </div>
             </div>
