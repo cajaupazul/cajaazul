@@ -131,7 +131,12 @@ export async function getTemporaryFileUrl(bucket: string, path: string): Promise
 /**
  * Uploads a file to R2 via the Cloudflare Worker proxy.
  */
-export async function uploadFileToR2(bucket: string, path: string, file: File): Promise<string> {
+export async function uploadFileToR2(
+    bucket: string,
+    path: string,
+    file: File,
+    onProgress?: (percentage: number) => void
+): Promise<string> {
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -140,18 +145,60 @@ export async function uploadFileToR2(bucket: string, path: string, file: File): 
 
     if (!session) throw new Error('No autenticado')
 
-    const response = await fetch(
-        `${WORKER_URL}/storage/upload?bucket=${bucket}&path=${encodeURIComponent(path)}`,
-        {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': file.type,
-                'X-File-Size': String(file.size)
-            },
-            body: file
-        }
-    )
+    const uploadUrl = `${WORKER_URL}/storage/upload?bucket=${bucket}&path=${encodeURIComponent(path)}`
+
+    // fetch() does not expose browser upload progress. Use XMLHttpRequest only
+    // when the caller needs byte-accurate progress, while keeping the existing
+    // fetch path for background uploads that do not render a progress bar.
+    if (onProgress) {
+        await new Promise<void>((resolve, reject) => {
+            const request = new XMLHttpRequest()
+            request.open('PUT', uploadUrl)
+            request.setRequestHeader('Authorization', `Bearer ${session.access_token}`)
+            request.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
+            request.setRequestHeader('X-File-Size', String(file.size))
+
+            request.upload.addEventListener('progress', (event) => {
+                if (!event.lengthComputable) return
+                // Reserve 100% for the successful server response. The browser
+                // can finish sending bytes before R2 confirms the upload.
+                const percentage = Math.min(99, Math.round((event.loaded / event.total) * 100))
+                onProgress(percentage)
+            })
+
+            request.addEventListener('load', () => {
+                if (request.status >= 200 && request.status < 300) {
+                    onProgress(100)
+                    resolve()
+                    return
+                }
+
+                let message = request.statusText
+                try {
+                    const payload = JSON.parse(request.responseText) as { error?: string }
+                    message = payload.error || message
+                } catch {
+                    // The worker may return plain text for unexpected failures.
+                }
+                reject(new Error(`Error subiendo archivo: ${message || request.status}`))
+            })
+            request.addEventListener('error', () => reject(new Error('Error de red al subir el archivo')))
+            request.addEventListener('abort', () => reject(new Error('La subida fue cancelada')))
+            request.send(file)
+        })
+
+        return getSecureFileUrl(bucket, path)
+    }
+
+    const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': file.type || 'application/octet-stream',
+            'X-File-Size': String(file.size)
+        },
+        body: file
+    })
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({})) as any

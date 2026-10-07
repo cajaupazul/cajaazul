@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Reorder, useDragControls } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase, Professor } from '@/lib/supabase';
 import { generateThumbnailFromFile } from '@/lib/thumbnail-generator';
-import { Upload, X, Trash2, UserPlus, ArrowLeft, CheckCircle, FolderUp, Files, Link2, FolderTree, FolderOpen, Check } from 'lucide-react';
+import { Upload, X, Trash2, UserPlus, ArrowLeft, CheckCircle, FolderUp, Files, Link2, FolderTree, FolderOpen, Check, GripVertical, ArrowUp, ArrowDown, LoaderCircle, CircleAlert } from 'lucide-react';
 import { FileTypeIcon } from '@/components/files/FileTypeIcon';
 import { buildBlackboardStoragePath, buildCourseMaterialPath } from '@/lib/course-storage-paths';
 import {
@@ -87,6 +88,46 @@ const requiresGroupTitle = (value?: string | null) =>
 
 interface FileEntry { file: File; relativePath: string; }
 
+type FileUploadStatus = 'pending' | 'preparing' | 'uploading' | 'done' | 'error';
+
+function SortableFileRow({
+    file,
+    order,
+    disabled,
+    children,
+}: {
+    file: File;
+    order: number;
+    disabled: boolean;
+    children: ReactNode;
+}) {
+    const dragControls = useDragControls();
+
+    return (
+        <Reorder.Item
+            value={file}
+            dragListener={false}
+            dragControls={dragControls}
+            layout
+            whileDrag={{ scale: 1.01, boxShadow: '0 18px 40px rgba(15, 23, 42, 0.22)' }}
+            className="relative flex items-stretch gap-2 rounded-xl border border-bb-border bg-white p-2.5 shadow-sm dark:bg-[#181a20] sm:gap-3 sm:p-3"
+        >
+            <button
+                type="button"
+                disabled={disabled}
+                onPointerDown={(event) => dragControls.start(event)}
+                className="flex w-9 shrink-0 touch-none cursor-grab flex-col items-center justify-center gap-1 rounded-lg text-zinc-400 transition-colors hover:bg-blue-50 hover:text-blue-600 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-blue-500/10 dark:hover:text-blue-300"
+                aria-label={`Arrastrar archivo en la posición ${order}`}
+                title="Arrastra para cambiar el orden"
+            >
+                <GripVertical className="h-5 w-5" aria-hidden="true" />
+                <span className="text-[10px] font-black tabular-nums">#{order}</span>
+            </button>
+            {children}
+        </Reorder.Item>
+    );
+}
+
 export default function FullPageUploadForm({
     courseId,
     courseName,
@@ -111,7 +152,8 @@ export default function FullPageUploadForm({
     const [fileCycleOverrides, setFileCycleOverrides] = useState<Record<string, string>>({});
     const [showFileCategories, setShowFileCategories] = useState(false);
     const [fileUploadProgress, setFileUploadProgress] = useState<Record<string, number>>({});
-    const [fileUploadStatus, setFileUploadStatus] = useState<Record<string, 'pending' | 'uploading' | 'done' | 'error'>>({});
+    const [fileUploadStatus, setFileUploadStatus] = useState<Record<string, FileUploadStatus>>({});
+    const [activeDropzone, setActiveDropzone] = useState<string | null>(null);
     
     const [professorId, setProfessorId] = useState<string>(
         allProfessors.length === 1 ? allProfessors[0].id : 'none'
@@ -176,15 +218,21 @@ export default function FullPageUploadForm({
         });
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
-        const selectedFiles = Array.from(e.target.files || []);
+    const addFiles = (selectedFiles: File[], key: string) => {
         if (selectedFiles.length > 0) {
             setFilesMap(prev => {
                 const existing = prev[key] || [];
+                const existingKeys = new Set(existing.map(fileKey));
+                const uniqueFiles = selectedFiles.filter((file) => {
+                    const key = fileKey(file);
+                    if (existingKeys.has(key)) return false;
+                    existingKeys.add(key);
+                    return true;
+                });
                 return {
                     ...prev,
                     // El orden de selección es el orden de publicación. No se ordena por nombre.
-                    [key]: [...existing, ...selectedFiles]
+                    [key]: [...existing, ...uniqueFiles]
                 };
             });
             setFileCycleOverrides((current) => {
@@ -202,9 +250,44 @@ export default function FullPageUploadForm({
                 });
                 return next;
             });
-            // Permite volver a elegir la misma carpeta o los mismos archivos.
-            e.target.value = '';
         }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
+        addFiles(Array.from(e.target.files || []), key);
+        // Permite volver a elegir la misma carpeta o los mismos archivos.
+        e.target.value = '';
+    };
+
+    const handleFileDrop = (event: React.DragEvent<HTMLDivElement>, key: string) => {
+        event.preventDefault();
+        setActiveDropzone(null);
+        if (uploading) return;
+
+        const acceptedExtensions = new Set(['pdf', 'ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'zip']);
+        const droppedFiles = Array.from(event.dataTransfer.files);
+        const acceptedFiles = droppedFiles.filter((file) => acceptedExtensions.has(file.name.split('.').pop()?.toLowerCase() || ''));
+        if (acceptedFiles.length !== droppedFiles.length) {
+            alert('Algunos archivos no se agregaron porque su formato no está permitido.');
+        }
+        addFiles(acceptedFiles, key);
+    };
+
+    const reorderFiles = (key: string, visibleOrder: File[]) => {
+        // La lista se muestra como quedará publicada: el último archivo arriba y
+        // la posición #1 abajo. Internamente conservamos el orden #1, #2, #3...
+        setFilesMap((current) => ({ ...current, [key]: [...visibleOrder].reverse() }));
+    };
+
+    const moveFile = (key: string, file: File, direction: 'up' | 'down') => {
+        setFilesMap((current) => {
+            const files = [...(current[key] || [])];
+            const index = files.indexOf(file);
+            const destination = direction === 'up' ? index + 1 : index - 1;
+            if (index < 0 || destination < 0 || destination >= files.length) return current;
+            [files[index], files[destination]] = [files[destination], files[index]];
+            return { ...current, [key]: files };
+        });
     };
 
     const removeFile = (key: string, index: number) => {
@@ -628,7 +711,7 @@ export default function FullPageUploadForm({
 
                 // Inicializar estados de progreso individual
                 const initialProgress: Record<string, number> = {};
-                const initialStatus: Record<string, 'pending' | 'uploading' | 'done' | 'error'> = {};
+                const initialStatus: Record<string, FileUploadStatus> = {};
                 allFiles.forEach(({ file }) => {
                     const fk = fileKey(file);
                     initialProgress[fk] = 0;
@@ -640,73 +723,78 @@ export default function FullPageUploadForm({
                 // 1. Upload all files to R2 in parallel with live individual progress
                 const uploadedFilesInfo = await Promise.all(allFiles.map(async ({ file, target }) => {
                     const fk = fileKey(file);
-                    setFileUploadStatus(prev => ({ ...prev, [fk]: 'uploading' }));
-                    setFileUploadProgress(prev => ({ ...prev, [fk]: 20 }));
+                    setFileUploadStatus(prev => ({ ...prev, [fk]: 'preparing' }));
 
-                    const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
-                    const requestedSection = target === 'General'
-                        ? (fileCategoryOverrides[fk] || selectedSubfolder)
-                        : target;
-                    const finalSection = requestedSection;
-                    const detectedPeriod = extractAcademicPeriod(fileSourceName(file));
+                    try {
+                        const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+                        const requestedSection = target === 'General'
+                            ? (fileCategoryOverrides[fk] || selectedSubfolder)
+                            : target;
+                        const finalSection = requestedSection;
+                        const detectedPeriod = extractAcademicPeriod(fileSourceName(file));
 
-                    const finalCycleId = isSharedSubfolder(finalSection)
-                        ? null
-                        : (fileCycleOverrides[fk]
-                            || (detectedPeriod ? cycleByPeriod.get(detectedPeriod)?.id : null)
-                            || selectedCycleId);
+                        const finalCycleId = isSharedSubfolder(finalSection)
+                            ? null
+                            : (fileCycleOverrides[fk]
+                                || (detectedPeriod ? cycleByPeriod.get(detectedPeriod)?.id : null)
+                                || selectedCycleId);
 
-                    const storagePath = buildCourseMaterialPath({
-                        courseId,
-                        cycleId: finalCycleId,
-                        section: finalSection,
-                        fileName: file.name,
-                    });
+                        const storagePath = buildCourseMaterialPath({
+                            courseId,
+                            cycleId: finalCycleId,
+                            section: finalSection,
+                            fileName: file.name,
+                        });
 
-                    const { uploadFileToR2 } = await import('@/lib/r2-storage');
+                        const { uploadFileToR2 } = await import('@/lib/r2-storage');
 
-                    let thumbnailUrl: string | null = null;
-                    const thumbnailBlob = await generateThumbnailFromFile(file);
-                    setFileUploadProgress(prev => ({ ...prev, [fk]: 55 }));
+                        let thumbnailUrl: string | null = null;
+                        const thumbnailBlob = await generateThumbnailFromFile(file);
 
-                    if (thumbnailBlob) {
-                        try {
-                            const thumbFileName = `thumb_${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
-                            const { data: thumbData } = await supabase.storage
-                                .from('thumbnails')
-                                .upload(thumbFileName, thumbnailBlob, {
-                                    contentType: 'image/webp',
-                                    upsert: false,
-                                });
-
-                            if (thumbData) {
-                                const { data: publicData } = supabase.storage
+                        if (thumbnailBlob) {
+                            try {
+                                const thumbFileName = `thumb_${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+                                const { data: thumbData } = await supabase.storage
                                     .from('thumbnails')
-                                    .getPublicUrl(thumbFileName);
-                                thumbnailUrl = publicData.publicUrl;
+                                    .upload(thumbFileName, thumbnailBlob, {
+                                        contentType: 'image/webp',
+                                        upsert: false,
+                                    });
+
+                                if (thumbData) {
+                                    const { data: publicData } = supabase.storage
+                                        .from('thumbnails')
+                                        .getPublicUrl(thumbFileName);
+                                    thumbnailUrl = publicData.publicUrl;
+                                }
+                            } catch (thumbErr) {
+                                console.warn('[THUMBNAIL] Failed:', thumbErr);
                             }
-                        } catch (thumbErr) {
-                            console.warn('[THUMBNAIL] Failed:', thumbErr);
                         }
+
+                        setFileUploadStatus(prev => ({ ...prev, [fk]: 'uploading' }));
+                        const materialUrl = await uploadFileToR2(
+                            'course-materials',
+                            storagePath,
+                            file,
+                            (percentage) => setFileUploadProgress(prev => ({ ...prev, [fk]: percentage }))
+                        );
+
+                        return {
+                            file,
+                            materialUrl,
+                            thumbnailUrl,
+                            fileExt,
+                            storagePath,
+                            finalSection,
+                            finalCycleId,
+                            materialScope: 'standard',
+                            academicPeriod: detectedPeriod,
+                        };
+                    } catch (error) {
+                        setFileUploadStatus(prev => ({ ...prev, [fk]: 'error' }));
+                        throw error;
                     }
-
-                    setFileUploadProgress(prev => ({ ...prev, [fk]: 85 }));
-                    const materialUrl = await uploadFileToR2('course-materials', storagePath, file);
-
-                    setFileUploadProgress(prev => ({ ...prev, [fk]: 100 }));
-                    setFileUploadStatus(prev => ({ ...prev, [fk]: 'done' }));
-
-                    return {
-                        file,
-                        materialUrl,
-                        thumbnailUrl,
-                        fileExt,
-                        storagePath,
-                        finalSection,
-                        finalCycleId,
-                        materialScope: 'standard',
-                        academicPeriod: detectedPeriod,
-                    };
                 }));
 
                 // 2. Insert into DB with explicitly staggered timestamps
@@ -725,7 +813,10 @@ export default function FullPageUploadForm({
                         academicPeriod,
                     } = info;
 
-                    const fileCreatedAt = new Date(nowMs - i * 1000).toISOString();
+                    // #1 es el archivo base y debe quedar abajo cuando la vista
+                    // ordena materiales por fecha descendente. Los siguientes se
+                    // apilan encima respetando el orden elegido por el usuario.
+                    const fileCreatedAt = new Date(nowMs - (uploadedFilesInfo.length - 1 - i) * 1000).toISOString();
                     const finalTipo = finalSection;
 
                     const { error: insertError } = await supabase.from('materials').insert({
@@ -747,6 +838,7 @@ export default function FullPageUploadForm({
                     });
 
                     if (insertError) {
+                        setFileUploadStatus(prev => ({ ...prev, [fileKey(file)]: 'error' }));
                         const { deleteFileFromR2 } = await import('@/lib/r2-storage');
                         await deleteFileFromR2('course-materials', storagePath).catch(() => false);
                         throw new Error(`Error al guardar ${file.name}: ${insertError.message}`);
@@ -772,6 +864,9 @@ export default function FullPageUploadForm({
                             console.warn('[CONVERTER] Trigger failed:', e);
                         }
                     }
+
+                    const fk = fileKey(file);
+                    setFileUploadStatus(prev => ({ ...prev, [fk]: 'done' }));
                 }
             }
 
@@ -1322,11 +1417,27 @@ export default function FullPageUploadForm({
                                 <div key={`file-${key}`} className={`space-y-4 bg-bb-sidebar/30 p-5 rounded-xl border transition-all duration-300 ${currentFiles.length > 0 ? 'border-blue-500/40 bg-blue-500/5 shadow-lg shadow-blue-500/5' : 'border-bb-border'}`}>
                                     <Label className="text-sm font-black text-blue-400 uppercase tracking-widest px-1">{label}</Label>
                                     
-                                    <div className={`border-2 border-dashed rounded-xl transition-all ${currentFiles.length > 0 ? 'border-blue-500/50 bg-blue-500/5 py-2.5 px-4 hover:bg-blue-500/10' : 'border-bb-border hover:border-blue-500 hover:bg-bb-darker/50 p-6 text-center'}`}>
+                                    <div
+                                        onDragEnter={(event) => {
+                                            event.preventDefault();
+                                            if (!uploading) setActiveDropzone(key);
+                                        }}
+                                        onDragOver={(event) => event.preventDefault()}
+                                        onDragLeave={(event) => {
+                                            if (!event.currentTarget.contains(event.relatedTarget as Node)) setActiveDropzone(null);
+                                        }}
+                                        onDrop={(event) => handleFileDrop(event, key)}
+                                        className={`border-2 border-dashed rounded-xl transition-colors ${activeDropzone === key
+                                            ? 'border-blue-400 bg-blue-500/15'
+                                            : currentFiles.length > 0
+                                                ? 'border-blue-500/50 bg-blue-500/5 hover:bg-blue-500/10'
+                                                : 'border-bb-border hover:border-blue-500 hover:bg-bb-darker/50'} ${currentFiles.length > 0 ? 'py-2.5 px-4' : 'p-6 text-center'}`}
+                                    >
                                         <input
                                             id={`file-${key}`}
                                             type="file"
                                             multiple
+                                            disabled={uploading}
                                             onChange={(e) => handleFileChange(e, key)}
                                             className="hidden"
                                             accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
@@ -1347,147 +1458,199 @@ export default function FullPageUploadForm({
                                     </div>
 
                                     {currentFiles.length > 0 && (
-                                        <div className="mt-4 p-4 sm:p-5 rounded-2xl border-2 border-dashed border-blue-400/80 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-500/40">
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4 max-h-[640px] overflow-y-auto custom-scrollbar p-1">
-                                                {currentFiles.map((f, i) => {
+                                        <section className="mt-4 rounded-2xl border border-blue-400/50 bg-blue-50/50 p-3 dark:border-blue-500/35 dark:bg-blue-950/15 sm:p-4" aria-label="Orden de los archivos seleccionados">
+                                            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                                <div>
+                                                    <h3 className="text-sm font-black text-bb-text">Orden de publicación</h3>
+                                                    <p className="mt-0.5 max-w-2xl text-[11px] leading-relaxed text-bb-text-secondary">
+                                                        Arrastra desde el asa o usa las flechas. El archivo <strong className="text-bb-text">#1 quedará abajo</strong> y los siguientes aparecerán encima.
+                                                    </p>
+                                                </div>
+                                                <span className="w-fit rounded-full border border-blue-400/30 bg-blue-500/10 px-2.5 py-1 text-[10px] font-black text-blue-600 dark:text-blue-300">
+                                                    {currentFiles.length} {currentFiles.length === 1 ? 'archivo' : 'archivos'}
+                                                </span>
+                                            </div>
+
+                                            <div className="mb-1 flex items-center gap-2 px-1 text-[9px] font-black uppercase tracking-wider text-blue-600/80 dark:text-blue-300/80">
+                                                <ArrowUp className="h-3 w-3" aria-hidden="true" />
+                                                Aparecerá más arriba en el curso
+                                            </div>
+
+                                            <Reorder.Group
+                                                as="ol"
+                                                axis="y"
+                                                values={[...currentFiles].reverse()}
+                                                onReorder={(visibleOrder) => reorderFiles(key, visibleOrder)}
+                                                className="max-h-[640px] space-y-2 overflow-y-auto p-1 custom-scrollbar"
+                                                aria-label="Archivos ordenables"
+                                            >
+                                                {[...currentFiles].reverse().map((f) => {
                                                     const fk = fileKey(f);
-                                                    const ext = (f.name.split('.').pop() || 'FILE').toUpperCase();
-                                                    const status = fileUploadStatus[fk] || (uploading ? 'uploading' : 'idle');
-                                                    const progress = fileUploadProgress[fk] ?? 0;
-                                                    const isDone = status === 'done';
-                                                    const isUploading = status === 'uploading';
+                                                    const storedIndex = currentFiles.indexOf(f);
+                                                    const order = storedIndex + 1;
+                                                    const status = fileUploadStatus[fk] || 'pending';
+                                                    const progress = Math.max(0, Math.min(100, fileUploadProgress[fk] ?? 0));
                                                     const detectedPeriod = extractAcademicPeriod(fileSourceName(f));
+                                                    const isPreparing = status === 'preparing';
+                                                    const isUploading = status === 'uploading';
+                                                    const isDone = status === 'done';
+                                                    const isError = status === 'error';
 
                                                     return (
-                                                        <div key={fk} className="flex flex-col items-center group relative">
-                                                            {/* Red Trash Icon above top-right */}
-                                                            <div className="w-full flex justify-end pr-1 mb-1">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removeFile(key, i)}
-                                                                    className="text-red-500 hover:text-red-600 transition-colors p-0.5 rounded hover:bg-red-500/10"
-                                                                    title="Eliminar archivo"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4 stroke-[2]" />
-                                                                </button>
-                                                            </div>
+                                                        <SortableFileRow key={fk} file={f} order={order} disabled={uploading}>
+                                                            <FileTypeIcon fileName={f.name} mimeType={f.type} />
 
-                                                            {/* Visual Card */}
-                                                            <div className="w-full bg-white dark:bg-[#181a20] rounded-2xl border border-zinc-200/80 dark:border-white/10 shadow-sm p-3 flex flex-col items-center justify-between text-center min-h-[120px] transition-all hover:shadow-md">
-                                                                <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 tracking-wider uppercase">
-                                                                    {ext}
-                                                                </span>
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                                    <div className="min-w-0">
+                                                                        <p className="truncate text-sm font-bold text-zinc-900 dark:text-zinc-100" title={f.name}>
+                                                                            {f.name}
+                                                                        </p>
+                                                                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                                                                            <span>{formatFileSize(f.size)}</span>
+                                                                            {detectedPeriod && (
+                                                                                <span className="rounded bg-teal-500/12 px-1.5 py-0.5 font-black text-teal-700 dark:text-teal-300">
+                                                                                    {formatAcademicPeriod(detectedPeriod)}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
 
-                                                                {isDone ? (
-                                                                    <div className="flex flex-col items-center justify-center my-auto py-1">
-                                                                        <Check className="w-6 h-6 text-emerald-500 stroke-[3] my-1" />
-                                                                        <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-medium">
-                                                                            {formatFileSize(f.size)}
-                                                                        </span>
+                                                                    <div className="w-full shrink-0 sm:w-44">
+                                                                        {isPreparing ? (
+                                                                            <div className="flex items-center gap-2 text-[11px] font-bold text-blue-600 dark:text-blue-300">
+                                                                                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                                                                Preparando archivo…
+                                                                            </div>
+                                                                        ) : isUploading ? (
+                                                                            <div>
+                                                                                <div
+                                                                                    className="h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700"
+                                                                                    role="progressbar"
+                                                                                    aria-label={`Progreso de ${f.name}`}
+                                                                                    aria-valuemin={0}
+                                                                                    aria-valuemax={100}
+                                                                                    aria-valuenow={progress}
+                                                                                >
+                                                                                    <div
+                                                                                        className="h-full rounded-full bg-blue-600 transition-[width] duration-150"
+                                                                                        style={{ width: `${progress}%` }}
+                                                                                    />
+                                                                                </div>
+                                                                                <p className="mt-1 text-right text-[10px] font-black tabular-nums text-blue-700 dark:text-blue-300">
+                                                                                    {progress === 100 ? 'Finalizando…' : `${progress}% subido`}
+                                                                                </p>
+                                                                            </div>
+                                                                        ) : isDone ? (
+                                                                            <div className="flex items-center gap-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                                                <Check className="h-4 w-4" aria-hidden="true" />
+                                                                                Carga completa
+                                                                            </div>
+                                                                        ) : isError ? (
+                                                                            <div className="flex items-center gap-2 text-[11px] font-bold text-red-600 dark:text-red-400">
+                                                                                <CircleAlert className="h-4 w-4" aria-hidden="true" />
+                                                                                No se pudo subir
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400">Listo para subir</span>
+                                                                        )}
                                                                     </div>
-                                                                ) : isUploading ? (
-                                                                    <div className="w-full flex flex-col items-center justify-center my-auto py-1">
-                                                                        <div className="w-full h-5 rounded-full bg-amber-100/60 dark:bg-zinc-800 overflow-hidden relative shadow-inner">
-                                                                            <div
-                                                                                className="h-full bg-amber-400 dark:bg-amber-500 rounded-full transition-all duration-300 flex items-center justify-center"
-                                                                                style={{ width: `${Math.max(8, progress)}%` }}
-                                                                            />
-                                                                            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-zinc-800 dark:text-zinc-100 pointer-events-none">
-                                                                                {progress}%
-                                                                            </span>
+                                                                </div>
+
+                                                                {showFileCategories && (
+                                                                    <div className="mt-3 grid gap-2 border-t border-bb-border/60 pt-3 sm:grid-cols-2">
+                                                                        <div>
+                                                                            <span className="block text-[10px] font-black uppercase tracking-wider text-blue-500">Categoría</span>
+                                                                            <Select
+                                                                                value={fileCategoryOverrides[fk] || selectedSubfolder}
+                                                                                onValueChange={(value) => setFileCategoryOverrides((current) => {
+                                                                                    const next = { ...current };
+                                                                                    if (value === selectedSubfolder) delete next[fk];
+                                                                                    else next[fk] = value;
+                                                                                    return next;
+                                                                                })}
+                                                                            >
+                                                                                <SelectTrigger className="mt-1 h-9 w-full border-zinc-300 bg-white px-2 text-xs font-bold text-zinc-900 shadow-sm [&>span]:truncate [&>span]:text-zinc-900">
+                                                                                    <SelectValue placeholder="Categoría" />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent className="z-50 max-h-56 border-zinc-200 bg-white text-zinc-900 shadow-xl">
+                                                                                    {MATERIAL_CATEGORY_OPTIONS.map((option) => (
+                                                                                        <SelectItem key={option.value} value={option.value} className="text-xs text-zinc-900 focus:bg-blue-50 focus:text-blue-600">
+                                                                                            {option.label}
+                                                                                        </SelectItem>
+                                                                                    ))}
+                                                                                </SelectContent>
+                                                                            </Select>
                                                                         </div>
-                                                                        <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-medium block mt-1.5">
-                                                                            {formatFileSize(f.size)}
-                                                                        </span>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="w-full flex flex-col items-center justify-center my-auto py-1">
-                                                                        <div className="w-full h-5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 flex items-center justify-center text-[11px] text-zinc-400 font-bold tracking-widest">
-                                                                            •••
+                                                                        <div>
+                                                                            <span className="block text-[10px] font-black uppercase tracking-wider text-blue-500">Ciclo</span>
+                                                                            <Select
+                                                                                value={fileCycleOverrides[fk] !== undefined ? fileCycleOverrides[fk] : selectedCycleId}
+                                                                                onValueChange={(value) => setFileCycleOverrides((current) => {
+                                                                                    const next = { ...current };
+                                                                                    if (value === selectedCycleId) delete next[fk];
+                                                                                    else next[fk] = value;
+                                                                                    return next;
+                                                                                })}
+                                                                            >
+                                                                                <SelectTrigger className="mt-1 h-9 w-full border-zinc-300 bg-white px-2 text-xs font-bold text-zinc-900 shadow-sm [&>span]:truncate [&>span]:text-zinc-900">
+                                                                                    <SelectValue placeholder="Ciclo" />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent className="z-50 max-h-56 border-zinc-200 bg-white text-zinc-900 shadow-xl">
+                                                                                    {courseCycles.map((cycle: any) => (
+                                                                                        <SelectItem key={cycle.id} value={cycle.id} className="text-xs text-zinc-900 focus:bg-blue-50 focus:text-blue-600">
+                                                                                            {cycle.ciclo_name}
+                                                                                        </SelectItem>
+                                                                                    ))}
+                                                                                </SelectContent>
+                                                                            </Select>
                                                                         </div>
-                                                                        <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-medium block mt-1.5">
-                                                                            {formatFileSize(f.size)}
-                                                                        </span>
                                                                     </div>
                                                                 )}
                                                             </div>
 
-                                                            {/* File Name */}
-                                                            <p
-                                                                className="text-xs font-bold text-white truncate w-full text-center mt-2 px-1"
-                                                                title={f.name}
-                                                            >
-                                                                {f.name}
-                                                            </p>
-
-                                                            {detectedPeriod && (
-                                                                <div className="mt-2 flex w-full flex-wrap justify-center gap-1">
-                                                                    <span className="rounded bg-teal-500/15 px-1.5 py-0.5 text-[9px] font-black text-teal-300">
-                                                                        {formatAcademicPeriod(detectedPeriod)}
-                                                                    </span>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Adjustments: Category & Cycle per file */}
-                                                            {showFileCategories && (
-                                                                <div className="w-full mt-2 space-y-1.5 pt-1.5 border-t border-bb-border/50">
-                                                                    <div>
-                                                                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-wider block text-left">
-                                                                            Categoría
-                                                                        </span>
-                                                                        <Select
-                                                                            value={fileCategoryOverrides[fk] || selectedSubfolder}
-                                                                            onValueChange={(value) => setFileCategoryOverrides((current) => {
-                                                                                const next = { ...current };
-                                                                                if (value === selectedSubfolder) delete next[fk];
-                                                                                else next[fk] = value;
-                                                                                return next;
-                                                                            })}
-                                                                        >
-                                                                            <SelectTrigger className="h-7 w-full text-[10px] font-bold bg-white text-zinc-900 [&>span]:text-zinc-900 [&>span]:truncate border-zinc-300 shadow-sm px-1.5 truncate mt-0.5 focus:ring-1 focus:ring-blue-500">
-                                                                                <SelectValue placeholder="Categoría" />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent className="border-zinc-200 bg-white text-zinc-900 z-50 max-h-56 shadow-xl">
-                                                                                {MATERIAL_CATEGORY_OPTIONS.map((option) => (
-                                                                                    <SelectItem key={option.value} value={option.value} className="text-xs text-zinc-900 hover:bg-zinc-100 focus:bg-blue-50 focus:text-blue-600">
-                                                                                        {option.label}
-                                                                                    </SelectItem>
-                                                                                ))}
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                    </div>
-                                                                    <div>
-                                                                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-wider block text-left">
-                                                                            Ciclo
-                                                                        </span>
-                                                                        <Select
-                                                                            value={fileCycleOverrides[fk] !== undefined ? fileCycleOverrides[fk] : selectedCycleId}
-                                                                            onValueChange={(value) => setFileCycleOverrides((current) => {
-                                                                                const next = { ...current };
-                                                                                if (value === selectedCycleId) delete next[fk];
-                                                                                else next[fk] = value;
-                                                                                return next;
-                                                                            })}
-                                                                        >
-                                                                            <SelectTrigger className="h-7 w-full text-[10px] font-bold bg-white text-zinc-900 [&>span]:text-zinc-900 [&>span]:truncate border-zinc-300 shadow-sm px-1.5 truncate mt-0.5 focus:ring-1 focus:ring-blue-500">
-                                                                                <SelectValue placeholder="Ciclo" />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent className="border-zinc-200 bg-white text-zinc-900 z-50 max-h-56 shadow-xl">
-                                                                                {courseCycles.map((cycle: any) => (
-                                                                                    <SelectItem key={cycle.id} value={cycle.id} className="text-xs text-zinc-900 hover:bg-zinc-100 focus:bg-blue-50 focus:text-blue-600">
-                                                                                        {cycle.ciclo_name}
-                                                                                    </SelectItem>
-                                                                                ))}
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                            <div className="flex shrink-0 flex-col gap-1">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => moveFile(key, f, 'up')}
+                                                                    disabled={uploading || order === currentFiles.length}
+                                                                    className="grid h-8 w-8 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-25 dark:hover:bg-blue-500/10 dark:hover:text-blue-300"
+                                                                    aria-label={`Mover ${f.name} hacia arriba`}
+                                                                    title="Mover arriba"
+                                                                >
+                                                                    <ArrowUp className="h-4 w-4" aria-hidden="true" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => moveFile(key, f, 'down')}
+                                                                    disabled={uploading || order === 1}
+                                                                    className="grid h-8 w-8 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-25 dark:hover:bg-blue-500/10 dark:hover:text-blue-300"
+                                                                    aria-label={`Mover ${f.name} hacia abajo`}
+                                                                    title="Mover abajo"
+                                                                >
+                                                                    <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeFile(key, storedIndex)}
+                                                                    disabled={uploading}
+                                                                    className="grid h-8 w-8 place-items-center rounded-lg text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 disabled:opacity-30 dark:hover:bg-red-500/10 dark:hover:text-red-300"
+                                                                    aria-label={`Eliminar ${f.name}`}
+                                                                    title="Eliminar archivo"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                                                </button>
+                                                            </div>
+                                                        </SortableFileRow>
                                                     );
                                                 })}
+                                            </Reorder.Group>
+
+                                            <div className="mt-1 flex items-center gap-2 px-1 text-[9px] font-black uppercase tracking-wider text-bb-text-secondary">
+                                                <ArrowDown className="h-3 w-3" aria-hidden="true" />
+                                                Posición #1 · aparecerá abajo
                                             </div>
-                                        </div>
+                                        </section>
                                     )}
                                 </div>
                             );
